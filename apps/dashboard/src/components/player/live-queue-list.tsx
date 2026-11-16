@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PlayerWebControlAction } from "@sirubot/utils/playerWeb";
 import { formatDuration } from "@sirubot/utils/time";
 import { ChevronDown, ChevronUp, ListMusic, Play, Shuffle, Trash2, X } from "lucide-react";
@@ -34,7 +34,35 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
     refreshInterval: VOICE_CONTEXT_REFRESH_MS,
   });
   const controlBlocked = voiceData?.voice ? !voiceData.voice.canControl : false;
-  const controlsDisabled = unavailable || controlBlocked || pendingKey !== null;
+  // 명령 성공 후 새 상태가 도착할 때까지(또는 시간 초과) 행 조작을 잠가 옛 인덱스 재명령을 막아요.
+  const [awaitingState, setAwaitingState] = useState(false);
+  const controlsDisabled = unavailable || controlBlocked || pendingKey !== null || awaitingState;
+
+  const rowKeys = useMemo(() => {
+    const seen = new Map<string, number>();
+    return state.queue.map((track) => {
+      const base = track.uri || track.title;
+      const n = (seen.get(base) ?? 0) + 1;
+      seen.set(base, n);
+      return `${base}#${n}`;
+    });
+  }, [state.queue]);
+  const queueSignature = `${state.queueLength}|${rowKeys.join("|")}`;
+
+  // 입장 애니메이션은 첫 마운트에만 적용해요.
+  const animateEntry = useRef(true);
+  useEffect(() => {
+    animateEntry.current = false;
+  }, []);
+
+  useEffect(() => {
+    if (!awaitingState) return;
+    const timer = setTimeout(() => setAwaitingState(false), 4000);
+    return () => clearTimeout(timer);
+  }, [awaitingState]);
+  useEffect(() => {
+    setAwaitingState(false);
+  }, [queueSignature]);
 
   const totalMs = state.queue.reduce((sum, track) => sum + (track.isStream ? 0 : track.durationMs), 0);
   const hiddenCount = Math.max(0, state.queueLength - state.queue.length);
@@ -56,6 +84,7 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
         return;
       }
       if (successMessage) toast.success(successMessage);
+      setAwaitingState(true);
     } finally {
       setPendingKey(null);
     }
@@ -135,12 +164,13 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
         <ol className="max-h-[26rem] space-y-2 overflow-y-auto scrollbar-none">
           {state.queue.map((track, index) => (
             <li
-              key={`${track.title}-${index}`}
-              className="animate-page-in flex items-center gap-3 rounded-card bg-surface-2 p-2.5 opacity-0"
-              style={{
-                animationDelay: `${Math.min(index, 9) * 40}ms`,
-                animationFillMode: "forwards",
-              }}
+              key={rowKeys[index]}
+              className={`flex items-center gap-3 rounded-card bg-surface-2 p-2.5 ${animateEntry.current ? "animate-page-in opacity-0" : ""}`}
+              style={
+                animateEntry.current
+                  ? { animationDelay: `${Math.min(index, 9) * 40}ms`, animationFillMode: "forwards" }
+                  : undefined
+              }
             >
               <span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground">
                 {index + 1}
@@ -187,6 +217,7 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
                 <Button
                   variant="ghost"
                   size="icon-sm"
+                  className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                   icon={<Play size={14} />}
                   loading={pendingKey === `jump-${index}`}
                   disabled={controlsDisabled}
@@ -197,32 +228,35 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
                 <Button
                   variant="ghost"
                   size="icon-sm"
+                  className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                   icon={<ChevronUp size={14} />}
                   loading={pendingKey === `up-${index}`}
                   disabled={controlsDisabled || index === 0}
                   title={controlBlocked ? CONTROL_BLOCKED_HINT : "위로 이동"}
                   aria-label={`${track.title} 위로 이동`}
-                  onClick={() => void runQueueAction(`up-${index}`, "queue-move", { from: index, to: index - 1 })}
+                  onClick={() => void runQueueAction(`up-${index}`, "queue-move", { from: index, to: index - 1 }, "순서를 바꿨어요.")}
                 />
                 <Button
                   variant="ghost"
                   size="icon-sm"
+                  className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                   icon={<ChevronDown size={14} />}
                   loading={pendingKey === `down-${index}`}
                   disabled={controlsDisabled || index === state.queue.length - 1}
                   title={controlBlocked ? CONTROL_BLOCKED_HINT : "아래로 이동"}
                   aria-label={`${track.title} 아래로 이동`}
-                  onClick={() => void runQueueAction(`down-${index}`, "queue-move", { from: index, to: index + 1 })}
+                  onClick={() => void runQueueAction(`down-${index}`, "queue-move", { from: index, to: index + 1 }, "순서를 바꿨어요.")}
                 />
                 <Button
                   variant="ghost"
                   size="icon-sm"
+                  className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                   icon={<X size={14} />}
                   loading={pendingKey === `remove-${index}`}
                   disabled={controlsDisabled}
                   title={controlBlocked ? CONTROL_BLOCKED_HINT : "대기열에서 제거"}
                   aria-label={`${track.title} 대기열에서 제거`}
-                  onClick={() => void runQueueAction(`remove-${index}`, "queue-remove", { index })}
+                  onClick={() => void runQueueAction(`remove-${index}`, "queue-remove", { index }, "대기열에서 뺐어요.")}
                 />
               </div>
             </li>

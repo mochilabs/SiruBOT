@@ -108,7 +108,7 @@ function SearchResultRow({
 			<Button
 				variant="secondary"
 				size="icon-lg"
-				className="min-h-11 min-w-11"
+				className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
 				icon={<Play size={15} />}
 				onClick={() => onPlay(track.uri)}
 				loading={playing}
@@ -294,7 +294,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 				</div>
 
 				<form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-					<InputGroup className="h-11 min-w-0 flex-1">
+					<InputGroup className="h-9 min-w-0 flex-1 pointer-coarse:h-11">
 						<InputGroupAddon>
 							<Search size={16} aria-hidden />
 						</InputGroupAddon>
@@ -307,7 +307,10 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 						/>
 						<InputGroupAddon align="inline-end">
 							{showLoading ? (
-								<Loader2 size={16} className="animate-spin text-muted-foreground" aria-label="검색 중" />
+								<span role="status" className="inline-flex">
+									<Loader2 size={16} className="animate-spin text-muted-foreground" aria-hidden />
+									<span className="sr-only">검색 중</span>
+								</span>
 							) : query ? (
 								<InputGroupButton size="icon-xs" onClick={() => setQuery("")} aria-label="검색어 지우기">
 									<X size={14} aria-hidden />
@@ -316,7 +319,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 						</InputGroupAddon>
 					</InputGroup>
 					{isUrl && (
-						<Button type="submit" className="min-h-11" loading={playingUri !== null} disabled={playingUri !== null}>
+						<Button type="submit" className="pointer-coarse:min-h-11" loading={playingUri !== null} disabled={playingUri !== null}>
 							바로 재생
 						</Button>
 					)}
@@ -366,7 +369,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 				)}
 			</Card>
 
-			<PlayerClient guildId={guildId} onPlay={handleHistoryPlay} />
+			<PlayerClient guildId={guildId} onPlay={handleHistoryPlay} playingUrl={playingUri} />
 			</div>
 		</div>
 	);

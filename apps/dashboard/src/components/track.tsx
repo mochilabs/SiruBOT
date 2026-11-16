@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useCallback, useMemo, useState } from "react";
+import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import Image from "next/image";
 import type { Track as TrackType } from "@sirubot/prisma";
@@ -11,6 +11,7 @@ import useSWR from "swr";
 import { MockThumbnail } from "@/components/primitives/mock-thumbnail";
 import { TrackListenLink } from "@/components/track-listen-link";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton, SkeletonLine } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import type { ChartEntry } from "@/lib/track-chart";
@@ -110,6 +111,7 @@ const AnimatedTrackItem = memo(function AnimatedTrackItem({
 	return (
 		<div
 			ref={ref}
+			className="motion-reduce:!transition-none motion-reduce:!transform-none"
 			style={{
 				opacity: inView ? 1 : 0,
 				transform: inView ? "none" : "translateY(16px)",
@@ -127,17 +129,29 @@ const AnimatedTrackItem = memo(function AnimatedTrackItem({
  */
 function useFavoriteIds(trackIds: string[]) {
 	const key = trackIds.length > 0 ? `/api/favorites?trackIds=${encodeURIComponent(trackIds.join(","))}` : null;
-	const { data, mutate } = useSWR<{ trackIds: string[] }>(key);
+	// 무한 스크롤로 key가 바뀌어도 이전 하트 상태를 유지해 깜빡임/오토글을 막아요
+	const { data, mutate } = useSWR<{ trackIds: string[] }>(key, { keepPreviousData: true });
 
 	const favoriteIds = useMemo(() => new Set(data?.trackIds ?? []), [data]);
+	// toggle이 클로저의 오래된 data에 의존하지 않도록 최신 집합을 ref로 들고 있어요
+	const favoriteRef = useRef(favoriteIds);
+	favoriteRef.current = favoriteIds;
 
 	const toggle = useCallback(
 		async (trackId: string) => {
-			const current = new Set(data?.trackIds ?? []);
-			const wasFavorite = current.has(trackId);
-			// 낙관적 업데이트 — 성공 여부와 무관하게 마지막에 재검증
-			current[wasFavorite ? "delete" : "add"](trackId);
-			await mutate({ trackIds: [...current] }, { revalidate: false });
+			const wasFavorite = favoriteRef.current.has(trackId);
+			// 낙관적 업데이트 — 성공 여부와 무관하게 마지막에 재검증 (함수형 갱신으로 연속 클릭도 서로 지우지 않아요)
+			const next = new Set(favoriteRef.current);
+			next[wasFavorite ? "delete" : "add"](trackId);
+			favoriteRef.current = next;
+			await mutate(
+				(cur) => {
+					const set = new Set(cur?.trackIds ?? []);
+					set[wasFavorite ? "delete" : "add"](trackId);
+					return { trackIds: [...set] };
+				},
+				{ revalidate: false },
+			);
 			try {
 				const res = await fetch(
 					wasFavorite ? `/api/favorites?trackId=${encodeURIComponent(trackId)}` : "/api/favorites",
@@ -146,6 +160,7 @@ function useFavoriteIds(trackIds: string[]) {
 						: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) },
 				);
 				const json = (await res.json().catch(() => ({}))) as { error?: string; alreadyRemoved?: boolean };
+				if (res.status === 401) throw new Error("로그인하면 즐겨찾기를 쓸 수 있어요.");
 				if (!res.ok && res.status !== 409 && !(res.status === 404 && json.alreadyRemoved)) {
 					throw new Error(json.error || "요청을 처리하지 못했어요.");
 				}
@@ -153,7 +168,7 @@ function useFavoriteIds(trackIds: string[]) {
 				await mutate();
 			}
 		},
-		[data, mutate],
+		[mutate],
 	);
 
 	return { favoriteIds, toggle };
@@ -187,20 +202,19 @@ function FavoriteButton({
 	};
 
 	return (
-		<button
-			type="button"
+		<Button
+			variant="state-toggle"
+			size="icon-sm"
+			active={favorite}
+			aria-pressed={favorite}
 			onClick={handleClick}
 			disabled={pending}
 			title={favorite ? "즐겨찾기 제거" : "즐겨찾기에 추가"}
-			className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-control transition-colors duration-fast shadow-control-boundary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${
-				favorite
-					? "bg-primary-control text-primary-control-text hover:bg-primary-control-hover"
-					: "bg-secondary text-muted-foreground hover:bg-surface-3 hover:text-foreground"
-			}`}
+			className="sm:h-10 sm:w-10"
 		>
 			<Heart className="h-4 w-4 sm:h-5 sm:w-5" fill={favorite ? "currentColor" : "none"} aria-hidden />
 			<span className="sr-only">{favorite ? "즐겨찾기 제거" : "즐겨찾기에 추가"}</span>
-		</button>
+		</Button>
 	);
 }
 
@@ -262,7 +276,7 @@ export const TrackItem = memo(function TrackItem({
 
 			<div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-card bg-muted/20">
 				{/* Mobile Rank Overlay */}
-				<div className="absolute top-0 left-0 z-10 sm:hidden flex items-center justify-center min-w-5 h-5 bg-surface-3 rounded-br-lg px-1.5 shadow-sm">
+				<div className="absolute top-0 left-0 z-10 sm:hidden flex items-center justify-center min-w-5 h-5 bg-surface-3 rounded-br-control px-1.5 shadow-sm">
 					{isTopThree ? (
 						<Crown className={`h-3 w-3 ${rank === 1 ? "text-rank-1" : rank === 2 ? "text-rank-2" : "text-rank-3"}`} />
 					) : (
@@ -287,7 +301,7 @@ export const TrackItem = memo(function TrackItem({
 			</div>
 
 			<div className="min-w-0 flex-1">
-				<h3 className="truncate text-base sm:text-lg font-black text-foreground leading-tight" title={entry.title}>
+				<h2 className="truncate text-base sm:text-lg font-black text-foreground leading-tight" title={entry.title}>
 					{/^https?:\/\//i.test(entry.url ?? "") ? (
 						<a
 							href={entry.url!}
@@ -300,7 +314,7 @@ export const TrackItem = memo(function TrackItem({
 					) : (
 						entry.title
 					)}
-				</h3>
+				</h2>
 				<p className="mt-0.5 truncate text-sm sm:text-base font-bold text-muted-foreground" title={entry.artist}>
 					{entry.artist}
 				</p>

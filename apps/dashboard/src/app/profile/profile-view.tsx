@@ -12,7 +12,7 @@ import { TrackListenLink } from "@/components/track-listen-link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCountUp } from "@/hooks/use-count-up";
-import { formatTotalDuration } from "@/hooks/use-playlists";
+import { formatTotalDuration } from "@/lib/playlist-format";
 import type {
   ProfileAttendance,
   ProfileBirthday,
@@ -209,7 +209,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                         {track.thumbnail ? (
                           <Image
                             src={track.thumbnail}
-                            alt={track.title}
+                            alt=""
                             fill
                             sizes="48px"
                             unoptimized

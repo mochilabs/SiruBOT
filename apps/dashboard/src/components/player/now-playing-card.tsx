@@ -44,13 +44,26 @@ export function NowPlaying({
   const volumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const commandPendingRef = useRef(false);
   const volumePendingRef = useRef(false);
+  const volumeHoldRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [volumePending, setVolumePending] = useState(false);
   // 봇이 실제 인가와 같은 정책으로 계산한 제어 가능 여부예요. 값을 모르면(로딩·오류) 열어 두고 봇의 거절 안내에 맡겨요.
   const { data: voiceData, mutate: refreshVoiceContext } = useVoiceContext(guildId, {
     refreshInterval: VOICE_CONTEXT_REFRESH_MS,
   });
   const controlBlocked = voiceData?.voice ? !voiceData.voice.canControl : false;
-  const controlsDisabled = unavailable || volumePending || volumeOverride !== null || controlBlocked;
+  // 명령 응답 뒤에도 새 상태가 도착할 때까지(또는 시간 초과) 잠가 같은 명령 중복을 막아요.
+  const stateSignature = `${state.paused}|${state.repeatMode}|${Math.round(state.volume)}|${state.trackUri ?? ""}|${state.playing}`;
+  const [settlingSignature, setSettlingSignature] = useState<string | null>(null);
+  const settling = settlingSignature !== null && settlingSignature === stateSignature;
+  useEffect(() => {
+    if (settlingSignature === null) return;
+    const timer = setTimeout(() => setSettlingSignature(null), 3000);
+    return () => clearTimeout(timer);
+  }, [settlingSignature]);
+  useEffect(() => {
+    if (settlingSignature !== null && settlingSignature !== stateSignature) setSettlingSignature(null);
+  }, [settlingSignature, stateSignature]);
+  const controlsDisabled = unavailable || volumePending || volumeOverride !== null || controlBlocked || settling;
 
   // 곡이 바뀌면 봇의 음성 채널도 바뀌었을 수 있어 바로 다시 확인해요
   useEffect(() => {
@@ -66,9 +79,19 @@ export function NowPlaying({
   useEffect(() => {
     return () => {
       if (volumeTimerRef.current) clearTimeout(volumeTimerRef.current);
+      if (volumeHoldRef.current) clearTimeout(volumeHoldRef.current);
     };
   }, []);
+  // 서버 볼륨이 보낸 값에 도달하면 override를 풀어요 (전송 중에는 유지)
+  useEffect(() => {
+    if (volumeOverride !== null && !volumePending && Math.round(state.volume) === volumeOverride) {
+      if (volumeHoldRef.current) clearTimeout(volumeHoldRef.current);
+      setVolumeOverride(null);
+    }
+  }, [state.volume, volumeOverride, volumePending]);
 
+  const stateSignatureRef = useRef(stateSignature);
+  stateSignatureRef.current = stateSignature;
   const displayedPaused = state.paused;
   const displayedRepeat = state.repeatMode;
   const displayedVolume = volumeOverride ?? Math.round(state.volume);
@@ -91,6 +114,7 @@ export function NowPlaying({
     setPendingAction(action);
     const result = await sendPlayerCommand(guildId, action);
     if (!result.ok) failCommand(result, "명령을 전달하지 못했어요.");
+    if (result.ok) setSettlingSignature(stateSignatureRef.current);
     setPendingAction(null);
     commandPendingRef.current = false;
   }, [controlsDisabled, displayedPaused, failCommand, guildId]);
@@ -101,6 +125,7 @@ export function NowPlaying({
     setPendingAction("skip");
     const result = await sendPlayerCommand(guildId, "skip");
     if (!result.ok) failCommand(result, "명령을 전달하지 못했어요.");
+    if (result.ok) setSettlingSignature(stateSignatureRef.current);
     setPendingAction(null);
     commandPendingRef.current = false;
   }, [controlsDisabled, failCommand, guildId]);
@@ -111,6 +136,7 @@ export function NowPlaying({
     setPendingAction("stop");
     const result = await sendPlayerCommand(guildId, "stop");
     if (!result.ok) failCommand(result, "정지하지 못했어요.");
+    if (result.ok) setSettlingSignature(stateSignatureRef.current);
     setPendingAction(null);
     commandPendingRef.current = false;
   }, [controlsDisabled, failCommand, guildId]);
@@ -121,6 +147,7 @@ export function NowPlaying({
     setPendingAction("repeat");
     const result = await sendPlayerCommand(guildId, "repeat");
     if (!result.ok) failCommand(result, "반복 설정을 바꾸지 못했어요.");
+    if (result.ok) setSettlingSignature(stateSignatureRef.current);
     setPendingAction(null);
     commandPendingRef.current = false;
   }, [controlsDisabled, failCommand, guildId]);
@@ -130,12 +157,17 @@ export function NowPlaying({
       if (unavailable || controlBlocked || volumePendingRef.current || commandPendingRef.current) return;
       setVolumeOverride(volume);
       if (volumeTimerRef.current) clearTimeout(volumeTimerRef.current);
+      if (volumeHoldRef.current) clearTimeout(volumeHoldRef.current);
       volumeTimerRef.current = setTimeout(async () => {
         volumePendingRef.current = true;
         setVolumePending(true);
         const result = await sendPlayerCommand(guildId, "volume", volume);
         if (!result.ok) failCommand(result, "볼륨을 적용하지 못했어요.");
-        setVolumeOverride(null);
+        if (!result.ok) {
+          setVolumeOverride(null);
+        } else {
+          volumeHoldRef.current = setTimeout(() => setVolumeOverride(null), 3000);
+        }
         volumePendingRef.current = false;
         setVolumePending(false);
       }, VOLUME_SEND_DEBOUNCE_MS);
@@ -219,7 +251,7 @@ export function NowPlaying({
           <Button
             variant="primary"
             size="icon-lg"
-            className="min-h-11 min-w-11"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             icon={displayedPaused ? <Play size={18} /> : <Pause size={18} />}
             onClick={handleTogglePause}
             loading={pendingAction === "pause" || pendingAction === "resume"}
@@ -229,7 +261,7 @@ export function NowPlaying({
           <Button
             variant="secondary"
             size="icon-lg"
-            className="min-h-11 min-w-11"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             icon={<SkipForward size={16} />}
             onClick={handleSkip}
             loading={pendingAction === "skip"}
@@ -239,7 +271,7 @@ export function NowPlaying({
           <Button
             variant="secondary"
             size="icon-lg"
-            className="min-h-11 min-w-11"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             icon={<Square size={16} />}
             onClick={handleStop}
             loading={pendingAction === "stop"}
@@ -249,13 +281,12 @@ export function NowPlaying({
           <Button
             variant="state-toggle"
             size="sm"
-            className="min-h-11"
+            className="pointer-coarse:min-h-11"
             active={displayedRepeat !== "off"}
             icon={<Repeat size={14} />}
             onClick={handleRepeat}
             loading={pendingAction === "repeat"}
             disabled={commandsOff || busy(["repeat"])}
-            aria-label={`반복 설정: ${displayedRepeat === "off" ? "없음" : displayedRepeat === "track" ? "한 곡" : "대기열"}`}
           >
             {repeatLabel}
           </Button>

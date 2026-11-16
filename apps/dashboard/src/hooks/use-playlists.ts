@@ -9,18 +9,10 @@ import { useToast } from "@/components/ui/toast";
 import { useDebounce } from "@/hooks/use-debounce";
 import { toApiError } from "@/lib/api-error";
 import { FAVORITES_PLAYLIST_NAME } from "@/lib/playlist-constants";
+import { formatTotalDuration } from "@/lib/playlist-format";
 import { useAuthedSWR } from "@/lib/swr";
 import { isYoutubeUrl } from "@/lib/youtube-url";
 import type { Playlist, PlaylistDetailResponse, SearchTracksResponse } from "@/types/playlist";
-
-function formatTotalDuration(ms: number): string {
-	if (!ms) return "0분";
-	const totalMinutes = Math.floor(ms / 60000);
-	if (totalMinutes < 60) return `${totalMinutes}분`;
-	const hours = Math.floor(totalMinutes / 60);
-	const mins = totalMinutes % 60;
-	return `${hours}시간 ${mins}분`;
-}
 
 export { formatTotalDuration };
 
@@ -42,12 +34,18 @@ export function usePlaylists() {
 
 	const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
 
+	// 활성 id가 없거나 목록에서 사라졌으면(삭제 등) 즐겨찾기 → 첫 항목으로 다시 골라요
 	useEffect(() => {
-		if (playlists.length > 0 && !activePlaylistId) {
+		if (!listData) return;
+		if (playlists.length === 0) {
+			if (activePlaylistId) setActivePlaylistId(null);
+			return;
+		}
+		if (!activePlaylistId || !playlists.some((p) => p.id === activePlaylistId)) {
 			const fav = playlists.find((p) => p.name === FAVORITES_PLAYLIST_NAME);
 			setActivePlaylistId(fav ? fav.id : playlists[0].id);
 		}
-	}, [playlists, activePlaylistId]);
+	}, [listData, playlists, activePlaylistId]);
 
 	const { data: detailData, error: detailError, mutate: mutateDetail, isLoading: detailLoading } = useAuthedSWR<PlaylistDetailResponse>(
 		activePlaylistId ? `/api/playlists/${activePlaylistId}` : null,
@@ -86,6 +84,9 @@ export function usePlaylists() {
 	const searchLoading = searchLoadingApi || trackInput.trim() !== debouncedTrackInput;
 
 	const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+	// 순서 변경 요청은 한 번에 하나씩만 보내요 (연타 시 낙관 상태가 서버 값으로 되돌아가 깜빡이는 것 방지)
+	const reorderingRef = useRef(false);
+	const [reordering, setReordering] = useState(false);
 
 	const parentRef = useRef<HTMLDivElement>(null);
 	const rowVirtualizer = useVirtualizer({
@@ -133,13 +134,13 @@ export function usePlaylists() {
 	async function callApi<T>(
 		url: string,
 		init: RequestInit,
-		messages: { success: string; failure: string },
+		messages: { success: string | null; failure: string },
 	): Promise<T | null> {
 		try {
 			const res = await fetch(url, init);
 			if (!res.ok) throw await toApiError(res, messages.failure);
 			const data = await res.json();
-			toast.success(messages.success);
+			if (messages.success) toast.success(messages.success);
 			return data as T;
 		} catch (err: unknown) {
 			toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
@@ -202,7 +203,7 @@ export function usePlaylists() {
 			if (activePlaylistId === deletePlaylistTarget.id) {
 				setActivePlaylistId(null);
 			}
-			mutateList();
+			await mutateList();
 		}
 		setLoadingSubmit(false);
 	};
@@ -240,9 +241,10 @@ export function usePlaylists() {
 	const confirmRemoveTrack = async () => {
 		if (!activePlaylistId || !removeTrackTarget) return;
 		const { position } = removeTrackTarget;
-		setRemoveTrackTarget(null);
 		setLoadingSubmit(true);
 		const data = await callApi(`/api/playlists/${activePlaylistId}/tracks?position=${position}`, { method: "DELETE" }, { success: "곡을 삭제했어요.", failure: "곡을 삭제하지 못했어요." });
+		// 요청이 끝난 뒤에 닫아 진행 중 표시와 대상 제목을 유지해요
+		setRemoveTrackTarget(null);
 		if (data) {
 			mutateDetail();
 			mutateList();
@@ -251,7 +253,9 @@ export function usePlaylists() {
 	};
 
 	const handleReorder = async (sourceIndex: number, destinationIndex: number) => {
-		if (!activePlaylistId || sourceIndex === destinationIndex) return;
+		if (!activePlaylistId || sourceIndex === destinationIndex || reorderingRef.current) return;
+		reorderingRef.current = true;
+		setReordering(true);
 
 		const updatedTracks = [...tracks];
 		const [moved] = updatedTracks.splice(sourceIndex, 1);
@@ -265,8 +269,10 @@ export function usePlaylists() {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ sourceIndex, destinationIndex })
-		}, { success: "곡 순서를 바꿨어요.", failure: "곡 순서를 바꾸지 못했어요." });
-		mutateDetail();
+		}, { success: null, failure: "곡 순서를 바꾸지 못했어요." });
+		await mutateDetail();
+		reorderingRef.current = false;
+		setReordering(false);
 	};
 
 	const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -327,6 +333,7 @@ export function usePlaylists() {
 		searchLoading,
 		searchError,
 		draggedIdx,
+		reordering,
 		handleDragStart,
 		handleDragOver,
 		handleDrop,

@@ -9,7 +9,7 @@ vi.mock("@/components/motion/reveal", () => ({
 }));
 vi.mock("@/hooks/use-count-up", () => ({ useCountUp: ({ end }: { end: number }) => ({ value: end, ref: null }) }));
 vi.mock("@/components/data/stat-card", () => ({ StatCard: () => null }));
-vi.mock("@/hooks/use-playlists", () => ({ formatTotalDuration: () => "0분" }));
+
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => undefined }) }));
 vi.mock("./tts-voice-card", () => ({ TtsVoiceCard: () => null }));
 

@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/primitives/empty-state";
 import { SidebarIndicatorOverlay, useSidebarIndicator } from "@/components/primitives/sidebar-indicator";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { FAVORITES_PLAYLIST_NAME } from "@/lib/playlist-constants";
 import type { Playlist } from "@/types/playlist";
 
@@ -27,10 +27,12 @@ export function PlaylistSidebar({
 	const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 	const [searchQuery, setSearchQuery] = useState("");
 
+	// 검색창은 5개 이상일 때만 보이므로, 그 아래로 줄면 남은 검색어로 필터되지 않게 무시해요
+	const effectiveQuery = playlists.length >= 5 ? searchQuery : "";
 	const filteredPlaylists = useMemo(() => {
-		if (!searchQuery) return playlists;
-		return playlists.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-	}, [playlists, searchQuery]);
+		if (!effectiveQuery) return playlists;
+		return playlists.filter(p => p.name.toLowerCase().includes(effectiveQuery.toLowerCase()));
+	}, [playlists, effectiveQuery]);
 
 	const activeIndex = filteredPlaylists.findIndex((p) => p.id === activePlaylistId);
 	const getItemEl = useCallback((index: number) => itemRefs.current[index], []);
@@ -41,17 +43,18 @@ export function PlaylistSidebar({
 			<Card padding="none" className="overflow-hidden max-h-[calc(100svh-8rem)] lg:min-h-[400px]">
 				{playlists.length >= 5 && (
 					<div className="p-3 shrink-0">
-						<div className="relative">
-							<Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-							<Input
+						<InputGroup>
+							<InputGroupAddon>
+								<Search size={14} aria-hidden />
+							</InputGroupAddon>
+							<InputGroupInput
 								type="text"
 								placeholder="검색..."
 								aria-label="플레이리스트 검색"
 								value={searchQuery}
 								onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-								className="bg-input/50 py-2 pl-9 hover:bg-input/60 focus:bg-input/60"
 							/>
-						</div>
+						</InputGroup>
 					</div>
 				)}
 
@@ -82,6 +85,7 @@ export function PlaylistSidebar({
 									<button
 										type="button"
 										onClick={() => onSelect(playlist.id)}
+										aria-current={isActive ? "true" : undefined}
 										className={`
 											flex-1 flex items-center justify-between px-3 py-2.5 rounded-menu text-left select-none cursor-pointer transition-colors duration-fast
 											${isActive ? "text-primary-text font-bold" : "text-muted-foreground hover:text-foreground hover:bg-accent/10"}
@@ -114,7 +118,7 @@ export function PlaylistSidebar({
 							variant="ghost"
 							size="sm"
 							onClick={onCreateNew}
-							className="h-auto w-full gap-1.5 rounded-menu px-0 py-2.5 text-xs font-medium text-muted-foreground hover:bg-accent/10 hover:text-foreground"
+							className="w-full gap-1.5 text-xs font-medium text-muted-foreground"
 						>
 							<Plus size={14} />
 							새 플레이리스트

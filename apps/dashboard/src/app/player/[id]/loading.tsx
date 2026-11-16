@@ -15,15 +15,21 @@ export default function PlayerLoading() {
 				description="지금 플레이 중인 곡을 실시간으로 보고, 검색해서 바로 재생해요. 음성 채널에 접속 중이라면 봇이 채널에 접속해 재생해요."
 			/>
 
-			<div className="space-y-6">
-				<Card padding="lg" className="space-y-4">
-					<SkeletonLine width="100%" height="h-10" />
-					<div className="grid gap-3 sm:grid-cols-2">
+			<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-8">
+				<div className="space-y-6">
+					<Card padding="lg" className="space-y-4">
+						<SkeletonLine width="100%" height="h-20" />
+						<SkeletonLine width="100%" height="h-10" />
+					</Card>
+					<SkeletonCard lines={4} avatar={false} />
+				</div>
+				<div className="space-y-6">
+					<Card padding="lg" className="space-y-4">
+						<SkeletonLine width="100%" height="h-11" />
 						<SkeletonLine width="100%" height="h-14" />
-						<SkeletonLine width="100%" height="h-14" />
-					</div>
-				</Card>
-				<SkeletonCard lines={4} avatar={false} />
+					</Card>
+					<SkeletonCard lines={4} avatar={false} />
+				</div>
 			</div>
 		</Container>
 	);
