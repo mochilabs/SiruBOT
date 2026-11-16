@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toError } from "@/lib/api-error";
 import { useAuthedSWR } from "@/lib/swr";
 
@@ -290,16 +289,22 @@ export default function ServerStatsTab({ guildId }: { guildId: string }) {
         title="통계"
         description="기간별 재생 기록과 요청자 순위를 확인해요."
       />
-      <Tabs value={range} onValueChange={(key) => setRange(key as RangeKey)} aria-label="통계 기간 필터">
-        <TabsList>
-          {RANGE_TABS.map((item) => (
-            <TabsTrigger key={item.key} value={item.key}>
-              {item.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-      <div role="tabpanel" className="outline-none">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="통계 기간 필터">
+        {RANGE_TABS.map((item) => (
+          <Button
+            key={item.key}
+            variant="state-toggle"
+            size="sm"
+            className="min-h-9 pointer-coarse:min-h-11 px-3"
+            active={item.key === range}
+            aria-pressed={item.key === range}
+            onClick={() => setRange(item.key)}
+          >
+            {item.label}
+          </Button>
+        ))}
+      </div>
+      <div aria-live="polite">
         <ServerStatsPanel guildId={guildId} range={range} />
       </div>
     </Card>

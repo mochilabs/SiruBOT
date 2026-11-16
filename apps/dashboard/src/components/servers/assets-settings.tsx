@@ -15,6 +15,7 @@ import {
   type GuildAsset,
   useGuildAssets,
 } from "@/hooks/use-guild-assets";
+import { cn } from "@/lib/utils";
 
 import { InfoBox, PanelError, PanelHeader, PanelLoading } from "./settings-shared";
 
@@ -48,6 +49,7 @@ function AssetsPanel({ guildId }: { guildId: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
   const [savingName, setSavingName] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { armedId: confirmDeleteId, request: requestDelete } = useConfirmDelete();
 
   const handleFiles = async (files: File[]) => {
@@ -108,8 +110,13 @@ function AssetsPanel({ guildId }: { guildId: string }) {
 
   const handleDelete = async (asset: GuildAsset) => {
     // 첫 클릭은 무장(4초 자동 해제), 두 번째 클릭이 실제 삭제예요
-    if (!requestDelete(asset.id)) return;
-    await remove(asset.id);
+    if (deletingId !== null || !requestDelete(asset.id)) return;
+    setDeletingId(asset.id);
+    try {
+      await remove(asset.id);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   if (loading) return <PanelLoading label="이미지 에셋 불러오는 중…" />;
@@ -233,6 +240,7 @@ function AssetsPanel({ guildId }: { guildId: string }) {
                       size="sm"
                       aria-label={`${asset.name} 이름 수정`}
                       icon={<Pencil size={14} />}
+                      disabled={editingId !== null || deletingId === asset.id}
                       onClick={() => startRename(asset)}
                     />
                   </div>
@@ -256,9 +264,9 @@ function AssetsPanel({ guildId }: { guildId: string }) {
                     variant="icon"
                     size="sm"
                     aria-label={`${asset.name} 삭제`}
-                    className={` ${
-                      confirmDeleteId === asset.id ? "ring-2 ring-destructive/50" : ""
-                    }`}
+                    className={cn(confirmDeleteId === asset.id && "ring-2 ring-destructive/50")}
+                    loading={deletingId === asset.id}
+                    disabled={deletingId !== null}
                     icon={
                       confirmDeleteId === asset.id ? (
                         <Trash2 size={14} className="text-destructive" />

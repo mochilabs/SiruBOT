@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useRef } from "react";
 
+import { SectionLabel } from "@/components/primitives/section-label";
 import { SidebarIndicatorOverlay, useSidebarIndicator } from "@/components/primitives/sidebar-indicator";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,15 @@ interface ServerFeatureSidebarProps {
 	active: string;
 	onSelect: (key: string) => void;
 	groupLabels?: Readonly<Record<string, string>>;
+}
+
+/** 데스크톱 사이드바·모바일 시트가 같이 쓰는 그룹 라벨 — SectionLabel에 들여쓰기만 조정해요 */
+export function ServerNavGroupLabel({ first, children }: { first: boolean; children: React.ReactNode }) {
+	return (
+		<SectionLabel as="p" className={cn("px-3.5 pb-1 text-2xs font-bold tracking-wide", first ? "pt-1" : "pt-3")}>
+			{children}
+		</SectionLabel>
+	);
 }
 
 /**
@@ -45,9 +55,7 @@ export function ServerFeatureSidebar({ items, active, onSelect, groupLabels }: S
 						return (
 							<Fragment key={item.key}>
 								{groupTitle ? (
-									<p className={cn("px-3.5 pb-1 text-2xs font-bold tracking-wide text-muted-foreground", idx === 0 ? "pt-1" : "pt-3")}>
-										{groupTitle}
-									</p>
+									<ServerNavGroupLabel first={idx === 0}>{groupTitle}</ServerNavGroupLabel>
 								) : (
 									startsGroup && idx !== 0 && <div role="separator" className="mx-3 my-1 h-px bg-border" />
 								)}

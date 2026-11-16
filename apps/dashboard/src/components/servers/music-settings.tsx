@@ -150,8 +150,9 @@ function MusicSettingsPanel({ guildId }: { guildId: string }) {
               summary={REPEAT_OPTIONS.find((option) => option.value === form.repeat)?.label ?? form.repeat}
               defaultOpen
             >
-              <Field label="반복 모드">
+              <Field htmlFor="music-repeat-mode" label="반복 모드">
                 <SearchableSelect
+                  id="music-repeat-mode"
                   options={REPEAT_OPTIONS}
                   value={form.repeat}
                   onChange={(value: string) => patch({ repeat: value as MusicForm["repeat"] })}
@@ -176,7 +177,16 @@ function MusicSettingsPanel({ guildId }: { guildId: string }) {
                 mode === "off" ? "끄기" : mode === "crossfade" ? `크로스페이드 · ${(form.crossfadeMs / 1000).toFixed(1)}초` : "AutoMix"
               }
             >
-              <Field label="곡 전환 방식" description="끄기는 겹치기 없이, 크로스페이드는 고정 길이로, AutoMix는 분석에 맞춰 이어줘요.">
+              <Field
+                htmlFor="music-transition-mode"
+                label="곡 전환 방식"
+                description={
+                  <span className="inline-flex flex-wrap items-center gap-1">
+                    끄기는 겹치기 없이, 크로스페이드는 고정 길이로, AutoMix는 분석에 맞춰 이어줘요.
+                    <MixerInfoTip kind="crossfade" />
+                  </span>
+                }
+              >
                 <Select
                   value={mode}
                   disabled={saving}
@@ -184,7 +194,7 @@ function MusicSettingsPanel({ guildId }: { guildId: string }) {
                     if (isTransitionMode(value)) patch(transitionFlags(value));
                   }}
                 >
-                  <SelectTrigger className="w-full" aria-label="곡 전환 방식">
+                  <SelectTrigger id="music-transition-mode" className="w-full" aria-label="곡 전환 방식">
                     <SelectValue>{(value) => (isTransitionMode(value) ? TRANSITION_LABELS[value] : "끄기")}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -344,10 +354,12 @@ function MusicSettingsPanel({ guildId }: { guildId: string }) {
 
             <SettingsSection title="SponsorBlock" summary={form.sponsorBlockSegments.length > 0 ? `${form.sponsorBlockSegments.length}개 구간` : "사용 안 함"}>
               <Field
+                htmlFor="music-sponsorblock-segments"
                 label="건너뛸 구간"
                 description="YouTube 영상에서 선택한 구간을 자동으로 건너뛰어요. 재생 중인 곡에는 다음 곡부터 반영돼요."
               >
                 <SearchableSelect
+                  id="music-sponsorblock-segments"
                   multiple
                   options={SEGMENT_OPTIONS}
                   value={form.sponsorBlockSegments}

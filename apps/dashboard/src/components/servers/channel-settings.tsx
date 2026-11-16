@@ -66,7 +66,19 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
   } = useGuildRoles(guildId, true);
 
   const listUnavailable = channels === null;
-  const nameOf = (id: string | null) => (id ? `#${channels?.find((channel) => channel.id === id)?.name ?? "알 수 없음"}` : "사용 안 함");
+  // 목록이 아직 없으면(로딩·실패) "불러오는 중", 목록에 없는 id는 삭제된 채널로 구분해요
+  const nameOf = (id: string | null) => {
+    if (!id) return "사용 안 함";
+    if (!channels) return "불러오는 중";
+    const name = channels.find((channel) => channel.id === id)?.name;
+    return name ? `#${name}` : "삭제된 채널";
+  };
+  const djRoleSummary = (id: string | null) => {
+    if (!id) return "DJ 역할 없음";
+    if (!roles) return "불러오는 중";
+    const name = roles.find((role) => role.id === id)?.name;
+    return name ? `DJ ${name}` : "삭제된 역할";
+  };
 
   return (
     <SettingsPanel
@@ -101,10 +113,12 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
       <div>
         <SettingsSection title="기본 채널" summary={`텍스트 ${nameOf(form.textChannelId)} · 음성 ${nameOf(form.voiceChannelId)}`} defaultOpen>
         <Field
+          htmlFor="channel-default-text"
           label="기본 텍스트 채널"
           description="미설정이면 입력이 온 채널을 그대로 사용해요."
         >
           <ChannelSelect
+            id="channel-default-text"
             channels={channels}
             types={CHANNEL_TYPE_GROUP.chat}
             noneLabel={NO_SELECTION.label}
@@ -116,10 +130,12 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
         </Field>
 
         <Field
+          htmlFor="channel-default-voice"
           label="기본 음성 채널"
           description="/재생 커맨드로 자동 입장하는 채널이에요."
         >
           <ChannelSelect
+            id="channel-default-voice"
             channels={channels}
             types={CHANNEL_TYPE_GROUP.voice}
             noneLabel={NO_SELECTION.label}
@@ -133,10 +149,12 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 
         <SettingsSection title="고정 채널" summary={form.pinnedChannelId ? nameOf(form.pinnedChannelId) : "사용 안 함"}>
       <Field
+        htmlFor="channel-pinned"
         label="고정 채널"
         description="이 채널에 입력한 텍스트를 검색어로 재생해요. 전체 채널에서 고정 채널을 하나만 지정할 수 있어요."
       >
         <ChannelSelect
+          id="channel-pinned"
           channels={channels}
           types={CHANNEL_TYPE_GROUP.chat}
           noneLabel={NO_SELECTION.label}
@@ -148,12 +166,14 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
       </Field>
 
       <Field
+        htmlFor="channel-pinned-mode"
         label="고정 채널 입력 동작"
         description={
           form.pinnedChannelId ? undefined : "고정 채널을 지정하면 적용돼요."
         }
       >
         <SearchableSelect
+          id="channel-pinned-mode"
           options={PINNED_MODE_OPTIONS}
           value={form.pinnedChannelMode}
           onChange={(value: string) =>
@@ -173,12 +193,14 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 
         </SettingsSection>
 
-        <SettingsSection title="권한" summary={form.djRoleId ? `DJ ${roles?.find((role) => role.id === form.djRoleId)?.name ?? "알 수 없음"}` : "DJ 역할 없음"}>
+        <SettingsSection title="권한" summary={djRoleSummary(form.djRoleId)}>
       <Field
+        htmlFor="channel-dj-role"
         label="DJ 역할"
         description="이 역할을 가진 멤버만 정지·스킵·볼륨 등 컨트롤 커맨드를 쓸 수 있어요. 관리자는 항상 가능해요."
       >
         <RoleSelect
+          id="channel-dj-role"
           roles={roles}
           noneLabel={NO_SELECTION.label}
           value={form.djRoleId ?? ""}

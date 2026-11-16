@@ -24,37 +24,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 import { ServerFeatureSidebar } from "./server-feature-sidebar";
 import { ServerMobileNav } from "./server-mobile-nav";
 import { SERVER_TAB_GROUPS, SERVER_TABS, type ServerTabKey } from "./server-tabs";
-import { hasUnsavedActiveSettings, registerSettingsDiscardHandler, saveActiveSettings, SettingsPanelActive } from "./settings-shared";
+import { hasUnsavedActiveSettings, PanelLoading, registerSettingsDiscardHandler, saveActiveSettings, SettingsPanelActive } from "./settings-shared";
 
 function TabLoadingFallback() {
-  return (
-    <Card aria-hidden padding="lg">
-      <div className="space-y-6">
-        <div className="flex items-start gap-3">
-          <Skeleton className="h-10 w-10 shrink-0 rounded-control" />
-          <div className="min-w-0 space-y-1.5">
-            <Skeleton.Line width="9rem" height="h-5" />
-            <Skeleton.Line width="16rem" height="h-4" />
-          </div>
-        </div>
-        <div className="grid gap-6 sm:grid-cols-2">
-          {[0, 1, 2, 3].map((field) => (
-            <div key={field} className="space-y-2">
-              <Skeleton.Line width="5rem" height="h-4" />
-              <Skeleton.Line width="100%" height="h-9" />
-              <Skeleton.Line width="65%" height="h-3.5" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </Card>
-  );
+  return <PanelLoading label="불러오는 중…" decorative />;
 }
 
 const AiSettings = dynamic(() => import("./ai-settings").then((m) => m.AiSettings), { loading: TabLoadingFallback });
@@ -108,7 +86,7 @@ function NotManageable() {
 }
 
 /**
- * 서버 대시보드 셸 — PC(lg+)는 기능 사이드바 + 설정 패널, 모바일은 기존 가로 탭을 유지해요.
+ * 서버 대시보드 셸 — PC(lg+)는 기능 사이드바 + 설정 패널, 모바일은 현재 기능 버튼 + 바텀시트(ServerMobileNav)를 써요.
  * 탭/사이드바는 패널을 숨기기만 해(언마운트하지 않아) 편집 중인 입력값이 보존되고,
  * 패널은 Tabs 안에서 한 번만 렌더돼 두 내비게이션이 같은 상태를 공유해요(중복 마운트·중복 요청 방지).
  * 데스크톱에서는 탭 스트립만 숨기고(listClassName) 사이드바를 띄워요.
@@ -203,10 +181,7 @@ export function ServerDashboard({
             className="w-full"
             aria-label="서버 설정 패널"
           >
-            {/* 모바일 기능 네비게이션 서피스 — PC 사이드바(ServerFeatureSidebar)와 동일한
-                Card 서피스 + rounded-menu 언어를 써서 부유하는 맨 요소 대신 안정된 표면을 제공해요.
-                가로 스크롤은 카드 내부로 격리되고 활성 탭은 ServerFeatureSidebar와 일치하는
-                primary-control/10 알약 스타일로 표시돼요. */}
+            {/* 모바일 기능 네비게이션 — 현재 기능 한 줄 버튼, 누르면 그룹별 전체 목록이 바텀시트로 열려요 */}
             <ServerMobileNav items={TABS} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} />
             {TABS.map((item) => (
               <TabsContent

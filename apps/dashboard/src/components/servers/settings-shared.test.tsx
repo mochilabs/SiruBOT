@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { hasUnsavedActiveSettings, hasUnsavedSettings, SaveBar } from "./settings-shared";
+import { hasUnsavedActiveSettings, hasUnsavedSettings, saveActiveSettings,SaveBar } from "./settings-shared";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/servers/fixture" }));
 
@@ -76,6 +76,24 @@ describe("floating save actions", () => {
     expect(onSave).toHaveBeenCalledOnce();
     await act(async () => { root.unmount(); });
     expect(hasUnsavedSettings()).toBe(false);
+    host.remove();
+  });
+
+  it("saveActiveSettings reports success from the panel save result without waiting on dirty state", async () => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const onSave = vi.fn(async () => false);
+    // dirty가 그대로 남는 실패 저장 → false
+    await act(async () => { root.render(<SaveBar dirty saving={false} active onSave={onSave} />); });
+    expect(await saveActiveSettings()).toBe(false);
+    // 성공(true)은 dirty가 남아 있어도 60ms 대기 없이 true
+    const okSave = vi.fn(async () => true);
+    await act(async () => { root.render(<SaveBar dirty saving={false} active onSave={okSave} />); });
+    expect(await saveActiveSettings()).toBe(true);
+    await act(async () => { root.unmount(); });
     host.remove();
   });
 });
