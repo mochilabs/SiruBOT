@@ -96,6 +96,20 @@ export function TtsVoiceCard() {
       <CardContent className="space-y-2">
         {loading ? (
           <Skeleton className="h-11 w-full" />
+        ) : guilds.error || saved.error ? (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">서버 목록과 현재 음성 설정을 불러오지 못했어요.</p>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                void guilds.mutate();
+                void saved.mutate();
+              }}
+            >
+              다시 시도
+            </Button>
+          </div>
         ) : installed.length === 0 ? (
           <EmptyState size="sm" icon={Mic} title="시루봇이 있는 서버가 없어요" description="서버에 시루봇을 초대하면 여기서 음성을 고를 수 있어요." />
         ) : voices.error ? (

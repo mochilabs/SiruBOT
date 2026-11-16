@@ -12,7 +12,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { SkeletonLine } from "@/components/ui/skeleton";
 import { isYoutubeUrl } from "@/lib/youtube-url";
 import type { SearchedTrack } from "@/types/playlist";
@@ -43,6 +43,11 @@ export function AddTrackModal({
 	const isUrl = isYoutubeUrl(trackInput);
 	const [keyboardLayout, setKeyboardLayout] = useState<{ top: number; height: number } | null>(null);
 	const initialViewportHeight = useRef<number | null>(null);
+	/** 지금 추가 요청을 보낸 행 — 이 행만 로딩으로 보여요 */
+	const [addingId, setAddingId] = useState<string | null>(null);
+	useEffect(() => {
+		if (!loading) setAddingId(null);
+	}, [loading]);
 
 	useEffect(() => {
 		if (!open) {
@@ -89,15 +94,19 @@ export function AddTrackModal({
 					<DialogTitle className="truncate">플레이리스트에 곡 추가</DialogTitle>
 				</DialogHeader>
 				<div className={`flex min-h-0 min-w-0 flex-col gap-3 ${keyboardLayout ? "py-0.5" : "h-[360px] py-1"}`}>
-					<div className="relative min-w-0 px-0.5 pt-0.5">
-						<Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
-						<Input
-							type="text"
-							placeholder="유튜브 링크 또는 곡 제목·아티스트 검색..."
-							value={trackInput}
-							onChange={(e: React.ChangeEvent<HTMLInputElement>) => onTrackInputChange(e.target.value)}
-							className="pl-10"
-						/>
+					<div className="min-w-0 px-0.5 pt-0.5">
+						<InputGroup>
+							<InputGroupAddon>
+								<Search size={16} aria-hidden />
+							</InputGroupAddon>
+							<InputGroupInput
+								type="text"
+								placeholder="유튜브 링크 또는 곡 제목·아티스트 검색..."
+								aria-label="곡 검색 또는 유튜브 링크"
+								value={trackInput}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) => onTrackInputChange(e.target.value)}
+							/>
+						</InputGroup>
 					</div>
 
 					<div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-0.5">
@@ -106,6 +115,12 @@ export function AddTrackModal({
 								<p className="text-sm font-medium text-foreground">링크를 확인했어요.</p>
 								<p className="text-xs text-muted-foreground leading-relaxed">
 									추가하기를 누르면 영상 정보를 불러와 바로 추가해요.
+								</p>
+							</div>
+						) : !trackInput.trim() ? (
+							<div className="flex h-full items-center justify-center px-4 text-center">
+								<p className="text-xs font-medium text-muted-foreground leading-relaxed">
+								유튜브 링크를 붙여넣거나 곡 제목·아티스트를 검색해 보세요.
 								</p>
 							</div>
 						) : searchLoading ? (
@@ -126,12 +141,6 @@ export function AddTrackModal({
 						) : searchError ? (
 							<div className="flex h-full items-center justify-center px-4 text-center">
 								<p className="text-sm text-destructive">YouTube 검색을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
-							</div>
-						) : !trackInput.trim() ? (
-							<div className="flex h-full items-center justify-center px-4 text-center">
-								<p className="text-xs font-medium text-muted-foreground leading-relaxed">
-								유튜브 링크를 붙여넣거나 곡 제목·아티스트를 검색해 보세요.
-								</p>
 							</div>
 						) : searchedTracks.length === 0 ? (
 							<div className="flex h-full items-center justify-center">
@@ -172,9 +181,13 @@ export function AddTrackModal({
 										<Button
 											variant="secondary"
 											size="sm"
+											loading={loading && addingId === track.id}
 											disabled={loading}
 											className="shrink-0 px-3 font-bold"
-											onClick={() => onAddTrack(track.youtubeUrl ? undefined : track.id, track.youtubeUrl)}
+											onClick={() => {
+												setAddingId(track.id);
+												onAddTrack(track.youtubeUrl ? undefined : track.id, track.youtubeUrl);
+											}}
 										>
 											추가
 										</Button>

@@ -61,13 +61,14 @@ function PeriodSelector({ value }: { value: ChartPeriod }) {
 function TrackContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get("query") || "";
-  const page = searchParams.get("page") || "1";
+  const parsedPage = Number.parseInt(searchParams.get("page") ?? "1", 10);
+  const page = String(Number.isFinite(parsedPage) && parsedPage >= 1 ? parsedPage : 1);
   const period = parsePeriod(searchParams.get("period"));
   const periodInfo = PERIODS.find((p) => p.value === period)!;
 
   // 차트는 로그인 없이 열려 있어요 — /api/tracks가 공개 읽기 전용이라 상태 게이트를 두지 않아요.
   // keepPreviousData: 재검색 동안 이전 목록을 유지해 로딩 스피너로 배경이 번쩍이는 걸 막아요.
-  const { data, error, isLoading, mutate } = useSWR<ChartPage>(
+  const { data, error, isLoading, isValidating, mutate } = useSWR<ChartPage>(
     `/api/tracks?period=${period}&query=${encodeURIComponent(query)}&page=${page}`,
     { keepPreviousData: true },
   );
@@ -77,16 +78,12 @@ function TrackContent() {
   const totalCount = data?.totalCount || 0;
   const totalPlaybacks = data?.totalPlays || 0;
   const totalPages = data?.totalPages || 0;
-  const currentPage = parseInt(page);
+  const currentPage = Number(page);
 
-  if (error) {
+  if (error && !data) {
     return (
       <Container>
-        <ErrorPanel 
-            title="차트 오류" 
-            message="데이터를 불러오지 못했어요." 
-            onRetry={() => mutate()} 
-          />
+        <ErrorPanel title="차트 오류" message="데이터를 불러오지 못했어요." onRetry={() => mutate()} />
       </Container>
     );
   }
@@ -121,7 +118,13 @@ function TrackContent() {
         </div>
       </PageHeader>
 
-      <section className="space-y-6 min-h-[500px] relative">
+      <section
+        className={`space-y-6 min-h-[500px] relative transition-opacity duration-fast ${!loading && isValidating ? "opacity-60" : ""}`}
+        aria-busy={loading || isValidating}
+      >
+        {error && data && (
+          <ErrorPanel title="차트 오류" message="최신 데이터를 불러오지 못했어요." onRetry={() => mutate()} />
+        )}
         {loading ? (
           <TrackListSkeleton />
         ) : entries.length === 0 ? (

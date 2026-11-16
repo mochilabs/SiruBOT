@@ -34,6 +34,10 @@ interface ChannelSelectBase {
 	searchPlaceholder?: string;
 	disabled?: boolean;
 	className?: string;
+	/** 트리거 id/라벨 — Field 라벨 연결용 */
+	id?: string;
+	"aria-label"?: string;
+	"aria-describedby"?: string;
 }
 
 interface ChannelSelectSingle extends ChannelSelectBase {
@@ -67,6 +71,9 @@ export function ChannelSelect(props: ChannelSelectProps) {
 		searchPlaceholder = "채널 검색…",
 		disabled = false,
 		className,
+		id,
+		"aria-label": ariaLabel,
+		"aria-describedby": ariaDescribedBy,
 	} = props;
 
 	const selectedIds = useMemo(() => {
@@ -92,6 +99,9 @@ export function ChannelSelect(props: ChannelSelectProps) {
 				searchPlaceholder={searchPlaceholder}
 				disabled={disabled || channels === null}
 				className={className}
+				id={id}
+				aria-label={ariaLabel}
+				aria-describedby={ariaDescribedBy}
 			/>
 		);
 	}
@@ -106,6 +116,9 @@ export function ChannelSelect(props: ChannelSelectProps) {
 			searchPlaceholder={searchPlaceholder}
 			disabled={disabled || channels === null}
 			className={className}
+			id={id}
+			aria-label={ariaLabel}
+			aria-describedby={ariaDescribedBy}
 		/>
 	);
 }

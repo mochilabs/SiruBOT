@@ -2,12 +2,19 @@ import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink, Play, Settings2, ShieldCheck, UserPlus } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card } from "@/components/ui/card";
 import { discordGuildIconUrl } from "@/lib/discord-cdn";
 import { cn } from "@/lib/utils";
 
 import type { GuildCardProps } from "./guild-card.types";
+
+/** 소프트 primary 링크 버튼 색 — 새 variant 없이 한 곳에서 공유해요(카드 CTA·빈 상태 CTA) */
+export const SOFT_PRIMARY_LINK_CLASS = "bg-primary/10 text-primary-text hover:bg-primary-control hover:text-primary-control-text";
+
+/** 서버 목록 그리드 — 실제 목록과 스켈레톤이 같은 열·간격을 써야 로드 때 카드가 재배치되지 않아요 */
+export const SERVERS_GRID_CLASS = "grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4";
 
 /**
  * PC(md 이상)는 그리드 카드, 모바일은 한 행 리스트 — 같은 마크업을 반응형 클래스만으로
@@ -50,7 +57,8 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						aria-label="관리하기"
 						className={cn(
 							buttonVariants({ variant: "primary", size: "xl" }),
-							"w-11 justify-center px-0 bg-primary/10 text-primary-text hover:bg-primary-control hover:text-primary-control-text md:w-auto md:flex-1 md:gap-1.5 md:px-2.5 lg:gap-2 lg:px-3.5 whitespace-nowrap",
+							SOFT_PRIMARY_LINK_CLASS,
+							"w-11 justify-center px-0 md:w-auto md:flex-1 md:gap-1.5 md:px-2.5 lg:gap-2 lg:px-3.5 whitespace-nowrap",
 						)}
 					>
 						<Settings2 size={18} />
@@ -74,7 +82,8 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						aria-label="음악 컨트롤러"
 						className={cn(
 							buttonVariants({ variant: "primary", size: "xl" }),
-							"w-11 shrink-0 justify-center px-0 bg-primary/10 text-primary-text hover:bg-primary-control hover:text-primary-control-text md:w-full md:gap-2 md:px-3.5",
+							SOFT_PRIMARY_LINK_CLASS,
+							"w-11 shrink-0 justify-center px-0 md:w-full md:gap-2 md:px-3.5",
 						)}
 					>
 						<Play size={18} />
@@ -98,16 +107,17 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 				</a>
 			) : (
 				// 초대 링크를 만들 수 없는 서버(R-26) — "#" 데드 링크 대신 비활성 표시
-				<button
-					type="button"
+				<Button
 					disabled
+					variant="secondary"
+					size="xl"
 					title="초대 링크가 없어요"
 					aria-label="초대 링크가 없어요"
-					className={cn(buttonVariants({ size: "xl" }), "w-11 shrink-0 justify-center bg-surface-2 px-0 text-muted-foreground md:w-full md:gap-2 md:px-3.5")}
+					className="w-11 shrink-0 justify-center px-0 md:w-full md:gap-2 md:px-3.5"
 				>
 					<UserPlus size={18} />
 					<span className="hidden text-sm font-bold md:inline">초대 링크가 없어요</span>
-				</button>
+				</Button>
 			)}
 		</Card>
 	);

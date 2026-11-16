@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatDuration } from "@sirubot/utils/time";
 import { type Virtualizer } from "@tanstack/react-virtual";
-import { Clock, Edit, ExternalLink, GripVertical, Heart, MoreHorizontal, Music, Plus, Settings, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Clock, Edit, ExternalLink, GripVertical, Heart, MoreHorizontal, Music, Plus, Settings, Trash2 } from "lucide-react";
 
 import { ErrorPanel } from "@/components/error-panel";
 import { EmptyState } from "@/components/primitives/empty-state";
@@ -40,6 +40,8 @@ interface PlaylistDetailProps {
 	onOpenAddTrack: () => void;
 	onRemoveTrack: (position: number, title: string) => void;
 	draggedIdx: number | null;
+	/** 순서 변경 요청 진행 중 — 추가 이동은 잠시 막아요 */
+	reordering?: boolean;
 	onDragStart: (e: React.DragEvent, idx: number) => void;
 	onDragOver: (e: React.DragEvent) => void;
 	onDrop: (e: React.DragEvent, idx: number) => void;
@@ -61,6 +63,7 @@ export function PlaylistDetail({
 	onOpenAddTrack,
 	onRemoveTrack,
 	draggedIdx,
+	reordering = false,
 	onDragStart,
 	onDragOver,
 	onDrop,
@@ -76,6 +79,7 @@ export function PlaylistDetail({
 	const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const touchStartRef = useRef<{ clientY: number; clientX: number } | null>(null);
 	const touchActiveRef = useRef(false);
+	const headerRef = useRef<HTMLDivElement>(null);
 
 	const clearTouchTimer = () => {
 		if (touchTimerRef.current) {
@@ -103,7 +107,20 @@ export function PlaylistDetail({
 		return () => clearTouchTimer();
 	}, []);
 
+	// React의 touchmove는 passive라 preventDefault가 무시돼요 — 드래그 중에만 non-passive 네이티브 리스너로 스크롤을 막아요.
+	const hasTracks = tracks.length > 0;
+	useEffect(() => {
+		const el = parentRef.current;
+		if (!el) return;
+		const block = (e: TouchEvent) => {
+			if (touchActiveRef.current && e.cancelable) e.preventDefault();
+		};
+		el.addEventListener("touchmove", block, { passive: false });
+		return () => el.removeEventListener("touchmove", block);
+	}, [parentRef, hasTracks]);
+
 	const moveTrack = (from: number, to: number) => {
+		if (reordering) return;
 		if (to < 0 || to >= tracks.length || from === to) return;
 		onDragStart(dragEventShim, from);
 		setPendingMove({ from, to });
@@ -140,11 +157,12 @@ export function PlaylistDetail({
 			}
 			return;
 		}
-		e.preventDefault();
 		const parent = parentRef.current;
 		if (!parent || touchDragIdx === null) return;
 		const rect = parent.getBoundingClientRect();
-		const offset = touch.clientY - rect.top + parent.scrollTop;
+		// 데스크톱 폭에서는 sticky 헤더가 목록 위를 차지해요
+		const headerHeight = headerRef.current?.offsetHeight ?? 0;
+		const offset = touch.clientY - rect.top + parent.scrollTop - headerHeight;
 		const item = rowVirtualizer.getVirtualItemForOffset(offset);
 		const clamped = item
 			? Math.max(0, Math.min(tracks.length - 1, item.index))
@@ -160,6 +178,16 @@ export function PlaylistDetail({
 			// 이동 없이 끝나도 onDragStart가 세운 부모의 draggedIdx를 해제해야 행이 흐려진 채 남지 않아요.
 			onDragEnd();
 		}
+		clearTouchDrag();
+	};
+
+	/** 스크롤 등으로 브라우저가 터치를 가져가면(cancel) 이동 없이 취소해요 */
+	const handleTouchCancel = () => {
+		if (!touchActiveRef.current) {
+			clearTouchTimer();
+			return;
+		}
+		onDragEnd();
 		clearTouchDrag();
 	};
 
@@ -197,7 +225,8 @@ export function PlaylistDetail({
 		);
 	}
 
-	if (detailError) {
+	// 이미 불러온 곡 목록이 있으면 재검증 실패로 통째로 가리지 않아요
+	if (detailError && !activePlaylist) {
 		return (
 			<ErrorPanel
 				message="플레이리스트 정보를 불러오지 못했어요."
@@ -214,16 +243,16 @@ export function PlaylistDetail({
 		<div className="flex flex-col gap-6 h-full">
 			<Card padding="md">
 				<div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-					<div className="flex-1">
+					<div className="min-w-0 flex-1">
 						<div className="flex items-center gap-3">
-							<h1 className="text-xl lg:text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
+							<h2 className="min-w-0 break-words text-xl lg:text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
 								{activePlaylist.name === FAVORITES_PLAYLIST_NAME ? (
 									<Heart size={24} className="text-primary-text shrink-0" />
 								) : (
 									<Music size={24} className="text-primary-text shrink-0" />
 								)}
 								{activePlaylist.name}
-							</h1>
+							</h2>
 						</div>
 						<div className="mt-1.5 space-y-1">
 							<div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-medium text-muted-foreground">
@@ -239,7 +268,7 @@ export function PlaylistDetail({
 								<div className="w-1 h-1 rounded-full bg-border" aria-hidden />
 								<span className="flex items-center gap-1">
 									<GripVertical size={13} className="text-muted-foreground" aria-hidden />
-									드래그하거나 길게 눌러 순서 변경
+									드래그하거나 길게 눌러 순서 변경 (키보드는 Alt+↑/↓)
 								</span>
 							</div>
 							{activePlaylist.description && (
@@ -295,7 +324,7 @@ export function PlaylistDetail({
 					/>
 				) : (
 					<div ref={parentRef} className="overflow-auto flex-1 w-full">
-						<div className="hidden md:flex items-center px-4 py-3 border-b border-border-subtle bg-card text-xs font-black text-muted-foreground sticky top-0 z-10">
+						<div ref={headerRef} className="hidden md:flex items-center px-4 py-3 border-b border-border-subtle bg-card text-xs font-black text-muted-foreground sticky top-0 z-10">
 							<div className="w-12 text-center shrink-0">#</div>
 							<div className="flex-1 min-w-[240px]">곡 정보</div>
 							<div className="w-32 shrink-0 px-2">아티스트</div>
@@ -304,6 +333,8 @@ export function PlaylistDetail({
 						</div>
 
 						<div
+							role="list"
+							aria-label="플레이리스트 곡 목록"
 							className="w-full relative"
 							style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
 						>
@@ -321,6 +352,7 @@ export function PlaylistDetail({
 											transform: `translateY(${virtualRow.start}px)`,
 										}}
 										draggable
+										aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
 										onDragStart={(e) => onDragStart(e, idx)}
 										onDragOver={(e) => {
 											setDragOverIdx(idx);
@@ -339,11 +371,11 @@ export function PlaylistDetail({
 										onTouchStart={handleTouchStart(idx)}
 										onTouchMove={handleTouchMove}
 										onTouchEnd={handleTouchEnd}
-										onTouchCancel={handleTouchEnd}
+										onTouchCancel={handleTouchCancel}
 										tabIndex={0}
 										role="listitem"
 									>
-										<div className="flex w-5 md:w-10 shrink-0 items-center justify-center">
+										<div className="flex w-5 md:w-10 shrink-0 select-none items-center justify-center">
 											<GripVertical
 												size={16}
 												className="text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
@@ -358,7 +390,7 @@ export function PlaylistDetail({
 											<div className="relative w-9 h-9 md:w-10 md:h-10 shrink-0 rounded-card overflow-hidden bg-muted/30 border border-border/40">
 												{track.thumbnail ? (
 													// eslint-disable-next-line @next/next/no-img-element
-													<img src={track.thumbnail} alt={track.title} className="w-full h-full object-cover" />
+													<img src={track.thumbnail} alt="" className="w-full h-full object-cover" />
 												) : (
 													<div className="w-full h-full flex items-center justify-center">
 														<Music size={16} className="text-muted-foreground" />
@@ -417,6 +449,14 @@ export function PlaylistDetail({
 																{track.source === "youtube" ? "유튜브에서 열기" : "원본 링크 열기"}
 															</DropdownMenuItem>
 														)}
+														<DropdownMenuItem disabled={reordering || idx === 0} onClick={() => moveTrack(idx, idx - 1)}>
+															<ArrowUp size={14} />
+															위로 이동
+														</DropdownMenuItem>
+														<DropdownMenuItem disabled={reordering || idx === tracks.length - 1} onClick={() => moveTrack(idx, idx + 1)}>
+															<ArrowDown size={14} />
+															아래로 이동
+														</DropdownMenuItem>
 														<DropdownMenuItem variant="destructive" onClick={() => onRemoveTrack(track.position, track.title)}>
 															<Trash2 size={14} />
 															트랙 삭제

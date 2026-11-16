@@ -10,7 +10,7 @@ import { ErrorPanel } from "@/components/error-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import { motionBase } from "@/components/motion/durations";
 import { EmptyState } from "@/components/primitives/empty-state";
-import { GuildCard } from "@/components/servers/guild-card";
+import { GuildCard, SERVERS_GRID_CLASS, SOFT_PRIMARY_LINK_CLASS } from "@/components/servers/guild-card";
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
 import { ServersGridSkeleton, ServersPageSkeleton } from "@/components/servers/servers-page-skeleton";
 import { buttonVariants } from "@/components/ui/button";
@@ -53,7 +53,7 @@ export default function ServersPage() {
                     )}
                     <div className="relative z-10">
                         <p className="text-sm font-black text-foreground">{session?.user?.name}</p>
-                        <p className="text-xs font-medium text-muted-foreground">내 계정이 아닌가요? <button onClick={() => signOut()} className="text-primary-text hover:underline cursor-pointer">로그아웃</button></p>
+                        <p className="text-xs font-medium text-muted-foreground">내 계정이 아닌가요? <button type="button" onClick={() => signOut()} className="text-primary-text hover:underline">로그아웃</button></p>
                     </div>
                 </div>
             </PageHeader>
@@ -77,7 +77,7 @@ export default function ServersPage() {
                                 href={buildInviteUrl({})}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className={cn(buttonVariants(), "h-10 bg-primary/10 px-4 font-bold text-primary-text hover:bg-primary-control hover:text-primary-control-text")}
+                                className={cn(buttonVariants(), "h-10 px-4 font-bold", SOFT_PRIMARY_LINK_CLASS)}
                             >
                                 시루봇 초대하기
                             </a>
@@ -86,7 +86,7 @@ export default function ServersPage() {
                 </section>
             ) : (
                 <section className="space-y-12">
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4">
+                    <div className={SERVERS_GRID_CLASS}>
                         {guilds.map((guild, index) => (
                             <m.div
                                 key={guild.id}

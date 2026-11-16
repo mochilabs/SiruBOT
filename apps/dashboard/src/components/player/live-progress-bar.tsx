@@ -63,7 +63,14 @@ export function ProgressBar({
   }
 
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+    <div
+      role="progressbar"
+      aria-label="재생 진행률"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(positionRatio(state, receivedAt) * 100)}
+      className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+    >
       <div
         ref={barRef}
         className="h-full rounded-full bg-primary-control"

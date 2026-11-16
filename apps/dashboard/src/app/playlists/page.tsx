@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useRef } from "react";
 
 import Container from "@/components/container";
 import { ErrorPanel } from "@/components/error-panel";
@@ -53,6 +53,7 @@ function PlaylistsContent() {
 		searchLoading,
 		searchError,
 		draggedIdx,
+		reordering,
 		handleDragStart,
 		handleDragOver,
 		handleDrop,
@@ -68,12 +69,12 @@ function PlaylistsContent() {
 		confirmRemoveTrack,
 	} = usePlaylists();
 
-	if (status === "loading" || listLoading) {
-		return <PlaylistsLoading />;
-	}
+	// 닫히는 애니메이션 동안에도 곡 제목이 비지 않게 마지막 대상을 기억해요
+	const lastRemoveTitle = useRef("");
+	if (removeTrackTarget) lastRemoveTitle.current = removeTrackTarget.title;
 
-	if (status === "unauthenticated") {
-		return null;
+	if (status === "loading" || status === "unauthenticated" || listLoading) {
+		return <PlaylistsLoading />;
 	}
 
 	if (listError) {
@@ -126,6 +127,7 @@ function PlaylistsContent() {
 						onOpenAddTrack={openAddTrackModal}
 						onRemoveTrack={handleRemoveTrack}
 						draggedIdx={draggedIdx}
+						reordering={reordering}
 						onDragStart={handleDragStart}
 						onDragOver={handleDragOver}
 						onDrop={handleDrop}
@@ -190,7 +192,7 @@ function PlaylistsContent() {
 				onConfirm={confirmRemoveTrack}
 				loading={loadingSubmit}
 			>
-				정말 <strong>{removeTrackTarget?.title ?? ""}</strong> 곡을 삭제할까요?<br />
+				정말 <strong>{removeTrackTarget?.title ?? lastRemoveTitle.current}</strong> 곡을 삭제할까요?<br />
 				이 플레이리스트에서만 제거되며 곡 자체는 남아있어요.
 			</ConfirmDeleteModal>
 		</Container>

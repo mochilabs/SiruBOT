@@ -77,6 +77,12 @@ function LivePlayerSession({ guildId }: { guildId: string }) {
   const [mode, setMode] = useState<"stream" | "polling">("stream");
   const [liveData, setLiveData] = useState<LivePayload | null>(null);
   const [connected, setConnected] = useState(false);
+  /** 첫 SSE 이벤트 전 잠깐은 경고 배너 없이 기다려요 (정상 연결에서 배너가 깜빡이지 않게) */
+  const [connectGraceOver, setConnectGraceOver] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setConnectGraceOver(true), 4000);
+    return () => clearTimeout(timer);
+  }, []);
   /** 마지막 상태 수신 시각 — 스냅샷 이후 경과를 보간하는 기준 */
   const [receivedAt, setReceivedAt] = useState<number>(Date.now());
 
@@ -160,7 +166,7 @@ function LivePlayerSession({ guildId }: { guildId: string }) {
 
   return (
     <LivePanel>
-      {(data.player.stale || (mode === "stream" && !connected)) && (
+      {(data.player.stale || (mode === "stream" && !connected && (connectGraceOver || liveData !== null))) && (
         <p role="status" className="rounded-control bg-warning/5 px-4 py-3 text-sm text-warning">
           마지막으로 확인한 재생 정보예요. 연결을 확인하는 동안 재생 제어는 사용할 수 없어요.
         </p>

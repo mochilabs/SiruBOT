@@ -60,11 +60,17 @@ export function PlaylistFormModal({
 	const nameId = `${copy.idPrefix}-name`;
 	const descId = `${copy.idPrefix}-desc`;
 	return (
-		<Dialog open={open} onOpenChange={(isOpen: boolean) => { if (!isOpen) onClose(); }}>
+		<Dialog open={open} onOpenChange={(isOpen: boolean) => { if (!isOpen && !loading) onClose(); }}>
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>{copy.title}</DialogTitle>
 				</DialogHeader>
+				<form
+					onSubmit={(e) => {
+						e.preventDefault();
+						if (!loading) onSubmit();
+					}}
+				>
 				<div className="space-y-4 py-2">
 					<Field htmlFor={nameId} label="플레이리스트 이름">
 						<Input
@@ -88,13 +94,14 @@ export function PlaylistFormModal({
 					</Field>
 				</div>
 				<DialogFooter>
-					<Button variant="secondary" size="sm" onClick={onClose}>
+					<Button variant="secondary" size="sm" disabled={loading} onClick={onClose}>
 						취소
 					</Button>
-					<Button variant="primary" size="sm" loading={loading} onClick={onSubmit}>
+					<Button type="submit" variant="primary" size="sm" loading={loading}>
 						{copy.submitLabel}
 					</Button>
 				</DialogFooter>
+				</form>
 			</DialogContent>
 		</Dialog>
 	);

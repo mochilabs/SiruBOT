@@ -44,6 +44,8 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
 
   const [nickname, setNickname] = useState("");
   const [nicknameTouched, setNicknameTouched] = useState(false);
+  // 저장 직후 재조회가 오기 전까지 입력이 옛 값으로 되돌아가지 않게 막는 기준값이에요.
+  const [appliedNickname, setAppliedNickname] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarReset, setAvatarReset] = useState(false);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
@@ -59,8 +61,14 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
 
   // 서버 값이 도착하면 입력값을 채워요 — 사용자가 건드리기 전까지만 동기화해요.
   useEffect(() => {
-    if (profile && !nicknameTouched) setNickname(profile.nickname ?? "");
-  }, [profile, nicknameTouched]);
+    if (!profile || nicknameTouched) return;
+    if (appliedNickname !== null) {
+      // 재조회로 저장한 값이 도착하면 기준값을 풀고 서버 값을 따라가요.
+      if ((profile.nickname ?? "") === appliedNickname) setAppliedNickname(null);
+      return;
+    }
+    setNickname(profile.nickname ?? "");
+  }, [profile, nicknameTouched, appliedNickname]);
 
   // 파일 미리보기 — 교체/해제 시 이전 URL을 즉시 회수해요.
   useEffect(() => {
@@ -140,27 +148,34 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
     [cropSource],
   );
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (): Promise<boolean> => {
     const form = new FormData();
     if (avatarFile) form.append("avatar", avatarFile);
     else if (avatarReset) form.append("avatarReset", "1");
     if (bannerFile) form.append("banner", bannerFile);
     else if (bannerReset) form.append("bannerReset", "1");
-    if (nicknameTouched && nickname.trim() !== (profile?.nickname ?? "")) {
+    if (nicknameTouched && nickname.trim() !== (appliedNickname ?? profile?.nickname ?? "")) {
       form.append("nickname", nickname.trim());
     }
-    if ([...form.keys()].length === 0) return;
+    if ([...form.keys()].length === 0) return true;
 
     try {
       await save(form);
+      if (form.has("nickname")) {
+        const savedNickname = nickname.trim();
+        setNickname(savedNickname);
+        setAppliedNickname(savedNickname);
+      }
       setNicknameTouched(false);
       setAvatarFile(null);
       setAvatarReset(false);
       setBannerFile(null);
       setBannerReset(false);
       toast.success("봇 프로필을 저장했어요.", "봇이 Discord에 곧 적용해요.");
+      return true;
     } catch (err) {
       notifyApiError(err, "저장에 실패했어요.");
+      return false;
     }
   }, [
     avatarFile,
@@ -169,6 +184,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
     bannerReset,
     nickname,
     nicknameTouched,
+    appliedNickname,
     profile?.nickname,
     save,
     toast,
@@ -197,7 +213,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
   }
 
   const nicknameDisabled = !profile.canChangeNickname;
-  const originalNickname = profile.nickname ?? "";
+  const originalNickname = appliedNickname ?? profile.nickname ?? "";
   const nicknameDirty = nicknameTouched && nickname.trim() !== originalNickname;
   const dirty =
     nicknameDirty ||
@@ -340,8 +356,11 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
               : "빈 칸으로 저장하면 봇 사용자명으로 표시돼요."
           }
         >
+          {({ id, describedBy }) => (
           <div className="space-y-2">
             <Input
+              id={id}
+              aria-describedby={describedBy}
               value={nickname}
               onChange={(event) => handleNicknameChange(event.target.value)}
               maxLength={MAX_NICKNAME_LENGTH}
@@ -366,13 +385,14 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
               기본 이름 사용
             </Button>
           </div>
+          )}
         </Field>
           </SettingsSection>
 
           <SettingsSection title="배너" summary={bannerPreview ? "설정됨" : "없음"}>
       <Field label="배너 이미지" description={bannerCaption}>
         <div className="space-y-2">
-          <div className="relative h-[150px] max-w-lg overflow-hidden rounded-card bg-surface-2">
+          <div className="relative aspect-[16/5] w-full max-w-lg overflow-hidden rounded-card bg-surface-2">
             {bannerPreview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img

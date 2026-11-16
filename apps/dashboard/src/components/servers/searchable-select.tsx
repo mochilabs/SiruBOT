@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,10 @@ interface BaseProps {
 	searchPlaceholder?: string;
 	disabled?: boolean;
 	className?: string;
+	/** 트리거 id — `Field htmlFor`나 렌더 프롭 id와 연결해 라벨이 컨트롤 이름이 되게 해요 */
+	id?: string;
+	"aria-label"?: string;
+	"aria-describedby"?: string;
 }
 
 interface SingleProps extends BaseProps {
@@ -133,6 +138,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
 	const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues]);
 
 	return (
+		<div className="space-y-1.5">
 		<SelectPrimitive.Root
 			value={props.value as string | string[] | undefined}
 			multiple={isMultiple}
@@ -143,6 +149,9 @@ export function SearchableSelect(props: SearchableSelectProps) {
 			modal={false}
 		>
 			<SelectPrimitive.Trigger
+				id={props.id}
+				aria-label={props["aria-label"]}
+				aria-describedby={props["aria-describedby"]}
 				aria-controls={listboxId}
 				className={cn(
 					"flex h-auto min-h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-control border-0 bg-input py-1.5 pl-3 pr-2.5 text-left text-sm font-medium text-foreground shadow-control-boundary transition-colors duration-fast outline-none select-none hover:bg-surface-3",
@@ -151,44 +160,9 @@ export function SearchableSelect(props: SearchableSelectProps) {
 				)}
 			>
 				{isMultiple ? (
-					selectedOptions.length > 0 ? (
-						<span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 py-0.5">
-							{selectedOptions.map((option) => (
-								<span
-									key={option.value}
-									className="inline-flex max-w-full items-center gap-1 rounded-full border border-primary-control/20 bg-primary-control/10 px-2.5 py-0.5 text-xs font-bold text-primary-text"
-								>
-									{option.icon}
-									<span className="max-w-[12rem] truncate">{option.label}</span>
-									<span
-										role="button"
-										tabIndex={disabled ? -1 : 0}
-										onPointerDown={(event) => {
-											event.stopPropagation();
-										}}
-										onClick={(event) => {
-											event.stopPropagation();
-											event.preventDefault();
-											removeSelectedValue(option.value);
-										}}
-										onKeyDown={(event) => {
-											if (event.key === "Enter" || event.key === " ") {
-												event.stopPropagation();
-												event.preventDefault();
-												removeSelectedValue(option.value);
-											}
-										}}
-										className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full transition-colors duration-fast hover:bg-primary-control/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring after:absolute after:inset-y-[min(0px,calc((100%-44px)/2))] after:inset-x-[min(0px,calc((100%-24px)/2))]"
-										aria-label={`${option.label} 제거`}
-									>
-										<X className="h-2.5 w-2.5" aria-hidden />
-									</span>
-								</span>
-							))}
-						</span>
-					) : (
-						<span className="font-normal text-muted-foreground">{placeholder}</span>
-					)
+					<span className={cn("min-w-0 flex-1 truncate", selectedOptions.length > 0 ? "text-foreground" : "font-normal text-muted-foreground")}>
+						{selectedOptions.length > 0 ? `${selectedOptions.length}개 선택됨` : placeholder}
+					</span>
 				) : (
 					<span className={cn("min-w-0 flex-1 truncate", displayLabel ? "text-foreground" : "font-normal text-muted-foreground")}>
 						{displayLabel ?? placeholder}
@@ -216,14 +190,14 @@ export function SearchableSelect(props: SearchableSelectProps) {
 										aria-label="검색"
 									/>
 									{search ? (
-										<button
-											type="button"
+										<Button
+											variant="icon"
+											size="icon-xs"
+											icon={<X className="size-3.5" aria-hidden />}
 											onClick={() => setSearch("")}
 											aria-label="검색어 지우기"
-											className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-										>
-											<X className="size-3.5" />
-										</button>
+											className="absolute right-1 top-1/2 -translate-y-1/2"
+										/>
 									) : null}
 								</div>
 							</div>
@@ -237,7 +211,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
 							{grouped.map(([groupName, items]) => (
 								<SelectPrimitive.Group key={groupName} className="space-y-0.5 py-0.5">
 									{groupName && (
-										<SelectPrimitive.GroupLabel className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
+										<SelectPrimitive.GroupLabel className="px-2 py-1 text-2xs font-medium text-muted-foreground">
 											{groupName}
 										</SelectPrimitive.GroupLabel>
 									)}
@@ -269,5 +243,27 @@ export function SearchableSelect(props: SearchableSelectProps) {
 				</SelectPrimitive.Positioner>
 			</SelectPrimitive.Portal>
 		</SelectPrimitive.Root>
+		{isMultiple && selectedOptions.length > 0 && (
+			<ul className="flex flex-wrap items-center gap-1.5" aria-label="선택한 항목">
+				{selectedOptions.map((option) => (
+					<li
+						key={option.value}
+						className="inline-flex max-w-full items-center gap-1 rounded-full border border-primary-control/20 bg-primary-control/10 py-0.5 pl-2.5 pr-1 text-xs font-bold text-primary-text"
+					>
+						{option.icon}
+						<span className="max-w-[12rem] truncate">{option.label}</span>
+						<Button
+							variant="icon"
+							size="icon-xs"
+							icon={<X className="size-3" aria-hidden />}
+							aria-label={`${option.label} 제거`}
+							disabled={disabled}
+							onClick={() => removeSelectedValue(option.value)}
+						/>
+					</li>
+				))}
+			</ul>
+		)}
+		</div>
 	);
 }

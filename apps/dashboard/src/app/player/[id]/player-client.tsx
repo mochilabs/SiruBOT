@@ -57,45 +57,54 @@ function TrackRow({
 	track,
 	meta,
 	onPlay,
+	playingUrl = null,
 }: {
 	index: number;
 	track: PlayerTrack;
 	meta: React.ReactNode;
 	onPlay?: (track: PlayerTrack) => void;
+	/** 재생 요청 중인 곡 url — 이 행은 로딩, 다른 행은 잠시 비활성이에요 */
+	playingUrl?: string | null;
 }) {
+	const safeUrl = /^https?:\/\//i.test(track.url) ? track.url : null;
 	return (
 		<div className="flex min-w-0 items-center gap-3 rounded-card bg-surface-2 px-3 py-2.5">
 			<span className="w-4 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">{index + 1}</span>
 			{track.thumbnail ? (
-				<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md">
+				<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-control">
 					<Image src={track.thumbnail} alt="" fill className="object-cover" sizes="40px" unoptimized />
 				</div>
 			) : (
-				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-1 text-muted-foreground">
+				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-surface-1 text-muted-foreground">
 					<Music2 size={14} aria-hidden />
 				</div>
 			)}
 			<div className="min-w-0 flex-1">
-				<a
-					href={track.url}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="line-clamp-1 text-sm font-semibold text-foreground hover:text-primary-text transition-colors duration-fast"
-				>
-					{track.title}
-				</a>
+				{safeUrl ? (
+					<a
+						href={safeUrl}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="line-clamp-1 rounded-sm text-sm font-semibold text-foreground hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-fast"
+					>
+						{track.title}
+					</a>
+				) : (
+					<p className="line-clamp-1 text-sm font-semibold text-foreground">{track.title}</p>
+				)}
 				<p className="truncate text-xs text-muted-foreground">{track.artist}</p>
 			</div>
 			<div className="shrink-0 text-xs tabular-nums text-muted-foreground">{meta}</div>
 			{onPlay && (
-				<button
-					type="button"
+				<Button
+					variant="icon"
+					size="icon-sm"
+					icon={<Play size={13} aria-hidden />}
 					onClick={() => onPlay(track)}
-					className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-surface-2 text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-control"
+					loading={playingUrl === track.url}
+					disabled={playingUrl !== null}
 					aria-label={`${track.title} 다시 재생`}
-				>
-					<Play size={13} aria-hidden />
-				</button>
+				/>
 			)}
 		</div>
 	);
@@ -116,7 +125,15 @@ function StatsSkeleton() {
 	);
 }
 
-export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (track: PlayerTrack) => void }) {
+export function PlayerClient({
+	guildId,
+	onPlay,
+	playingUrl = null,
+}: {
+	guildId: string;
+	onPlay?: (track: PlayerTrack) => void;
+	playingUrl?: string | null;
+}) {
 	const [tab, setTab] = useState<"top" | "recent">("top");
 	const { data, error, isLoading, mutate } = useGuildResource<PlayerStats>(guildId, "/player", { fetcher: playerStatsFetcher });
 
@@ -190,6 +207,7 @@ export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (t
 									track={track}
 									meta={`${track.playCount.toLocaleString()}회 · ${formatDuration(track.duration)}`}
 									onPlay={onPlay}
+									playingUrl={playingUrl}
 								/>
 							))}
 						</div>
@@ -210,6 +228,7 @@ export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (t
 									</span>
 								}
 								onPlay={onPlay}
+									playingUrl={playingUrl}
 							/>
 						))}
 					</div>

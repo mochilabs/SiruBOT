@@ -96,7 +96,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 
   return (
     <SettingsPanel
-      panel={{ ...panel, saving: saving || setupLoading }}
+      panel={panel}
       icon={<Volume2 className="h-5 w-5" />}
       title="임시 음성 채널 (JTC)"
       description="마커 채널에 들어가면 방장 이름으로 개인 음성방을 만들어 줘요."
@@ -108,6 +108,9 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
     >
       {(form) => {
         const currentMarkerName = channels?.find((channel) => channel.id === form.jtcMarkerChannelId)?.name;
+        // 마커 채널 준비 중에는 저장 바와 무관하게 나머지 컨트롤도 잠가요
+        const busy = saving || setupLoading;
+        const draftPending = markerNameDraft !== null && markerNameDraft.trim() !== (currentMarkerName ?? "");
         const markerName = currentMarkerName ?? form.jtcMarkerChannelId;
         const markerNameInput = markerNameDraft ?? currentMarkerName ?? DEFAULT_MARKER_NAME;
         const categoryName = channels?.find((channel) => channel.id === form.jtcCategoryId)?.name;
@@ -128,44 +131,48 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
                   <Switch
                     checked={form.jtcEnabled}
                     onChange={(checked: boolean) => patch({ jtcEnabled: checked })}
-                    disabled={saving || !form.jtcMarkerChannelId}
+                    disabled={busy || !form.jtcMarkerChannelId}
                     aria-label="임시 음성 채널 사용"
                   />
                 }
               />
               <Field
+                htmlFor="jtc-category"
                 label="생성 위치 (카테고리)"
                 description="선택하면 해당 카테고리에 마커 채널이 만들어지거나 옮겨져요. (채널 관리 권한이 필요해요)"
               >
                 <ChannelSelect
+                  id="jtc-category"
                   channels={channels}
                   types={CHANNEL_TYPE_GROUP.category}
                   groupByCategory={false}
                   value={form.jtcCategoryId ?? ""}
-                  onChange={(value: string) => void runJtcSetup(value, markerNameInput)}
+                  onChange={(value: string) => void runJtcSetup(value, markerNameDraft ?? undefined)}
                   placeholder="카테고리 선택"
-                  disabled={saving || setupLoading}
+                  disabled={busy}
                 />
               </Field>
               {form.jtcCategoryId && (
                 <Field
+                  htmlFor="jtc-marker-name"
                   label="마커 채널 이름"
-                  description="멤버가 들어와서 임시방을 만드는 기준 음성 채널의 이름이에요."
+                  description={draftPending ? "아직 적용되지 않았어요. '이름 적용'을 눌러야 채널 이름이 바뀌어요." : "멤버가 들어와서 임시방을 만드는 기준 음성 채널의 이름이에요."}
                 >
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Input
+                      id="jtc-marker-name"
                       value={markerNameInput}
                       onChange={(e) => setMarkerNameDraft(e.target.value)}
                       maxLength={100}
                       placeholder={DEFAULT_MARKER_NAME}
-                      disabled={saving || setupLoading}
+                      disabled={busy}
                     />
                     <Button
                       type="button"
                       variant="secondary"
                       className="shrink-0"
                       loading={setupLoading}
-                      disabled={saving || setupLoading || !markerNameInput.trim() || markerNameInput.trim() === currentMarkerName}
+                      disabled={busy || !markerNameInput.trim() || markerNameInput.trim() === currentMarkerName}
                       onClick={() => void runJtcSetup(form.jtcCategoryId!, markerNameInput)}
                     >
                       이름 적용
@@ -190,7 +197,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
                   type="text"
                   value={form.jtcTemplate}
                   maxLength={JTC_TEMPLATE_MAX_LENGTH}
-                  disabled={saving}
+                  disabled={busy}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ jtcTemplate: e.target.value })}
                   placeholder="{user}의 방"
                 />
@@ -207,7 +214,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
                   max={JTC_USER_LIMIT_RANGE.max}
                   label="임시방 인원 제한"
                   formatValue={(v) => (v === 0 ? "제한 없음" : `${v}명`)}
-                  disabled={saving}
+                  disabled={busy}
                 />
               </Field>
             </SettingsSection>

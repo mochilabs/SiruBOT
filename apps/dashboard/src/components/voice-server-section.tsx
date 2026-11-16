@@ -36,7 +36,7 @@ export function VoiceServerSection() {
 						{sectionHeader}
 					</div>
 					{isLoading ? (
-						<div className="grid gap-3 sm:grid-cols-1">
+						<div className="grid gap-3">
 							<SkeletonCard lines={2} avatar={false} />
 						</div>
 					) : (
@@ -57,7 +57,7 @@ export function VoiceServerSection() {
 					</Badge>
 				</div>
 
-				<div className="grid gap-3 sm:grid-cols-1">
+				<div className="grid gap-3">
 					<div className="flex min-w-0 items-center gap-3 rounded-control bg-surface-2 p-4">
 						<Activity size={17} className="shrink-0 text-muted-foreground" aria-hidden />
 						<div className="min-w-0">

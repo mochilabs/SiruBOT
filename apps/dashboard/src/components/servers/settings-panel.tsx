@@ -18,13 +18,15 @@ export function useSettingsPanel<T extends Partial<GuildSettings>>(guildId: stri
 	const state = useSettingsForm(guildId, map);
 	const { submit } = state;
 
-	const handleSave = useCallback(async () => {
+	const handleSave = useCallback(async (): Promise<boolean> => {
 		try {
 			await submit();
 			if (savedHint === undefined) notifySaved(savedMessage);
 			else notifySaved(savedMessage, savedHint);
+			return true;
 		} catch (err) {
 			notifyApiError(err, "저장에 실패했어요.");
+			return false;
 		}
 	}, [submit, savedMessage, savedHint]);
 
@@ -38,7 +40,7 @@ export interface SettingsPanelState<T> {
 	error: ApiError | null | undefined;
 	dirty: boolean;
 	saving: boolean;
-	handleSave: () => void | Promise<void>;
+	handleSave: () => boolean | void | Promise<boolean | void>;
 	reload: () => void;
 }
 

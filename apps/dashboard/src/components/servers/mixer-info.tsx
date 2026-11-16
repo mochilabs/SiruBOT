@@ -6,6 +6,7 @@ import { Info } from "lucide-react";
 
 import { motionFast } from "@/components/motion/durations";
 import { Portal, usePopoverCoords } from "@/components/overlay/portal";
+import { Button } from "@/components/ui/button";
 
 /**
  * 믹서 설정 설명 팝오버 — 갭리스/크로스페이드가 무엇을 하는지 파형 그래프 애니메이션으로 보여줘요.
@@ -146,16 +147,15 @@ export function MixerInfoTip({ kind }: { kind: MixerInfoKind }) {
 
 	return (
 		<>
-			<button
+			<Button
 				ref={triggerRef}
-				type="button"
+				variant="icon"
+				size="icon-xs"
+				icon={<Info size={14} aria-hidden />}
 				onClick={() => setOpen((v) => !v)}
 				aria-expanded={open}
 				aria-label={open ? `${copy.title} 설명 닫기` : copy.buttonLabel}
-				className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-			>
-				<Info size={14} aria-hidden />
-			</button>
+			/>
 
 			<AnimatePresence>
 				{open && coords.top > 0 && (

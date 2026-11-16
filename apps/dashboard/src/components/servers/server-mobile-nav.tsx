@@ -6,7 +6,7 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-import type { ServerFeatureItem } from "./server-feature-sidebar";
+import { type ServerFeatureItem, ServerNavGroupLabel } from "./server-feature-sidebar";
 
 interface ServerMobileNavProps {
 	items: readonly ServerFeatureItem[];
@@ -50,7 +50,7 @@ export function ServerMobileNav({ items, active, onSelect, groupLabels }: Server
 						const groupTitle = item.group && item.group !== items[idx - 1]?.group ? groupLabels[item.group] : undefined;
 						return (
 							<div key={item.key}>
-								{groupTitle && <p className={cn("px-3.5 pb-1 text-2xs font-bold tracking-wide text-muted-foreground", idx === 0 ? "pt-1" : "pt-3")}>{groupTitle}</p>}
+								{groupTitle && <ServerNavGroupLabel first={idx === 0}>{groupTitle}</ServerNavGroupLabel>}
 								<button
 									type="button"
 									aria-current={isActive ? "true" : undefined}

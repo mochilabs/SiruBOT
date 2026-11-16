@@ -23,6 +23,10 @@ interface RoleSelectBase {
 	searchPlaceholder?: string;
 	disabled?: boolean;
 	className?: string;
+	/** 트리거 id/라벨 — Field 라벨 연결용 */
+	id?: string;
+	"aria-label"?: string;
+	"aria-describedby"?: string;
 }
 
 interface RoleSelectSingle extends RoleSelectBase {
@@ -54,6 +58,9 @@ export function RoleSelect(props: RoleSelectProps) {
 		searchPlaceholder = "역할 검색…",
 		disabled = false,
 		className,
+		id,
+		"aria-label": ariaLabel,
+		"aria-describedby": ariaDescribedBy,
 	} = props;
 
 	const selectedIds = useMemo(() => {
@@ -78,6 +85,9 @@ export function RoleSelect(props: RoleSelectProps) {
 				searchPlaceholder={searchPlaceholder}
 				disabled={disabled || roles === null}
 				className={className}
+				id={id}
+				aria-label={ariaLabel}
+				aria-describedby={ariaDescribedBy}
 			/>
 		);
 	}
@@ -92,6 +102,9 @@ export function RoleSelect(props: RoleSelectProps) {
 			searchPlaceholder={searchPlaceholder}
 			disabled={disabled || roles === null}
 			className={className}
+			id={id}
+			aria-label={ariaLabel}
+			aria-describedby={ariaDescribedBy}
 		/>
 	);
 }

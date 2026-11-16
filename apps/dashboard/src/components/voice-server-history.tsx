@@ -32,7 +32,7 @@ interface SeriesConfig {
 }
 
 const PLAYER_SERIES: SeriesConfig[] = [
-	{ key: "players", name: "총 플레이어", color: "var(--brand)", format: (value) => value.toLocaleString() },
+	{ key: "players", name: "총 플레이어", color: "var(--primary-control)", format: (value) => value.toLocaleString() },
 	{ key: "playing", name: "재생 중", color: "var(--warning)", format: (value) => value.toLocaleString() },
 ];
 
@@ -94,19 +94,29 @@ function ChartCard({
 					))}
 				</div>
 			</div>
+			<div
+				role="img"
+				aria-label={`${title}: ${series
+					.map((item) => {
+						const last = points[points.length - 1];
+						const value = last ? Number(last[item.key]) : NaN;
+						return `${item.name} 최근 ${Number.isFinite(value) ? item.format(value) : "-"}`;
+					})
+					.join(", ")}`}
+			>
 			<ResponsiveContainer width="100%" height={220}>
 				<AreaChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
 					<CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
 					<XAxis
 						dataKey="time"
 						tickFormatter={timeLabel}
-						tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+						tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
 						tickLine={false}
 						axisLine={{ stroke: "var(--border-subtle)" }}
 						minTickGap={24}
 					/>
 					<YAxis
-						tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+						tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
 						tickFormatter={(value: number) => yTickFormat(value)}
 						tickLine={false}
 						axisLine={false}
@@ -129,6 +139,7 @@ function ChartCard({
 					))}
 				</AreaChart>
 			</ResponsiveContainer>
+			</div>
 		</Card>
 	);
 }

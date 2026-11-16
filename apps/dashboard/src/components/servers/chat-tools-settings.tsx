@@ -162,16 +162,15 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 				{form.embedFixMode !== "off" && (
 					<>
 						<Field label="복구할 사이트" description="링크를 고쳐서 다시 보낼 사이트를 골라요. 링크를 &lt; &gt;로 감싸면 건드리지 않아요.">
-							<div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+							<div className="flex flex-wrap gap-x-6 gap-y-3">
 								{SITE_TOGGLES.map((toggle) => (
-									<label key={toggle.value} className="flex items-center gap-2 text-sm font-medium text-foreground">
-										<Switch
-											checked={form.embedFixSites.includes(toggle.value)}
-											onChange={(checked: boolean) => toggleSite(toggle.value, checked)}
-											disabled={saving}
-										/>
-										{toggle.label}
-									</label>
+									<Switch
+										key={toggle.value}
+										label={toggle.label}
+										checked={form.embedFixSites.includes(toggle.value)}
+										onChange={(checked: boolean) => toggleSite(toggle.value, checked)}
+										disabled={saving}
+									/>
 								))}
 							</div>
 						</Field>
@@ -182,6 +181,7 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 							control={<Switch checked={form.embedFixSuppressOriginal} onChange={(checked: boolean) => patch({ embedFixSuppressOriginal: checked })} disabled={saving} aria-label="원본 임베드 숨기기" />}
 						/>
 						<Field
+							htmlFor="chat-tools-translate-lang"
 							label="임베드 자동 번역"
 							description="외국어 게시글을 선택한 언어로 번역해 함께 보여줘요."
 						>
@@ -193,7 +193,7 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 									}}
 									disabled={saving}
 								>
-									<SelectTrigger className="w-full">
+									<SelectTrigger id="chat-tools-translate-lang" className="w-full">
 										<SelectValue>
 											{(value: string) =>
 												TRANSLATE_LANG_OPTIONS.find((opt) => opt.value === value)?.label ?? "번역 안 함"

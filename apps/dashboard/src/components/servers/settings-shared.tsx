@@ -70,9 +70,9 @@ export function ChannelListError({ error, onRetry }: { error: ApiError; onRetry:
  * 설정 패널 로딩 중 — 라우트 loading.tsx와 같은 모양(PanelHeader 아이콘+제목, 2단 필드 그리드)이에요.
  * 스켈레톤이 실제 패널과 자리를 공유해야 탭 전환·최초 진입에서 이중 레이아웃 시프트가 없어요.
  */
-export function PanelLoading({ label }: { label: string }) {
+export function PanelLoading({ label, decorative = false }: { label: string; /** 이미 다른 곳에서 로딩을 알리는 자리(라우트 loading·dynamic fallback)라 스크린리더에 숨겨요 */ decorative?: boolean }) {
   return (
-    <Card padding="lg" role="status" aria-label={label}>
+    <Card padding="lg" {...(decorative ? { "aria-hidden": true } : { role: "status", "aria-label": label })}>
       <div className="space-y-6">
         <div className="flex items-start gap-3">
           <Skeleton className="h-10 w-10 shrink-0 rounded-control" />
@@ -260,7 +260,10 @@ export function PanelError({
   );
 }
 
-const dirtySaveBars = new Map<string, { dirty: boolean; active: boolean; save: () => Promise<void> }>();
+/** 저장 결과 — true/false는 성공/실패, undefined는 결과를 알리지 않는 패널(저장 뒤 dirty로 판단해요) */
+type SaveResult = boolean | void;
+
+const dirtySaveBars = new Map<string, { dirty: boolean; active: boolean; save: () => Promise<SaveResult> }>();
 
 const saveBarListeners = new Set<() => void>();
 
@@ -299,13 +302,15 @@ export function hasUnsavedActiveSettings(): boolean {
 }
 
 /**
- * 지금 보이는 패널의 저장하지 않은 변경을 모두 저장해요. 각 패널의 저장 핸들러는 실패를 토스트로만 알리고
- * 던지지 않으므로, 저장 뒤에도 변경이 남아 있는지로 성공 여부를 판단해요.
+ * 지금 보이는 패널의 저장하지 않은 변경을 모두 저장해요. 패널 저장 핸들러가 성공 여부(boolean)를 돌려주면
+ * 그대로 쓰고, 알리지 않는 패널만 저장 뒤에도 변경이 남아 있는지로 판단해요.
  */
 export async function saveActiveSettings(): Promise<boolean> {
   const entries = [...dirtySaveBars.values()].filter((entry) => entry.dirty && entry.active);
-  await Promise.all(entries.map((entry) => entry.save()));
-  // dirty 상태는 저장 완료 뒤 렌더·이펙트를 거쳐 갱신되므로 한 틱 기다려요
+  const results = await Promise.all(entries.map((entry) => entry.save()));
+  if (results.some((result) => result === false)) return false;
+  if (results.every((result) => result === true)) return true;
+  // 결과를 알리지 않는 패널은 dirty 상태가 렌더·이펙트를 거쳐 갱신되므로 한 틱 기다려요
   await new Promise((resolve) => setTimeout(resolve, 60));
   return !hasUnsavedActiveSettings();
 }
@@ -345,7 +350,7 @@ export function SaveBar({
 }: {
   dirty: boolean;
   saving: boolean;
-  onSave: () => void | Promise<void>;
+  onSave: () => SaveResult | Promise<SaveResult>;
   /** 변경 취소 — 넘기지 않으면 대시보드 셸이 등록한 폐기 동작(패널 새로 마운트)을 써요 */
   onDiscard?: () => void;
   children?: ReactNode;
@@ -395,11 +400,11 @@ export function SaveBar({
     };
   }, [visible]);
 
-  const handleSave = async () => {
-    if (saving || savingRef.current) return;
+  const handleSave = async (): Promise<SaveResult> => {
+    if (saving || savingRef.current) return false;
     savingRef.current = true;
     setSubmitting(true);
-    try { await onSave(); }
+    try { return await onSave(); }
     finally { savingRef.current = false; setSubmitting(false); }
   };
 
@@ -447,7 +452,7 @@ export function SaveBar({
               className="h-8 px-3.5"
               loading={saving || submitting}
               disabled={!dirty}
-              onClick={handleSave}
+              onClick={() => void handleSave()}
             >
               <span className="sm:hidden">저장</span>
               <span className="hidden sm:inline">{saving || submitting ? "저장 중…" : "변경 사항 저장"}</span>
