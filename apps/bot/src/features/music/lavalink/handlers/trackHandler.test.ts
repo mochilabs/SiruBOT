@@ -351,6 +351,19 @@ describe('startClientOwnedTrack race handling', () => {
 		expect(player.play).not.toHaveBeenCalled();
 	});
 
+	it('정지 명령 뒤에는 클라 전이로 곡을 시작하지 않는다', async () => {
+		const { handler } = makeHandler();
+		const player = transitionPlayer({ track: null, paused: false });
+		player.queue.current = track('late-enc', 'id-late');
+		player.transitionState.stopByCommand = true;
+
+		await handler.startClientOwnedTrack(player);
+
+		expect(player.node.fetchPlayer).not.toHaveBeenCalled();
+		expect(player.play).not.toHaveBeenCalled();
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
 	it('follows the server track when the client advance lost the race', async () => {
 		const { handler } = makeHandler();
 		const player = transitionPlayer({ track: { encoded: 'server-enc', info: { identifier: 'id-a' } }, paused: false });
@@ -820,6 +833,21 @@ describe('handleQueueEnd', () => {
 		expect(playerNotifierUpdate).toHaveBeenCalledWith(player);
 		expect(vi.getTimerCount()).toBe(1);
 	});
+
+	it('정지 명령으로 끝난 큐는 서버 응답이 남아 있어도 current를 되살리지 않는다', async () => {
+		vi.useFakeTimers();
+		const { handler } = makeTrackedHandler();
+		const { notifier } = stubPlaybackContainer();
+		const player = fullPlayer();
+		player.transitionState.stopByCommand = true;
+		player.node.fetchPlayer = vi.fn(async () => ({ track: { encoded: 'srv-enc', info: { identifier: 'id-srv' } }, paused: false }));
+
+		await handler.handleQueueEnd(player, track('old-enc', 'id-old'), { reason: 'stopped' });
+
+		expect(player.queue.current).toBeNull();
+		expect(notifier.deleteController).toHaveBeenCalledWith(player);
+		expect(vi.getTimerCount()).toBe(0);
+	});
 });
 
 describe('handlePlayerDestroy (타이머 정리)', () => {
@@ -911,6 +939,25 @@ describe('watchdog 복구 루프', () => {
 		expect(mixer.clearNext).toHaveBeenCalledWith(player);
 		expect(mixer.primeForPlay).toHaveBeenCalledWith(player);
 		expect(player.play).toHaveBeenCalledWith({ noReplace: true });
+	});
+
+	it('정지 명령 뒤에 남은 타이머는 곡을 되살리지 않고 종료로 확정한다', async () => {
+		const { handler } = makeTrackedHandler();
+		const { mixer, notifier } = stubPlaybackContainer();
+		const player = fullPlayer();
+		player.queue.current = track('c-enc', 'id-c');
+		player.transitionState.stopByCommand = true;
+		player.node.fetchPlayer = vi.fn(async () => ({ track: { encoded: 'c-enc', info: { identifier: 'id-c' } }, paused: false }));
+
+		handler.armWatchdog(player);
+		await vi.advanceTimersByTimeAsync(60_000);
+
+		expect(player.node.fetchPlayer).not.toHaveBeenCalled();
+		expect(mixer.primeForPlay).not.toHaveBeenCalled();
+		expect(player.play).not.toHaveBeenCalled();
+		expect(notifier.deleteController).toHaveBeenCalledWith(player);
+		expect(channelSend).not.toHaveBeenCalled();
+		expect(vi.getTimerCount()).toBe(0);
 	});
 
 	it('복구할 곡이 없으면 종료로 확정한다', async () => {

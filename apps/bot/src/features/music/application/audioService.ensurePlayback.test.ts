@@ -20,6 +20,7 @@ function makePlayer(serverPlayer: unknown, queuedEncoded: string | null = 'x') {
 		playing: false,
 		paused: false,
 		queue: { current: queuedEncoded === null ? null : { encoded: queuedEncoded } },
+		transitionState: { stopByCommand: false },
 		node: { fetchPlayer: vi.fn(async () => serverPlayer) },
 		play: vi.fn()
 	} as any;
@@ -52,6 +53,14 @@ describe('ensurePlayback', () => {
 		expect(player.play).toHaveBeenCalledTimes(1);
 		expect(player.playing).toBe(false);
 	});
+
+	it('정지 명령 뒤의 새 재생은 정지 플래그를 해제한다 (watchdog 복구가 막히지 않게)', async () => {
+		const player = makePlayer({ track: null, paused: false });
+		player.transitionState.stopByCommand = true;
+		await makeAudioService().ensurePlayback(player);
+		expect(player.transitionState.stopByCommand).toBe(false);
+		expect(player.play).toHaveBeenCalledTimes(1);
+	});
 });
 
 describe('지연 deps', () => {
@@ -76,5 +85,38 @@ describe('지연 deps', () => {
 		mocks.primeForPlay.mockClear();
 		await service.ensurePlayback(makePlayer({ track: null, paused: false }));
 		expect(mocks.primeForPlay).toHaveBeenCalledOnce();
+	});
+});
+
+describe('stopPlayback', () => {
+	function stoppablePlayer() {
+		return {
+			guildId: 'g',
+			playing: true,
+			paused: false,
+			queue: { current: { encoded: 'x' }, tracks: [{ encoded: 'y' }] },
+			transitionState: { stopByCommand: false },
+			destroy: vi.fn(async () => undefined),
+			stopPlaying: vi.fn(async () => undefined),
+			disconnect: vi.fn(async () => undefined)
+		} as any;
+	}
+
+	it('큐를 비우고 플레이어를 소멸시킨다 (disconnect만 하면 유령 플레이어가 남는다)', async () => {
+		const player = stoppablePlayer();
+		await makeAudioService().stopPlayback(player);
+		expect(player.transitionState.stopByCommand).toBe(true);
+		expect(player.queue.current).toBeNull();
+		expect(player.queue.tracks).toEqual([]);
+		expect(player.destroy).toHaveBeenCalledWith('StopCommand');
+		expect(player.disconnect).not.toHaveBeenCalled();
+	});
+
+	it('소멸이 실패하면 정지·퇴장으로 물러선다', async () => {
+		const player = stoppablePlayer();
+		player.destroy.mockRejectedValueOnce(new Error('node down'));
+		await makeAudioService().stopPlayback(player);
+		expect(player.stopPlaying).toHaveBeenCalled();
+		expect(player.disconnect).toHaveBeenCalledWith(true);
 	});
 });

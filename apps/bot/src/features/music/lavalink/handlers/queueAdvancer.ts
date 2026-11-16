@@ -7,7 +7,7 @@ import { emoji } from '@sirubot/utils';
 import { getInFlightRelatedFetch } from '../autoPlayRelated.ts';
 import { isTtsClip } from '../requester.ts';
 import { clearPlayerStateTracker, publishPlayerEnded, publishPlayerState } from '../playerStatePublisher.ts';
-import { CustomPlayer, transitionConfirmTimeoutMs } from '../player/customPlayer.ts';
+import { CustomPlayer, destroyStoppedPlayer, transitionConfirmTimeoutMs } from '../player/customPlayer.ts';
 import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded, syncPlayingFlagFromProbe, syncQueueToNowPlaying } from './playbackWatchdog.ts';
 import type { TrackTransitionHost } from './trackHandler.ts';
 import { clearMixerRuntime, handleMixerTrackEnd, sendOverride } from './mixerHandlers.ts';
@@ -132,8 +132,7 @@ export class QueueAdvancer {
 			this.host.clearWatchdog(player.guildId);
 			cancelPendingInvalidate(player);
 			await sendOverride(this.deps, player, 'STOP', null).catch(() => null);
-			await player.stopPlaying();
-			await player.disconnect();
+			await destroyStoppedPlayer(player);
 			return;
 		}
 
@@ -275,7 +274,9 @@ export class QueueAdvancer {
 		// 종료 처리를 건너뛴다. 확인(REST)과 판정 사이에 서버 상태가 바뀌는 경합 창은 남는다:
 		// 완전 제거가 아니라 빈도 제거가 목표다. 조회 실패 시에는 서버 상태를 알 수 없으니
 		// 기존 종료 경로를 그대로 탄다.
-		const serverPlayer = await player.node.fetchPlayer(String(player.guildId)).catch(() => null);
+		// 정지 명령으로 끝난 큐는 착시가 아니다 — 정지 PATCH가 반영되기 전 서버 응답으로 current를
+		// 되살리면 watchdog 복구가 곡을 다시 재생해 유령 플레이어가 된다.
+		const serverPlayer = player.transitionState.stopByCommand ? null : await player.node.fetchPlayer(String(player.guildId)).catch(() => null);
 		if (serverPlayer && !('status' in serverPlayer) && serverPlayer.track) {
 			this.logger.warn(`[mixer] queueEnd deferred: server still has an active track (guild ${player.guildId}), restoring client state`);
 			const serverTrack = this.lavalinkManager.utils.buildTrack(serverPlayer.track, undefined);
@@ -347,6 +348,8 @@ export class QueueAdvancer {
 
 	/** 서버 슬롯이 없는 전이에서만 호출: stale 슬롯을 비운 뒤 클라이언트가 다음 곡을 시작한다. */
 	public async startClientOwnedTrack(player: CustomPlayer): Promise<void> {
+		// 정지 뒤 늦게 도착한 continuation(추천곡 fetch·TTS 등)이 곡을 되살리지 않게 한다.
+		if (player.transitionState.stopByCommand) return;
 		if (this.clientAdvancePending.has(player.guildId)) return;
 		const token = this.setAdvancePending(player.guildId);
 		// 서버가 이미 트랙을 시작했으면(슬롯 자동 진행이 경합에서 이김) play({noReplace:true})는
