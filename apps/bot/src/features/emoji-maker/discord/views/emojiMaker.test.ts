@@ -20,6 +20,7 @@ describe('emojiMakerView', () => {
 	const base = {
 		description: '선글라스 낀 고양이',
 		translatedPrompt: 'cat wearing sunglasses',
+		fromImage: false,
 		candidateCount: 4,
 		registered: new Map<number, string>()
 	};
@@ -62,5 +63,14 @@ describe('emojiMakerView', () => {
 		expect(interactive(json).every((c) => c.disabled)).toBe(true);
 		expect(JSON.stringify(json)).toContain('-# Tessera-small (CC BY-NC 4.0)');
 		expect(JSON.stringify(json)).not.toContain('로 그렸어요');
+	});
+
+	it('labels drawings made from an attached image', () => {
+		const text = JSON.stringify(
+			emojiMakerView({ ...base, description: '', fromImage: true, translatedPrompt: 'orange cat', phase: 'active' }).toJSON()
+		);
+		expect(text).toContain('📎 첨부한 이미지');
+		expect(text).toContain('이미지를 보고 이렇게 그렸어요: orange cat');
+		expect(text).not.toContain('영어로 옮겨서');
 	});
 });

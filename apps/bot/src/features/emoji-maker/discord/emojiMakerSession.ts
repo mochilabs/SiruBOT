@@ -16,7 +16,7 @@ import type { AppLogger } from '../../../lib/appLogger.ts';
 import { createComponentSession } from '../../../lib/componentSession.ts';
 import { notice } from '../../../lib/notice.ts';
 import { normalizeEmojiName } from '../application/emojiName.ts';
-import type { EmojiMaker, PreparedPrompt } from '../application/emojiMaker.ts';
+import type { EmojiMaker, PrepareInput, PreparedPrompt } from '../application/emojiMaker.ts';
 import { mojiId } from './customIds.ts';
 import { createGuildEmoji, emojiPermissionProblem } from './emojiRegistration.ts';
 import { candidateFileName, emojiMakerView, type EmojiMakerViewState } from './views/emojiMaker.ts';
@@ -34,14 +34,15 @@ export async function runEmojiMakerSession(
 	interaction: ChatInputCommandInteraction<'cached'>,
 	maker: EmojiMaker,
 	logger: AppLogger,
-	description: string
+	input: PrepareInput
 ): Promise<void> {
-	const prepared: PreparedPrompt = await maker.prepare(description);
+	const prepared: PreparedPrompt = await maker.prepare(input);
 	let images = (await maker.draw(interaction.user.id, prepared.prompt)).images;
 
 	const state: EmojiMakerViewState & { registered: Map<number, string> } = {
 		description: prepared.description,
 		translatedPrompt: prepared.translated ? prepared.prompt : null,
+		fromImage: prepared.source === 'image',
 		candidateCount: images.length,
 		registered: new Map(),
 		phase: 'active'

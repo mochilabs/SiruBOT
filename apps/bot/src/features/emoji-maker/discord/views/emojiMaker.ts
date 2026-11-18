@@ -11,8 +11,10 @@ import { mojiId } from '../customIds.ts';
 
 export interface EmojiMakerViewState {
 	description: string;
-	/** 영어로 옮겼을 때만 보여줘요. */
+	/** 영어로 옮겼거나 이미지에서 만든 설명 — 원문과 다를 때만 보여줘요. */
 	translatedPrompt: string | null;
+	/** 첨부 이미지를 읽어서 그렸는지 */
+	fromImage: boolean;
 	candidateCount: number;
 	/** 후보 번호 → 등록된 이모지 마크업 (`<:name:id>`) */
 	registered: ReadonlyMap<number, string>;
@@ -25,8 +27,15 @@ export interface EmojiMakerViewState {
 export const candidateFileName = (index: number) => `moji-${index + 1}.png`;
 
 export function emojiMakerView(state: EmojiMakerViewState) {
-	const lines = [`### ${emoji('sparkle')} 이모지 만들기`, `> ${state.description.replace(/\n/g, ' ')}`];
-	if (state.translatedPrompt) lines.push(`-# 영어로 옮겨서 그렸어요: ${state.translatedPrompt}`);
+	const description = state.description.replace(/\n/g, ' ');
+	const lines = [`### ${emoji('sparkle')} 이모지 만들기`];
+	if (state.fromImage) {
+		lines.push(`> 📎 첨부한 이미지${description ? ` · ${description}` : ''}`);
+		if (state.translatedPrompt) lines.push(`-# 이미지를 보고 이렇게 그렸어요: ${state.translatedPrompt}`);
+	} else {
+		lines.push(`> ${description}`);
+		if (state.translatedPrompt) lines.push(`-# 영어로 옮겨서 그렸어요: ${state.translatedPrompt}`);
+	}
 	const container = createContainer().addTextDisplayComponents((text) => text.setContent(lines.join('\n')));
 
 	const gallery = new MediaGalleryBuilder();
