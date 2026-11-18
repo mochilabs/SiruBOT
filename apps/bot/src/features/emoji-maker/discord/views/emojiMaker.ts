@@ -1,5 +1,12 @@
 import { addSeparator, createContainer, emoji } from '@sirubot/utils';
-import { ButtonBuilder, ButtonStyle, MediaGalleryBuilder, MediaGalleryItemBuilder } from 'discord.js';
+import {
+	ButtonBuilder,
+	ButtonStyle,
+	MediaGalleryBuilder,
+	MediaGalleryItemBuilder,
+	StringSelectMenuBuilder,
+	StringSelectMenuOptionBuilder
+} from 'discord.js';
 import { mojiId } from '../customIds.ts';
 
 export interface EmojiMakerViewState {
@@ -29,18 +36,18 @@ export function emojiMakerView(state: EmojiMakerViewState) {
 	container.addMediaGalleryComponents(gallery);
 
 	const locked = state.phase !== 'active';
-	container.addActionRowComponents((row) =>
-		row.addComponents(
-			Array.from({ length: state.candidateCount }, (_, i) => {
-				const done = state.registered.has(i);
-				return new ButtonBuilder()
-					.setCustomId(mojiId.encode('register', { index: i }))
-					.setLabel(done ? `${i + 1}번 등록됨` : `${i + 1}번 등록`)
-					.setStyle(done ? ButtonStyle.Secondary : ButtonStyle.Success)
-					.setDisabled(locked || done);
-			})
-		)
-	);
+	// 등록할 후보는 셀렉트 메뉴로 골라요. 이미 등록한 후보는 빼고, 다 등록했으면 메뉴를 잠가요(옵션은 최소 1개가 필요해서 자리만 채워요).
+	const remaining = Array.from({ length: state.candidateCount }, (_, i) => i).filter((i) => !state.registered.has(i));
+	const select = new StringSelectMenuBuilder()
+		.setCustomId(mojiId.encode('pick'))
+		.setPlaceholder(remaining.length > 0 ? '서버 이모지로 등록할 후보를 골라요' : '모든 후보를 등록했어요')
+		.setDisabled(locked || remaining.length === 0);
+	if (remaining.length > 0) {
+		select.addOptions(remaining.map((i) => new StringSelectMenuOptionBuilder().setLabel(`${i + 1}번 후보`).setValue(String(i))));
+	} else {
+		select.addOptions(new StringSelectMenuOptionBuilder().setLabel('모두 등록했어요').setValue('none'));
+	}
+	container.addActionRowComponents((row) => row.addComponents(select));
 	container.addActionRowComponents((row) =>
 		row.addComponents(
 			new ButtonBuilder()
@@ -57,10 +64,10 @@ export function emojiMakerView(state: EmojiMakerViewState) {
 	if (state.feedback) footer.push(state.feedback);
 	footer.push(
 		state.phase === 'expired'
-			? '-# 버튼 사용 시간이 지났어요. 새로 만들려면 명령어를 다시 써 주세요.'
-			: '-# 등록하려면 서버 이모지 관리 권한이 필요해요 · 버튼은 5분 동안 쓸 수 있어요'
+			? '-# 사용 시간이 지났어요. 새로 만들려면 명령어를 다시 써 주세요.'
+			: '-# 등록하려면 서버 이모지 관리 권한이 필요해요 · 5분 동안 쓸 수 있어요'
 	);
-	footer.push('-# Tessera-small (CC BY-NC 4.0)로 그렸어요');
+	footer.push('-# Tessera-small (CC BY-NC 4.0)');
 	addSeparator(container);
 	container.addTextDisplayComponents((text) => text.setContent(footer.join('\n')));
 	return container;

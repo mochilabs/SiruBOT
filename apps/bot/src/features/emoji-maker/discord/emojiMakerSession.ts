@@ -7,7 +7,7 @@ import {
 	ModalBuilder,
 	TextInputBuilder,
 	TextInputStyle,
-	type ButtonInteraction,
+	type StringSelectMenuInteraction,
 	type ChatInputCommandInteraction,
 	type MessageComponentInteraction
 } from 'discord.js';
@@ -28,7 +28,7 @@ const toFiles = (images: Buffer[]) => images.map((image, i) => new AttachmentBui
 
 /**
  * `/이모지만들기` 결과 메시지 한 개의 수명 — 후보 이미지를 메모리에 들고 있다가
- * 등록 버튼(이름 모달 → 서버 이모지 생성)과 다시 그리기 버튼을 처리해요. 5분이 지나면 버튼을 닫아요.
+ * 등록 셀렉트 메뉴(이름 모달 → 서버 이모지 생성)과 다시 그리기 버튼을 처리해요. 5분이 지나면 메뉴와 버튼을 닫아요.
  */
 export async function runEmojiMakerSession(
 	interaction: ChatInputCommandInteraction<'cached'>,
@@ -61,15 +61,15 @@ export async function runEmojiMakerSession(
 		await component.reply({ components: [notice(text)], flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral] });
 	};
 
-	async function register(button: ButtonInteraction<'cached'>, index: number): Promise<void> {
-		const problem = emojiPermissionProblem(button.member, button.guild.members.me);
-		if (problem) return replyNotice(button, problem);
+	async function register(picker: StringSelectMenuInteraction<'cached'>, index: number): Promise<void> {
+		const problem = emojiPermissionProblem(picker.member, picker.guild.members.me);
+		if (problem) return replyNotice(picker, problem);
 		// 모달이 열려 있는 동안 다시 그리기를 눌러도 처음 고른 그림이 등록되게 지금 붙잡아 둬요.
 		const image = images[index];
-		if (!image) return replyNotice(button, `${emoji('error')} 후보를 찾을 수 없어요.`);
+		if (!image) return replyNotice(picker, `${emoji('error')} 후보를 찾을 수 없어요.`);
 
 		const formId = mojiId.encode('nameForm', { formId: randomUUID() });
-		await button.showModal(
+		await picker.showModal(
 			new ModalBuilder()
 				.setCustomId(formId)
 				.setTitle(`${index + 1}번 후보 등록`)
@@ -86,7 +86,9 @@ export async function runEmojiMakerSession(
 					)
 				)
 		);
-		const submitted = await button
+		// 셀렉트 메뉴는 이미 선택된 값을 다시 고르면 이벤트가 오지 않아요. 모달을 닫고 같은 후보를 다시 고를 수 있게 선택을 바로 비워요.
+		void refresh();
+		const submitted = await picker
 			.awaitModalSubmit({ time: NAME_FORM_MS, filter: (s) => s.user.id === interaction.user.id && s.customId === formId })
 			.catch(() => null);
 		if (!submitted) return;
@@ -101,7 +103,7 @@ export async function runEmojiMakerSession(
 			return;
 		}
 		try {
-			const markup = await createGuildEmoji(button.guild, image, name, `${interaction.user.username} 님이 /이모지만들기로 등록`);
+			const markup = await createGuildEmoji(picker.guild, image, name, `${interaction.user.username} 님이 /이모지만들기로 등록`);
 			if (images[index] === image) state.registered.set(index, markup);
 			await submitted.editReply({
 				components: [notice(`${emoji('success')} ${markup} \`:${name}:\` 이모지를 등록했어요!`)],
@@ -144,7 +146,12 @@ export async function runEmojiMakerSession(
 			const decoded = mojiId.decode(component.customId);
 			if (!decoded || !component.inCachedGuild()) return;
 			if (state.phase === 'busy') return replyNotice(component, `${emoji('error')} 지금 그리는 중이에요. 잠시만 기다려 주세요.`);
-			if (decoded.action === 'register' && component.isButton()) return register(component, decoded.index);
+			if (decoded.action === 'pick' && component.isStringSelectMenu()) {
+				const index = Number(component.values[0]);
+				if (!Number.isInteger(index) || index < 0 || index >= state.candidateCount)
+					return replyNotice(component, `${emoji('error')} 후보를 찾을 수 없어요.`);
+				return register(component, index);
+			}
 			if (decoded.action === 'reroll') return reroll(component);
 		},
 		onTimeout: async () => {
