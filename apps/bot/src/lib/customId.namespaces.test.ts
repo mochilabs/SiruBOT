@@ -13,6 +13,7 @@ import '../features/role-panels/discord/customIds.ts';
 import '../features/games/discord/customIds.ts';
 import '../features/ai-chat/discord/customIds.ts';
 import '../features/tts/discord/customIds.ts';
+import '../features/emoji-maker/discord/customIds.ts';
 
 const SRC_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 

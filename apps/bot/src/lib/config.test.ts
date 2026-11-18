@@ -99,6 +99,7 @@ describe('loadConfig — 기본값 (선택 키가 전부 없을 때)', () => {
 		expect(config.redis.signingKey).toBe('');
 		expect(config.dataApi).toEqual({ baseUrl: null, authKey: '' });
 		expect(config.tts).toEqual({ url: '', defaultVoice: null });
+		expect(config.moji).toEqual({ url: '', authKey: '' });
 		expect(config.search).toEqual({ searxngEnabled: true, searxngBaseUrl: undefined });
 		expect(config.mixer).toEqual({ callTimeoutMs: 5000, confirmTimeoutMs: 5000 });
 		expect(config.autoplay).toEqual({ highSimilarity: 0.75, lowSimilarity: 0.2 });
@@ -274,6 +275,13 @@ describe('loadConfig — 문자열·truthiness 규칙', () => {
 		expect(configWith({ SIRU_TTS_URL: '   ' }).tts.url).toBe('');
 		expect(configWith({ SIRU_TTS_DEFAULT_VOICE: ' edge:ko ' }).tts.defaultVoice).toBe('edge:ko');
 		expect(configWith({ SIRU_TTS_DEFAULT_VOICE: '  ' }).tts.defaultVoice).toBeNull();
+	});
+
+	it('이모지 생성 — URL이 없으면 off, 슬래시를 자르고, 키는 SIRU_MOJI_AUTH_KEY ?? AUTH_KEY', () => {
+		expect(configWith({ SIRU_MOJI_URL: ' http://moji.invalid/// ' }).moji.url).toBe('http://moji.invalid');
+		expect(configWith({ SIRU_MOJI_URL: '   ' }).moji.url).toBe('');
+		expect(configWith({ AUTH_KEY: 'shared' }).moji.authKey).toBe('shared');
+		expect(configWith({ AUTH_KEY: 'shared', SIRU_MOJI_AUTH_KEY: ' own ' }).moji.authKey).toBe('own');
 	});
 
 	it('LAVALINK_DEFAULT_PASSWORD는 원본 그대로, 빈 값은 빈 문자열', () => {

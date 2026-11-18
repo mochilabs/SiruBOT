@@ -68,6 +68,8 @@ declare module '@sapphire/pieces' {
 		/** 커스텀 슬래시 명령어 길드 동기화 소유자 (features/custom-commands/application/slashRegistry.ts) */
 		customSlashRegistry: import('../features/custom-commands/index.ts').SlashRegistry;
 		gameRecords: import('../features/games/index.ts').GameRecords;
+		/** /이모지만들기 — siru_moji 생성 + 설명 번역 (features/emoji-maker) */
+		emojiMaker: import('../features/emoji-maker/index.ts').EmojiMaker;
 		ticketService: import('../features/tickets/index.ts').TicketService;
 		rolePanelService: import('../features/role-panels/index.ts').RolePanelService;
 		/** 로거가 필요한 data-api 호출(이미지 렌더·업로드) — services/dataApiClient.ts */

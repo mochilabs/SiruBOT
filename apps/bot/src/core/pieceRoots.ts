@@ -14,6 +14,7 @@ export const PIECE_ROOTS = [
 	'features/embed-fix/discord',
 	'features/user-data/discord',
 	'features/games/discord',
+	'features/emoji-maker/discord',
 	'features/tickets/discord',
 	'features/role-panels/discord',
 	'features/temp-voice/discord',
