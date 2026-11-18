@@ -21,6 +21,7 @@ import { createDataApiClient } from '../services/dataApiClient.ts';
 import { WebhookRelay } from '../services/webhookRelay.ts';
 import { createCustomCommandStore, createSlashRegistry } from '../features/custom-commands/index.ts';
 import { createGameRecords } from '../features/games/index.ts';
+import { createEmojiMaker, createMojiClient, createPromptTranslator, getMojiConfig, getTranslatorLlmConfig } from '../features/emoji-maker/index.ts';
 import { createRolePanelService, rolePanelMessages, createRoleValidationResponder } from '../features/role-panels/index.ts';
 import {
 	AudioService,
@@ -333,6 +334,11 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			db: container.db,
 			getGuild: (guildId) => container.client.guilds.cache.get(guildId),
 			getCoreCommandNames: () => container.stores.get('commands').keys()
+		});
+		container.emojiMaker = createEmojiMaker({
+			logger: appLogger,
+			client: createMojiClient({ getMojiConfig }),
+			translator: createPromptTranslator({ logger: appLogger, getLlmConfig: getTranslatorLlmConfig })
 		});
 		container.gameRecords = createGameRecords({ db: container.db, getLockStore: () => container.redisStore });
 		container.ticketService = createTicketService({

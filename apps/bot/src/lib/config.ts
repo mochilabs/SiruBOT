@@ -85,6 +85,10 @@ const botEnvSchema = z.object({
 	ENABLE_THINK_TOKEN: z.string().optional(),
 	SIRU_TTS_URL: z.string().optional(),
 	SIRU_TTS_DEFAULT_VOICE: z.string().optional(),
+	/** siru_moji(텍스트→이모지 생성) 주소 — 미설정이면 /이모지 생성 기능 off. */
+	SIRU_MOJI_URL: z.string().optional(),
+	/** siru_moji 인증 키 — SIRU_MOJI_AUTH_KEY ?? AUTH_KEY. */
+	SIRU_MOJI_AUTH_KEY: z.string().optional(),
 	SEARXNG_BASE_URL: z.string().optional(),
 	ENABLE_SEARXNG: z.string().optional(),
 
@@ -193,6 +197,12 @@ export interface Config {
 		readonly url: string;
 		/** SIRU_TTS_DEFAULT_VOICE trim, 빈 값이면 null. */
 		readonly defaultVoice: string | null;
+	};
+	readonly moji: {
+		/** SIRU_MOJI_URL trim·끝 슬래시 제거. 빈 값이면 이모지 생성 off. */
+		readonly url: string;
+		/** (SIRU_MOJI_AUTH_KEY ?? AUTH_KEY ?? '').trim() */
+		readonly authKey: string;
 	};
 	readonly search: {
 		/** (ENABLE_SEARXNG ?? 'true').toLowerCase() !== 'false' — trim 안 하므로 ' false'는 켜진 걸로 봐요. */
@@ -315,6 +325,10 @@ export function loadConfig(env: RawEnv): Config {
 		tts: Object.freeze({
 			url: trimUrl(env.SIRU_TTS_URL ?? ''),
 			defaultVoice: ttsDefaultVoice || null
+		}),
+		moji: Object.freeze({
+			url: trimUrl(env.SIRU_MOJI_URL ?? ''),
+			authKey: (env.SIRU_MOJI_AUTH_KEY ?? env.AUTH_KEY ?? '').trim()
 		}),
 		search: Object.freeze({
 			searxngEnabled: (env.ENABLE_SEARXNG ?? 'true').toLowerCase() !== 'false',

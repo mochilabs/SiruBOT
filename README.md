@@ -35,7 +35,7 @@
 - **Web dashboard** (Next.js): live player control, guild settings, playlists, statistics, custom commands, tickets, social alerts and shard status.
 - **Playlists and profiles**: personal playlists managed from Discord or the dashboard, and a rendered profile card with listening stats.
 - **Social alerts**: YouTube, Twitch and Chzzk live notifications delivered through Discord webhooks.
-- **Extras**: AI chat, TTS, temporary voice channels, weather, horoscope and parcel tracking.
+- **Extras**: AI chat, TTS, emoji maker (siru_moji), temporary voice channels, weather, horoscope and parcel tracking.
 - **Built to scale**: a shard manager assigns shards to bot processes, so bots can be added or rolled without downtime.
 
 ## Architecture
