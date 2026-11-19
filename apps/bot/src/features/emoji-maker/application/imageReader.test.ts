@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createImageReader, ImageReaderError, MAX_IMAGE_BYTES, normalizeImageType, parseImageReading } from './imageReader.ts';
+import { MAX_IMAGE_BYTES } from '../../../lib/imageDataUrl.ts';
+import { createImageReader, ImageReaderError, parseImageReading } from './imageReader.ts';
 
 const fetchMock = vi.hoisted(() => vi.fn());
 vi.stubGlobal('fetch', fetchMock);
@@ -25,17 +26,6 @@ describe('parseImageReading', () => {
 		expect(parseImageReading('{"nsfw": "no", "prompt": "cat"}')).toBeNull();
 		expect(parseImageReading('{"nsfw": false, "prompt": ""}')).toBeNull();
 		expect(parseImageReading('{"nsfw": false, ')).toBeNull();
-	});
-});
-
-describe('normalizeImageType', () => {
-	it('accepts PNG, JPEG and WEBP only', () => {
-		expect(normalizeImageType('image/png')).toBe('image/png');
-		expect(normalizeImageType('IMAGE/JPG; charset=binary')).toBe('image/jpeg');
-		expect(normalizeImageType('image/webp')).toBe('image/webp');
-		expect(normalizeImageType('image/gif')).toBeNull();
-		expect(normalizeImageType('image/*')).toBeNull();
-		expect(normalizeImageType(null)).toBeNull();
 	});
 });
 

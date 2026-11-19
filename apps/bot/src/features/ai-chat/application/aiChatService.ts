@@ -41,7 +41,7 @@ export {
 	type TurnCounterStore
 } from './aiChat/turnControl.ts';
 export { extractThinkTokens } from './aiChat/completion.ts';
-export { collectImageUrls } from './aiChat/agentLoop.ts';
+export { collectImageUrls, type ChatImage } from './aiChat/agentLoop.ts';
 export type { AiChatDeps, AiChatPlayerView, AiToolRegistry } from './aiChat/deps.ts';
 
 import { getAiChatPolicy } from './aiChat/config.ts';

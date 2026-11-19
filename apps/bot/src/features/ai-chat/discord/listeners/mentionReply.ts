@@ -2,7 +2,7 @@ import { notice } from '../../../../lib/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { Message, MessageFlags } from 'discord.js';
-import { ChatServiceError, collectImageUrls, assertChatEnabled, type ChatConfig } from '../../application/aiChatService.ts';
+import { ChatServiceError, collectImageUrls, assertChatEnabled, type ChatConfig, type ChatImage } from '../../application/aiChatService.ts';
 import { getChatConfig } from '../../chatConfig.ts';
 import type { AiToolContext } from '../../application/aiTools/index.ts';
 import { emoji } from '@sirubot/utils';
@@ -89,7 +89,7 @@ export class MentionReplyListener extends Listener {
 		}
 	}
 
-	private async respond(message: Message, prompt: string, images: string[], config: ChatConfig) {
+	private async respond(message: Message, prompt: string, images: readonly ChatImage[], config: ChatConfig) {
 		const channelId = message.channelId;
 		const toolContext: AiToolContext = {
 			guildId: message.guildId,

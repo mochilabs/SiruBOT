@@ -3,7 +3,7 @@ import { Command, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, type Attachment } from 'discord.js';
 import { MAX_DESCRIPTION_LENGTH } from '../../application/emojiMaker.ts';
-import { MAX_IMAGE_BYTES, normalizeImageType } from '../../application/imageReader.ts';
+import { MAX_IMAGE_BYTES, normalizeImageType } from '../../../../lib/imageDataUrl.ts';
 import { runEmojiMakerSession } from '../emojiMakerSession.ts';
 
 @ApplyOptions<Command.Options>({

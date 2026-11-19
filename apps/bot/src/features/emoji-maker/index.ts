@@ -3,7 +3,7 @@
  * (Sapphire 피스는 features/emoji-maker/discord 아래에서 스토어가 직접 읽어요.)
  */
 export { createEmojiMaker, type EmojiMaker } from './application/emojiMaker.ts';
-export { createImageReader, MAX_IMAGE_BYTES, normalizeImageType } from './application/imageReader.ts';
+export { createImageReader } from './application/imageReader.ts';
 export { createMojiClient, type MojiProgress } from './application/mojiClient.ts';
 export { createPromptTranslator } from './application/promptTranslator.ts';
 export { getMojiConfig, getTranslatorLlmConfig } from './emojiMakerConfig.ts';

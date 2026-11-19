@@ -1,4 +1,4 @@
-import { ChatServiceError, registerChatAbort, releaseChatAbort, type AiChat, type ChatConfig } from '../application/aiChatService.ts';
+import { ChatServiceError, registerChatAbort, releaseChatAbort, type AiChat, type ChatConfig, type ChatImage } from '../application/aiChatService.ts';
 import type { AiToolContext } from '../application/aiTools/index.ts';
 import { errorPayload, finalPayload, livePayload, statusPayload, stoppedPayload } from './views/chatView.ts';
 
@@ -20,7 +20,7 @@ export interface ChatTurnInvocation {
 	userId: string;
 	channelId: string;
 	prompt: string;
-	images: string[];
+	images: readonly ChatImage[];
 	toolContext: AiToolContext;
 	/** 대화 기록에 남길 화자 표시명 */
 	author: string;

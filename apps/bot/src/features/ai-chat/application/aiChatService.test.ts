@@ -270,7 +270,7 @@ describe('ai chat policy', () => {
 });
 
 describe('collectImageUrls', () => {
-	it('filters by type and size, then caps at three urls', () => {
+	it('keeps PNG/JPEG/WEBP within the size limit, then caps at three', () => {
 		expect(
 			collectImageUrls([
 				{ url: 'a', contentType: 'image/png', size: 100 },
@@ -281,7 +281,11 @@ describe('collectImageUrls', () => {
 				{ url: 'f', contentType: 'IMAGE/WEBP', size: 1 },
 				{ url: 'g', contentType: 'image/png' }
 			])
-		).toEqual(['a', 'e', 'f']);
+		).toEqual([
+			{ url: 'a', contentType: 'image/png' },
+			{ url: 'f', contentType: 'IMAGE/WEBP' },
+			{ url: 'g', contentType: 'image/png' }
+		]);
 	});
 });
 
@@ -703,21 +707,29 @@ describe('runChatTurn agent loop', () => {
 		expect(result.answer).toBe('실제 답변');
 	});
 
-	it('sends image attachments as multimodal content parts', async () => {
-		const fetchMock = vi.fn().mockResolvedValue(Response.json({ choices: [{ message: { content: '고양이네요' } }] }));
+	it('sends image attachments as typed data URLs, skipping ones that fail to download', async () => {
+		const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+		const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
+			if (url === 'http://x/cat.png') return new Response(png, { headers: { 'content-type': 'image/png' } });
+			if (url === 'http://x/gone.png') return new Response('', { status: 404 });
+			return Response.json({ choices: [{ message: { content: '고양이네요' } }] });
+		});
 		vi.stubGlobal('fetch', fetchMock);
 		const result = await runChatTurn({
 			...options,
 			channelId: 'agent-image',
 			prompt: '이게 뭐야?',
-			images: ['http://x/cat.png'],
+			images: [
+				{ url: 'http://x/cat.png', contentType: 'image/png' },
+				{ url: 'http://x/gone.png', contentType: 'image/png' }
+			],
 			toolContext: { ...options.toolContext, channelId: 'agent-image' }
 		});
 		expect(result.answer).toBe('고양이네요');
-		const [, request] = fetchMock.mock.calls[0]!;
-		expect(JSON.parse(request?.body as string).messages[1].content).toEqual([
+		const completion = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/chat/completions'))!;
+		expect(JSON.parse(completion[1]!.body as string).messages[1].content).toEqual([
 			{ type: 'text', text: '이게 뭐야?' },
-			{ type: 'image_url', image_url: { url: 'http://x/cat.png' } }
+			{ type: 'image_url', image_url: { url: `data:image/png;base64,${png.toString('base64')}` } }
 		]);
 	});
 
