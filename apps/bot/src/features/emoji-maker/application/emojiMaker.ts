@@ -2,7 +2,7 @@ import { AppError } from '../../../lib/appError.ts';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 import { suggestEmojiName } from './emojiName.ts';
 import { ImageReaderError, type ImageReader } from './imageReader.ts';
-import { MojiError, type MojiClient } from './mojiClient.ts';
+import { MojiError, type MojiClient, type MojiProgress } from './mojiClient.ts';
 import type { PromptTranslator } from './promptTranslator.ts';
 
 export const MAX_DESCRIPTION_LENGTH = 200;
@@ -40,8 +40,8 @@ export interface EmojiMaker {
 	canReadImages(): boolean;
 	/** 설명을 다듬어 영어로 옮기거나, 이미지를 읽어 설명을 만들어요. 다시 그리기는 이 결과를 재사용해요. */
 	prepare(input: PrepareInput): Promise<PreparedPrompt>;
-	/** 후보 4장을 그려요. 한 사람은 한 번에 하나만 그릴 수 있어요. */
-	draw(userId: string, prompt: string): Promise<{ images: Buffer[]; seed: number }>;
+	/** 후보 4장을 그려요. 한 사람은 한 번에 하나만 그릴 수 있어요. 진행 상황은 onProgress로 알려줘요. */
+	draw(userId: string, prompt: string, onProgress?: (progress: MojiProgress) => void): Promise<{ images: Buffer[]; seed: number }>;
 }
 
 export function createEmojiMaker(deps: EmojiMakerDeps): EmojiMaker {
@@ -87,13 +87,13 @@ export function createEmojiMaker(deps: EmojiMakerDeps): EmojiMaker {
 			return { description, prompt, source: 'text', translated, suggestedName: suggestEmojiName(prompt) };
 		},
 
-		async draw(userId, prompt) {
+		async draw(userId, prompt, onProgress) {
 			if (drawing.has(userId)) {
 				throw new AppError('conflict', '이미 그리고 있는 이모지가 있어요. 끝나면 다시 시도해 주세요.', { ephemeral: true });
 			}
 			drawing.add(userId);
 			try {
-				const result = await deps.client.generate(prompt, { n: CANDIDATE_COUNT });
+				const result = await deps.client.generate(prompt, { n: CANDIDATE_COUNT, onProgress });
 				return { images: result.images, seed: result.seed };
 			} catch (error) {
 				if (error instanceof MojiError) {

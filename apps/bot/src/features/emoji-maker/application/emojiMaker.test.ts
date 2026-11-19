@@ -38,7 +38,7 @@ describe('createEmojiMaker', () => {
 		const generate = vi.fn(async () => ({ images: [Buffer.from('a')], seed: 3, device: 'webgpu' }));
 		const maker = createEmojiMaker({ logger, translator, imageReader: noImages, client: client(generate) });
 		expect(await maker.draw('u1', 'cat')).toEqual({ images: [Buffer.from('a')], seed: 3 });
-		expect(generate).toHaveBeenCalledWith('cat', { n: 4 });
+		expect(generate).toHaveBeenCalledWith('cat', { n: 4, onProgress: undefined });
 	});
 
 	it('lets one user draw one thing at a time', async () => {

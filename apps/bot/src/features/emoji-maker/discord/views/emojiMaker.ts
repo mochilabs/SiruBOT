@@ -26,15 +26,16 @@ export interface EmojiMakerViewState {
 /** 첨부 이름 — 뷰의 MediaGallery와 전송부의 AttachmentBuilder가 같은 이름을 써야 이미지가 붙어요. */
 export const candidateFileName = (index: number) => `moji-${index + 1}.png`;
 
+/** 제목과 사용자가 준 설명(또는 첨부 이미지) 한 줄 — 진행 화면과 결과 화면이 같이 써요. */
+export function emojiMakerHeader(description: string, fromImage: boolean): string[] {
+	const text = description.replace(/\n/g, ' ');
+	return [`### ${emoji('sparkle')} 이모지 만들기`, fromImage ? `> 📎 첨부한 이미지${text ? ` · ${text}` : ''}` : `> ${text}`];
+}
+
 export function emojiMakerView(state: EmojiMakerViewState) {
-	const description = state.description.replace(/\n/g, ' ');
-	const lines = [`### ${emoji('sparkle')} 이모지 만들기`];
-	if (state.fromImage) {
-		lines.push(`> 📎 첨부한 이미지${description ? ` · ${description}` : ''}`);
-		if (state.translatedPrompt) lines.push(`-# 이미지를 보고 이렇게 그렸어요: ${state.translatedPrompt}`);
-	} else {
-		lines.push(`> ${description}`);
-		if (state.translatedPrompt) lines.push(`-# 영어로 옮겨서 그렸어요: ${state.translatedPrompt}`);
+	const lines = emojiMakerHeader(state.description, state.fromImage);
+	if (state.translatedPrompt) {
+		lines.push(`-# ${state.fromImage ? '이미지를 보고 이렇게 그렸어요' : '영어로 옮겨서 그렸어요'}: ${state.translatedPrompt}`);
 	}
 	const container = createContainer().addTextDisplayComponents((text) => text.setContent(lines.join('\n')));
 
