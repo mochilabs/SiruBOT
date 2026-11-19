@@ -169,6 +169,7 @@ const EXPECTED_PIECES: string[] = [
 	'commands:ticket',
 	'commands:tts',
 	'commands:weather',
+	'commands:wrapped',
 	'interaction-handlers:chatCancel',
 	'interaction-handlers:controllerButton',
 	'interaction-handlers:controllerSelectMenu',
@@ -271,7 +272,8 @@ const EXPECTED_COMMAND_CATEGORIES: string[] = [
 	'stop=음악',
 	'ticket=일반',
 	'tts=일반',
-	'weather=일반'
+	'weather=일반',
+	'wrapped=개발'
 ];
 
 describe('sapphire piece inventory', () => {
