@@ -5,7 +5,7 @@ import { greetingConfigSchema, redisIdSchema } from '@sirubot/utils';
 import { deduped } from '../utils/dedup.ts';
 import { metrics } from '../utils/metrics.ts';
 import { DataApiError } from './serveCached.ts';
-import { sendDomainError, sendError } from './common.ts';
+import { playerUserIdSchema, sendDomainError, sendError } from './common.ts';
 import { renderProfileCardDark } from '../renderers/profileCardDark.ts';
 import { renderProfileCardTicket } from '../renderers/profileCardTicket.ts';
 import { renderGreetingCard, normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/memberGreetingCard.ts';
@@ -14,6 +14,9 @@ import { renderOhaasaCard, renderOhaasaTopCard } from '../renderers/ohaasaCard.t
 import { ohaasaCardSchema, ohaasaTopCardSchema } from './ohaasaCardSchema.ts';
 import { renderWeatherCard } from '../renderers/weatherCard.ts';
 import { weatherCardSchema } from './weatherCardSchema.ts';
+import { renderWrappedCard } from '../renderers/satori/wrappedCard.ts';
+import { getDb } from '../services/db.ts';
+import { loadWrappedStats, resolveWrappedRange } from '../services/wrapped.ts';
 
 /** 이미지 렌더 라우트 — 프로필 카드(dark/ticket)·멤버 인사 카드·NowPlaying·운세 카드·날씨 카드 + 인사 이미지 정규화. 렌더러 본체는 renderers/에 있어요. */
 
@@ -302,6 +305,36 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 			const body = weatherCardSchema.parse(request.body);
 			const buffer = await deduped(`img:weather:${body.scope}:${payloadHash(body)}`, () => renderWeatherCard(body));
 			metrics.request('image-weather');
+			return reply.type('image/png').send(buffer);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// Wrapped 카드 이미지 (satori) — 신청 이력을 data-api가 직접 집계해서 그려요 (봇은 표시 정보만 보내요).
+	// guildId가 null이면 모든 서버를 합쳐요. DATABASE_URL이 없으면 503이에요.
+	const wrappedCardSchema = z.object({
+		userId: playerUserIdSchema,
+		guildId: redisIdSchema.nullable().default(null),
+		displayName: z.string().trim().min(1).max(64),
+		avatarUrl: z.string().url().nullable().default(null),
+		period: z.enum(['month', 'year', 'all']).default('month')
+	});
+	fastify.post('/v1/image/wrapped', async (request, reply) => {
+		try {
+			const body = wrappedCardSchema.parse(request.body);
+			const db = getDb();
+			if (!db) throw new DataApiError(503, 'db_unavailable', 'DB가 연결되지 않아 Wrapped를 만들 수 없어요.');
+			const range = resolveWrappedRange(body.period);
+			const stats = await loadWrappedStats(db, { userId: body.userId, guildId: body.guildId, from: range.from, to: range.to });
+			const buffer = await renderWrappedCard({
+				displayName: body.displayName,
+				avatarUrl: body.avatarUrl,
+				periodLabel: range.label,
+				scopeLabel: body.guildId ? '이 서버' : '모든 서버',
+				stats
+			});
+			metrics.request('image-wrapped');
 			return reply.type('image/png').send(buffer);
 		} catch (error) {
 			return sendError(reply, error);
