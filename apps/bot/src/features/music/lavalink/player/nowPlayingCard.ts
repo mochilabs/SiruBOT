@@ -64,7 +64,7 @@ function requesterInfo(deps: LavalinkDeps, player: CustomPlayer): { name: string
 	const name = member.displayName;
 	// 카드 UI에서 신청자 이름이 두 줄로 줄바꿈되지 않도록 12자에서 말줄임
 	const truncatedName = name.length > 12 ? `${name.slice(0, 12)}…` : name;
-	return { name, truncatedName, avatarUrl: member.displayAvatarURL({ size: 128 }) };
+	return { name, truncatedName, avatarUrl: member.displayAvatarURL({ size: 128, extension: 'png' }) };
 }
 
 function safeFilename(trackKey: string): string {
