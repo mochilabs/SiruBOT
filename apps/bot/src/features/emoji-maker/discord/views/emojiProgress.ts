@@ -1,4 +1,4 @@
-import { addSeparator, createContainer, emoji, emojiProgressBar } from '@sirubot/utils';
+import { addSeparator, createContainer, emoji } from '@sirubot/utils';
 import { MediaGalleryBuilder, MediaGalleryItemBuilder } from 'discord.js';
 import { emojiMakerHeader } from './emojiMaker.ts';
 
@@ -14,7 +14,7 @@ export interface EmojiProgressViewState {
 	readPrompt: string | null;
 	/** 앞에 기다리는 생성 수 — 차례가 오면 null */
 	queueAhead: number | null;
-	/** 그리기 진행 — 시작 전이면 null */
+	/** 그리기 진행 — 시작 전이면 null. 화면엔 숫자를 쓰지 않고 그리는 중인지만 보여줘요. */
 	drawing: { step: number; total: number } | null;
 	/** PREVIEW_FILE_NAME 첨부가 함께 가는지 */
 	hasPreview: boolean;
@@ -23,8 +23,8 @@ export interface EmojiProgressViewState {
 }
 
 /**
- * "그리는 중" 화면 — 단계 목록(읽기 → 차례 기다리기 → 픽셀 찍기)과 진행 바,
- * 그리고 칠해지는 중인 후보 미리보기를 보여줘요. 끝난 단계는 ✅, 진행 중은 강조, 남은 단계는 흐리게 적어요.
+ * "그리는 중" 화면 — 단계 목록(읽기 → 차례 기다리기 → 픽셀 찍기)과
+ * 칠해지는 중인 후보 미리보기를 보여줘요. 진행 바 대신 미리보기가 채워지는 모습으로 진행을 느끼게 해요. 끝난 단계는 ✅, 진행 중은 강조, 남은 단계는 흐리게 적어요.
  */
 export function emojiProgressView(state: EmojiProgressViewState) {
 	const lines = emojiMakerHeader(state.description, state.fromImage);
@@ -44,10 +44,7 @@ export function emojiProgressView(state: EmojiProgressViewState) {
 	}
 
 	if (state.drawing) {
-		const { step, total } = state.drawing;
-		const ratio = total > 0 ? step / total : 0;
-		lines.push(`${emoji('palette')} **픽셀을 찍는 중…** \`${String(Math.round(ratio * 100)).padStart(3, ' ')}%\``);
-		lines.push(emojiProgressBar(ratio));
+		lines.push(`${emoji('palette')} **픽셀을 찍는 중…**`);
 	} else if (state.readDone || state.reroll) {
 		if (state.queueAhead === null) lines.push(`${emoji('palette')} **붓을 준비하는 중…**`);
 	} else {

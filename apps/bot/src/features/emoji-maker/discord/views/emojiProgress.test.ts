@@ -24,7 +24,8 @@ describe('emojiProgressView', () => {
 		expect(text({ ...base, readDone: true, queueAhead: 2 })).toContain('차례를 기다리는 중…** 앞에 2개');
 
 		const drawing = text({ ...base, readDone: true, drawing: { step: 8, total: 16 }, hasPreview: true });
-		expect(drawing).toContain('픽셀을 찍는 중…** ` 50%`');
+		expect(drawing).toContain('픽셀을 찍는 중…**');
+		expect(drawing).not.toContain('%');
 		expect(drawing).not.toContain('차례를 기다리는');
 		expect(drawing).toContain('attachment://moji-preview.png');
 	});
