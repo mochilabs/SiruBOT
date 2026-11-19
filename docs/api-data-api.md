@@ -60,7 +60,7 @@ Routes are registered from `routes/index.ts`, one file per domain.
 | POST `/v1/image/member-card` | Greeting card, kind `welcome` or `goodbye` | Dedup key `img:greeting:`; body limit 4 MB | `routes/render.ts` |
 | POST `/v1/image/member-card/background` | Normalize an uploaded background to JPEG (longest side 1600 px, at most 900 KB) | Body limit 8 MB | `routes/render.ts` |
 | POST `/v1/image/member-card/layer-image` | Normalize an uploaded sticker layer to PNG | Body limit 8 MB | `routes/render.ts` |
-| POST `/v1/image/nowplaying` | Now-playing card | Dedup key `img:nowplaying:`, bucketed by 5 s of position | `routes/render.ts` |
+| POST `/v1/image/nowplaying` | Now-playing card for the pinned controller (artwork-tinted backdrop, queue preview, variable height). Rendered with satori, falls back to the skia card if satori fails | Dedup key `img:nowplaying:` plus a hash of the payload without the position | `routes/render.ts`, `renderers/satori/nowPlayingCard.ts` |
 | POST `/v1/image/ohaasa` | Horoscope card for one zodiac sign (rank, lucky item and key, date). The bot shows the description as text below it and falls back to text only when rendering fails | Dedup key `img:ohaasa:` | `routes/render.ts` |
 | POST `/v1/image/ohaasa/top` | Horoscope top 3 card (rank and sign only) for the lookup without a sign | Dedup key `img:ohaasa-top:` | `routes/render.ts` |
 | POST `/v1/image/weather` | Weather card (now, today, tomorrow, week strip). The bot falls back to a text card when rendering fails | Dedup key `img:weather:` | `routes/render.ts` |

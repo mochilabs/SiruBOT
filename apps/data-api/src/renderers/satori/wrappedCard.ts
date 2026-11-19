@@ -6,6 +6,7 @@
  * 레이아웃은 flex 선언만 쓰고, 좌표 계산은 하지 않아요.
  */
 import type { WrappedRanking, WrappedStats } from '../../services/wrapped.ts';
+import { RADIUS, T, W } from './tokens.ts';
 import { CARD_FONT, fetchImageDataUri, h, img, renderSatoriPng, stripEmoji, type SatoriChild, type SatoriElement } from './satoriKit.ts';
 
 export const WRAPPED_CARD_SIZE = { width: 900, height: 1700 } as const;
@@ -22,30 +23,11 @@ export interface WrappedCardInput {
 	stats: WrappedStats;
 }
 
-/** 대시보드 다크 테마 토큰 (apps/dashboard/src/app/globals.css `.dark`) — 값을 바꾸려면 거기를 먼저 바꿔요. */
-const T = {
-	background: '#1f1618',
-	surface1: '#2b2023',
-	surface2: '#3a2c30',
-	foreground: '#fbeeee',
-	mutedForeground: '#b9a4a9',
-	/** 강조 텍스트(`text-primary-text` = accent-foreground) — 숫자·강조 */
-	primaryText: '#ffdada',
-	/** 솔리드 강조(`bg-primary-control`) — 막대 피크 */
-	brand: '#f98aa0',
-	/** `bg-primary-control` 위의 글자색(`text-primary-control-text`) */
-	brandForeground: '#3a1a22',
-	/** 인터랙티브 경계(3:1) */
-	borderStrong: '#a37d89'
-} as const;
-
 /**
  * 카드 그림자(Elev-1)는 그리지 않아요 — 다크 배경에서 거의 안 보이는 값인데, satori가 블러 필터로 내보내서
  * resvg 래스터 시간의 약 70%(카드 7개에 약 115ms)를 먹어요. 깊이는 surface 톤 차이로 충분해요.
  * 같은 이유로 inset 그림자(control-boundary) 대신 border를 써요.
  */
-const RADIUS = { card: 32, control: 20, controlInner: 12 } as const;
-const W = { regular: 400, semibold: 600, black: 900 } as const;
 
 const number = (n: number): string => n.toLocaleString('ko-KR');
 

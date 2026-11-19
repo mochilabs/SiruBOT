@@ -9,6 +9,7 @@ import type { Resvg as ResvgType } from '@resvg/resvg-js';
 import type { Font } from 'satori';
 import satori from 'satori';
 import { getLogger } from '../../utils/logger.ts';
+import { getIconDef, type IconName } from '../canvas/icons.ts';
 import { isAllowedImageUrl } from '../canvas/images.ts';
 
 const logger = getLogger('satoriKit');
@@ -86,19 +87,57 @@ export function stripEmoji(text: string): string {
 		.trim();
 }
 
-/** satori로 SVG를 만들고 resvg로 PNG까지 변환해요. 폰트를 못 찾으면 throw해서 라우트가 500으로 알려요. */
-export async function renderSatoriPng(node: SatoriElement, size: { width: number; height: number }): Promise<Buffer> {
+let resvgPromise: Promise<typeof ResvgType> | null = null;
+
+/** resvg 생성자 — 네이티브 바이너리라 처음 쓸 때 한 번만 로드해요. */
+export function loadResvg(): Promise<typeof ResvgType> {
+	resvgPromise ??= import('@resvg/resvg-js').then((mod) => (mod as unknown as { Resvg: typeof ResvgType }).Resvg);
+	return resvgPromise;
+}
+
+/**
+ * satori로 SVG를 만들고 resvg로 PNG까지 변환해요. 폰트를 못 찾으면 throw해서 라우트가 500으로 알려요.
+ * height를 생략하면 레이아웃이 정한 높이로 그려요 (대기열 길이처럼 내용에 따라 달라지는 카드용).
+ */
+export async function renderSatoriPng(node: SatoriElement, size: { width: number; height?: number }): Promise<Buffer> {
 	const fonts = await loadCardFonts();
 	if (fonts.length === 0) throw new Error('card font unavailable');
-	const svg = await satori(node as unknown as SatoriInput, {
-		...size,
-		fonts,
-		// 색 이모지는 아직 지원하지 않아요 — 깨진 글리프(tofu) 대신 빈칸으로 두고, 폰트에 없는 글자는 건너뛰어요.
-		loadAdditionalAsset: async (code) => (code === 'emoji' ? EMPTY_EMOJI : [])
-	});
+	const svg = await satori(
+		node as unknown as SatoriInput,
+		{
+			...size,
+			fonts,
+			// 색 이모지는 아직 지원하지 않아요 — 깨진 글리프(tofu) 대신 빈칸으로 두고, 폰트에 없는 글자는 건너뛰어요.
+			loadAdditionalAsset: async (code) => (code === 'emoji' ? EMPTY_EMOJI : [])
+		} as Parameters<typeof satori>[1]
+	);
 	// resvg는 system font 스캔이 첫 호출에 1초 넘게 걸려서 꺼요 (satori가 글자를 path로 바꿔 줘서 폰트가 필요 없어요).
-	const { Resvg } = (await import('@resvg/resvg-js')) as { Resvg: typeof ResvgType };
+	const Resvg = await loadResvg();
 	return Buffer.from(new Resvg(svg, { fitTo: { mode: 'width', value: size.width }, font: { loadSystemFonts: false } }).render().asPng());
+}
+
+/** lucide 아이콘을 satori `<svg>` 요소로 — skia 카드와 같은 경로 DB(canvas/icons.ts)를 써요. 선 아이콘만 지원해요. */
+export function iconElement(name: IconName, size: number, color: string, strokeWidth = 2): SatoriElement {
+	const def = getIconDef(name);
+	const children: SatoriElement[] = [
+		...(def?.subpaths ?? []).map((d) => ({ type: 'path', props: { d } })),
+		...(def?.circles ?? []).map(([cx, cy, r]) => ({ type: 'circle', props: { cx, cy, r } })),
+		...(def?.rects ?? []).map(([x, y, width, height, rx]) => ({ type: 'rect', props: { x, y, width, height, rx } }))
+	];
+	return {
+		type: 'svg',
+		props: {
+			width: size,
+			height: size,
+			viewBox: '0 0 24 24',
+			fill: 'none',
+			stroke: color,
+			strokeWidth,
+			strokeLinecap: 'round',
+			strokeLinejoin: 'round',
+			children
+		}
+	} as unknown as SatoriElement;
 }
 
 const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif']);
@@ -119,4 +158,33 @@ export async function fetchImageDataUri(url: string | null | undefined): Promise
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * 키별 비동기 결과를 최근 사용 순으로 max개까지 기억하는 캐시예요 (동시 요청은 하나로 합쳐요). null·실패는 기억하지 않아 다음에 다시 시도해요.
+ * 같은 곡의 볼륨·일시정지·반복·챕터 변경처럼 입력이 거의 같은 재렌더에서 이미지 다운로드와 처리를 건너뛰는 용도예요.
+ */
+export function createAsyncLru<T>(max: number, load: (key: string) => Promise<T | null>): (key: string) => Promise<T | null> {
+	const entries = new Map<string, Promise<T | null>>();
+	return (key) => {
+		const hit = entries.get(key);
+		if (hit) {
+			entries.delete(key); // 최근 사용으로 갱신
+			entries.set(key, hit);
+			return hit;
+		}
+		const promise = load(key).then(
+			(value) => {
+				if (value === null && entries.get(key) === promise) entries.delete(key);
+				return value;
+			},
+			(error: unknown) => {
+				if (entries.get(key) === promise) entries.delete(key);
+				throw error;
+			}
+		);
+		entries.set(key, promise);
+		if (entries.size > max) entries.delete(entries.keys().next().value as string);
+		return promise;
+	};
 }

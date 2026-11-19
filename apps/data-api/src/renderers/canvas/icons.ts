@@ -43,7 +43,7 @@ export type IconName =
 	| 'zodiac-aquarius'
 	| 'zodiac-pisces';
 
-interface IconDef {
+export interface IconDef {
 	subpaths?: string[];
 	circles?: [number, number, number][];
 	rects?: [number, number, number, number, number][];
@@ -180,6 +180,11 @@ const ICONS: Record<IconName, IconDef> = {
 		]
 	}
 };
+
+/** 아이콘 정의(경로·원·사각형) — satori 등 skia 밖의 렌더러가 같은 경로 DB를 써요. */
+export function getIconDef(name: IconName): IconDef | undefined {
+	return ICONS[name];
+}
 
 /** 아이콘 그리기 — (x, y)는 아이콘 박스 좌상단, size는 박스 한변. fill:true면 채운 모양. */
 export function drawIcon(
