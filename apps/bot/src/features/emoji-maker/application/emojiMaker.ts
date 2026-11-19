@@ -50,7 +50,7 @@ export function createEmojiMaker(deps: EmojiMakerDeps): EmojiMaker {
 	// 같은 사람이 버튼·명령을 연타해 서버 대기열을 혼자 채우지 않게 막는 진행 중 표시예요 (인스턴스 소유).
 	const drawing = new Set<string>();
 
-	async function readImage(imageUrl: string, note: string, imageType?: string | null): Promise<string> {
+	async function readImage(imageUrl: string, note: string, imageType?: string | null): Promise<{ prompt: string; subject: string | null }> {
 		let reading;
 		try {
 			reading = await deps.imageReader.read(imageUrl, note, imageType);
@@ -70,7 +70,7 @@ export function createEmojiMaker(deps: EmojiMakerDeps): EmojiMaker {
 		if (reading.kind === 'nsfw') {
 			throw new AppError('forbidden', '부적절한 이미지라 이모지로 만들 수 없어요.', { ephemeral: true });
 		}
-		return reading.prompt;
+		return { prompt: reading.prompt, subject: reading.subject };
 	}
 
 	return {
@@ -81,8 +81,9 @@ export function createEmojiMaker(deps: EmojiMakerDeps): EmojiMaker {
 		async prepare(input) {
 			const description = (input.description ?? '').trim().replace(/\s+/g, ' ').slice(0, MAX_DESCRIPTION_LENGTH);
 			if (input.imageUrl) {
-				const prompt = await readImage(input.imageUrl, description, input.imageType);
-				return { description, prompt, source: 'image', translated: true, suggestedName: suggestEmojiName(prompt) };
+				const { prompt, subject } = await readImage(input.imageUrl, description, input.imageType);
+				// 이미지 설명은 길어서 이름은 짧은 대상 이름(예: tabby_cat)으로 지어요.
+				return { description, prompt, source: 'image', translated: true, suggestedName: suggestEmojiName(subject ?? prompt) };
 			}
 			if (!description) throw new AppError('invalid_input', '그릴 이모지를 설명하거나 이미지를 첨부해 주세요.', { ephemeral: true });
 			const { prompt, translated } = await deps.translator.toEnglish(description);

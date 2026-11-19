@@ -76,14 +76,14 @@ describe('createEmojiMaker', () => {
 	});
 
 	it('reads an attached image into a prompt, using the description as a note', async () => {
-		const reader = imageReader({ kind: 'ok', prompt: 'orange cat wearing a crown' });
+		const reader = imageReader({ kind: 'ok', prompt: 'front-view chubby orange tabby cat with a tiny gold crown', subject: 'tabby cat' });
 		const maker = createEmojiMaker({ logger, translator, imageReader: reader, client: client(vi.fn()) });
 		expect(await maker.prepare({ description: '왕관 씌워줘', imageUrl: 'https://cdn/a.png' })).toEqual({
 			description: '왕관 씌워줘',
-			prompt: 'orange cat wearing a crown',
+			prompt: 'front-view chubby orange tabby cat with a tiny gold crown',
 			source: 'image',
 			translated: true,
-			suggestedName: 'orange_cat_wearing_a_crown'
+			suggestedName: 'tabby_cat'
 		});
 		expect(reader.read).toHaveBeenCalledWith('https://cdn/a.png', '왕관 씌워줘', undefined);
 		expect(translator.toEnglish).not.toHaveBeenCalledWith('왕관 씌워줘');

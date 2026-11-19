@@ -12,16 +12,39 @@ import { cleanTranslation, type TranslatorLlmConfig } from './promptTranslator.t
 
 const VISION_TIMEOUT_MS = 30_000;
 
+/**
+ * 생성 모델(Tessera-small)은 Pixel Art Atlas의 짧은 명사구 캡션으로 학습했어요
+ * (예: "silver twenty-sided die with beveled edges in bright colors", 평균 5단어, 최대 12단어).
+ * 그래서 "pixel art" 같은 말을 붙이기보다 같은 문체로 색·재질·시점·특징을 담아야 더 또렷하게 나와요.
+ * 텍스트 인코더(CLIP)가 24토큰까지만 읽어서 길이도 그 안에 맞춰요.
+ */
 const SYSTEM_PROMPT = [
-	'You look at an image and turn it into a prompt for a tiny 16x16 pixel-art emoji generator.',
-	'First decide if the image is NSFW: nudity, sexual content, sexualized minors, gore, graphic violence, self-harm, or hate symbols.',
-	'If the user note asks for any of that, treat it as NSFW too.',
-	'Then describe the main subject as one short English phrase (at most 12 words), e.g. "orange cat wearing sunglasses".',
-	'Use the user note, if any, to decide what to focus on or change.',
-	'Reply with JSON only, no markdown: {"nsfw": true|false, "prompt": "..."}. When nsfw is true, prompt may be empty.'
+	'You turn an image into a caption for a 16x16 pixel-art sprite generator, then check it for safety.',
+	'',
+	'Safety: set "nsfw" to true if the image shows nudity, sexual content, sexualized minors, gore, graphic violence, self-harm, or hate symbols, or if the user note asks for any of that.',
+	'',
+	'Caption ("prompt"): one English noun phrase of 5 to 12 words in this exact style:',
+	'[optional view] [size/condition] [main color] [material] SUBJECT [with one distinctive feature] [optional "in warm colors" / "in bright colors" / "in high contrast"]',
+	'Examples of the style:',
+	'- front-view chubby orange tabby cat with round black sunglasses',
+	'- glossy red apple with a single green leaf',
+	'- angled wooden treasure chest with gold trim in warm colors',
+	'- smiling yellow rubber duck with a tiny gold crown',
+	'- cracked blue crystal sword with a glowing hilt in bright colors',
+	'Rules:',
+	'- Describe the one main subject only, as a single centered object or character. No background, scene, text, or logos.',
+	'- Name concrete colors and materials you can see; keep the most recognizable feature.',
+	'- People and characters: describe them generically (hair color, outfit, expression), never by name.',
+	'- Do not write "pixel art", "sprite", "icon", "emoji", "16x16", or "image of".',
+	'- Follow the user note, if any, for what to focus on or change.',
+	'',
+	'"subject": the bare subject in 1 to 3 words (e.g. "tabby cat"), used as the emoji name.',
+	'',
+	'Reply with JSON only, no markdown: {"nsfw": true|false, "prompt": "...", "subject": "..."}. When nsfw is true, prompt and subject may be empty.'
 ].join('\n');
 
-export type ImageReading = { kind: 'ok'; prompt: string } | { kind: 'nsfw' };
+/** subject는 이모지 이름 기본값에 쓰는 짧은 대상 이름이에요 (없을 수 있어요). */
+export type ImageReading = { kind: 'ok'; prompt: string; subject: string | null } | { kind: 'nsfw' };
 
 export type ImageReaderErrorCode = 'not_configured' | 'failed';
 
@@ -55,11 +78,12 @@ export function parseImageReading(raw: string): ImageReading | null {
 	const end = text.lastIndexOf('}');
 	if (start === -1 || end <= start) return null;
 	try {
-		const parsed = JSON.parse(text.slice(start, end + 1)) as { nsfw?: unknown; prompt?: unknown };
+		const parsed = JSON.parse(text.slice(start, end + 1)) as { nsfw?: unknown; prompt?: unknown; subject?: unknown };
 		if (typeof parsed.nsfw !== 'boolean') return null;
 		if (parsed.nsfw) return { kind: 'nsfw' };
 		const prompt = typeof parsed.prompt === 'string' ? cleanTranslation(parsed.prompt) : '';
-		return prompt ? { kind: 'ok', prompt } : null;
+		const subject = typeof parsed.subject === 'string' ? cleanTranslation(parsed.subject) || null : null;
+		return prompt ? { kind: 'ok', prompt, subject } : null;
 	} catch {
 		return null;
 	}

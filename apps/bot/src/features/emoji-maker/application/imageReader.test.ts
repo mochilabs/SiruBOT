@@ -16,7 +16,12 @@ const reader = (on = true) => createImageReader({ logger, getLlmConfig: () => (o
 
 describe('parseImageReading', () => {
 	it('reads safe and nsfw verdicts, tolerating fences and think blocks', () => {
-		expect(parseImageReading('{"nsfw": false, "prompt": "orange cat."}')).toEqual({ kind: 'ok', prompt: 'orange cat' });
+		expect(parseImageReading('{"nsfw": false, "prompt": "orange cat."}')).toEqual({ kind: 'ok', prompt: 'orange cat', subject: null });
+		expect(parseImageReading('{"nsfw": false, "prompt": "front-view chubby orange tabby cat", "subject": "tabby cat"}')).toEqual({
+			kind: 'ok',
+			prompt: 'front-view chubby orange tabby cat',
+			subject: 'tabby cat'
+		});
 		expect(parseImageReading('<think>x</think>```json\n{"nsfw": true, "prompt": ""}\n```')).toEqual({ kind: 'nsfw' });
 	});
 
@@ -34,7 +39,8 @@ describe('createImageReader', () => {
 		fetchMock.mockResolvedValueOnce(image('image/png')).mockResolvedValueOnce(answer('{"nsfw": false, "prompt": "orange cat wearing a crown"}'));
 		expect(await reader().read('https://cdn.discordapp.com/a.png?ex=1', '왕관 씌워줘')).toEqual({
 			kind: 'ok',
-			prompt: 'orange cat wearing a crown'
+			prompt: 'orange cat wearing a crown',
+			subject: null
 		});
 		expect(fetchMock.mock.calls[0]![0]).toBe('https://cdn.discordapp.com/a.png?ex=1');
 		const [url, init] = fetchMock.mock.calls[1]! as [string, RequestInit];
