@@ -1,4 +1,5 @@
 import type { AppLogger } from '../../../lib/appLogger.ts';
+import { fetchImageAsDataUrl } from '../../../lib/imageDataUrl.ts';
 import { cleanTranslation, type TranslatorLlmConfig } from './promptTranslator.ts';
 
 /**
@@ -10,34 +11,6 @@ import { cleanTranslation, type TranslatorLlmConfig } from './promptTranslator.t
  */
 
 const VISION_TIMEOUT_MS = 30_000;
-const IMAGE_FETCH_TIMEOUT_MS = 15_000;
-/** AI 채팅이 받는 이미지 상한과 같아요. */
-export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-/** 주요 비전 모델(Gemini·OpenAI 등)이 공통으로 받는 형식 — GIF는 Gemini가 거절해서 받지 않아요. */
-export const SUPPORTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
-
-/** content-type 헤더에서 지원하는 이미지 형식만 골라요 (`image/jpg` 같은 변형도 받아요). */
-export function normalizeImageType(raw: string | null | undefined): (typeof SUPPORTED_IMAGE_TYPES)[number] | null {
-	const type = (raw ?? '').split(';')[0]!.trim().toLowerCase();
-	if (type === 'image/jpg' || type === 'image/pjpeg') return 'image/jpeg';
-	return (SUPPORTED_IMAGE_TYPES as readonly string[]).includes(type) ? (type as (typeof SUPPORTED_IMAGE_TYPES)[number]) : null;
-}
-
-/**
- * 첨부 이미지를 내려받아 `data:` URL로 바꿔요. URL을 그대로 넘기면 LLM 프록시가 형식을 몰라
- * `image/*`로 보내고, Gemini 같은 제공자가 400으로 거절해요. 직접 받아서 실제 형식을 붙여 보내요.
- */
-async function toDataUrl(imageUrl: string, typeHint?: string | null): Promise<string> {
-	const res = await fetch(imageUrl, { signal: AbortSignal.timeout(IMAGE_FETCH_TIMEOUT_MS) });
-	if (!res.ok) throw new Error(`image download HTTP ${res.status}`);
-	const declared = Number(res.headers.get('content-length'));
-	if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) throw new Error(`image too large: ${declared} bytes`);
-	const bytes = Buffer.from(await res.arrayBuffer());
-	if (bytes.length > MAX_IMAGE_BYTES) throw new Error(`image too large: ${bytes.length} bytes`);
-	const type = normalizeImageType(res.headers.get('content-type')) ?? normalizeImageType(typeHint);
-	if (!type) throw new Error(`unsupported image type: ${res.headers.get('content-type') ?? typeHint ?? 'unknown'}`);
-	return `data:${type};base64,${bytes.toString('base64')}`;
-}
 
 const SYSTEM_PROMPT = [
 	'You look at an image and turn it into a prompt for a tiny 16x16 pixel-art emoji generator.',
@@ -101,7 +74,7 @@ export function createImageReader(deps: ImageReaderDeps): ImageReader {
 			const userText = note?.trim() ? `User note: ${note.trim()}` : 'No user note.';
 			let content: string;
 			try {
-				const dataUrl = await toDataUrl(imageUrl, typeHint);
+				const dataUrl = await fetchImageAsDataUrl(imageUrl, typeHint);
 				const res = await fetch(`${config.apiUrl}/chat/completions`, {
 					method: 'POST',
 					headers: { 'content-type': 'application/json', ...(config.apiKey ? { authorization: `Bearer ${config.apiKey}` } : {}) },

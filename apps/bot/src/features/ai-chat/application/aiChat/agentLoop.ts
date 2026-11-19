@@ -8,26 +8,45 @@ import { scheduleSummary } from './summarizer.ts';
 import { ChatServiceError, type ChatConfig, type ChatContent, type ChatContentPart, type ChatMessage, type ChatTurnResult } from './types.ts';
 import { appendCitedSources } from './traceCitation.ts';
 import { resolveFallbackTextFromToolResults } from './agentFallback.ts';
+import { fetchImageAsDataUrl, MAX_IMAGE_BYTES, normalizeImageType } from '../../../../lib/imageDataUrl.ts';
 const MAX_TOOL_ROUNDS = 5;
 
 // 멀티모달 이미지
 const MAX_IMAGES_PER_MESSAGE = 3;
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+/** 모델에 보낼 첨부 이미지 — contentType은 내려받은 응답에 형식이 없을 때 쓰는 힌트예요. */
+export interface ChatImage {
+	url: string;
+	contentType: string | null;
+}
 
 /**
- * Discord 첨부파일 중 모델에 보낼 수 있는 이미지 URL만 골라요.
- * image/* 이면서( svg 제외) 10MB 이하, 최대 MAX_IMAGES_PER_MESSAGE장.
+ * Discord 첨부파일 중 모델에 보낼 수 있는 이미지만 골라요.
+ * PNG·JPEG·WEBP(GIF·SVG 제외) 10MB 이하, 최대 MAX_IMAGES_PER_MESSAGE장.
  */
-export function collectImageUrls(attachments: ReadonlyArray<{ url: string; contentType: string | null; size?: number | null }>): string[] {
+export function collectImageUrls(attachments: ReadonlyArray<{ url: string; contentType: string | null; size?: number | null }>): ChatImage[] {
 	return attachments
 		.filter((a) => {
-			const type = (a.contentType ?? '').toLowerCase();
-			if (!type.startsWith('image/') || type === 'image/svg+xml') return false;
+			if (!normalizeImageType(a.contentType)) return false;
 			if (typeof a.size === 'number' && a.size > MAX_IMAGE_BYTES) return false;
 			return Boolean(a.url);
 		})
 		.slice(0, MAX_IMAGES_PER_MESSAGE)
-		.map((a) => a.url);
+		.map((a) => ({ url: a.url, contentType: a.contentType }));
+}
+
+/**
+ * 첨부 이미지를 `data:` URL로 바꿔요(URL을 그대로 넘기면 Gemini가 `image/*` 형식으로 거절해요, lib/imageDataUrl.ts).
+ * 하나가 실패해도 대화는 이어가도록 그 이미지만 빼고 로그를 남겨요.
+ */
+async function toImageDataUrls(deps: Pick<AiChatDeps, 'logger'>, images: readonly ChatImage[] | undefined): Promise<string[]> {
+	if (!images?.length) return [];
+	const results = await Promise.allSettled(images.map((image) => fetchImageAsDataUrl(image.url, image.contentType)));
+	return results.flatMap((result) => {
+		if (result.status === 'fulfilled') return [result.value];
+		deps.logger.warn(`[aiChat] 첨부 이미지를 받지 못해 빼고 보내요: ${result.reason}`);
+		return [];
+	});
 }
 
 /** 사용자 메시지 content를 문자열 또는 멀티모달 파트 배열로 만들어요. (텍스트가 비면 이미지만 보내요) */
@@ -55,8 +74,8 @@ export async function runChatTurn(
 		prompt: string;
 		config: ChatConfig;
 		toolContext: AiToolContext;
-		/** 사용자 메시지에 함께 보낼 이미지 URL (미지정 시 텍스트만 전송) */
-		images?: string[];
+		/** 사용자 메시지에 함께 보낼 첨부 이미지 (미지정 시 텍스트만 전송) */
+		images?: readonly ChatImage[];
 		/** 대화 기록에 남길 화자 표시명 (미지정 시 '사용자') */
 		author?: string;
 		/** 원문 Discord 메시지 ID — 삭제/편집 시 기록도 동기화돼요 */
@@ -82,14 +101,15 @@ export async function runChatTurn(
 
 	deps.history.setChannelGuild(channelId, options.toolContext.guildId);
 	// 정책 확인 후, 서로 독립적인 맥락 조회를 함께 시작한다.
-	const [, channelBlock, memoryBlock, discordContextBlock] = await Promise.all([
+	const [, channelBlock, memoryBlock, discordContextBlock, imageDataUrls] = await Promise.all([
 		deps.history.loadChannelHistory(channelId),
 		buildRecentChannelBlock(deps, channelId, options.excludeMessageId),
 		deps.memory.buildPromptBlock(userId).catch((error) => {
 			deps.logger.error('[aiChat] failed to load user memory:', error);
 			return null;
 		}),
-		buildDiscordContextBlock(deps, options.toolContext.guildId, userId)
+		buildDiscordContextBlock(deps, options.toolContext.guildId, userId),
+		toImageDataUrls(deps, options.images)
 	]);
 
 	const messages: ChatMessage[] = [
@@ -103,7 +123,7 @@ export async function runChatTurn(
 				deps.getContextTokenBudget()
 			)
 		},
-		{ role: 'user', content: buildUserContent(options.prompt, options.images) }
+		{ role: 'user', content: buildUserContent(options.prompt, imageDataUrls) }
 	];
 
 	let answer = '';
