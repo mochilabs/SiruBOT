@@ -85,7 +85,7 @@ describe('createEmojiMaker', () => {
 			translated: true,
 			suggestedName: 'orange_cat_wearing_a_crown'
 		});
-		expect(reader.read).toHaveBeenCalledWith('https://cdn/a.png', '왕관 씌워줘');
+		expect(reader.read).toHaveBeenCalledWith('https://cdn/a.png', '왕관 씌워줘', undefined);
 		expect(translator.toEnglish).not.toHaveBeenCalledWith('왕관 씌워줘');
 	});
 
