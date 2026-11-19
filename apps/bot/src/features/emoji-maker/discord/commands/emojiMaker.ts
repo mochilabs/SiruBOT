@@ -3,10 +3,8 @@ import { Command, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, type Attachment } from 'discord.js';
 import { MAX_DESCRIPTION_LENGTH } from '../../application/emojiMaker.ts';
+import { MAX_IMAGE_BYTES, normalizeImageType } from '../../application/imageReader.ts';
 import { runEmojiMakerSession } from '../emojiMakerSession.ts';
-
-/** AI 채팅이 받는 이미지 상한과 같아요. */
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 @ApplyOptions<Command.Options>({
 	name: 'emojimaker',
@@ -37,8 +35,8 @@ export class EmojiMakerCommand extends Command {
 					option
 						.setName('image')
 						.setNameLocalizations({ ko: '이미지' })
-						.setDescription('An image to turn into an emoji. NSFW images are rejected.')
-						.setDescriptionLocalizations({ ko: '이모지로 만들 이미지 (부적절한 이미지는 거절해요)' })
+						.setDescription('A PNG, JPG or WEBP image to turn into an emoji. NSFW images are rejected.')
+						.setDescriptionLocalizations({ ko: '이모지로 만들 PNG·JPG·WEBP 이미지 (부적절한 이미지는 거절해요)' })
 						.setRequired(false)
 				)
 		);
@@ -70,10 +68,14 @@ export class EmojiMakerCommand extends Command {
 		}
 		if (image) this.assertImage(image);
 		await interaction.deferReply();
-		await runEmojiMakerSession(interaction, this.container.emojiMaker, this.container.logger, { description, imageUrl: image?.url ?? null });
+		await runEmojiMakerSession(interaction, this.container.emojiMaker, this.container.logger, {
+			description,
+			imageUrl: image?.url ?? null,
+			imageType: image?.contentType ?? null
+		});
 	}
 
-	/** 비전 모델에 보낼 수 있는 이미지인지 — image/*(SVG 제외), 10MB 이하, 이미지 판독이 켜져 있어야 해요. */
+	/** 비전 모델에 보낼 수 있는 이미지인지 — PNG·JPG·WEBP, 10MB 이하, 이미지 판독이 켜져 있어야 해요. */
 	private assertImage(image: Attachment) {
 		if (!this.container.emojiMaker.canReadImages()) {
 			throw new UserError({
@@ -82,11 +84,10 @@ export class EmojiMakerCommand extends Command {
 				context: { ephemeral: true }
 			});
 		}
-		const type = (image.contentType ?? '').toLowerCase();
-		if (!type.startsWith('image/') || type === 'image/svg+xml' || image.size > MAX_IMAGE_BYTES) {
+		if (!normalizeImageType(image.contentType) || image.size > MAX_IMAGE_BYTES) {
 			throw new UserError({
 				identifier: 'emojimaker_bad_image',
-				message: `${emoji('error')} 10MB 이하의 PNG·JPG·GIF·WEBP 이미지만 쓸 수 있어요.`,
+				message: `${emoji('error')} 10MB 이하의 PNG·JPG·WEBP 이미지만 쓸 수 있어요.`,
 				context: { ephemeral: true }
 			});
 		}

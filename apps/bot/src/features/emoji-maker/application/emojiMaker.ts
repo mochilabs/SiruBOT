@@ -32,6 +32,8 @@ export interface PrepareInput {
 	description?: string | null;
 	/** 첨부 이미지 URL — 있으면 비전 모델로 읽고, 설명은 무엇을 그릴지 고르는 메모로 써요. */
 	imageUrl?: string | null;
+	/** 첨부의 contentType — 이미지를 내려받았을 때 형식을 모르면 써요. */
+	imageType?: string | null;
 }
 
 export interface EmojiMaker {
@@ -48,10 +50,10 @@ export function createEmojiMaker(deps: EmojiMakerDeps): EmojiMaker {
 	// 같은 사람이 버튼·명령을 연타해 서버 대기열을 혼자 채우지 않게 막는 진행 중 표시예요 (인스턴스 소유).
 	const drawing = new Set<string>();
 
-	async function readImage(imageUrl: string, note: string): Promise<string> {
+	async function readImage(imageUrl: string, note: string, imageType?: string | null): Promise<string> {
 		let reading;
 		try {
-			reading = await deps.imageReader.read(imageUrl, note);
+			reading = await deps.imageReader.read(imageUrl, note, imageType);
 		} catch (error) {
 			if (error instanceof ImageReaderError && error.code === 'not_configured') {
 				throw new AppError('unavailable', '이 봇에서는 이미지로 이모지 만들기가 꺼져 있어요. 설명으로 만들어 주세요.', {
@@ -79,7 +81,7 @@ export function createEmojiMaker(deps: EmojiMakerDeps): EmojiMaker {
 		async prepare(input) {
 			const description = (input.description ?? '').trim().replace(/\s+/g, ' ').slice(0, MAX_DESCRIPTION_LENGTH);
 			if (input.imageUrl) {
-				const prompt = await readImage(input.imageUrl, description);
+				const prompt = await readImage(input.imageUrl, description, input.imageType);
 				return { description, prompt, source: 'image', translated: true, suggestedName: suggestEmojiName(prompt) };
 			}
 			if (!description) throw new AppError('invalid_input', '그릴 이모지를 설명하거나 이미지를 첨부해 주세요.', { ephemeral: true });
