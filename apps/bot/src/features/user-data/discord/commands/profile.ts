@@ -57,7 +57,10 @@ export class ProfileCommand extends Command {
 								.setDescriptionLocalizations({ ko: '프로필 카드 디자인이에요. 기본은 다크 퍼플 카드예요.' })
 								.addChoices(
 									{ name: 'Dark (default)', name_localizations: { ko: '다크 (기본)' }, value: 'dark' },
-									{ name: 'Member pass ticket', name_localizations: { ko: '멤버 패스 티켓' }, value: 'ticket' }
+									{ name: 'Member pass ticket', name_localizations: { ko: '멤버 패스 티켓' }, value: 'ticket' },
+									{ name: 'Dashboard (dark)', name_localizations: { ko: '대시보드 (다크)' }, value: 'dashboard' },
+									{ name: 'Dashboard (light)', name_localizations: { ko: '대시보드 (라이트)' }, value: 'light' },
+									{ name: 'Aura (banner colors)', name_localizations: { ko: '오라 (배너 색 번짐)' }, value: 'aura' }
 								)
 								.setRequired(false)
 						)
@@ -186,7 +189,7 @@ export class ProfileCommand extends Command {
 		// 본인 조회는 기본 비공개이고 생일은 비공개 응답에만 넣어요.
 		const target = interaction.options.getUser('user') ?? interaction.user;
 		const showPrivate = interaction.options.getBoolean('private') ?? target.id === interaction.user.id;
-		const preset = (interaction.options.getString('style') ?? 'dark') as 'dark' | 'ticket';
+		const preset = (interaction.options.getString('style') ?? 'dark') as 'dark' | 'ticket' | 'dashboard' | 'light' | 'aura';
 		await interaction.deferReply({ flags: showPrivate ? [MessageFlags.Ephemeral] : undefined });
 
 		const data = await buildProfileCardData(target.id, interaction.user.id, interaction.guildId);

@@ -56,7 +56,7 @@ Routes are registered from `routes/index.ts`, one file per domain.
 
 | Route | Description | Notes | File |
 |---|---|---|---|
-| POST `/v1/image/profile` | Profile card PNG, preset `dark` or `ticket` | Dedup key `img:card:` | `routes/render.ts` |
+| POST `/v1/image/profile` | Profile card PNG, preset `dark`, `ticket` (skia) or `dashboard`, `light`, `aura` (satori; falls back to `dark` on render failure) | Dedup key `img:card:` | `routes/render.ts` |
 | POST `/v1/image/member-card` | Greeting card, kind `welcome` or `goodbye` | Dedup key `img:greeting:`; body limit 4 MB | `routes/render.ts` |
 | POST `/v1/image/member-card/background` | Normalize an uploaded background to JPEG (longest side 1600 px, at most 900 KB) | Body limit 8 MB | `routes/render.ts` |
 | POST `/v1/image/member-card/layer-image` | Normalize an uploaded sticker layer to PNG | Body limit 8 MB | `routes/render.ts` |

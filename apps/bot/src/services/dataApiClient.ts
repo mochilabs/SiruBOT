@@ -169,7 +169,7 @@ export async function fetchWeather(location: string, scope: WeatherScope = 'now'
  * preset: 'dark'(RINE 다크 퍼플) | 'ticket'(RINE 멤버패스 티켓)
  */
 export interface ProfileCardRequest {
-	preset?: 'dark' | 'ticket';
+	preset?: 'dark' | 'ticket' | 'dashboard' | 'light' | 'aura';
 	userId: string;
 	displayName: string;
 	username: string;
