@@ -399,7 +399,7 @@ describe('non-blocking player notifications', () => {
 			.mockReturnValueOnce(recheck.promise); // catch 복구 분기의 재확인
 		notifier.updateController(current);
 		await vi.advanceTimersByTimeAsync(300);
-		expect(mocks.pinned).toHaveBeenCalledTimes(3); // send 1회 + update 2회
+		expect(mocks.pinned).toHaveBeenCalledTimes(4); // send 2회(패널 조회 포함) + update 2회
 		await notifier.deleteController(current);
 		recheck.resolve('channel');
 		await vi.advanceTimersByTimeAsync(0);

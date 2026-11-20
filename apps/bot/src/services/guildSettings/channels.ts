@@ -32,6 +32,17 @@ export async function setPinnedChannel(store: GuildSettingsStore, guildId: strin
 	return guild.pinnedChannelId;
 }
 
+/** 고정 채널 상시 패널 메시지 ID — 채널이 바뀌면 의미가 없어지므로 호출부가 함께 비워요. */
+export async function getPinnedMessage(store: GuildSettingsStore, guildId: string): Promise<string | null> {
+	const guild = await store.getGuild(guildId);
+	return guild.pinnedMessageId ?? null;
+}
+
+export async function setPinnedMessage(store: GuildSettingsStore, guildId: string, messageId: string | null) {
+	const guild = await store.upsertField(guildId, 'pinnedMessageId', messageId);
+	return guild.pinnedMessageId ?? null;
+}
+
 export async function getPinnedChannelMode(store: GuildSettingsStore, guildId: string): Promise<PinnedChannelMode> {
 	const guild = await store.getGuild(guildId);
 	return normalizePinnedChannelMode(guild.pinnedChannelMode);

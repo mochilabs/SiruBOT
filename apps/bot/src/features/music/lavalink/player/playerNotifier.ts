@@ -11,6 +11,7 @@ import { buildControllerCardPayload } from './controllerPayload.ts';
 import { clearNowPlayingCard, getCachedNowPlayingCard, getNowPlayingCardKey, resolveNowPlayingCard } from './nowPlayingCard.ts';
 import type { LavalinkDeps } from '../deps.ts';
 import { Guild } from '@sirubot/prisma';
+import { pinnedIdleView } from '../../discord/views/pinnedIdle.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 
 type ControllerOptions = Pick<Guild, 'enableController' | 'volume'>;
@@ -90,8 +91,15 @@ export class PlayerNotifier implements Stoppable {
 			if (!options.enableController && !interaction) return;
 			if (!this.canSend(player, version, interaction)) return;
 
-			// 새 컨트롤러를 실제로 보내기 직전에만 기존 메시지를 지운다.
-			await this.removeController(player);
+			// 고정 채널이면 상시 패널 메시지를 그대로 이어 쓴다 (없거나 지워졌으면 새로 보낸다).
+			const pinnedPanel = interaction ? null : await this.fetchPinnedPanel(player);
+			if (pinnedPanel) {
+				if (player.controller && player.controller.id !== pinnedPanel.id) await this.removeController(player);
+				else this.resetControllerState(player);
+			} else {
+				// 새 컨트롤러를 실제로 보내기 직전에만 기존 메시지를 지운다.
+				await this.removeController(player);
+			}
 			if (!this.canSend(player, version, interaction)) return;
 
 			const textChannelId = interaction?.channelId ?? player.textChannelId;
@@ -129,12 +137,23 @@ export class PlayerNotifier implements Stoppable {
 				if (!player.textChannelId) return;
 				const textChannel = this.deps.client.channels.cache.get(player.textChannelId);
 				if (!textChannel?.isSendable()) return;
-				message = await textChannel.send({
-					components: [components],
-					files,
-					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
-					allowedMentions: { roles: [], users: [] }
-				});
+				if (pinnedPanel) {
+					message = await pinnedPanel.edit({
+						components: [components],
+						attachments: [],
+						files,
+						flags: [MessageFlags.IsComponentsV2],
+						allowedMentions: { roles: [], users: [] }
+					});
+				} else {
+					message = await textChannel.send({
+						components: [components],
+						files,
+						flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
+						allowedMentions: { roles: [], users: [] }
+					});
+					if (pinnedChannel) await guildChannels.setPinnedMessage(this.deps.guildService, player.guildId, message.id).catch(() => null);
+				}
 			}
 
 			if (this.destroyedPlayers.has(player) || (this.controllerVersions.get(player) ?? 0) !== version) {
@@ -351,19 +370,77 @@ export class PlayerNotifier implements Stoppable {
 		await this.removeController(player);
 	}
 
-	private async removeController(player: CustomPlayer): Promise<void> {
+	/** 대기 중 갱신·타이머를 정리하고 플레이어의 메시지 참조를 비운다 — 메시지 자체는 건드리지 않는다. */
+	private resetControllerState(player: CustomPlayer): { controllerMessage: Message | null; messageId: string | null } {
 		this.clearDebounceTimer(player.guildId);
 		this.pendingUpdates.delete(player.guildId);
 		this.updateRevisions.set(player.guildId, (this.updateRevisions.get(player.guildId) ?? 0) + 1);
 		this.cardRefreshes.delete(player.guildId);
 		this.stopProgressTick(player.guildId);
 
-		const controllerMessage = player.controller;
-		const messageId = player.messageId;
+		const controllerMessage = (player.controller as Message | null) ?? null;
+		const messageId = player.messageId ?? null;
 
 		// 봇이 직접 삭제할 때, messageDeleted 이벤트가 발생했을 때 구별하기 위해 미리 null로 비워둡니다.
 		player.messageId = null;
 		player.controller = null;
+		return { controllerMessage, messageId };
+	}
+
+	/** 길드 고정 채널에 저장된 상시 패널 메시지 — 플레이어의 텍스트 채널이 고정 채널일 때만, 편집 가능하면 돌려준다. */
+	private async fetchPinnedPanel(player: CustomPlayer): Promise<Message | null> {
+		try {
+			if (!player.textChannelId) return null;
+			const [channelId, messageId] = await Promise.all([
+				guildChannels.getPinnedChannel(this.deps.guildService, player.guildId),
+				guildChannels.getPinnedMessage(this.deps.guildService, player.guildId)
+			]);
+			if (!channelId || !messageId || channelId !== player.textChannelId) return null;
+			const channel = this.deps.client.channels.cache.get(channelId);
+			if (!channel?.isTextBased() || !('messages' in channel)) return null;
+			const message = await channel.messages.fetch(messageId).catch(() => null);
+			return message?.editable ? message : null;
+		} catch {
+			return null;
+		}
+	}
+
+	/**
+	 * 고정 채널 상시 패널을 맞춘다 — 채널 설정/해제 직후 호출한다.
+	 * 이전 패널은 지우고, 새 고정 채널에는 대기 화면을 올려 메시지 ID를 저장한다.
+	 */
+	public async syncPinnedPanel(guildId: string, previousChannelId: string | null): Promise<void> {
+		await this.enqueueControllerOperation(guildId, async () => {
+			try {
+				const oldMessageId = await guildChannels.getPinnedMessage(this.deps.guildService, guildId);
+				if (oldMessageId && previousChannelId) {
+					const oldChannel = this.deps.client.channels.cache.get(previousChannelId);
+					if (oldChannel?.isTextBased() && 'messages' in oldChannel) {
+						await oldChannel.messages.delete(oldMessageId).catch(() => null);
+					}
+				}
+				await guildChannels.setPinnedMessage(this.deps.guildService, guildId, null);
+				const channelId = await guildChannels.getPinnedChannel(this.deps.guildService, guildId);
+				if (!channelId) return;
+				const channel = this.deps.client.channels.cache.get(channelId);
+				if (!channel?.isSendable()) return;
+				const player = this.deps.audio?.getPlayer?.(guildId);
+				// 이미 재생 중이면 곧 컨트롤러가 이 채널로 오므로 대기 화면을 올리지 않는다.
+				if (player?.queue.current) return;
+				const message = await channel.send({
+					components: [pinnedIdleView()],
+					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
+					allowedMentions: { roles: [], users: [] }
+				});
+				await guildChannels.setPinnedMessage(this.deps.guildService, guildId, message.id);
+			} catch (error) {
+				this.logger.warn(`Failed to sync pinned panel for guild ${guildId}:`, error);
+			}
+		});
+	}
+
+	private async removeController(player: CustomPlayer): Promise<void> {
+		const { controllerMessage, messageId } = this.resetControllerState(player);
 
 		// controller 객체가 이미 있으면 fetch 없이 바로 삭제
 		if (controllerMessage?.deletable) {
@@ -430,6 +507,19 @@ export class PlayerNotifier implements Stoppable {
 		this.logger.debug(`Player destroyed in guild: ${player.guildId}`);
 		this.destroyedPlayers.add(player);
 		clearNowPlayingCard(this.deps, player.guildId);
+		// 고정 채널 패널은 지우지 않고 대기 화면으로 되돌린다.
+		const panel = player.controller as Message | null;
+		if (panel && player.textChannelId && panel.editable && (await this.isPinnedChannel(player.guildId, player.textChannelId))) {
+			this.controllerVersions.set(player, (this.controllerVersions.get(player) ?? 0) + 1);
+			this.resetControllerState(player);
+			// 진행 중인 편집과 겹쳐도 파괴 경로가 막히지 않게 기다리지 않는다.
+			void panel
+				.edit({ components: [pinnedIdleView()], attachments: [], files: [], flags: [MessageFlags.IsComponentsV2] })
+				.catch((error: { code?: number }) => {
+					if (error.code !== 10008) this.logger.warn(`Failed to reset pinned panel for guild ${player.guildId}:`, error);
+				});
+			return;
+		}
 		await this.deleteController(player);
 	}
 

@@ -60,7 +60,8 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		intro: z.string().trim().max(120).default(''),
 		accountCreated: z.string().trim().max(40).nullable().default(null),
 		guildJoinedAt: z.string().trim().max(40).nullable().default(null),
-		roleChips: z.array(redisIdSchema).max(4).default([]),
+		// 역할 이름이라 ID 정규식을 쓰면 한글·공백 이름이 400이 돼요 — 디스코드 역할명 상한(100자)만 둬요.
+		roleChips: z.array(z.string().trim().min(1).max(100)).max(4).default([]),
 		guildTag: z
 			.string()
 			.trim()

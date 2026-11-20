@@ -47,6 +47,7 @@ function setup(guild: Record<string, unknown> = GUILD) {
 	const player = { playing: true, queue: { current: { info: {} }, tracks: [] as unknown[] }, setRepeatMode: vi.fn() };
 	const services = {
 		guildService: { getGuild: vi.fn().mockResolvedValue(guild) },
+		lavalink: { playerNotifier: { syncPinnedPanel: vi.fn().mockResolvedValue(undefined) } },
 		audio: { getPlayer: vi.fn(() => player), players: { get: vi.fn(() => player) } },
 		mixerService: { clearNext: vi.fn().mockResolvedValue(undefined) },
 		sponsorBlockService: { refreshSettings: vi.fn() },
@@ -213,8 +214,9 @@ describe('settings 액션 표', () => {
 		expect(guildChannels.setDefaultTextChannel).toHaveBeenLastCalledWith(g, 'g1', 't');
 		await run('selectVoice', makeInteraction('channel', ['v']));
 		expect(guildChannels.setDefaultVoiceChannel).toHaveBeenLastCalledWith(g, 'g1', 'v');
-		await run('selectPin', makeInteraction('channel', ['p']));
+		const pin = await run('selectPin', makeInteraction('channel', ['p']));
 		expect(guildChannels.setPinnedChannel).toHaveBeenLastCalledWith(g, 'g1', 'p');
+		expect(pin.services.lavalink.playerNotifier.syncPinnedPanel).toHaveBeenCalledTimes(1);
 		await run('removeText', makeInteraction('button'));
 		expect(guildChannels.setDefaultTextChannel).toHaveBeenLastCalledWith(g, 'g1', null);
 		await run('removeVoice', makeInteraction('button'));
