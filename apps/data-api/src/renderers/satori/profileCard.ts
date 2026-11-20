@@ -148,7 +148,7 @@ function statTile(theme: Theme, icon: Parameters<typeof iconElement>[0], value: 
 	);
 }
 
-function thumb(uri: string | null, size: number, theme: Theme, accent: string): SatoriElement {
+function thumb(uri: string | null, size: number, accent: string): SatoriElement {
 	return uri
 		? img(uri, { width: size, height: size, borderRadius: RADIUS.controlInner, objectFit: 'cover', flexShrink: 0 })
 		: h('div', { width: size, height: size, borderRadius: RADIUS.controlInner, background: hexToRgba(accent, 0.25), flexShrink: 0 });
@@ -311,7 +311,7 @@ export async function renderProfileCardSatori(input: ProfileSatoriInput): Promis
 					marginBottom: tracks.length ? 14 : 0
 				},
 				[
-					thumb(nowUri, 84, theme, accent),
+					thumb(nowUri, 84, accent),
 					h('div', { flexDirection: 'column', marginLeft: 18, flex: 1, minWidth: 0 }, [
 						h('div', { fontSize: 20, fontWeight: W.semibold, color: theme.strong }, '지금 재생 중'),
 						h(
@@ -345,7 +345,7 @@ export async function renderProfileCardSatori(input: ProfileSatoriInput): Promis
 					},
 					String(i + 1)
 				),
-				h('div', { marginLeft: 14 }, thumb(trackUris[i] ?? null, 64, theme, accent)),
+				h('div', { marginLeft: 14 }, thumb(trackUris[i] ?? null, 64, accent)),
 				h('div', { flexDirection: 'column', marginLeft: 16, flex: 1, minWidth: 0 }, [
 					h('div', { fontSize: 26, fontWeight: W.semibold, color: theme.foreground, ...ellipsis }, stripEmoji(track.title) || '제목 없음'),
 					h('div', { fontSize: 21, color: theme.muted, ...ellipsis }, stripEmoji(track.artist))
