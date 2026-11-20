@@ -161,7 +161,9 @@ export const SETTINGS_ACTIONS = {
 		mode: 'channel',
 		apply: async ({ interaction, guildId, services }) => {
 			if (!interaction.isChannelSelectMenu()) return;
+			const previous = await guildChannels.getPinnedChannel(services.guildService, guildId);
 			await guildChannels.setPinnedChannel(services.guildService, guildId, interaction.values[0]);
+			await services.lavalink.playerNotifier.syncPinnedPanel(guildId, previous);
 		}
 	},
 	// 고정 채널 입력 동작 (play: 즉시 재생 / select: 5개 선택)
@@ -187,7 +189,9 @@ export const SETTINGS_ACTIONS = {
 	removePin: {
 		mode: 'channel',
 		apply: async ({ guildId, services }) => {
+			const previous = await guildChannels.getPinnedChannel(services.guildService, guildId);
 			await guildChannels.setPinnedChannel(services.guildService, guildId, null);
+			await services.lavalink.playerNotifier.syncPinnedPanel(guildId, previous);
 		}
 	},
 	selectJtcCategory: {
