@@ -18,11 +18,13 @@
     "dependencies": {
         "@prisma/adapter-pg": "^7.10.1",
         "@redis/client": "^5.12.1",
+        "@resvg/resvg-js": "^2.6.2",
         "@sirubot/app-kit": "workspace:^",
         "@sirubot/isrc": "*",
         "@sirubot/prisma": "*",
         "@sirubot/utils": "*",
         "fastify": "^5.12.7",
+        "satori": "^0.63.2",
         "skia-canvas": "^3.0.8",
         "tslog": "^4.11.0",
         "youtubei.js": "18.3.0",

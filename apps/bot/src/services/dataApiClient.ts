@@ -340,6 +340,21 @@ async function renderMemberCard(
 	return renderImage(logger, '/v1/image/member-card', { guildId, kind, config, context });
 }
 
+/** Wrapped 카드 입력 — data-api POST /v1/image/wrapped 바디와 같은 형식이에요. 집계는 data-api가 DB에서 직접 해요. */
+export interface WrappedCardRequest {
+	userId: string;
+	/** null이면 모든 서버를 합쳐요 */
+	guildId: string | null;
+	displayName: string;
+	avatarUrl: string | null;
+	period: 'month' | 'year' | 'all';
+}
+
+/** Wrapped 카드 PNG — 실패하면 null이라 호출부가 안내 문구로 폴백해요. 집계가 오래 걸릴 수 있어 이미지 렌더 타임아웃을 그대로 써요. */
+async function renderWrappedCard(logger: AppLogger, data: WrappedCardRequest): Promise<Buffer | null> {
+	return renderImage(logger, '/v1/image/wrapped', data);
+}
+
 /** 로거가 필요한 data-api 호출(이미지 렌더·오브젝트 업로드)이 쓰는 의존성 */
 export interface DataApiClientDeps {
 	logger: AppLogger;
@@ -357,6 +372,7 @@ export function createDataApiClient(deps: DataApiClientDeps) {
 		renderOhaasaTopCard: (data: OhaasaTopCardRequest) => renderOhaasaTopCard(logger, data),
 		renderWeatherCard: (data: WeatherCardRequest) => renderWeatherCard(logger, data),
 		renderProfileCard: (data: ProfileCardRequest) => renderProfileCard(logger, data),
+		renderWrappedCard: (data: WrappedCardRequest) => renderWrappedCard(logger, data),
 		renderMemberCard: (guildId: string, kind: GreetingKind, config: GreetingConfig, context: MemberCardRenderContext) =>
 			renderMemberCard(logger, guildId, kind, config, context),
 		uploadObject: (bucket: string, key: string, bytes: Uint8Array, contentType: string) => uploadObject(logger, bucket, key, bytes, contentType)

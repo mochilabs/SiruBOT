@@ -8,6 +8,12 @@
 - 라이선스: SIL Open Font License 1.1 (출처: <https://github.com/orioncactus/pretendard>)
 - Pretendard Variable은 Inter(라틴)와 Noto Sans KR(한글)을 서브셋팅한 폰트예요. 본체에는 일본어 한자가 없어 JP 변형을 쓰며, 여기엔 일본식 자형(桜·姫 등)까지 포함돼요.
 
+## PretendardJP-SemiBold.subset.ttf · PretendardJP-Black.subset.ttf
+
+- 위 PretendardJPVariable.ttf에서 `wght=600` / `wght=900` 정적 인스턴스를 뽑아 한글(가–힣)·자모·라틴·가나·기본 기호만 남긴 서브셋이에요 (각 약 2.6MB). 일본어 한자는 빠져 있어요.
+- satori 카드(Wrapped)용이에요. satori는 가변 폰트의 굵기 축을 쓰지 못해서 굵기별 정적 파일이 필요해요. 라이선스는 원본과 같은 SIL OFL 1.1이에요.
+- 다시 만들 때: `fonttools varLib.instancer PretendardJPVariable.ttf wght=900 -o black.ttf` → `pyftsubset black.ttf --unicodes=U+0020-007E,U+00A0-00FF,U+2010-205E,U+2190-21FF,U+25A0-26FF,U+3000-30FF,U+1100-11FF,U+3130-318F,U+AC00-D7A3,U+FF01-FF5E --layout-features=kern,liga,locl --no-hinting --desubroutinize`.
+
 ## TwemojiMozilla.ttf (COLR/CPAL)
 
 - twemoji-colr v0.7.0 — 카드 캔버스의 색 이모지 렌더와 대시보드 이모지 폴백에 써요.

@@ -3,17 +3,24 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { greetingConfigSchema, redisIdSchema } from '@sirubot/utils';
 import { deduped } from '../utils/dedup.ts';
+import { getLogger } from '../utils/logger.ts';
 import { metrics } from '../utils/metrics.ts';
 import { DataApiError } from './serveCached.ts';
-import { sendDomainError, sendError } from './common.ts';
+import { playerUserIdSchema, sendDomainError, sendError } from './common.ts';
 import { renderProfileCardDark } from '../renderers/profileCardDark.ts';
 import { renderProfileCardTicket } from '../renderers/profileCardTicket.ts';
 import { renderGreetingCard, normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/memberGreetingCard.ts';
 import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
+import { renderNowPlayingCardSatori } from '../renderers/satori/nowPlayingCard.ts';
 import { renderOhaasaCard, renderOhaasaTopCard } from '../renderers/ohaasaCard.ts';
 import { ohaasaCardSchema, ohaasaTopCardSchema } from './ohaasaCardSchema.ts';
 import { renderWeatherCard } from '../renderers/weatherCard.ts';
 import { weatherCardSchema } from './weatherCardSchema.ts';
+import { renderWrappedCard } from '../renderers/satori/wrappedCard.ts';
+import { getDb } from '../services/db.ts';
+import { loadWrappedStats, resolveWrappedRange } from '../services/wrapped.ts';
+
+const logger = getLogger('render');
 
 /** 이미지 렌더 라우트 — 프로필 카드(dark/ticket)·멤버 인사 카드·NowPlaying·운세 카드·날씨 카드 + 인사 이미지 정규화. 렌더러 본체는 renderers/에 있어요. */
 
@@ -258,9 +265,15 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 	fastify.post('/v1/image/nowplaying', async (request, reply) => {
 		try {
 			const body = nowPlayingCardSchema.parse(request.body);
-			// 위치 버킷을 키에 넣어 같은 트랙, 다른 진행율의 동시 요청이 첫 응답으로 합쳐지지 않게 한다.
-			const positionBucket = Math.floor(body.positionMs / 5000);
-			const buffer = await deduped(`img:nowplaying:${body.trackId}:p${positionBucket}`, () => renderNowPlayingCard(body));
+			// 카드에는 재생 위치가 그려지지 않아요 — 위치를 뺀 페이로드 해시를 키로 써서, 같은 곡이라도 볼륨·일시정지·반복·챕터가
+			// 다른 동시 요청이 첫 응답으로 합쳐지지 않게 하고 위치만 다른 요청은 합쳐요.
+			const buffer = await deduped(`img:nowplaying:${body.trackId}:${payloadHash({ ...body, positionMs: 0 })}`, () =>
+				// satori 카드가 기본이에요. 렌더에 실패하면(폰트 누락 등) 기존 skia 카드로 폴백해서 고정 채널 컨트롤러가 비지 않게 해요.
+				renderNowPlayingCardSatori(body).catch((error) => {
+					logger.warn(`satori now-playing card failed, falling back to skia: ${error instanceof Error ? error.message : String(error)}`);
+					return renderNowPlayingCard(body);
+				})
+			);
 			metrics.request('image-nowplaying');
 			return reply.type('image/png').send(buffer);
 		} catch (error) {
@@ -302,6 +315,36 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 			const body = weatherCardSchema.parse(request.body);
 			const buffer = await deduped(`img:weather:${body.scope}:${payloadHash(body)}`, () => renderWeatherCard(body));
 			metrics.request('image-weather');
+			return reply.type('image/png').send(buffer);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// Wrapped 카드 이미지 (satori) — 신청 이력을 data-api가 직접 집계해서 그려요 (봇은 표시 정보만 보내요).
+	// guildId가 null이면 모든 서버를 합쳐요. DATABASE_URL이 없으면 503이에요.
+	const wrappedCardSchema = z.object({
+		userId: playerUserIdSchema,
+		guildId: redisIdSchema.nullable().default(null),
+		displayName: z.string().trim().min(1).max(64),
+		avatarUrl: z.string().url().nullable().default(null),
+		period: z.enum(['month', 'year', 'all']).default('month')
+	});
+	fastify.post('/v1/image/wrapped', async (request, reply) => {
+		try {
+			const body = wrappedCardSchema.parse(request.body);
+			const db = getDb();
+			if (!db) throw new DataApiError(503, 'db_unavailable', 'DB가 연결되지 않아 Wrapped를 만들 수 없어요.');
+			const range = resolveWrappedRange(body.period);
+			const stats = await loadWrappedStats(db, { userId: body.userId, guildId: body.guildId, from: range.from, to: range.to });
+			const buffer = await renderWrappedCard({
+				displayName: body.displayName,
+				avatarUrl: body.avatarUrl,
+				periodLabel: range.label,
+				scopeLabel: body.guildId ? '이 서버' : '모든 서버',
+				stats
+			});
+			metrics.request('image-wrapped');
 			return reply.type('image/png').send(buffer);
 		} catch (error) {
 			return sendError(reply, error);
