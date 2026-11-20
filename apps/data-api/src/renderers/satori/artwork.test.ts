@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectContentBounds, dominantColor, hexToRgba, mixHex, normalizeAccent, prepareArtwork } from './artwork.ts';
+import { detectContentBounds, dominantColor, hexToRgba, imageSizeOf, mixHex, normalizeAccent, prepareArtwork } from './artwork.ts';
 import { createAsyncLru, loadResvg } from './satoriKit.ts';
 
 /** w×h RGBA 버퍼 — fill(x, y)가 [r,g,b,a]를 돌려줘요. */
@@ -125,5 +125,26 @@ describe('createAsyncLru', () => {
 		await expect(get('boom')).rejects.toThrow();
 		await expect(get('boom')).rejects.toThrow();
 		expect(calls).toBe(4);
+	});
+});
+
+describe('imageSizeOf', () => {
+	it('reads PNG, GIF and JPEG sizes from the header without decoding', async () => {
+		const Resvg = await loadResvg();
+		const png = new Resvg('<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"><rect width="480" height="360"/></svg>')
+			.render()
+			.asPng();
+		expect(imageSizeOf(png)).toEqual({ width: 480, height: 360 });
+		// GIF89a, 가로 320(0x0140) 세로 200(0x00c8)
+		expect(imageSizeOf(Uint8Array.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x40, 0x01, 0xc8, 0x00, 0, 0]))).toEqual({ width: 320, height: 200 });
+		// JPEG: SOI + APP0(길이 4) + SOF0(높이 360=0x0168, 너비 480=0x01e0)
+		const jpeg = Uint8Array.from([
+			0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x01, 0x68, 0x01, 0xe0, 0x03, 0, 0, 0, 0, 0
+		]);
+		expect(imageSizeOf(jpeg)).toEqual({ width: 480, height: 360 });
+	});
+	it('returns null for unknown or truncated data', () => {
+		expect(imageSizeOf(Uint8Array.from([1, 2, 3]))).toBeNull();
+		expect(imageSizeOf(new Uint8Array(40))).toBeNull();
 	});
 });

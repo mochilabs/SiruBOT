@@ -87,12 +87,27 @@ export function stripEmoji(text: string): string {
 		.trim();
 }
 
-let resvgPromise: Promise<typeof ResvgType> | null = null;
+let resvgPromise: Promise<typeof import('@resvg/resvg-js')> | null = null;
 
-/** resvg 생성자 — 네이티브 바이너리라 처음 쓸 때 한 번만 로드해요. */
-export function loadResvg(): Promise<typeof ResvgType> {
-	resvgPromise ??= import('@resvg/resvg-js').then((mod) => (mod as unknown as { Resvg: typeof ResvgType }).Resvg);
+/** resvg-js 모듈 — 네이티브 바이너리라 처음 쓸 때 한 번만 로드해요. */
+export function loadResvgModule(): Promise<typeof import('@resvg/resvg-js')> {
+	resvgPromise ??= import('@resvg/resvg-js');
 	return resvgPromise;
+}
+
+/** resvg 생성자(동기 API) — 크기가 아주 작은 SVG나 테스트용이에요. 카드 렌더에는 renderSvgAsync를 써요. */
+export async function loadResvg(): Promise<typeof ResvgType> {
+	return (await loadResvgModule()).Resvg as unknown as typeof ResvgType;
+}
+
+/**
+ * SVG를 libuv 스레드풀에서 래스터해요. resvg-js의 동기 `render()`는 메인 스레드를 막아서 렌더가 몰리면 같은 프로세스의
+ * 다른 요청(Redis 허브·SSE)까지 지연돼요 — 카드 렌더는 항상 이 함수를 써요.
+ */
+export async function renderSvgAsync(svg: string, options: { fitTo?: { mode: 'width'; value: number } } = {}) {
+	const { renderAsync } = await loadResvgModule();
+	// satori가 글자를 path로 바꿔 줘서 폰트가 필요 없어요 — system font 스캔(첫 호출 1초 넘게)을 꺼요.
+	return renderAsync(svg, { ...options, font: { loadSystemFonts: false } });
 }
 
 /**
@@ -111,9 +126,8 @@ export async function renderSatoriPng(node: SatoriElement, size: { width: number
 			loadAdditionalAsset: async (code) => (code === 'emoji' ? EMPTY_EMOJI : [])
 		} as Parameters<typeof satori>[1]
 	);
-	// resvg는 system font 스캔이 첫 호출에 1초 넘게 걸려서 꺼요 (satori가 글자를 path로 바꿔 줘서 폰트가 필요 없어요).
-	const Resvg = await loadResvg();
-	return Buffer.from(new Resvg(svg, { fitTo: { mode: 'width', value: size.width }, font: { loadSystemFonts: false } }).render().asPng());
+	const rendered = await renderSvgAsync(svg, { fitTo: { mode: 'width', value: size.width } });
+	return Buffer.from(rendered.asPng());
 }
 
 /** lucide 아이콘을 satori `<svg>` 요소로 — skia 카드와 같은 경로 DB(canvas/icons.ts)를 써요. 선 아이콘만 지원해요. */

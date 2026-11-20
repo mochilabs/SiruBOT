@@ -3,7 +3,7 @@
  * 전부 resvg의 `<image>` 렌더로 처리해서 skia·sharp 없이 동작해요 (satori 카드 전용).
  * resvg-js 2.6은 webp를 못 읽어서 png/jpeg/gif만 받아요 (fetchImageDataUri가 그 밖은 null로 돌려요).
  */
-import { loadResvg } from './satoriKit.ts';
+import { renderSvgAsync } from './satoriKit.ts';
 
 export interface PreparedArtwork {
 	/** 레터박스를 잘라낸 정사각 PNG data URI (satori `<img>`에 그대로 써요) */
@@ -26,6 +26,46 @@ export const BACKDROP_SIZE = { width: 160, height: 100 } as const;
 /** 160x100 기준 가우시안 표준편차 — 카드 폭(960)에서 약 6배 크기로 보여요 */
 const BACKDROP_BLUR = 6;
 const PROBE_WIDTH = 96;
+
+/**
+ * PNG·GIF·JPEG 헤더에서 크기만 읽어요 (디코딩 없이). resvg로 자연 크기를 재면 이미지를 통째로 디코딩해서 느려요.
+ * 알 수 없는 형식이면 null이에요.
+ */
+export function imageSizeOf(buf: Uint8Array): { width: number; height: number } | null {
+	if (buf.length > 24 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+		return {
+			width: ((buf[16]! << 24) | (buf[17]! << 16) | (buf[18]! << 8) | buf[19]!) >>> 0,
+			height: ((buf[20]! << 24) | (buf[21]! << 16) | (buf[22]! << 8) | buf[23]!) >>> 0
+		};
+	}
+	if (buf.length > 10 && buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) {
+		return { width: buf[6]! | (buf[7]! << 8), height: buf[8]! | (buf[9]! << 8) };
+	}
+	if (buf.length > 4 && buf[0] === 0xff && buf[1] === 0xd8) {
+		let i = 2;
+		while (i + 9 < buf.length) {
+			if (buf[i] !== 0xff) {
+				i += 1;
+				continue;
+			}
+			const marker = buf[i + 1]!;
+			if (marker === 0xff) {
+				i += 1;
+				continue;
+			}
+			if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+				i += 2;
+				continue;
+			}
+			// SOF0~SOF15 (DHT 0xc4, JPG 0xc8, DAC 0xcc 제외) — 높이·너비가 들어 있어요
+			if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+				return { height: (buf[i + 5]! << 8) | buf[i + 6]!, width: (buf[i + 7]! << 8) | buf[i + 8]! };
+			}
+			i += 2 + ((buf[i + 2]! << 8) | buf[i + 3]!);
+		}
+	}
+	return null;
+}
 
 /** rgb → '#rrggbb' */
 function rgbToHex(r: number, g: number, b: number): string {
@@ -182,18 +222,16 @@ const toDataUri = (png: Uint8Array) => `data:image/png;base64,${Buffer.from(png)
 export async function prepareArtwork(dataUri: string | null, artSize: number): Promise<PreparedArtwork | null> {
 	if (!dataUri) return null;
 	try {
-		const Resvg = await loadResvg();
-		const opts = { font: { loadSystemFonts: false } };
-		// 1) 자연 크기 — width/height 없는 <image>를 그리면 viewport가 이미지 크기가 돼요.
-		const natural = new Resvg(`<svg xmlns="http://www.w3.org/2000/svg"><image href="${dataUri}"/></svg>`, opts);
-		const nw = natural.width;
-		const nh = natural.height;
-		if (!nw || !nh || nw < 4 || nh < 4) return null;
+		// 1) 자연 크기 — 헤더만 읽어요 (디코딩 없음)
+		const comma = dataUri.indexOf(',');
+		const size = comma < 0 ? null : imageSizeOf(Buffer.from(dataUri.slice(comma + 1), 'base64'));
+		if (!size || size.width < 4 || size.height < 4) return null;
+		const { width: nw, height: nh } = size;
 
 		// 2) 가장자리 검은 띠 감지용 초소형 래스터 (비율 유지, 너비 96)
 		const pw = Math.min(PROBE_WIDTH, nw);
 		const ph = Math.max(4, Math.round((pw * nh) / nw));
-		const probe = new Resvg(imageSvg(dataUri, { width: pw, height: ph, aspect: 'none' }, { width: pw, height: ph }), opts).render();
+		const probe = await renderSvgAsync(imageSvg(dataUri, { width: pw, height: ph, aspect: 'none' }, { width: pw, height: ph }));
 		// 디코딩에 실패한 이미지(미지원 형식 등)는 resvg가 아무것도 안 그려서 알파가 전부 0이에요.
 		if (!probe.pixels.some((v, i) => i % 4 === 3 && v > 0)) return null;
 		const bounds = detectContentBounds(probe.pixels, pw, ph);
@@ -205,12 +243,11 @@ export async function prepareArtwork(dataUri: string | null, artSize: number): P
 		};
 		const viewBox = `${crop.sx} ${crop.sy} ${crop.sw} ${crop.sh}`;
 
-		// 3) 정사각 아트워크 (cover)와 4) 배경용 초소형 이미지 (늘려서 전체 색 번짐)
-		const art = new Resvg(
-			imageSvg(dataUri, { width: artSize, height: artSize, viewBox, aspect: 'xMidYMid slice' }, { width: nw, height: nh }),
-			opts
-		).render();
-		const back = new Resvg(backdropSvg(dataUri, viewBox, { width: nw, height: nh }), opts).render();
+		// 3) 정사각 아트워크 (cover)와 4) 배경용 초소형 이미지 — 서로 독립이라 스레드풀에서 같이 돌려요
+		const [art, back] = await Promise.all([
+			renderSvgAsync(imageSvg(dataUri, { width: artSize, height: artSize, viewBox, aspect: 'xMidYMid slice' }, { width: nw, height: nh })),
+			renderSvgAsync(backdropSvg(dataUri, viewBox, { width: nw, height: nh }))
+		]);
 		const dominant = dominantColor(back.pixels);
 		return { art: toDataUri(art.asPng()), backdrop: toDataUri(back.asPng()), accent: dominant ? normalizeAccent(dominant) : null };
 	} catch {
