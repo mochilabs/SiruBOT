@@ -123,7 +123,9 @@ export async function renderSatoriPng(node: SatoriElement, size: { width: number
 			...size,
 			fonts,
 			// 색 이모지는 아직 지원하지 않아요 — 깨진 글리프(tofu) 대신 빈칸으로 두고, 폰트에 없는 글자는 건너뛰어요.
-			loadAdditionalAsset: async (code) => (code === 'emoji' ? EMPTY_EMOJI : [])
+			// 600·900 서브셋엔 한자가 없어서, 폰트에 없는 글자(한자 등)는 한자를 담은 400 가변 원본으로 그려요.
+			loadAdditionalAsset: async (code) =>
+				code === 'emoji' ? EMPTY_EMOJI : fonts.slice(0, 1).map((font) => ({ ...font, name: `${CARD_FONT}-fallback-${code}` }))
 		} as Parameters<typeof satori>[1]
 	);
 	const rendered = await renderSvgAsync(svg, { fitTo: { mode: 'width', value: size.width } });

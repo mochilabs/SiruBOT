@@ -8,6 +8,7 @@ import { metrics } from '../utils/metrics.ts';
 import { DataApiError } from './serveCached.ts';
 import { playerUserIdSchema, sendDomainError, sendError } from './common.ts';
 import { renderProfileCardDark } from '../renderers/profileCardDark.ts';
+import { renderProfileCardSatori } from '../renderers/satori/profileCard.ts';
 import { renderProfileCardTicket } from '../renderers/profileCardTicket.ts';
 import { renderGreetingCard, normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/memberGreetingCard.ts';
 import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
@@ -50,7 +51,10 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		.nullable()
 		.default(null);
 	const profileCardSchema = z.object({
-		preset: z.enum(['dark', 'ticket']).default('dark'),
+		preset: z.enum(['dark', 'ticket', 'dashboard', 'light', 'aura']).default('dark'),
+		bannerUrl: z.string().url().nullable().default(null),
+		listenText: z.string().trim().max(40).default(''),
+		checkinStreak: z.number().int().min(0).max(100_000).nullable().default(null),
 		userId: redisIdSchema,
 		displayName: z.string().trim().min(1).max(64),
 		username: z.string().trim().min(1).max(64),
@@ -106,6 +110,32 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 					topTracks: body.topTracks,
 					nowPlaying: body.nowPlaying
 				};
+				if (body.preset === 'dashboard' || body.preset === 'light' || body.preset === 'aura') {
+					const variant = body.preset;
+					return renderProfileCardSatori({
+						variant,
+						displayName: base.displayName,
+						username: base.profileId,
+						avatarUrl: base.avatarUrl,
+						bannerUrl: body.bannerUrl,
+						guildTag: base.guildTag,
+						status: base.status,
+						statusLabel: base.onlineLabel,
+						intro: base.intro,
+						createdText: base.createdText,
+						joinedText: base.joinedText,
+						roleChips: base.roleChips,
+						playlistCount: body.playlistCount,
+						requestedCount: body.requestedCount,
+						listenText: body.listenText,
+						checkinStreak: body.checkinStreak,
+						topTracks: base.topTracks,
+						nowPlaying: base.nowPlaying
+					}).catch((error: unknown) => {
+						logger.warn(`satori profile card failed, falling back to skia: ${error instanceof Error ? error.message : String(error)}`);
+						return renderProfileCardDark({ ...base, statusColor: '#3ecf8e' });
+					});
+				}
 				if (body.preset === 'dark') {
 					return renderProfileCardDark({ ...base, statusColor: '#3ecf8e' });
 				}
