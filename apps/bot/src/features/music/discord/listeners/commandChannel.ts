@@ -9,6 +9,7 @@ import { errorView } from '../../../../lib/errorView.ts';
 import { unexpectedErrorView } from '../../../../lib/unexpectedErrorView.ts';
 import { AppError } from '../../../../lib/appError.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
+import { isMessageFeatureEnabled } from '../../../../services/guildSettings/modules.ts';
 import { actorFromMember } from '../../application/actor.ts';
 import { trackPlayFeedback } from '../utils/playFeedback.ts';
 import { RESULT_LIMIT, SELECT_TIMEOUT_MS } from '../utils/searchSelect.ts';
@@ -55,6 +56,7 @@ export class CommandChannelListener extends Listener {
 		if (!content) return;
 
 		const guildId = message.guildId;
+		if (!(await isMessageFeatureEnabled(this.container.guildService, guildId, 'music-channel'))) return;
 		const pinned = await guildChannels.getPinnedChannel(this.container.guildService, guildId);
 		if (!pinned || pinned !== message.channelId) return;
 

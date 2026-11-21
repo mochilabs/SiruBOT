@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 	deleteCacheValue: vi.fn()
 }));
 
+vi.mock('../../../../services/guildSettings/modules.ts', () => ({ isMessageFeatureEnabled: async () => true }));
 vi.mock('@sapphire/decorators', () => ({ ApplyOptions: () => () => undefined }));
 vi.mock('@sapphire/framework', () => {
 	const containerMock = {

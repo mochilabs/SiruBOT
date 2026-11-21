@@ -96,6 +96,7 @@ declare module '@sapphire/pieces' {
 declare module '@sapphire/framework' {
 	interface Preconditions {
 		ManageGuild: never;
+		ModuleEnabled: never;
 		OwnerOnly: never;
 
 		DJOrAlone: never;

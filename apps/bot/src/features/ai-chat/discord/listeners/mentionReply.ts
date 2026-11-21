@@ -10,6 +10,7 @@ import { emoji } from '@sirubot/utils';
 import { runChatTurnToScreen } from '../chatTurnRunner.ts';
 import { errorPayload, livePayload } from '../views/chatView.ts';
 import { usageFeatureKey } from '@sirubot/utils/modules';
+import { isMessageFeatureEnabled } from '../../../../services/guildSettings/modules.ts';
 @ApplyOptions<Listener.Options>({
 	event: Events.MessageCreate
 })
@@ -24,6 +25,9 @@ export class MentionReplyListener extends Listener {
 
 		// 2. 메시지가 봇을 멘션하지도 않았고 명시적 멘션도 없으면 무시
 		if (!hasExplicitMention && !message.mentions.has(client.user, { ignoreEveryone: true })) return;
+
+		// AI·TTS 모듈이 꺼진 서버는 조용히 무시해요
+		if (!(await isMessageFeatureEnabled(this.container.guildService, message.guildId, 'ai-mention'))) return;
 
 		// 3. 만약 명시적 멘션 없이 Discord 답장(Reply)으로 인해 암묵적으로 봇이 멘션된 경우:
 		// 답장 대상 메시지가 실제 "AI 어시스턴트의 답변"일 때만 대화로 인정해요.

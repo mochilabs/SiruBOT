@@ -18,6 +18,7 @@ import {
 	TTS_DUCK_LEVEL_RANGE,
 	TTS_VOLUME_RANGE,
 } from "@sirubot/utils/guildSettingsContract";
+import { BOT_MODULES } from "@sirubot/utils/modules";
 import { z } from "zod";
 
 const snowflake = z.string().regex(/^\d{17,20}$/, "올바른 ID 형식이 아니에요.");
@@ -110,6 +111,8 @@ export const guildSettingsSchema = z.object({
 	embedFixTranslateLang: z.enum(EMBED_FIX_TRANSLATE_LANGS, "임베드 번역 언어가 잘못됐어요.").optional(),
 	countingEnabled: z.boolean().optional(),
 	countingChannelId: nullableSnowflake.optional(),
+	// 꺼진 기능 모듈 id (P-06). 모르는 id와 끌 수 없는 모듈(관리)은 라우트가 sanitizeDisabledModules로 버려요.
+	disabledModules: z.array(z.string().max(32, "모듈 ID가 잘못됐어요."), "모듈 목록이 잘못됐어요.").max(BOT_MODULES.length, "모듈 목록이 잘못됐어요.").optional(),
 });
 
 /**
@@ -164,6 +167,7 @@ export const GUILD_SETTINGS_DEFAULTS = {
 	embedFixTranslateLang: "off",
 	countingEnabled: false,
 	countingChannelId: null,
+	disabledModules: [],
 } satisfies GuildSettings;
 
 /** POST /api/servers/[id]/jtc/setup */

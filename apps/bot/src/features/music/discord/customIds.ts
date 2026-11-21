@@ -39,6 +39,8 @@ export const settingsId = defineCustomId({
 	version: 1,
 	actions: {
 		navigate: {},
+		/** 첫 화면의 기능 모듈 켜기/끄기 다중 선택 (P-06) */
+		selectModules: {},
 		back: {},
 		toggleController: {},
 		toggleRelated: {},

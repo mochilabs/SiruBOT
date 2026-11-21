@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 	}
 }));
 
+vi.mock('../../../../services/guildSettings/modules.ts', () => ({ isMessageFeatureEnabled: async () => true }));
 vi.mock('@sapphire/decorators', () => ({ ApplyOptions: () => (target: unknown) => target }));
 vi.mock('@sapphire/framework', () => ({
 	Events: { VoiceStateUpdate: 'voiceStateUpdate' },

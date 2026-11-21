@@ -4,6 +4,7 @@
  * servers/[id]/loading.tsx 스켈레톤이 같은 목록으로 탭 수를 따라가요 (9/7 하드코딩 방지).
  */
 export const SERVER_TABS = [
+  { key: "modules", label: "모듈", group: "general" },
   { key: "music", label: "음악", group: "music" },
   { key: "player-live", label: "라이브", group: "music" },
   { key: "stats", label: "통계", group: "music" },
@@ -22,6 +23,7 @@ export const SERVER_TABS = [
 
 /** 사이드바·모바일 내비게이션의 그룹 — SERVER_TABS가 그룹 순서대로 정렬돼 있어요 */
 export const SERVER_TAB_GROUPS = {
+  general: "기본",
   music: "음악",
   chat: "채팅",
   community: "커뮤니티",

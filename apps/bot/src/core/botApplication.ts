@@ -82,6 +82,7 @@ import type { RedisBinding, RedisRuntime } from '../lib/redisResponder.ts';
 import { createSharedRedisSubscriber, type RedisSubscriberEntry } from './redisSubscribers.ts';
 import * as guildPlayback from '../services/guildSettings/playback.ts';
 import * as guildJtc from '../services/guildSettings/jtc.ts';
+import { isMessageFeatureEnabled } from '../services/guildSettings/modules.ts';
 
 export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	private rootData: RootData = getRootData();
@@ -288,7 +289,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			},
 			messages: tempVoiceMessages,
 			emptyGraceMs: getConfig().tempVoice.emptyGraceMs,
-			recordUsage: (guildId, userId) => container.usageRecorder?.record(guildId, usageFeatureKey('msg', 'temp-voice'), userId)
+			recordUsage: (guildId, userId) => container.usageRecorder?.record(guildId, usageFeatureKey('msg', 'temp-voice'), userId),
+			isEnabled: (guildId) => isMessageFeatureEnabled(container.guildService, guildId, 'temp-voice')
 		});
 		container.stoppables.push(container.chatTtsService, container.tempVoiceService);
 		container.voiceLeaveTimers = new KeyedTimers('빈 음성 채널 퇴장 타이머');

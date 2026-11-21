@@ -9,6 +9,7 @@ import {
   Bot,
   Hash,
   Images,
+  LayoutGrid,
   MessageSquare,
   Music,
   Radio,
@@ -35,6 +36,7 @@ function TabLoadingFallback() {
   return <PanelLoading label="불러오는 중…" decorative />;
 }
 
+const ModulesSettings = dynamic(() => import("./modules-settings").then((m) => m.ModulesSettings), { loading: TabLoadingFallback });
 const AiSettings = dynamic(() => import("./ai-settings").then((m) => m.AiSettings), { loading: TabLoadingFallback });
 const CustomCommandsSettings = dynamic(() => import("./custom-commands-settings").then((m) => m.CustomCommandsSettings), { loading: TabLoadingFallback });
 const AssetsSettings = dynamic(() => import("./assets-settings").then((m) => m.AssetsSettings), { loading: TabLoadingFallback });
@@ -50,6 +52,7 @@ const MemberGreetingSettings = dynamic(() => import("./member-greeting-settings"
 const TicketSettings = dynamic(() => import("./ticket-settings").then((m) => m.TicketSettings), { loading: TabLoadingFallback });
 const RolePanelsSettings = dynamic(() => import("./role-panels-settings").then((m) => m.RolePanelsSettings), { loading: TabLoadingFallback });
 const ICONS = {
+  modules: <LayoutGrid size={14} />,
   ai: <Bot size={14} />,
   "custom-commands": <SquareSlash size={14} />,
   assets: <Images size={14} />,
@@ -193,6 +196,7 @@ export function ServerDashboard({
                 <SettingsPanelActive.Provider value={tab === item.key}>
                 {visitedTabs.has(item.key) && (
                   <Fragment key={panelResets[item.key] ?? 0}>
+                    {item.key === "modules" && <ModulesSettings guildId={guildId} />}
                     {item.key === "ai" && <AiSettings guildId={guildId} />}
                     {item.key === "custom-commands" && (
                       <CustomCommandsSettings guildId={guildId} />
