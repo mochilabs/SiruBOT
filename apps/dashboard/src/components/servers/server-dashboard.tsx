@@ -32,6 +32,7 @@ import { ServerFeatureSidebar } from "./server-feature-sidebar";
 import { ServerMobileNav } from "./server-mobile-nav";
 import { SERVER_TAB_GROUPS, SERVER_TABS, type ServerTabKey } from "./server-tabs";
 import { hasUnsavedActiveSettings, PanelLoading, registerSettingsDiscardHandler, saveActiveSettings, SettingsPanelActive } from "./settings-shared";
+import { UnsavedNavigationGuard } from "./unsaved-navigation-guard";
 
 function TabLoadingFallback() {
   return <PanelLoading label="불러오는 중…" decorative />;
@@ -177,6 +178,7 @@ export function ServerDashboard({
 
   return (
     <div className="animate-page-in">
+      <UnsavedNavigationGuard />
       <div className="flex flex-col items-start gap-4 lg:flex-row lg:gap-8">
         <ServerFeatureSidebar items={TABS} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} />
 

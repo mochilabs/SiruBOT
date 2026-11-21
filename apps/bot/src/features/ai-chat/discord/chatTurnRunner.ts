@@ -1,4 +1,4 @@
-import { ChatServiceError, registerChatAbort, releaseChatAbort, type AiChat, type ChatConfig, type ChatImage } from '../application/aiChatService.ts';
+import { ChatServiceError, type AiChat, type ChatConfig, type ChatImage } from '../application/aiChatService.ts';
 import type { AiToolContext } from '../application/aiTools/index.ts';
 import { toolConfirmText } from './views/toolConfirm.ts';
 import { errorPayload, finalPayload, livePayload, statusPayload, stoppedPayload } from './views/chatView.ts';
@@ -22,6 +22,9 @@ export interface ChatTurnScreen {
 export interface ChatTurnInvocation {
 	/** 턴 실행기 — container.aiChat.runChatTurn을 진입점이 넘겨요 */
 	runChatTurn: AiChat['runChatTurn'];
+	/** 중지 레지스트리 — container.aiChat의 것을 진입점이 넘겨요 */
+	registerChatAbort: AiChat['registerChatAbort'];
+	releaseChatAbort: AiChat['releaseChatAbort'];
 	config: ChatConfig;
 	userId: string;
 	channelId: string;
@@ -45,7 +48,7 @@ export interface ChatTurnInvocation {
  * 그 외=화면 교체 후 재던짐)도 한곳에서만 정의돼요.
  */
 export async function runChatTurnToScreen(invocation: ChatTurnInvocation): Promise<void> {
-	const { key: cancelKey, controller } = registerChatAbort(invocation.userId);
+	const { key: cancelKey, controller } = invocation.registerChatAbort(invocation.userId);
 	const edit = async (payload: ReturnType<typeof livePayload>) => {
 		await invocation.screen.edit(payload).catch(() => undefined);
 	};
@@ -108,6 +111,6 @@ export async function runChatTurnToScreen(invocation: ChatTurnInvocation): Promi
 		await edit(finalPayload(answer, { memoryUpdated }));
 	} finally {
 		// 라이브 메시지 생성이 실패해도 abort 키가 새지 않도록 여기서 보장해요
-		releaseChatAbort(cancelKey);
+		invocation.releaseChatAbort(cancelKey);
 	}
 }

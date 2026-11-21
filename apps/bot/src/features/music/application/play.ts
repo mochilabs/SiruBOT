@@ -1,5 +1,5 @@
 import type { Player, SearchPlatform, SearchResult, Track, UnresolvedTrack } from 'lavalink-client';
-import { emoji } from '@sirubot/utils';
+import { emoji, PLAYER_WEB_CODE_SEARCH_EMPTY } from '@sirubot/utils';
 import { AppError } from '../../../lib/appError.ts';
 import { canAddTracks, MUSIC_ACCESS_MESSAGES, type MusicAccessDeps } from './access.ts';
 import type { Actor } from './actor.ts';
@@ -127,7 +127,7 @@ export function createMusicPlay<P, T extends PlayTrackLike, L extends PlayPlayli
 	}
 
 	function requireResults<X extends PlaySearchOutcome<T, L>>(outcome: X): X {
-		if (outcome.tracks.length === 0) throw new AppError('not_found', MUSIC_SEARCH_MESSAGES.empty());
+		if (outcome.tracks.length === 0) throw new AppError('not_found', MUSIC_SEARCH_MESSAGES.empty(), { code: PLAYER_WEB_CODE_SEARCH_EMPTY });
 		return outcome;
 	}
 

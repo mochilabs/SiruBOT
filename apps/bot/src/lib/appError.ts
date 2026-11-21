@@ -4,6 +4,8 @@ export interface AppErrorOptions {
 	cause?: unknown;
 	/** 응답을 본인에게만 보일지 여부. 생략하면 프레젠터가 종류에 따라 정해요. */
 	ephemeral?: boolean;
+	/** 문구와 별개로 실패 종류를 가리는 기계용 코드 — 웹 응답처럼 소비자가 문구를 비교하지 않게 해요. */
+	code?: string;
 }
 
 /**
@@ -14,6 +16,7 @@ export class AppError extends Error {
 	public readonly kind: ErrorKind;
 	public readonly userMessage: string;
 	public readonly ephemeral: boolean | undefined;
+	public readonly code: string | undefined;
 
 	public constructor(kind: ErrorKind, userMessage: string, options: AppErrorOptions = {}) {
 		super(userMessage, options.cause === undefined ? undefined : { cause: options.cause });
@@ -21,6 +24,7 @@ export class AppError extends Error {
 		this.kind = kind;
 		this.userMessage = userMessage;
 		this.ephemeral = options.ephemeral;
+		this.code = options.code;
 	}
 }
 

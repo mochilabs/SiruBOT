@@ -19,7 +19,10 @@ export const POST = createGuildApiHandler({
   handler: async ({ guildId, authz, data }) => {
     const result = await requestPlayerSearch(guildId, authz.userId, data.query);
     if (!result.ok) {
-      return NextResponse.json({ error: result.error ?? "검색을 처리하지 못했어요." }, { status: result.status });
+      return NextResponse.json(
+        { error: result.error ?? "검색을 처리하지 못했어요.", ...(result.code ? { code: result.code } : {}) },
+        { status: result.status },
+      );
     }
 
     return NextResponse.json({ tracks: result.tracks ?? [] });

@@ -1,17 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	ChatServiceError,
-	abortChatTurn,
-	acquireChannelTurn,
 	assertChatEnabled,
 	collectImageUrls,
 	contentText,
 	createAiChat,
 	estimateTokens,
-	extractThinkTokens,
-	registerChatAbort,
-	releaseChannelTurn,
-	releaseChatAbort
+	extractThinkTokens
 } from './aiChatService.ts';
 import { ChannelHistoryStore, historyLine } from './aiChat/historyStore.ts';
 import { MemoryPromotionJobs } from './aiChat/memoryPromotion.ts';
@@ -65,6 +60,11 @@ const runChatTurn = (...args: Parameters<typeof aiChat.runChatTurn>) => aiChat.r
 const streamChatCompletion = (...args: Parameters<typeof aiChat.streamChatCompletion>) => aiChat.streamChatCompletion(...args);
 const getAiChatPolicy = (guildId: string | null) => aiChat.getAiChatPolicy(guildId);
 const tryConsumeUserTurn = (userId: string) => aiChat.tryConsumeUserTurn(userId);
+const acquireChannelTurn = (channelId: string) => aiChat.acquireChannelTurn(channelId);
+const releaseChannelTurn = (channelId: string) => aiChat.releaseChannelTurn(channelId);
+const registerChatAbort = (userId: string) => aiChat.registerChatAbort(userId);
+const releaseChatAbort = (key: string) => aiChat.releaseChatAbort(key);
+const abortChatTurn = (key: string, requesterId: string) => aiChat.abortChatTurn(key, requesterId);
 const loadChannelHistory = (channelId: string) => history.loadChannelHistory(channelId);
 const clearChannelHistory = (channelId: string) => history.clearChannelHistory(channelId);
 const dropChannelHistory = (channelId: string) => history.dropChannelHistory(channelId);

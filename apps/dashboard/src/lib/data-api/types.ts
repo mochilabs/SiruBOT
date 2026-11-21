@@ -60,6 +60,8 @@ export interface DataApiForwardFail {
   ok: false;
   status: number;
   message: string | null;
+  /** data-api 본문의 error 코드 — 있으면 문구 대신 이 값으로 실패 종류를 가려요 */
+  code?: string;
 }
 
 export type DataApiForwardResult<T> = DataApiForwardOk<T> | DataApiForwardFail;
@@ -97,6 +99,8 @@ export interface PlayerWebApiResult {
   voice: PlayerVoiceContextData | null;
   /** 실패 사유 — 봇이 실은 한국어 안내를 그대로 전달해요 */
   error: string | null;
+  /** 봇이 실은 실패 코드 — 예: 검색 결과 없음(`search_empty`) */
+  code?: string;
   /** data-api 실패 상태 코드 — 라우트가 이 상태로 응답해요 */
   status: number;
 }

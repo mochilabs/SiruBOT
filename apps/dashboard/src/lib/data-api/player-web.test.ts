@@ -45,6 +45,11 @@ describe("requestPlayerSearch", () => {
 		});
 	});
 
+	it("봇의 실패 코드는 code로 그대로 옮겨요", async () => {
+		vi.mocked(forwardDataApiPost).mockResolvedValue({ ok: false, status: 400, message: "검색 결과가 없어요.", code: "search_empty" });
+		await expect(requestPlayerSearch("g", "u", "q")).resolves.toMatchObject({ ok: false, code: "search_empty", status: 400 });
+	});
+
 	it("실패 사유가 없으면 error가 null이에요", async () => {
 		vi.mocked(forwardDataApiPost).mockResolvedValue({ ok: false, status: 502, message: null });
 		await expect(requestPlayerSearch("g", "u", "q")).resolves.toMatchObject({ ok: false, error: null, status: 502 });
