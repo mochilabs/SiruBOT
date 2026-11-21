@@ -1,8 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, PermissionFlagsBits } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { settingsView } from '../views/settings.ts';
+import { openSettingsPanel } from '../openSettingsPanel.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -33,14 +33,6 @@ export class SettingsCommand extends Command {
 			});
 		}
 
-		await interaction.deferReply();
-
-		const guild = await this.container.guildService.getGuild(interaction.guildId);
-
-		await interaction.editReply({
-			components: [settingsView(guild, 'main')],
-			flags: [MessageFlags.IsComponentsV2],
-			allowedMentions: { roles: [], users: [] }
-		});
+		await openSettingsPanel(interaction, { ephemeral: false });
 	}
 }

@@ -23,7 +23,7 @@
 
 ## 1. Overview
 
-SiruBOT is a Discord music bot platform: one monorepo with 6 independent process apps and 5 shared packages. Workspaces are `apps/*` and `packages/*` (`package.json`), orchestrated by Turborepo (`turbo.json`), on Node ≥ 22 and Yarn 4 (Corepack).
+SiruBOT is an all-in-one Discord bot for Korean communities (music, AI chat, server management): one monorepo with 6 independent process apps and 5 shared packages. Workspaces are `apps/*` and `packages/*` (`package.json`), orchestrated by Turborepo (`turbo.json`), on Node ≥ 22 and Yarn 4 (Corepack).
 
 | Kind | Target | One-line definition | Runtime |
 |---|---|---|---|
@@ -33,7 +33,7 @@ SiruBOT is a Discord music bot platform: one monorepo with 6 independent process
 | App | `apps/shardmanager` | Shard assignment and health aggregation WS server for bot processes | Fastify 5 + @fastify/websocket (port 3001) |
 | App | `apps/storage` | Object storage — authenticated upload, public GET (Discord embed assets), private bucket (ticket transcripts) | Fastify 5 (port 3003) |
 | App | `apps/notifier` | Social alerts — YouTube (WebSub + RSS), Twitch (EventSub), Chzzk (polling) → Discord webhooks | Fastify 5 (port 3004) |
-| Package | `packages/prisma` | PostgreSQL schema + Prisma client (22 models) | Prisma 7 + PrismaPg |
+| Package | `packages/prisma` | PostgreSQL schema + Prisma client (24 models) | Prisma 7 + PrismaPg |
 | Package | `packages/isrc` | ISRC lookup for a track (Deezer, MusicBrainz). Pure module: no env reads, `fetch` injected; data-api owns scheduling | fetch |
 | Package | `packages/shardclient` | WS client for shardmanager (retry and backoff built in) | ws |
 | Package | `packages/utils` | Redis channel constants, signed envelopes, zod contracts, shared utilities | zod |
@@ -495,7 +495,7 @@ During rolling updates the new process retries identify until a shard slot frees
 
 **PostgreSQL + Prisma 7 (PrismaPg adapter)** — `packages/prisma/src/schema.prisma`. Clients are created in bot `core/botApplication.ts`, data-api `services/db.ts`, notifier `services/db.ts`, dashboard `src/lib/db.ts`. The `mysql2` resolution in the root `package.json` is a leftover (the real provider is postgresql).
 
-**22 models**:
+**24 models**:
 
 | Area | Model | Role · main writer |
 |---|---|---|
@@ -513,6 +513,8 @@ During rolling updates the new process retries identify until a shard slot frees
 | | `TtsPronunciation` | Per-guild TTS pronunciation dictionary (term → reading) — bot (`features/tts/application/ttsPronunciation.ts`) |
 | AI | `ChannelChatHistory` · `UserMemory` | Channel chat history · user long/short-term memory (tidied nightly by data-api) — bot, data-api |
 | Social | `SocialSubscription` · `SocialEventLog` | Alert subscriptions (contract `packages/utils/src/social.ts`) · dedupe log — notifier |
+| Metrics | `GuildLifecycle` | Bot join/leave, onboarding message and first-use times per guild (kept after the bot leaves, no foreign key) — bot |
+| | `FeatureDailyUse` | Daily feature use per guild (KST day × feature key from `@sirubot/utils/modules`): count and unique users. User IDs stay in a 48-hour Redis set, never in the DB — bot; read by dashboard `/admin` |
 
 **Redis** uses: ① Lavalink node sessions and queue persistence (`features/music/lavalink/redisStore.ts`), ② §5.2 channels and pending keys, ③ data-api shared cache (`utils/cache.ts`), ④ dashboard rate limits and token storage (`src/lib/redis.ts`), ⑤ notifier audit state and failure counters.
 

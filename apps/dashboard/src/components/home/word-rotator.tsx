@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 
 // 헤드라인 회전 단어 — "음악부터 AI까지, ___ 시루봇 하나면 돼요"의 빈칸에 아래에서 위로 밀려 올라와 교체돼요
-export const ROTATING_WORDS = ['서버에 필요한 모든 걸', 'Discord 안에서, 웹에서', '게임부터 서버 꾸미기까지'] as const;
+export const ROTATING_WORDS = ['서버에 필요한 모든 걸', '한국어 커뮤니티에 맞게', '게임부터 서버 꾸미기까지'] as const;
 const ROTATE_INTERVAL_MS = 2600;
 
 /**

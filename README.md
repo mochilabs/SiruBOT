@@ -1,7 +1,7 @@
 <h1 align="center">SiruBOT</h1>
 
 <p align="center">
-  A Discord music bot platform: Lavalink playback, a web dashboard, and the services behind them, in one monorepo.
+  An all-in-one Discord bot for Korean communities: music, AI chat and server management in one bot, with a web dashboard and the services behind them in one monorepo. The bot speaks Korean only.
 </p>
 
 <p align="center">
@@ -40,7 +40,7 @@
 
 ## Architecture
 
-Six independent processes and four shared packages. Apps never import each other; they communicate over Redis pub/sub, authenticated HTTP and the shard manager's WebSocket protocol.
+Six independent processes and five shared packages. Apps never import each other; they communicate over Redis pub/sub, authenticated HTTP and the shard manager's WebSocket protocol.
 
 ```mermaid
 graph LR
@@ -76,7 +76,7 @@ graph LR
 
 | Workspace | Role | Stack |
 |---|---|---|
-| `apps/bot` | Discord gateway, slash commands, audio, AI chat, TTS, tickets | Sapphire (discord.js), lavalink-client |
+| `apps/bot` | Discord gateway, slash commands, music, AI chat, TTS, community tools | Sapphire (discord.js), lavalink-client |
 | `apps/dashboard` | Guild management web app | Next.js App Router, React 19 |
 | `apps/data-api` | Gateway: external API cache, Redis hubs, image rendering, scheduled LLM jobs | Fastify 5 |
 | `apps/shardmanager` | Shard assignment and health aggregation | Fastify 5, WebSocket |
@@ -86,6 +86,7 @@ graph LR
 | `packages/utils` | Redis channel contracts, zod schemas, shared helpers | zod |
 | `packages/app-kit` | Shared Fastify auth, env validation, logger | Fastify |
 | `packages/shardclient` | WebSocket client for the shard manager | ws |
+| `packages/isrc` | ISRC lookup (Deezer, MusicBrainz) for the track chart | fetch |
 
 The dashboard never talks to the bot directly: requests go dashboard → data-api → Redis → the bot that owns the guild. The full picture, including the Redis channel map and boot/shutdown order, is in [docs/architecture.md](docs/architecture.md).
 

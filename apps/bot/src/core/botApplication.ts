@@ -12,6 +12,9 @@ import { LavalinkManager, LavalinkNodeOptions } from 'lavalink-client';
 import { GuildService } from '../services/guildService.ts';
 import { ChatTtsService, TtsPronunciationService, TtsService, TtsUserSettingsService, getTtsConfig } from '../features/tts/index.ts';
 import { CountingStateStore } from '../features/counting/index.ts';
+import { UsageRecorder } from '../features/usage-metrics/index.ts';
+import { usageFeatureKey } from '@sirubot/utils/modules';
+import { createGuildLifecycleService } from '../services/guildLifecycle.ts';
 import { BotActivityService } from '../services/botActivity.ts';
 import { KeyedTimers } from '../lib/keyedTimers.ts';
 import { fetchCommandIndex } from '../discord/utils/commandMentions.ts';
@@ -280,7 +283,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 				fetchChannel: (channelId) => container.client.channels.fetch(channelId)
 			},
 			messages: tempVoiceMessages,
-			emptyGraceMs: getConfig().tempVoice.emptyGraceMs
+			emptyGraceMs: getConfig().tempVoice.emptyGraceMs,
+			recordUsage: (guildId, userId) => container.usageRecorder?.record(guildId, usageFeatureKey('msg', 'temp-voice'), userId)
 		});
 		container.stoppables.push(container.chatTtsService, container.tempVoiceService);
 		container.voiceLeaveTimers = new KeyedTimers('빈 음성 채널 퇴장 타이머');
@@ -334,8 +338,20 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		});
 		container.countingState = new CountingStateStore({ getRedisStore: () => container.redisStore });
 		container.stoppables.push(container.countingState);
-		container.playbackReporter = new PlaybackReporter({ logger: appLogger, getClient: () => container.client });
+		container.playbackReporter = new PlaybackReporter({
+			logger: appLogger,
+			getClient: () => container.client,
+			recordUsage: (guildId, type) => container.usageRecorder?.record(guildId, usageFeatureKey('playback', type))
+		});
 		container.stoppables.push(container.playbackReporter);
+		container.guildLifecycle = createGuildLifecycleService({ db: container.db });
+		container.usageRecorder = new UsageRecorder({
+			db: container.db,
+			getRedisStore: () => container.redisStore,
+			firstUse: container.guildLifecycle,
+			logger: appLogger
+		});
+		container.stoppables.push(container.usageRecorder);
 		container.customCommandStore = createCustomCommandStore({ db: container.db, logger: appLogger });
 		container.customSlashRegistry = createSlashRegistry({
 			db: container.db,
@@ -379,7 +395,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			getGuild: (guildId) => container.client.guilds.cache.get(guildId),
 			getGuildSettings: (guildId) => container.guildService.getGuild(guildId),
 			renderMemberCard: container.dataApi.renderMemberCard,
-			messages: greetingMessages
+			messages: greetingMessages,
+			recordUsage: (guildId, userId) => container.usageRecorder?.record(guildId, usageFeatureKey('msg', 'greeting'), userId)
 		});
 
 		const redisRuntime: RedisRuntime = {

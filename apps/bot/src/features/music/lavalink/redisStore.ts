@@ -204,6 +204,24 @@ export class RedisStore {
 		}
 	}
 
+	/**
+	 * 집합에 멤버를 넣고 TTL을 갱신한 뒤 크기를 돌려줘요 (사용 지표의 하루 고유 사용자 수).
+	 * 한 번의 MULTI로 보내요. 미연결/오류 시 null (호출자가 메모리 근사로 폴백).
+	 */
+	public async addToSetAndCount(key: string, members: string[], ttlSeconds: number): Promise<number | null> {
+		try {
+			if (!this.isReady) return null;
+			const multi = this.redis.multi();
+			if (members.length > 0) multi.sAdd(key, members);
+			const replies = await multi.expire(key, ttlSeconds).sCard(key).exec();
+			const size = Number(replies[replies.length - 1]);
+			return Number.isFinite(size) ? size : null;
+		} catch (error) {
+			this.logger.warn(`Cache set add failed (${key}): ${error}`);
+			return null;
+		}
+	}
+
 	/** 범용 해시 전체 읽기 — 카운팅 채널 상태 등. 미연결/오류 시 null (호출자가 기본값으로 폴백) */
 	public async getCacheHashFields(key: string): Promise<Record<string, string> | null> {
 		try {

@@ -19,6 +19,7 @@ export { playbackMessages } from './discord/playbackMessages.ts';
 export { createPlaylistPlayback, type PlaylistPlayback } from './application/playlistPlayback.ts';
 export { SponsorBlockService } from './application/sponsorBlockService.ts';
 export { MUSIC_PROMOTED_COMMANDS, MUSIC_SUBCOMMANDS } from './discord/commandCatalog.ts';
+export { openSettingsPanel } from './discord/openSettingsPanel.ts';
 export { LavalinkHandler } from './lavalink/handlers/lavalinkHandler.ts';
 export { handleMixerNeedNext } from './lavalink/handlers/mixerHandlers.ts';
 export type { LavalinkDeps, LavalinkLogger, LavalinkShardInfo } from './lavalink/deps.ts';

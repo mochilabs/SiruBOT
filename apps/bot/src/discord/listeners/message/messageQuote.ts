@@ -12,6 +12,7 @@ import { type MessageLinkTarget, MemoryCache, parseMessageLinks } from '@sirubot
 import { messageQuoteView } from '../../views/messageQuote.ts';
 import { isChannelToggleEnabled } from '../../../services/guildService.ts';
 import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
+import { usageFeatureKey } from '@sirubot/utils/modules';
 
 const QUOTE_IMAGE_MAX = 4;
 const QUOTE_COOLDOWN_MS = 3_000;
@@ -51,6 +52,7 @@ export class MessageQuoteListener extends Listener {
 				}
 			}
 			if (sources.length === 0) return;
+			this.container.usageRecorder?.record(message.guildId, usageFeatureKey('msg', 'message-quote'), message.author.id);
 
 			await message
 				.reply({

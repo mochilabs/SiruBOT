@@ -78,6 +78,8 @@ export interface TempVoiceServiceDeps {
 	messages: TempVoiceMessagePort;
 	/** 빈 임시방 자동 삭제 유예 시간(ms) — JTC_EMPTY_GRACE_MS, 기본 30초 (설정값을 읽어 넘겨요) */
 	emptyGraceMs: number;
+	/** 사용 지표 — 입장용 채널로 내 방을 만들 때 불러요 */
+	recordUsage?: (guildId: string, userId: string) => void;
 }
 
 export class TempVoiceService implements Stoppable {
@@ -101,6 +103,7 @@ export class TempVoiceService implements Stoppable {
 			const member = newState.member;
 			if (!member || member.user.bot) return;
 			if (newState.channelId === settings.markerChannelId && oldState.channelId !== settings.markerChannelId) {
+				this.deps.recordUsage?.(guildId, member.id);
 				await this.createRoom(member, settings);
 			}
 		} catch (error) {
