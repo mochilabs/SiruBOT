@@ -16,7 +16,7 @@ import {
   createAvatarLayer,
   createShapeLayer,
   createTextLayer,
-  drawGreetingPreview,
+  drawGreetingSelection,
 } from "./greeting-draw";
 import { GreetingElementSection } from "./greeting-element-section";
 import { GreetingPreviewSection } from "./greeting-preview-section";
@@ -26,6 +26,7 @@ import { LayerProperties } from "./layer-properties";
 import { useGreetingDrag } from "./use-greeting-drag";
 import { useGreetingHistory } from "./use-greeting-history";
 import { useGreetingShortcuts } from "./use-greeting-shortcuts";
+import { useGreetingSvg } from "./use-greeting-svg";
 import { useGreetingUpload } from "./use-greeting-upload";
 
 interface GreetingImageEditorProps {
@@ -95,26 +96,8 @@ export function GreetingImageEditor({
     [image, patchImage],
   );
 
-  // 캔버스 드로잉: 편집 상태가 바뀔 때마다 재그려요
-  useEffect(() => {
-    if (!active) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
-    let cancelled = false;
-    void drawGreetingPreview(
-      ctx,
-      image,
-      { selectedId, avatarSrc, guildName: guildName ?? "" },
-      () => cancelled,
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [active, image, selectedId, avatarSrc, guildName]);
-
-  // 드래그 이동·리사이즈 (pointer capture + rAF 스로틀)
-  const { handlePointerDown, handlePointerMove, endDrag } = useGreetingDrag({
+  // 드래그 이동·리사이즈 (pointer capture + rAF 스로틀). 드래그 중에는 선택 박스만 따라가요
+  const { handlePointerDown, handlePointerMove, endDrag, dragging } = useGreetingDrag({
     canvasRef,
     saving,
     layers: image.layers,
@@ -123,6 +106,23 @@ export function GreetingImageEditor({
     patchLayer,
     commit,
   });
+
+  // 카드 본체: 서버와 같은 greetingCard를 satori로 그린 SVG — 드래그 중엔 멈추고 놓을 때·입력 150ms 뒤에 다시 그려요
+  const { src: previewSrc, error: previewError } = useGreetingSvg({
+    active,
+    image,
+    avatarSrc,
+    guildName: guildName ?? "",
+    paused: dragging,
+  });
+
+  // 선택 오버레이: 투명 canvas에 선택 테두리·핸들만 그려요 (가벼워서 바로 갱신)
+  useEffect(() => {
+    if (!active) return;
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx) return;
+    drawGreetingSelection(ctx, image, selectedId);
+  }, [active, image, selectedId]);
 
   // 레이어 조작: 각 조작이 되돌리기 한 단계(커밋 1회)예요
   const addLayer = useCallback(
@@ -243,6 +243,8 @@ export function GreetingImageEditor({
         {/* 미리보기 — 모바일은 맨 위, 데스크톱은 좌상단 */}
         <GreetingPreviewSection
           canvasRef={canvasRef}
+          previewSrc={previewSrc}
+          previewError={previewError}
           saving={saving}
           canUndo={canUndo}
           canRedo={canRedo}

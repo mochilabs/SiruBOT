@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   GreetingLayer,
 } from "@sirubot/utils/memberGreeting";
@@ -20,6 +20,8 @@ export interface GreetingDrag {
   handlePointerDown: (event: React.PointerEvent<HTMLCanvasElement>) => void;
   handlePointerMove: (event: React.PointerEvent<HTMLCanvasElement>) => void;
   endDrag: (event: React.PointerEvent<HTMLCanvasElement>) => void;
+  /** 드래그 중인지 — 미리보기 SVG는 드래그 중 재렌더하지 않고 놓을 때 이어서 그려요 */
+  dragging: boolean;
 }
 
 /**
@@ -43,6 +45,7 @@ export function useGreetingDrag({
   patchLayer: (layerId: string, partial: Partial<GreetingLayer>) => void;
   commit: () => void;
 }): GreetingDrag {
+  const [dragging, setDragging] = useState(false);
   const dragRef = useRef<DragState | null>(null);
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
   const dragFrameRef = useRef<number | null>(null);
@@ -114,6 +117,7 @@ export function useGreetingDrag({
           signY: handle.signY,
         };
         canvas.setPointerCapture(event.pointerId);
+        setDragging(true);
         return;
       }
     }
@@ -132,6 +136,7 @@ export function useGreetingDrag({
         signY: 1,
       };
       canvas.setPointerCapture(event.pointerId);
+      setDragging(true);
     } else {
       setSelectedId(null);
     }
@@ -212,6 +217,7 @@ export function useGreetingDrag({
     if (!drag || drag.pointerId !== event.pointerId) return;
     dragRef.current = null;
     dragPointRef.current = null;
+    setDragging(false);
     if (dragFrameRef.current != null) {
       cancelAnimationFrame(dragFrameRef.current);
       dragFrameRef.current = null;
@@ -221,5 +227,5 @@ export function useGreetingDrag({
     commit();
   };
 
-  return { handlePointerDown, handlePointerMove, endDrag };
+  return { handlePointerDown, handlePointerMove, endDrag, dragging };
 }

@@ -11,6 +11,10 @@ import {
 } from "@sirubot/utils/memberGreeting";
 
 /**
+ * @deprecated 미리보기 그리기는 `greeting-svg.ts`(@sirubot/cards의 greetingCard를 satori로 그린 SVG)로 바뀌었어요.
+ * 이 파일에서는 `drawGreetingPreview`·`drawPresetBackground`가 더 이상 쓰이지 않아요 (두 릴리스 뒤 삭제 예정).
+ * 레이어 바운딩 박스·히트테스트·레이어 생성 헬퍼, 선택 오버레이(`drawGreetingSelection`)는 계속 써요.
+ *
  * 인사 카드 브라우저 canvas 미리보기 — 서버 skia 렌더러(data-api/src/renderers/memberGreetingCard.ts)와
  * 같은 좌표/드로잉 계약을 따른다. 최종 렌더는 서버가 하므로 이쪽은 근사치면 충분해요.
  * 배경 프리셋 색·그라데이션 파라미터는 공용 계약(@sirubot/utils/greetingCardDesign)에서 받아 그대로 그려요.
@@ -79,6 +83,14 @@ export async function drawGreetingPreview(
 		const layer = image.layers.find((item) => item.id === options.selectedId);
 		if (layer && !layer.hidden) drawSelection(ctx, layer);
 	}
+}
+
+/** 선택한 레이어의 테두리·핸들만 그려요 — satori SVG 위에 겹친 투명 canvas에서 써요. */
+export function drawGreetingSelection(ctx: CanvasRenderingContext2D, image: GreetingImage, selectedId: string | null): void {
+	ctx.clearRect(0, 0, CARD_W, CARD_H);
+	if (!selectedId) return;
+	const layer = image.layers.find((item) => item.id === selectedId);
+	if (layer && !layer.hidden) drawSelection(ctx, layer);
 }
 
 /** 배경 — 업로드 dataURI(cover-fit) 우선, 실패·부재 시 프리셋 + 어두운 스크림 */

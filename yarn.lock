@@ -3617,6 +3617,7 @@ __metadata:
     react-intersection-observer: "npm:^10.1.0"
     react-is: "npm:^16.13.1"
     recharts: "npm:^3.10.1"
+    satori: "npm:^0.63.2"
     swr: "npm:^2.5.1"
     tailwind-merge: "npm:^3.7.0"
     tailwindcss: "npm:^4"
