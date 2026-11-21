@@ -231,7 +231,7 @@ export function ServerDashboard({
                     </span>
                     {activeDisabledModule.label}
                   </span>{" "}
-                  모듈이 꺼져 있어요. 설정은 바꿀 수 있지만 디스코드에서는 동작하지 않아요.
+                  모듈이 꺼져 있어요.
                 </p>
                 <Button
                   variant="primary"
