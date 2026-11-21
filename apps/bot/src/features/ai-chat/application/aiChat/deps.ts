@@ -2,7 +2,7 @@ import type { Client } from 'discord.js';
 import type { AppLogger } from '../../../../lib/appLogger.ts';
 import type { AiMemoryService } from '../aiMemoryService.ts';
 import type { GuildService } from '../../../../services/guildService.ts';
-import type { AiToolContext, AiToolDefinition } from '../aiTools/types.ts';
+import type { AiToolContext, AiToolDefinition, AiToolEffect } from '../aiTools/types.ts';
 import type { ChannelHistoryStore } from './historyStore.ts';
 import type { MemoryPromotionJobs } from './memoryPromotion.ts';
 import type { TurnCounterStore } from './turnControl.ts';
@@ -11,6 +11,12 @@ import type { TurnCounterStore } from './turnControl.ts';
 export interface AiToolRegistry {
 	getDefinitions(): AiToolDefinition[];
 	getStatus(name: string, rawArguments?: string): string;
+	/** 도구의 영향 종류 — 모르는 도구면 undefined */
+	getEffect(name: string): AiToolEffect | undefined;
+	/** 결과에 외부(웹) 내용이 담기는 도구인지 — 실행되면 그 턴이 "외부 내용 포함"이 돼요 */
+	returnsExternalContent(name: string): boolean;
+	/** 확인 창에 보여줄 호출 요약 */
+	describeCall(name: string, rawArguments: string): string;
 	execute(name: string, rawArguments: string, ctx: AiToolContext): Promise<string>;
 }
 

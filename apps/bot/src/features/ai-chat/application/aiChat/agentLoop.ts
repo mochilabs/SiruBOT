@@ -9,7 +9,23 @@ import { ChatServiceError, type ChatConfig, type ChatContent, type ChatContentPa
 import { appendCitedSources } from './traceCitation.ts';
 import { resolveFallbackTextFromToolResults } from './agentFallback.ts';
 import { fetchImageAsDataUrl, MAX_IMAGE_BYTES, normalizeImageType } from '../../../../lib/imageDataUrl.ts';
+import { requiresConfirmation, TOOL_DENIED_OUTPUT, type ToolConfirmRequest } from './toolConfirmation.ts';
 const MAX_TOOL_ROUNDS = 5;
+
+/** 확인 요청을 보내고 승인 여부를 돌려줘요. 수단이 없거나 던지면 false예요 (fail-closed). */
+async function askConfirmation(
+	deps: Pick<AiChatDeps, 'logger'>,
+	confirm: ((request: ToolConfirmRequest) => Promise<boolean>) | undefined,
+	request: ToolConfirmRequest
+): Promise<boolean> {
+	if (!confirm) return false;
+	try {
+		return (await confirm(request)) === true;
+	} catch (error) {
+		deps.logger.warn('[aiChat] tool confirmation failed, treating as denied:', error);
+		return false;
+	}
+}
 
 // 멀티모달 이미지
 const MAX_IMAGES_PER_MESSAGE = 3;
@@ -86,6 +102,8 @@ export async function runChatTurn(
 		excludeMessageId?: string;
 		/** 중지 버튼용 사용자 취소 신호 — abort되면 chat_cancelled 오류로 멈춰요 */
 		signal?: AbortSignal;
+		/** 확인이 필요한 도구 호출을 요청자에게 물어요 — true면 실행, 없으면 확인이 필요한 호출은 모두 거절돼요 */
+		confirmToolCall?: (request: ToolConfirmRequest) => Promise<boolean>;
 		onDelta?: (fullText: string) => void | Promise<void>;
 		onStatus?: (status: string) => void | Promise<void>;
 	}
@@ -129,6 +147,8 @@ export async function runChatTurn(
 	let answer = '';
 	let memoryUpdated = false;
 	let forceNoTools = false;
+	// 이 턴에 외부(웹) 내용이 대화에 들어왔는지 — 한 번 켜지면 턴이 끝날 때까지 유지돼요
+	let externalContentSeen = false;
 	for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
 		throwIfCancelled();
 		const result = await streamChatCompletion(deps.logger, {
@@ -154,7 +174,24 @@ export async function runChatTurn(
 		messages.push({ role: 'assistant', content: result.content, tool_calls: result.toolCalls });
 		for (const toolCall of result.toolCalls) {
 			throwIfCancelled();
+			const effect = deps.tools.getEffect(toolCall.name);
+			if (requiresConfirmation(effect, externalContentSeen)) {
+				// 확인을 받기 전에는 도구를 실행하지 않아요. 확인 수단이 없거나 실패해도 거절로 봐요 (fail-closed).
+				const approved = await askConfirmation(deps, options.confirmToolCall, {
+					toolName: toolCall.name,
+					effect: effect!,
+					summary: deps.tools.describeCall(toolCall.name, toolCall.arguments),
+					tainted: externalContentSeen
+				});
+				throwIfCancelled();
+				if (!approved) {
+					messages.push({ role: 'tool', tool_call_id: toolCall.id, content: TOOL_DENIED_OUTPUT });
+					continue;
+				}
+			}
 			await options.onStatus?.(deps.tools.getStatus(toolCall.name, toolCall.arguments));
+			// 외부 내용은 결과가 대화에 들어가기 전에 표시해요 — 실패 결과에도 외부 문구가 섞일 수 있어서 성공 여부와 상관없어요
+			if (deps.tools.returnsExternalContent(toolCall.name)) externalContentSeen = true;
 			const output = await deps.tools.execute(toolCall.name, toolCall.arguments, options.toolContext);
 			if (toolCall.name.startsWith('memory_') && !memoryUpdated) {
 				try {
