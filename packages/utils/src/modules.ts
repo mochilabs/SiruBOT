@@ -49,6 +49,7 @@ export const BOT_MODULES: readonly BotModule[] = [
 		messageFeatures: [
 			{ id: 'greeting', summary: '새 멤버가 오고 갈 때 인사 메시지와 카드를 보내요' },
 			{ id: 'counting', summary: '카운팅 채널에서 다 같이 숫자를 이어 세요' },
+			{ id: 'starboard', summary: '반응이 많이 달린 메시지를 스타보드 채널에 모아요' },
 			{ id: 'custom-command', summary: '서버가 만든 커스텀 명령에 답해요' },
 			{ id: 'temp-voice', summary: '입장용 음성 채널에 들어가면 내 음성 채널을 만들어 줘요' }
 		],

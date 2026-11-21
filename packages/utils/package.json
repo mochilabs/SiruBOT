@@ -102,6 +102,11 @@
             "import": "./dist/ticket.js",
             "require": "./dist/ticket.cjs"
         },
+        "./starboard": {
+            "types": "./dist/starboard.d.ts",
+            "import": "./dist/starboard.js",
+            "require": "./dist/starboard.cjs"
+        },
         "./rolePanel": {
             "types": "./dist/rolePanel.d.ts",
             "import": "./dist/rolePanel.js",

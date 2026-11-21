@@ -44,6 +44,8 @@ export function createGuildSettingsInvalidationListener(): RedisBinding {
 	return createRedisEventListener(guildSettingsInvalidateEvent, ({ event, logger }) => {
 		const { guildId } = event;
 		container.guildService.invalidate(guildId);
+		// 스타보드 설정(기준·이모지·채널)도 같은 저장 흐름으로 바뀌어요
+		container.starboardService.invalidateSettings(guildId);
 		// 커스텀 명령어 테이블도 같은 채널로 무효화돼요 — 커스텀 명령어 저장·접두사 변경이 함께 와요
 		container.customCommandStore.clearGuildCustomCommandsCache(guildId);
 		// 슬래시형 커스텀 명령어는 등록/해제도 같은 저장 흐름이에요 — 이 길드의 슬래시 커맨드를 DB와 맞춰요
