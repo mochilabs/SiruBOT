@@ -6,8 +6,8 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "scripts": {
-        "lint": "prettier --check \"src/**/*.ts\"",
-        "lint:fix": "prettier --write \"src/**/*.ts\"",
+        "lint": "prettier --check \"src/**/*.{ts,tsx}\"",
+        "lint:fix": "prettier --write \"src/**/*.{ts,tsx}\"",
         "test": "vitest run --passWithNoTests --config ../../vitest.config.ts",
         "typecheck": "tsc --noEmit",
         "build": "tsup",
@@ -27,12 +27,13 @@
         "@takumi-rs/helpers": "^2.22.1",
         "fastify": "^5.12.7",
         "js-yaml": "^4.3.2",
-        "skia-canvas": "^3.0.8",
+        "react": "19.3.1",
         "tslog": "^4.11.0",
         "youtubei.js": "18.3.0",
         "zod": "^4.6.7"
     },
     "devDependencies": {
-        "@types/js-yaml": "^4.0.9"
+        "@types/js-yaml": "^4.0.9",
+        "@types/react": "^19"
     }
 }

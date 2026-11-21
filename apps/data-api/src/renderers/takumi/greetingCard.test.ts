@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_GREETINGS, GREETING_CARD_H, GREETING_CARD_W, GREETING_RENDER_SCALE, GREETING_TEMPLATES, type GreetingImage } from '@sirubot/utils';
 import type { GreetingCardContext } from '../memberGreetingCard.ts';
-import { renderGreetingCardSatori } from './greetingCard.ts';
+import { renderGreetingCard } from './greetingCard.ts';
 
 const warn = vi.hoisted(() => vi.fn());
 vi.mock('../../utils/logger.ts', () => ({ getLogger: () => ({ warn, error: vi.fn(), info: vi.fn(), debug: vi.fn() }) }));
@@ -16,10 +16,10 @@ function expectPngSize(buffer: Buffer, width: number, height: number): void {
 	expect(buffer.readUInt32BE(20)).toBe(height);
 }
 
-describe('renderGreetingCardSatori', () => {
-	it('모든 템플릿을 skia와 같은 출력 크기(1200×675 × 축소 배율)의 PNG로 그려요', async () => {
+describe('renderGreetingCard', () => {
+	it('모든 템플릿을 출력 크기(1200×675 × 축소 배율)의 PNG로 그려요', async () => {
 		for (const template of GREETING_TEMPLATES) {
-			expectPngSize(await renderGreetingCardSatori(template.image, context), OUT_W, OUT_H);
+			expectPngSize(await renderGreetingCard(template.image, context), OUT_W, OUT_H);
 		}
 	});
 
@@ -33,7 +33,7 @@ describe('renderGreetingCardSatori', () => {
 				{ id: 'i', type: 'image', x: 50, y: 50, width: 100, height: 100, dataUri: 'data:image/png;base64,AAAA', opacity: 1 }
 			]
 		};
-		expectPngSize(await renderGreetingCardSatori(broken, context), OUT_W, OUT_H);
+		expectPngSize(await renderGreetingCard(broken, context), OUT_W, OUT_H);
 		expect(warn).toHaveBeenCalledTimes(2);
 	});
 });

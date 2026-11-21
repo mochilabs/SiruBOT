@@ -104,6 +104,39 @@ describe('imageSizeOf', () => {
 		]);
 		expect(imageSizeOf(jpeg)).toEqual({ width: 480, height: 360 });
 	});
+	it('reads WebP sizes (VP8X, VP8L, VP8)', () => {
+		const riff = (chunk: string, body: number[]) =>
+			Uint8Array.from([
+				0x52,
+				0x49,
+				0x46,
+				0x46,
+				0,
+				0,
+				0,
+				0,
+				0x57,
+				0x45,
+				0x42,
+				0x50,
+				...[...chunk].map((c) => c.charCodeAt(0)),
+				0,
+				0,
+				0,
+				0,
+				...body
+			]);
+		// VP8X: 플래그 4바이트 뒤 캔버스 너비-1·높이-1(각 24비트 LE) — 너비 1200, 높이 675
+		const vp8x = riff('VP8X', [0, 0, 0, 0, 0xaf, 0x04, 0, 0xa2, 0x02, 0, 0, 0, 0]);
+		expect(imageSizeOf(vp8x)).toEqual({ width: 1200, height: 675 });
+		// VP8L: 시그니처 0x2f 뒤 14비트 너비-1, 14비트 높이-1 — 너비 480, 높이 360
+		const bits = (479 | (359 << 14)) >>> 0;
+		const vp8l = riff('VP8L', [0x2f, bits & 0xff, (bits >> 8) & 0xff, (bits >> 16) & 0xff, (bits >>> 24) & 0xff, 0, 0, 0, 0, 0, 0, 0, 0]);
+		expect(imageSizeOf(vp8l)).toEqual({ width: 480, height: 360 });
+		// VP8: 프레임 태그 3바이트 + 시작 코드 9d 01 2a + 너비·높이(각 16비트 LE)
+		const vp8 = riff('VP8 ', [0, 0, 0, 0x9d, 0x01, 0x2a, 0xe0, 0x01, 0x68, 0x01, 0, 0, 0, 0]);
+		expect(imageSizeOf(vp8)).toEqual({ width: 480, height: 360 });
+	});
 	it('returns null for unknown or truncated data', () => {
 		expect(imageSizeOf(Uint8Array.from([1, 2, 3]))).toBeNull();
 		expect(imageSizeOf(new Uint8Array(40))).toBeNull();

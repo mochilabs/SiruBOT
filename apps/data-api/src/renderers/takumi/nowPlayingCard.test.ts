@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { NowPlayingCardInput } from '../nowPlayingCard.ts';
-import { brandText, NOW_PLAYING_CARD_WIDTH, renderNowPlayingCardSatori } from './nowPlayingCard.ts';
+import { renderSvgRaster } from './takumiKit.tsx';
+import { brandText, NOW_PLAYING_CARD_WIDTH, renderNowPlayingCard, type NowPlayingCardInput } from './nowPlayingCard.tsx';
 
 function input(patch: Partial<NowPlayingCardInput> = {}): NowPlayingCardInput {
 	return {
@@ -29,17 +29,17 @@ function input(patch: Partial<NowPlayingCardInput> = {}): NowPlayingCardInput {
 
 const size = (png: Buffer) => ({ width: png.readUInt32BE(16), height: png.readUInt32BE(20) });
 
-describe('renderNowPlayingCardSatori', () => {
+describe('renderNowPlayingCard', () => {
 	it('renders a 960px-wide PNG even without artwork or avatar', async () => {
-		const png = await renderNowPlayingCardSatori(input());
+		const png = await renderNowPlayingCard(input());
 		expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
 		expect(size(png).width).toBe(NOW_PLAYING_CARD_WIDTH);
 	}, 30_000);
 
 	it('gets taller with each queued track preview and chapter', async () => {
-		const none = size(await renderNowPlayingCardSatori(input()));
+		const none = size(await renderNowPlayingCard(input()));
 		const three = size(
-			await renderNowPlayingCardSatori(
+			await renderNowPlayingCard(
 				input({
 					nextTracks: [
 						{ title: 'a', artist: 'x' },
@@ -50,20 +50,24 @@ describe('renderNowPlayingCardSatori', () => {
 				})
 			)
 		);
-		const withChapter = size(await renderNowPlayingCardSatori(input({ chapter: { name: 'Verse', startMs: 0, endMs: 60_000 } })));
+		const withChapter = size(await renderNowPlayingCard(input({ chapter: { name: 'Verse', startMs: 0, endMs: 60_000 } })));
 		expect(three.height).toBeGreaterThan(none.height);
 		expect(withChapter.height).toBeGreaterThanOrEqual(none.height);
 	}, 30_000);
 
 	it('has transparent rounded corners so it sits on the container as a panel', async () => {
-		const png = await renderNowPlayingCardSatori(input());
-		const { loadImage, Canvas } = await import('skia-canvas');
-		const img = await loadImage(png);
-		const canvas = new Canvas(img.width, img.height);
-		const ctx = canvas.getContext('2d');
-		ctx.drawImage(img, 0, 0);
-		expect(ctx.getImageData(0, 0, 1, 1).data[3]).toBe(0);
-		expect(ctx.getImageData(img.width >> 1, img.height >> 1, 1, 1).data[3]).toBe(255);
+		const png = await renderNowPlayingCard(input());
+		const { width, height } = size(png);
+		// PNG를 다시 raw RGBA로 풀어서 픽셀 알파를 봐요
+		const raw = await renderSvgRaster(
+			`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><image href="data:image/png;base64,${png.toString('base64')}" width="${width}" height="${height}"/></svg>`,
+			width,
+			height,
+			'raw'
+		);
+		const alphaAt = (x: number, y: number) => raw[(y * width + x) * 4 + 3];
+		expect(alphaAt(0, 0)).toBe(0);
+		expect(alphaAt(width >> 1, height >> 1)).toBe(255);
 	}, 30_000);
 });
 

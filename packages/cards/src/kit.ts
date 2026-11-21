@@ -1,23 +1,23 @@
 /**
- * satori 카드 공용 키트 중 런타임 독립 부분 — 요소 헬퍼, 폰트 이름, 이모지 제거, 비동기 LRU예요 (node·브라우저 공용).
- * 폰트 파일 읽기, resvg 래스터, 원격 이미지 다운로드 같은 node 전용 코드는 data-api `renderers/satori/satoriKit.ts`에 있어요.
- * JSX 대신 `h()`로 요소를 만들어서 TSX 빌드 설정 없이 쓸 수 있어요.
+ * Takumi 카드 공용 키트 중 런타임 독립 부분 — 요소 헬퍼, 폰트 이름, 이모지 제거, 비동기 LRU예요 (node·브라우저 공용).
+ * 폰트 파일 읽기, 네이티브 래스터, 원격 이미지 다운로드 같은 node 전용 코드는 data-api `renderers/takumi/takumiKit.tsx`에 있어요.
+ * 이 패키지는 JSX 빌드 설정 없이 쓰려고 `h()`로 요소를 만들어요 (data-api 카드는 TSX예요).
  */
 
-/** satori 요소 — React 타입에 의존하지 않는 최소 형태예요. */
-export interface SatoriElement {
+/** Takumi `fromJsx`가 받는 요소 — React 타입에 의존하지 않는 최소 형태예요. */
+export interface CardElement {
 	type: string;
-	props: { style?: Record<string, string | number>; children?: SatoriChild | SatoriChild[]; [key: string]: unknown };
+	props: { style?: Record<string, string | number>; children?: CardChild | CardChild[]; [key: string]: unknown };
 }
-export type SatoriChild = SatoriElement | string | number | null | false;
+export type CardChild = CardElement | string | number | null | false;
 
-/** flex 컨테이너 요소 — satori는 모든 div가 `display: flex`여야 해서 기본값으로 넣어요. */
-export function h(type: string, style: Record<string, string | number>, children?: SatoriChild | SatoriChild[]): SatoriElement {
+/** flex 컨테이너 요소 — Takumi의 div는 기본이 block이라 `display: flex`를 기본값으로 넣어요. */
+export function h(type: string, style: Record<string, string | number>, children?: CardChild | CardChild[]): CardElement {
 	return { type, props: { style: { display: 'flex', ...style }, children } };
 }
 
-/** 이미지 요소 — src는 data URI(또는 Buffer)를 권장해요. 원격 URL은 satori가 직접 받아 SSRF 경계가 사라져요. */
-export function img(src: string, style: Record<string, string | number>): SatoriElement {
+/** 이미지 요소 — src는 data URI(또는 Buffer)를 권장해요. 원격 URL은 렌더러가 직접 받아 SSRF 경계가 사라져요. */
+export function img(src: string, style: Record<string, string | number>): CardElement {
 	return { type: 'img', props: { src, style } };
 }
 

@@ -1,10 +1,7 @@
 /**
- * lucide 아이콘 (0.545, 24×24 viewBox, stroke 기반) — skia용 경로 DB와 드로잉 함수예요. ISC 라이선스.
+ * lucide 아이콘 (0.545, 24×24 viewBox, stroke 기반) — SVG 경로 DB예요. ISC 라이선스.
  * 이모지는 폰트에 없으니 카드에서는 항상 이 벡터 아이콘을 써요.
- * 카드 렌더러는 그려야 할 때마다 ensureKoreanFont()를 먼저 불러 Path2D 싱글턴을 준비해요.
- */
-import type { CanvasRenderingContext2D } from 'skia-canvas';
-import { getPath2DConstructor } from './fonts.ts';
+ *  */
 
 export type IconName =
 	| 'sparkle'
@@ -181,58 +178,7 @@ const ICONS: Record<IconName, IconDef> = {
 	}
 };
 
-/** 아이콘 정의(경로·원·사각형) — satori 등 skia 밖의 렌더러가 같은 경로 DB를 써요. */
+/** 아이콘 정의(경로·원·사각형) — `<Icon>` 컴포넌트가 이 경로 DB로 SVG를 그려요. */
 export function getIconDef(name: IconName): IconDef | undefined {
 	return ICONS[name];
-}
-
-/** 아이콘 그리기 — (x, y)는 아이콘 박스 좌상단, size는 박스 한변. fill:true면 채운 모양. */
-export function drawIcon(
-	ctx: CanvasRenderingContext2D,
-	name: IconName,
-	x: number,
-	y: number,
-	size: number,
-	color: string,
-	options: { fill?: boolean; strokeWidth?: number } = {}
-): void {
-	const def = ICONS[name];
-	const pathCtor = getPath2DConstructor();
-	// Path2D는 ensureKoreanFont()가 세운 싱글턴이에요 — 아직 준비 전이면 아이콘만 건너뛰어요(도달 불가 경로).
-	if (!def || !pathCtor) return;
-	const s = size / 24;
-	ctx.save();
-	ctx.translate(x, y);
-	ctx.scale(s, s);
-	if (def.rects)
-		for (const [rx, ry, rw, rh, rr] of def.rects) {
-			ctx.beginPath();
-			ctx.roundRect(rx, ry, rw, rh, rr);
-			options.fill
-				? ((ctx.fillStyle = color), ctx.fill())
-				: ((ctx.strokeStyle = color), (ctx.lineWidth = options.strokeWidth ?? 2), ctx.stroke());
-		}
-	if (options.fill) {
-		ctx.fillStyle = color;
-		for (const d of def.subpaths ?? []) ctx.fill(new pathCtor(d) as never);
-		if (def.circles)
-			for (const [cx, cy, r] of def.circles) {
-				ctx.beginPath();
-				ctx.arc(cx, cy, r, 0, Math.PI * 2);
-				ctx.fill();
-			}
-	} else {
-		ctx.strokeStyle = color;
-		ctx.lineWidth = options.strokeWidth ?? 2;
-		ctx.lineCap = 'round';
-		ctx.lineJoin = 'round';
-		for (const d of def.subpaths ?? []) ctx.stroke(new pathCtor(d) as never);
-		if (def.circles)
-			for (const [cx, cy, r] of def.circles) {
-				ctx.beginPath();
-				ctx.arc(cx, cy, r, 0, Math.PI * 2);
-				ctx.stroke();
-			}
-	}
-	ctx.restore();
 }

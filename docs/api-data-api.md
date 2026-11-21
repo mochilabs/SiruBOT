@@ -56,15 +56,15 @@ Routes are registered from `routes/index.ts`, one file per domain.
 
 | Route | Description | Notes | File |
 |---|---|---|---|
-| POST `/v1/image/profile` | Profile card PNG, preset `dark`, `ticket` (skia) or `dashboard`, `light`, `aura` (satori; falls back to `dark` on render failure) | Dedup key `img:card:` | `routes/render.ts` |
-| POST `/v1/image/member-card` | Greeting card, kind `welcome` or `goodbye`. Rendered with satori from the same `greetingCard` node as the dashboard preview (`packages/cards`); falls back to the skia card if satori fails. Colored emoji in the text are dropped by the satori card | Dedup key `img:greeting:`; body limit 4 MB | `routes/render.ts`, `renderers/satori/greetingCard.ts` |
+| POST `/v1/image/profile` | Profile card PNG, preset `dashboard` (`dark` is an alias), `light`, `aura` or `ticket` (Takumi; a render failure returns 500) | Dedup key `img:card:` | `routes/render.ts` |
+| POST `/v1/image/member-card` | Greeting card, kind `welcome` or `goodbye`. Rendered with Takumi from the same `greetingCard` node as the dashboard preview (`packages/cards`). Colored emoji in the text render natively through the Twemoji font | Dedup key `img:greeting:`; body limit 4 MB | `routes/render.ts`, `renderers/takumi/greetingCard.ts` |
 | POST `/v1/image/member-card/background` | Normalize an uploaded background to JPEG (longest side 1600 px, at most 900 KB) | Body limit 8 MB | `routes/render.ts` |
 | POST `/v1/image/member-card/layer-image` | Normalize an uploaded sticker layer to PNG | Body limit 8 MB | `routes/render.ts` |
-| POST `/v1/image/nowplaying` | Now-playing card for the pinned controller (artwork-tinted backdrop, queue preview, variable height). Rendered with satori, falls back to the skia card if satori fails | Dedup key `img:nowplaying:` plus a hash of the payload without the position | `routes/render.ts`, `renderers/satori/nowPlayingCard.ts` |
+| POST `/v1/image/nowplaying` | Now-playing card for the pinned controller (artwork-tinted backdrop, queue preview, variable height). Rendered with Takumi | Dedup key `img:nowplaying:` plus a hash of the payload without the position | `routes/render.ts`, `renderers/takumi/nowPlayingCard.tsx` |
 | POST `/v1/image/ohaasa` | Horoscope card for one zodiac sign (rank, lucky item and key, date). The bot shows the description as text below it and falls back to text only when rendering fails | Dedup key `img:ohaasa:` | `routes/render.ts` |
 | POST `/v1/image/ohaasa/top` | Horoscope top 3 card (rank and sign only) for the lookup without a sign | Dedup key `img:ohaasa-top:` | `routes/render.ts` |
 | POST `/v1/image/weather` | Weather card (now, today, tomorrow, week strip). The bot falls back to a text card when rendering fails | Dedup key `img:weather:` | `routes/render.ts` |
-| POST `/v1/image/wrapped` | Personal music Wrapped card (satori). Aggregates the user's requests from the database for `period` (`month`, `year`, `all`), one guild or all guilds. Shows a "top N%" rank among users who requested in the same period and scope, overall and for the top artist, hidden when fewer than 5 users are in the pool | 503 without `DATABASE_URL`. Currently used only by the dev-guild command | `routes/render.ts`, `services/wrapped.ts`, `renderers/satori/` |
+| POST `/v1/image/wrapped` | Personal music Wrapped card (Takumi). Aggregates the user's requests from the database for `period` (`month`, `year`, `all`), one guild or all guilds. Shows a "top N%" rank among users who requested in the same period and scope, overall and for the top artist, hidden when fewer than 5 users are in the pool | 503 without `DATABASE_URL`. Currently used only by the dev-guild command | `routes/render.ts`, `services/wrapped.ts`, `renderers/takumi/` |
 
 ### Guild data and bot-bound work
 

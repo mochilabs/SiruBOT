@@ -1,5 +1,5 @@
 /**
- * satori 카드 공용 디자인 토큰 — 대시보드 다크 테마(apps/dashboard/src/app/globals.css `.dark`, DESIGN.md)를 옮긴 값이에요.
+ * Takumi 카드 공용 디자인 토큰 — 대시보드 다크 테마(apps/dashboard/src/app/globals.css `.dark`, DESIGN.md)를 옮긴 값이에요.
  * 카드는 대시보드의 2배 스케일이라 반경·간격도 2배예요 (rounded-card 1rem → 32, rounded-control 0.625rem → 20).
  * 새 색을 만들지 말고 여기서 골라요. 값을 바꾸려면 대시보드 토큰을 먼저 바꿔요.
  */
@@ -23,5 +23,5 @@ export const T = {
 
 export const RADIUS = { card: 32, control: 20, controlInner: 12 } as const;
 
-/** 정적 폰트 굵기 — 400은 가변 원본, 600/900은 서브셋이에요 (satoriKit.loadCardFonts) */
+/** 정적 폰트 굵기 — 400은 가변 원본, 600/900은 서브셋이에요 (대시보드 미리보기 폰트) */
 export const W = { regular: 400, semibold: 600, black: 900 } as const;

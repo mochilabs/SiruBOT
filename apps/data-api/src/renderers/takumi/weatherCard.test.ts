@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { weatherCardSchema } from '../routes/weatherCardSchema.ts';
-import { dayLabel, emojiForCode, renderWeatherCard, toneForCode } from './weatherCard.ts';
+import { weatherCardSchema } from '../../routes/weatherCardSchema.ts';
+import { dayLabel, emojiForCode, renderWeatherCard, toneForCode } from './weatherCard.tsx';
 
 /** 날씨 카드 렌더 스모크 — 범위별 캔버스 크기와 코드 매핑 헬퍼를 검증해요. */
 

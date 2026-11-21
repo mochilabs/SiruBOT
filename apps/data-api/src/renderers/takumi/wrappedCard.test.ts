@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { WrappedStats } from '../../services/wrapped.ts';
 import { stripEmoji } from '@sirubot/cards';
-import { formatHour, formatMinutes, renderWrappedCard, WRAPPED_CARD_SIZE } from './wrappedCard.ts';
+import { formatHour, formatMinutes, renderWrappedCard, WRAPPED_CARD_SIZE } from './wrappedCard.tsx';
 
 const base = { displayName: '당면', avatarUrl: null, periodLabel: '최근 30일', scopeLabel: '모든 서버' };
 

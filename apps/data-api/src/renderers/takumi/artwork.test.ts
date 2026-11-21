@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { prepareArtwork } from './artwork.ts';
-import { renderSvgRaster } from './satoriKit.ts';
+import { renderSvgRaster } from './takumiKit.tsx';
 
 describe('prepareArtwork', () => {
 	/** 위아래 검은 띠 + 가운데 빨간 사각형인 480x360 PNG data URI */

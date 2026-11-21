@@ -1,10 +1,10 @@
 /**
  * 아트워크 처리 — 썸네일에서 레터박스를 잘라낸 정사각 이미지, 카드 배경용 초소형 이미지, 대표색을 뽑아요.
- * Takumi의 SVG `<image>` 래스터로 처리해서 skia·sharp·resvg 없이 동작해요 (node 전용).
+ * Takumi의 SVG `<image>` 래스터로 처리해서 네이티브 이미지 라이브러리 없이 동작해요 (node 전용).
  * 색·크기 계산 같은 순수 헬퍼는 `@sirubot/cards`에 있어요.
  */
 import { BACKDROP_SIZE, type CropBox, detectContentBounds, dominantColor, imageSizeOf, normalizeAccent, type PreparedArtwork } from '@sirubot/cards';
-import { renderSvgRaster } from './satoriKit.ts';
+import { renderSvgRaster } from './takumiKit.tsx';
 
 export type { PreparedArtwork } from '@sirubot/cards';
 

@@ -22,7 +22,7 @@ Each app's file ends with a **Run and test** section (start, port, health check,
 - `packages/utils`: cross-app contracts, subpath exports, Redis channel contracts.
 - `packages/app-kit`: shared Fastify auth, env, error handler, logger.
 - `packages/isrc`: provider contract, matching rule, MusicBrainz User-Agent.
-- `packages/cards`: runtime-independent satori card pieces (tokens, artwork helpers, `greetingCard`); no node-only imports in the root export.
+- `packages/cards`: runtime-independent Takumi card pieces (tokens, artwork helpers, `greetingCard`); no node-only imports in the root export.
 - `packages/prisma`: schema, migrations, client generation. More conventions in the `repo-infra` skill.
 
 ## Service map

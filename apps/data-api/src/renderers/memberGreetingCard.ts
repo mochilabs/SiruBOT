@@ -1,8 +1,9 @@
 /**
  * 멤버 인사 카드 공용 타입·업로드 이미지 정규화.
- * 카드 PNG 렌더링은 `satori/greetingCard.ts`가 맡고, 이 파일은 대시보드에서 올라온 배경/스티커 이미지를 저장 규격에 맞게 축소·재인코딩해요.
+ * 카드 PNG 렌더링은 `takumi/greetingCard.ts`가 맡고, 이 파일은 대시보드에서 올라온 배경/스티커 이미지를 저장 규격에 맞게 축소·재인코딩해요.
  */
-import type { Canvas, CanvasDrawable } from 'skia-canvas';
+import { imageSizeOf } from '@sirubot/cards';
+import { reencodeImage } from './takumi/takumiKit.tsx';
 
 /** 인사 배경 정규화/디코딩 실패 — 라우트가 400으로 매핑해요 (WeatherError/DeliveryError와 같은 패턴) */
 export class GreetingBackgroundError extends Error {
@@ -45,7 +46,7 @@ const IMAGE_MAX_BYTES = 900_000;
 const IMAGE_STEP_PX = 200;
 const BG_MAX_SIDE = 1600;
 const BG_MIN_SIDE = 320;
-const BG_QUALITY = 0.82;
+const BG_QUALITY = 82;
 const LAYER_MAX_SIDE = 1200;
 const LAYER_MIN_SIDE = 200;
 
@@ -57,7 +58,7 @@ interface NormalizeUploadedImageOptions {
 }
 
 /**
- * 업로드 이미지 축소·재인코딩 공용 파이프라인: decode → load → 첫 축소 →
+ * 업로드 이미지 축소·재인코딩 공용 파이프라인: 헤더 크기 확인 → 첫 축소 →
  * 재인코딩 결과가 IMAGE_MAX_BYTES를 넘으면 가장 긴 변을 IMAGE_STEP_PX씩 더 줄여요.
  * 리턴은 data:image/jpeg;base64,… (배경) 또는 data:image/png;base64,… (레이어).
  */
@@ -67,31 +68,24 @@ async function normalizeUploadedImage(
 	encode: { format: 'jpeg'; quality: number } | { format: 'png' }
 ): Promise<string> {
 	const raw = decodeDataUri(dataUri);
-	if (!raw) {
+	const natural = raw ? imageSizeOf(raw) : null;
+	if (!natural || !natural.width || !natural.height) {
 		throw new GreetingBackgroundError('invalid_image', INVALID_IMAGE_MESSAGE);
 	}
-	const { Canvas, loadImage } = await import('skia-canvas');
-	let source: CanvasDrawable;
-	try {
-		source = (await loadImage(raw)) as unknown as CanvasDrawable;
-	} catch {
-		throw new GreetingBackgroundError('invalid_image', INVALID_IMAGE_MESSAGE);
-	}
-	const iw = (source as { width: number }).width;
-	const ih = (source as { height: number }).height;
-	if (!iw || !ih) {
-		throw new GreetingBackgroundError('invalid_image', INVALID_IMAGE_MESSAGE);
-	}
+	const { width: iw, height: ih } = natural;
 
 	// 첫 목표 — 가장 긴 변 maxSide 이하
 	let scale = Math.min(1, options.maxSide / Math.max(iw, ih));
 	for (;;) {
 		const w = Math.max(1, Math.round(iw * scale));
 		const h = Math.max(1, Math.round(ih * scale));
-		const canvas: Canvas = new Canvas(w, h);
-		const drawCtx = canvas.getContext('2d');
-		drawCtx.drawImage(source, 0, 0, w, h);
-		const encoded = encode.format === 'jpeg' ? await canvas.toBuffer('jpeg', { quality: encode.quality }) : await canvas.toBuffer('png');
+		let encoded: Buffer;
+		try {
+			encoded = await reencodeImage(dataUri, { width: w, height: h }, encode);
+		} catch {
+			// 헤더는 읽혔지만 본문을 디코딩하지 못한 손상 이미지
+			throw new GreetingBackgroundError('invalid_image', INVALID_IMAGE_MESSAGE);
+		}
 		if (encoded.length <= IMAGE_MAX_BYTES) {
 			return `data:image/${encode.format};base64,${encoded.toString('base64')}`;
 		}

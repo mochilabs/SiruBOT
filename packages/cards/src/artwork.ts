@@ -1,10 +1,10 @@
 /**
  * 아트워크 순수 헬퍼 — 레터박스 감지, 대표색, 색 섞기, 이미지 헤더 크기 읽기예요. 런타임 독립(node·브라우저 공용)이에요.
- * 래스터가 필요한 `prepareArtwork`(resvg)는 data-api `renderers/satori/artwork.ts`에 있어요.
+ * 래스터가 필요한 `prepareArtwork`(Takumi)는 data-api `renderers/takumi/artwork.ts`에 있어요.
  */
 
 export interface PreparedArtwork {
-	/** 레터박스를 잘라낸 정사각 PNG data URI (satori `<img>`에 그대로 써요) */
+	/** 레터박스를 잘라낸 정사각 PNG data URI (Takumi `<img>`에 그대로 써요) */
 	art: string;
 	/** 카드 배경용 160x100 PNG data URI — 작은 크기에서 한 번 블러해 둬서 카드 크기로 키워도 매끈한 색 번짐이 돼요 (큰 이미지에 블러 필터를 걸면 비싸요). 비율은 유지하고 카드 쪽에서 cover로 맞춰요. */
 	backdrop: string;
@@ -23,7 +23,7 @@ export interface CropBox {
 export const BACKDROP_SIZE = { width: 160, height: 100 } as const;
 
 /**
- * PNG·GIF·JPEG 헤더에서 크기만 읽어요 (디코딩 없이). resvg로 자연 크기를 재면 이미지를 통째로 디코딩해서 느려요.
+ * PNG·GIF·JPEG·WebP 헤더에서 크기만 읽어요 (디코딩 없이). 렌더러로 자연 크기를 재면 이미지를 통째로 디코딩해서 느려요.
  * 알 수 없는 형식이면 null이에요.
  */
 export function imageSizeOf(buf: Uint8Array): { width: number; height: number } | null {
@@ -57,6 +57,33 @@ export function imageSizeOf(buf: Uint8Array): { width: number; height: number } 
 				return { height: (buf[i + 5]! << 8) | buf[i + 6]!, width: (buf[i + 7]! << 8) | buf[i + 8]! };
 			}
 			i += 2 + ((buf[i + 2]! << 8) | buf[i + 3]!);
+		}
+	}
+	// WebP — RIFF....WEBP 뒤 청크(VP8 손실 / VP8L 무손실 / VP8X 확장)에서 크기를 읽어요
+	if (
+		buf.length > 30 &&
+		buf[0] === 0x52 &&
+		buf[1] === 0x49 &&
+		buf[2] === 0x46 &&
+		buf[3] === 0x46 &&
+		buf[8] === 0x57 &&
+		buf[9] === 0x45 &&
+		buf[10] === 0x42 &&
+		buf[11] === 0x50
+	) {
+		const chunk = String.fromCharCode(buf[12]!, buf[13]!, buf[14]!, buf[15]!);
+		if (chunk === 'VP8X') {
+			return {
+				width: 1 + (buf[24]! | (buf[25]! << 8) | (buf[26]! << 16)),
+				height: 1 + (buf[27]! | (buf[28]! << 8) | (buf[29]! << 16))
+			};
+		}
+		if (chunk === 'VP8L' && buf[20] === 0x2f) {
+			const bits = (buf[21]! | (buf[22]! << 8) | (buf[23]! << 16) | (buf[24]! << 24)) >>> 0;
+			return { width: (bits & 0x3fff) + 1, height: ((bits >>> 14) & 0x3fff) + 1 };
+		}
+		if (chunk === 'VP8 ' && buf[23] === 0x9d && buf[24] === 0x01 && buf[25] === 0x2a) {
+			return { width: (buf[26]! | (buf[27]! << 8)) & 0x3fff, height: (buf[28]! | (buf[29]! << 8)) & 0x3fff };
 		}
 	}
 	return null;

@@ -29,12 +29,12 @@ SiruBOT is an all-in-one Discord bot for Korean communities (music, AI chat, ser
 |---|---|---|---|
 | App | `apps/bot` | Discord gateway, slash commands, Lavalink audio, AI chat, TTS, tickets, emoji maker | Sapphire (discord.js) + lavalink-client |
 | App | `apps/dashboard` | Guild management web dashboard (player, settings, stats, social alerts, tickets, operator panel) | Next.js 16.4 App Router + React 19 |
-| App | `apps/data-api` | Gateway: external provider cache, Redis hubs, image rendering (skia canvas and satori), LLM batch jobs, ISRC enrichment, notifier/storage proxy | Fastify 5 (port 3002) |
+| App | `apps/data-api` | Gateway: external provider cache, Redis hubs, image rendering (Takumi), LLM batch jobs, ISRC enrichment, notifier/storage proxy | Fastify 5 (port 3002) |
 | App | `apps/shardmanager` | Shard assignment and health aggregation WS server for bot processes | Fastify 5 + @fastify/websocket (port 3001) |
 | App | `apps/storage` | Object storage — authenticated upload, public GET (Discord embed assets), private bucket (ticket transcripts) | Fastify 5 (port 3003) |
 | App | `apps/notifier` | Social alerts — YouTube (WebSub + RSS), Twitch (EventSub), Chzzk (polling) → Discord webhooks | Fastify 5 (port 3004) |
 | Package | `packages/prisma` | PostgreSQL schema + Prisma client (25 models) | Prisma 7 + PrismaPg |
-| Package | `packages/cards` | Runtime-independent satori card nodes (tokens, artwork helpers, `greetingCard`) shared by data-api (PNG) and the dashboard (SVG preview). Root export has no node-only imports | satori nodes |
+| Package | `packages/cards` | Runtime-independent Takumi card nodes (tokens, artwork helpers, `greetingCard`) shared by data-api (PNG) and the dashboard (SVG preview). Root export has no node-only imports | Takumi nodes |
 | Package | `packages/isrc` | ISRC lookup for a track (Deezer, MusicBrainz). Pure module: no env reads, `fetch` injected; data-api owns scheduling | fetch |
 | Package | `packages/shardclient` | WS client for shardmanager (retry and backoff built in) | ws |
 | Package | `packages/utils` | Redis channel constants, signed envelopes, zod contracts, shared utilities | zod |
@@ -218,7 +218,7 @@ Shutdown: stop the three schedulers → stop 8 hubs → cache Redis → DB → F
 graph TB
     R1["routes/<br/>index · cache-providers · ohaasa · embed-fix · render · ai · tts<br/>player · guild-data · panel · social · storage · bot-admin · dashboard"] --> P["providers/<br/>weather · lyrics · ohaasa · chapters · delivery · sponsorblock<br/>youtubeSuggestions · lavalinkSearch · embedFix · translate"]
     R1 --> S["services/<br/>8 hubs · ohaasaScheduler · memoryTidy · isrcEnricher · recordingMerge<br/>playbackStore · wrapped · db"]
-    R1 --> RD["renderers/<br/>skia: profileCard(Ticket/Dark) · ohaasaCard · weatherCard · nowPlayingCard<br/>satori/: profileCard · nowPlayingCard · wrappedCard · greetingCard"]
+    R1 --> RD["renderers/takumi/ (TSX)<br/>profileCard · profileCardTicket · nowPlayingCard · wrappedCard · ohaasaCard · weatherCard · greetingCard"]
     P --> U["utils/<br/>cache · dedup · breaker · metrics · hubSubscriber · hubCorrelate · requestReplyHub"]
     S --> U
 ```
@@ -247,7 +247,7 @@ graph TB
 | `GET /v1/tts/voices` | siru_tts voice catalog proxy | 5 min, in memory |
 | `GET /v1/sponsorblock/segments` | SponsorBlock skip segments | 24 h, empty result 1 h, positive stale copy 7 days |
 | `POST /v1/embed-fix/metadata` | Social link embed-fix metadata (+ auto translation) | constants in `routes/embed-fix.ts` |
-| `POST /v1/image/{profile,member-card,nowplaying,ohaasa,ohaasa/top,weather,wrapped}` · `POST /v1/image/member-card/{background,layer-image}` | PNG rendering (now-playing, Wrapped, the greeting card and the `dashboard`/`light`/`aura` profile presets use satori; profile, now-playing and greeting fall back to skia) · greeting upload normalization | — |
+| `POST /v1/image/{profile,member-card,nowplaying,ohaasa,ohaasa/top,weather,wrapped}` · `POST /v1/image/member-card/{background,layer-image}` | PNG rendering (all cards render with Takumi; no fallback renderer) · greeting upload normalization | — |
 | `POST /v1/ai/custom-command-{draft,refine}` | Custom command draft/refine (503 without a key) | — |
 | `POST /v1/playback/events` | Collect shard playback events (`services/playbackStore.ts`) | — |
 | `GET /v1/player/:guildId` (+ `/stream` SSE, `/voice-context`) · `POST /v1/internal/player/{search,play,control}` | Web player | — |

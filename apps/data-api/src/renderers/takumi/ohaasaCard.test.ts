@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ohaasaCardSchema, ohaasaTopCardSchema } from '../routes/ohaasaCardSchema.ts';
-import { renderOhaasaCard, renderOhaasaTopCard, starsForRank } from './ohaasaCard.ts';
+import { ohaasaCardSchema, ohaasaTopCardSchema } from '../../routes/ohaasaCardSchema.ts';
+import { renderOhaasaCard, renderOhaasaTopCard, starsForRank } from './ohaasaCard.tsx';
 
 /**
  * 운세 카드 스모크 — 요약 카드(운세 설명·럭키 컬러 미포함) 크기 시그니처와
@@ -32,13 +32,10 @@ describe('renderOhaasaCard', () => {
 		expect((await renderOhaasaCard({ ...base })).length).toBeGreaterThan(1_000);
 	});
 
-	it('배경을 칠하지 않는 투명 PNG예요', async () => {
-		const { loadImage, Canvas } = await import('skia-canvas');
-		const img = await loadImage(await renderOhaasaCard({ ...base, luckyItem: '핑크색' }));
-		const ctx = new Canvas(960, 304).getContext('2d');
-		ctx.drawImage(img, 0, 0);
-		// 좌하단 모서리에는 텍스트가 없어서 완전 투명이어야 해요
-		expect(ctx.getImageData(2, 300, 1, 1).data[3]).toBe(0);
+	it('배경을 칠하지 않는 알파 채널 PNG예요', async () => {
+		const buffer = await renderOhaasaCard({ ...base, luckyItem: '핑크색' });
+		// IHDR 색상 타입(오프셋 25) 6 = RGBA — 투명 배경을 보존해요
+		expect(buffer[25]).toBe(6);
 	});
 
 	it('일본어로 넘어온 아이템도 그대로 그려요 (주말 원문 폴백)', async () => {

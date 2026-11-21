@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { isAllowedImageUrl, loadImageAllowed } from './images.ts';
+import { describe, expect, it } from 'vitest';
+import { isAllowedImageUrl } from './images.ts';
 
 describe('isAllowedImageUrl (이미지 allowlist)', () => {
 	it('Discord CDN·유튜브 썸네일 호스트만 허용해요', () => {
@@ -30,27 +30,5 @@ describe('isAllowedImageUrl (이미지 allowlist)', () => {
 	it('호스트 대소문자·포트·경로는 판정에 영향 없어요', () => {
 		expect(isAllowedImageUrl('https://CDN.DISCORDAPP.COM/a.png')).toBe(true);
 		expect(isAllowedImageUrl('https://cdn.discordapp.com:443/a.png?v=1')).toBe(true);
-	});
-});
-
-describe('loadImageAllowed', () => {
-	it('허용 호스트가 아니면 fetch를 아예 시도하지 않아요', async () => {
-		const fetchSpy = vi.spyOn(globalThis, 'fetch');
-		try {
-			await expect(loadImageAllowed('https://example.com/a.png')).resolves.toBeNull();
-			expect(fetchSpy).not.toHaveBeenCalled();
-		} finally {
-			fetchSpy.mockRestore();
-		}
-	});
-
-	it('허용 호스트는 fetch를 시도하고 실패하면 null을 돌려줘요', async () => {
-		const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
-		try {
-			await expect(loadImageAllowed('https://cdn.discordapp.com/avatars/1/a.png')).resolves.toBeNull();
-			expect(fetchSpy).toHaveBeenCalledOnce();
-		} finally {
-			fetchSpy.mockRestore();
-		}
 	});
 });

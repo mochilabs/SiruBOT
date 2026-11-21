@@ -1,23 +1,24 @@
 /**
- * Takumi 카드 렌더 공용 키트(node 전용) — 폰트 등록, PNG/RGBA 래스터, 원격 이미지 data URI 변환, 아이콘 요소를 한곳에서 해요.
- * 런타임 독립 부분(요소 헬퍼 `h`·`img`, `stripEmoji`, `createAsyncLru`, 토큰)은 `@sirubot/cards`에 있어요.
+ * Takumi 카드 렌더 공용 키트(node 전용) — 폰트 등록, PNG/RGBA 래스터, 원격 이미지 data URI 변환, `Box`·`Icon` 컴포넌트를 한곳에서 해요.
+ * 카드는 TSX로 짜요. 런타임 독립 부분(`stripEmoji`, `createAsyncLru`, 토큰)은 `@sirubot/cards`에 있어요.
  */
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Renderer } from '@takumi-rs/core';
 import { fromJsx } from '@takumi-rs/helpers/jsx';
-import { CARD_FONT, h, img, type SatoriElement } from '@sirubot/cards';
+import type { CSSProperties, ReactNode } from 'react';
+import { CARD_FONT } from '@sirubot/cards';
 import { getLogger } from '../../utils/logger.ts';
-import { getIconDef, type IconName } from '../canvas/icons.ts';
-import { isAllowedImageUrl } from '../canvas/images.ts';
+import { getIconDef, type IconName } from './icons.ts';
+import { isAllowedImageUrl } from './images.ts';
 
-const logger = getLogger('satoriKit');
+const logger = getLogger('takumiKit');
 
 let rendererPromise: Promise<{ renderer: Renderer; hasFont: boolean }> | null = null;
 
 function findFontFile(fileName: string): string | null {
-	// 런타임 CWD는 프로덕션(/app)·dev(apps/data-api)로 달라요 — canvas/fonts.ts와 같은 후보를 탐색해요.
+	// 런타임 CWD는 프로덕션(/app)·dev(apps/data-api)로 달라요 — resources/fonts 후보를 탐색해요.
 	const dirs = [join(process.cwd(), 'resources/fonts'), join(process.cwd(), '../../resources/fonts')];
 	for (const dir of dirs) {
 		const path = join(dir, fileName);
@@ -51,12 +52,68 @@ export function getCardRenderer(): Promise<{ renderer: Renderer; hasFont: boolea
 	return rendererPromise;
 }
 
+/** `display: flex` div — Takumi의 div는 기본이 block이라 flex 레이아웃은 이 컴포넌트로 만들어요 (구 satori `h()`와 같은 기본값). */
+export function Box({ style, children }: { style?: CSSProperties; children?: ReactNode }): ReactNode {
+	return <div style={{ display: 'flex', ...style }}>{children}</div>;
+}
+
+/** lucide 아이콘을 `<svg>`로 — 경로 DB(icons.ts)를 써요. */
+export function Icon({
+	name,
+	size,
+	color,
+	strokeWidth = 2,
+	filled = false
+}: {
+	name: IconName;
+	size: number;
+	color: string;
+	strokeWidth?: number;
+	/** true면 경로 안쪽도 같은 색으로 채워요 (별·왕관) */
+	filled?: boolean;
+}): ReactNode {
+	const def = getIconDef(name);
+	return (
+		<svg
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			fill={filled ? color : 'none'}
+			stroke={color}
+			strokeWidth={strokeWidth}
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			{(def?.subpaths ?? []).map((d, i) => (
+				<path key={`p${i}`} d={d} />
+			))}
+			{(def?.circles ?? []).map(([cx, cy, r], i) => (
+				<circle key={`c${i}`} cx={cx} cy={cy} r={r} />
+			))}
+			{(def?.rects ?? []).map(([x, y, width, height, rx], i) => (
+				<rect key={`r${i}`} x={x} y={y} width={width} height={height} rx={rx} />
+			))}
+		</svg>
+	);
+}
+
 /** SVG 문자열을 Takumi로 래스터해 PNG 또는 raw RGBA 버퍼로 돌려줘요 (아트워크 크롭·블러·테스트용). */
 export async function renderSvgRaster(svg: string, width: number, height: number, format: 'png' | 'raw'): Promise<Buffer> {
 	const { renderer } = await getCardRenderer();
 	const uri = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
-	const { node } = await fromJsx(img(uri, { width, height }));
+	const { node } = await fromJsx(<img src={uri} style={{ width, height }} />);
 	return Buffer.from(await renderer.render(node, { width, height, format }));
+}
+
+/** 이미지 data URI를 width×height로 다시 그려 JPEG/PNG 버퍼로 돌려줘요 — 업로드 이미지 축소·재인코딩용이에요. 읽을 수 없는 이미지면 throw해요. */
+export async function reencodeImage(
+	dataUri: string,
+	size: { width: number; height: number },
+	encode: { format: 'jpeg'; quality: number } | { format: 'png' }
+): Promise<Buffer> {
+	const { renderer } = await getCardRenderer();
+	const { node } = await fromJsx(<img src={dataUri} style={{ width: size.width, height: size.height }} />);
+	return Buffer.from(await renderer.render(node, { ...size, ...encode }));
 }
 
 /**
@@ -64,11 +121,11 @@ export async function renderSvgRaster(svg: string, width: number, height: number
  * height를 생략하면 레이아웃이 정한 높이로 그려요 (대기열 길이처럼 내용에 따라 달라지는 카드용).
  * outputWidth를 주면 레이아웃 크기(width)는 그대로 두고 출력 PNG만 그 너비로 균일 축소/확대해요 (인사 카드 1200→800).
  */
-export async function renderSatoriPng(node: SatoriElement, size: { width: number; height?: number; outputWidth?: number }): Promise<Buffer> {
+export async function renderCardPng(node: ReactNode, size: { width: number; height?: number; outputWidth?: number }): Promise<Buffer> {
 	const { renderer, hasFont } = await getCardRenderer();
 	if (!hasFont) throw new Error('card font unavailable');
 
-	let targetNode = node;
+	let target = node;
 	let renderWidth = size.width;
 	let renderHeight = size.height;
 
@@ -76,27 +133,23 @@ export async function renderSatoriPng(node: SatoriElement, size: { width: number
 		const scale = size.outputWidth / size.width;
 		renderWidth = size.outputWidth;
 		renderHeight = size.height ? Math.round(size.height * scale) : undefined;
-		targetNode = h(
-			'div',
-			{
-				width: renderWidth,
-				...(renderHeight ? { height: renderHeight } : {}),
-				overflow: 'hidden'
-			},
-			h(
-				'div',
-				{
-					width: size.width,
-					...(size.height ? { height: size.height } : {}),
-					transform: `scale(${scale})`,
-					transformOrigin: 'top left'
-				},
-				node
-			)
+		target = (
+			<Box style={{ width: renderWidth, ...(renderHeight ? { height: renderHeight } : {}), overflow: 'hidden' }}>
+				<Box
+					style={{
+						width: size.width,
+						...(size.height ? { height: size.height } : {}),
+						transform: `scale(${scale})`,
+						transformOrigin: 'top left'
+					}}
+				>
+					{node}
+				</Box>
+			</Box>
 		);
 	}
 
-	const { node: takumiNode } = await fromJsx(targetNode as unknown as Parameters<typeof fromJsx>[0]);
+	const { node: takumiNode } = await fromJsx(target);
 	return Buffer.from(
 		await renderer.render(takumiNode, {
 			width: renderWidth,
@@ -104,30 +157,6 @@ export async function renderSatoriPng(node: SatoriElement, size: { width: number
 			format: 'png'
 		})
 	);
-}
-
-/** lucide 아이콘을 `<svg>` 요소로 — skia 카드와 같은 경로 DB(canvas/icons.ts)를 써요. 선 아이콘만 지원해요. */
-export function iconElement(name: IconName, size: number, color: string, strokeWidth = 2): SatoriElement {
-	const def = getIconDef(name);
-	const children: SatoriElement[] = [
-		...(def?.subpaths ?? []).map((d) => ({ type: 'path', props: { d } })),
-		...(def?.circles ?? []).map(([cx, cy, r]) => ({ type: 'circle', props: { cx, cy, r } })),
-		...(def?.rects ?? []).map(([x, y, width, height, rx]) => ({ type: 'rect', props: { x, y, width, height, rx } }))
-	];
-	return {
-		type: 'svg',
-		props: {
-			width: size,
-			height: size,
-			viewBox: '0 0 24 24',
-			fill: 'none',
-			stroke: color,
-			strokeWidth,
-			strokeLinecap: 'round',
-			strokeLinejoin: 'round',
-			children
-		}
-	} as unknown as SatoriElement;
 }
 
 const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);

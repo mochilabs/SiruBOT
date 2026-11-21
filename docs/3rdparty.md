@@ -31,7 +31,7 @@
 | 3RD-04 | SponsorBlock API | data-api external HTTP | `sponsor.ajay.app/api/skipSegments` | millisecond skip segments | BOT controls current-track seek; mixer receives incoming start |
 | 3RD-05 | `lavalink-client` | Bot client library | Patched `2.11.0` (`apps/bot/package.json`) | `LavalinkManager`, Player / QueueStore hooks | `autoSkip: false` is required |
 | 3RD-06 | `discord.js` + `@sapphire/framework` | Bot framework | `^14.27.0` / `^5.5.1` | Slash command and precondition registration | Bot conventions are in `.claude/skills/sapphire-command` |
-| 3RD-07 | Prisma, Redis, Fastify, Next.js, satori, Sentry, etc. | Runtime dependencies | See table in Section 2 | Type and client contracts | Run `yarn generate` first |
+| 3RD-07 | Prisma, Redis, Fastify, Next.js, Takumi, Sentry, etc. | Runtime dependencies | See table in Section 2 | Type and client contracts | Run `yarn generate` first |
 | 3RD-08 | lrclib, Open-Meteo, tracker.delivery, TV Asahi, YouTube internal API, Deezer, MusicBrainz, OpenAI-compatible LLM, side servers | External HTTP | `apps/data-api/src/providers/*`, `packages/isrc/src/providers/*`, bot clients | REST, including unofficial APIs | YouTube's internal API can change without notice |
 
 For the overall system diagram, see [System Context in `architecture.md`, Section 2](./architecture.md#2-system-context). For the relationship among mixer, file-cache, and SiruBOT, consult the corresponding sibling-project documentation.
@@ -162,7 +162,7 @@ All callers live in `mixerService.ts`. The plugin's `api/openapi.yaml` is the fu
 | `@redis/client` | `^5.12.1` (bot/data-api/utils), `^6.3.0` (dashboard only) | All apps | **Version mismatch:** dashboard may use a different Redis client API. Take care when porting shared code to dashboard. |
 | `fastify` | `^5.12.7` | data-api/shardmanager | `@fastify/websocket ^11.3.4`, `@fastify/autoload ^6.5.1` |
 | `next` / `react` | `16.4.3` / `19.3.1` | dashboard | Dev uses `--webpack`; build uses `--turbopack` (`AGENTS.md`). |
-| `satori` / `@resvg/resvg-js` | `^0.63.2` / `^2.6.2` | data-api | Profile, now-playing and Wrapped cards (`apps/data-api/src/renderers/satori/`). The profile and now-playing routes fall back to the skia renderers when satori fails |
+| `@takumi-rs/core` / `@takumi-rs/helpers` / `react` | `^2.22.1` / `^2.22.1` / `19.3.1` | data-api | Every PNG card (`apps/data-api/src/renderers/takumi/`, written as TSX). react is only the JSX runtime and types; `fromJsx` runs without react-dom |
 | `youtubei.js` | `18.3.0` (exact pin) | data-api | See 3RD-08e |
 | `zod` | `^4.6.7` | All apps | Contract schema language |
 | `ws` | `^8.22.0` | shardmanager/shardclient | Shard WebSocket protocol |

@@ -1,5 +1,5 @@
-// 루트 export는 대시보드 번들에도 들어가요 — node 전용 모듈(node:*, Buffer, resvg 등)을 import하지 않아요.
-export { createAsyncLru, CARD_FONT, h, img, stripEmoji, type SatoriChild, type SatoriElement } from './kit.js';
+// 루트 export는 대시보드 번들에도 들어가요 — node 전용 모듈(node:*, Buffer, @takumi-rs/core 등)을 import하지 않아요.
+export { createAsyncLru, CARD_FONT, h, img, stripEmoji, type CardChild, type CardElement } from './kit.js';
 export { RADIUS, T, W } from './tokens.js';
 export {
 	BACKDROP_SIZE,

@@ -87,7 +87,7 @@ graph LR
 | `packages/app-kit` | 공용 Fastify 인증, env 검증, 로거 | Fastify |
 | `packages/shardclient` | 샤드 매니저용 WebSocket 클라이언트 | ws |
 | `packages/isrc` | 차트용 ISRC 조회 (Deezer, MusicBrainz) | fetch |
-| `packages/cards` | data-api와 대시보드가 같이 쓰는 satori 카드 노드(인사 카드 등) | satori |
+| `packages/cards` | data-api와 대시보드가 같이 쓰는 Takumi 카드 노드(인사 카드 등) | Takumi |
 
 대시보드는 봇과 직접 통신하지 않습니다. 요청은 대시보드 → data-api → Redis → 해당 서버를 맡은 봇 순서로 전달됩니다. Redis 채널 맵과 부팅/종료 순서를 포함한 전체 구조는 [docs/architecture.md](docs/architecture.md)에 있습니다.
 
