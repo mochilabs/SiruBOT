@@ -58,7 +58,7 @@ export function ServerOverviewTab({ guildId, onSelectTab }: ServerOverviewTabPro
 				<PanelHeader
 					icon={<LayoutDashboard className="h-5 w-5" />}
 					title="서버 개요"
-					description="이 서버에서 켜진 모듈 상태를 한눈에 보고, 자주 쓰는 설정으로 바로 이동해요."
+					description="모듈 상태와 자주 쓰는 설정이에요."
 					action={
 						<Badge variant="primary" size="md" className="tabular-nums">
 							켜진 모듈 {enabledCount} / {BOT_MODULES.length}
@@ -122,9 +122,7 @@ export function ServerOverviewTab({ guildId, onSelectTab }: ServerOverviewTabPro
 				<div className="flex flex-wrap items-center justify-between gap-2">
 					<div className="space-y-0.5">
 						<h2 className="text-base font-bold text-foreground">모듈 상태</h2>
-						<p className="text-xs text-muted-foreground">
-							스위치를 누르면 바로 저장돼요. 꺼진 모듈은 사이드바에서 흐리게 표시돼요.
-						</p>
+						<p className="text-xs text-muted-foreground">이 서버에서 쓸 기능을 켜고 꺼요.</p>
 					</div>
 					<Button variant="ghost" size="sm" onClick={() => onSelectTab("modules")}>
 						모듈 설정 보기
