@@ -624,7 +624,7 @@ describe('handleTrackStart (시작 확정과 mixer wiring)', () => {
 		expect(player.transitionState.lastStartedEncoded).toBe('a-enc');
 		expect(player.consecutiveErrors).toBe(0);
 		expect(reportPlaybackEvent).toHaveBeenCalledWith('g-1', 'track_start', started);
-		expect(publishPlayerState).toHaveBeenCalledWith(expect.anything(), player);
+		expect(publishPlayerState).toHaveBeenCalledWith(expect.anything(), player, { immediate: true });
 		expect(mixer.ensureMixerFilter).toHaveBeenCalledWith(player);
 		expect(mixer.preloadUpcoming).toHaveBeenCalledWith(player);
 		expect(queueRelatedUpfront).not.toHaveBeenCalled();
