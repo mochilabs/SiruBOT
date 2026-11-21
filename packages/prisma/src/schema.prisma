@@ -224,6 +224,39 @@ model FeatureDailyUse {
   @@index([day])
 }
 
+/// 예약 작업 상태 — pending(대기) → running(봇이 가져감) → done | failed
+enum ScheduledJobStatus {
+  pending
+  running
+  done
+  failed
+}
+
+/// 서버별 예약 작업 큐 (예약 메시지·기브어웨이 종료·생일 발송 등의 공통 기반).
+/// 봇의 guildJobScheduler가 15초마다 자기가 가진 서버의 만기 작업을 FOR UPDATE SKIP LOCKED로 가져가요.
+/// 반복 작업은 핸들러가 끝날 때 다음 행을 새로 넣어요. 서버가 지워져도 기록을 남기려고 외래 키는 두지 않아요.
+model ScheduledJob {
+  id        String             @id @default(uuid())
+  guildId   String
+  /// 핸들러를 고르는 키 (기능이 `register(kind, handler)`로 등록)
+  kind      String
+  runAt     DateTime
+  payload   Json               @default("{}")
+  status    ScheduledJobStatus @default(pending)
+  /// 실패한 횟수 (3회째 실패하면 failed)
+  attempts  Int                @default(0)
+  /// 가져간 봇 프로세스 ID
+  lockedBy  String?
+  lockedAt  DateTime?
+  lastError String?
+  createdBy String
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([status, runAt])
+  @@index([guildId])
+}
+
 model User {
   id          String          @id // Discord user ID
   // 프로필: 생일(월/일) — 별자리 자동 변환용. 연도는 저장하지 않아요.
