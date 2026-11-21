@@ -11,7 +11,6 @@ vi.mock('@sapphire/framework', () => ({
 	InteractionHandlerTypes: { Button: 'button', SelectMenu: 'select-menu', MessageComponent: 'message-component', ModalSubmit: 'modal-submit' }
 }));
 vi.mock('@sapphire/decorators', () => ({ ApplyOptions: () => (target: unknown) => target }));
-vi.mock('../../application/aiChatService.ts', () => ({ abortChatTurn: vi.fn() }));
 
 const ctx = {} as never;
 const ids = (rendered: unknown) => [...JSON.stringify(rendered).matchAll(/"custom_id":"([^"]+)"/g)].map((match) => match[1]!);

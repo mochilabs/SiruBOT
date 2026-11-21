@@ -106,6 +106,8 @@ export class MentionReplyListener extends Listener {
 		let live: Message | null = null;
 		await runChatTurnToScreen({
 			runChatTurn: this.container.aiChat.runChatTurn,
+			registerChatAbort: this.container.aiChat.registerChatAbort,
+			releaseChatAbort: this.container.aiChat.releaseChatAbort,
 			config,
 			userId: message.author.id,
 			channelId,

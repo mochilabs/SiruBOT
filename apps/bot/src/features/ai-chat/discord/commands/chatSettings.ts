@@ -12,7 +12,6 @@ import { emoji } from '@sirubot/utils';
 import { normalizeAiMode } from '../../../../services/guildService.ts';
 import { collectOtherTextChannelIds } from '../../../../discord/utils/channels.ts';
 import { confirmAction } from '../../../../lib/confirmation.ts';
-import { acquireChannelTurn, releaseChannelTurn } from '../../application/aiChatService.ts';
 import { channelToggleView, settingResultView } from '../../../../discord/views/settingResult.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
@@ -125,7 +124,7 @@ export class ChatSettingsCommand extends Command {
 				))
 			)
 				return;
-			if (!acquireChannelTurn(interaction.channelId))
+			if (!this.container.aiChat.acquireChannelTurn(interaction.channelId))
 				throw new UserError({
 					identifier: 'chat_busy',
 					message: `${emoji('error')} 지금 답변 중이에요. 답변이 끝난 뒤 초기화를 다시 실행해 주세요.`,
@@ -145,7 +144,7 @@ export class ChatSettingsCommand extends Command {
 					flags: [MessageFlags.IsComponentsV2]
 				});
 			} finally {
-				releaseChannelTurn(interaction.channelId);
+				this.container.aiChat.releaseChannelTurn(interaction.channelId);
 			}
 			return;
 		}

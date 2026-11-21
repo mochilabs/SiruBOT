@@ -30,38 +30,28 @@ export {
 } from './aiChat/types.ts';
 export { estimateTokens } from './aiChat/tokenBudget.ts';
 export { assertChatEnabled, type AiChatPolicy } from './aiChat/config.ts';
-export {
-	acquireChannelTurn,
-	releaseChannelTurn,
-	registerChatAbort,
-	releaseChatAbort,
-	abortChatTurn,
-	type ChatTurnDenial,
-	type ChatTurnGrant,
-	type TurnCounterStore
-} from './aiChat/turnControl.ts';
+export { type ChatTurnDenial, type ChatTurnGrant, type TurnCounterStore } from './aiChat/turnControl.ts';
 export { extractThinkTokens } from './aiChat/completion.ts';
 export { collectImageUrls, type ChatImage } from './aiChat/agentLoop.ts';
 export type { AiChatDeps, AiChatPlayerView, AiToolRegistry } from './aiChat/deps.ts';
 
 import { getAiChatPolicy } from './aiChat/config.ts';
-import { acquireChatTurn, tryConsumeUserTurn } from './aiChat/turnControl.ts';
+import { createTurnControl } from './aiChat/turnControl.ts';
 import { streamChatCompletion } from './aiChat/completion.ts';
 import { runChatTurn } from './aiChat/agentLoop.ts';
 import type { AiChatDeps } from './aiChat/deps.ts';
 
 /**
  * 의존성이 필요한 AI 채팅 진입점을 deps에 묶어 한 번 만들어요 (container.aiChat).
- * 채널 기록(로드·삭제·편집 동기화)은 container.aiChatHistory가 맡고, 의존성이 필요 없는 잠금·중지 함수는 위에서 그대로 내보내요.
+ * 채널 기록(로드·삭제·편집 동기화)은 container.aiChatHistory가 맡고, 채널 턴 잠금·유저 턴 한도·중지 레지스트리는 이 인스턴스가 들고 있어요.
  */
 export function createAiChat(deps: AiChatDeps) {
+	const turns = createTurnControl(() => deps.getRedisStore());
 	return {
+		...turns,
 		getAiChatPolicy: (guildId: string | null) => getAiChatPolicy(deps, guildId),
 		runChatTurn: (options: Parameters<typeof runChatTurn>[1]) => runChatTurn(deps, options),
-		streamChatCompletion: (options: Parameters<typeof streamChatCompletion>[1]) => streamChatCompletion(deps.logger, options),
-		/** 채널 턴 확보 → 유저 턴 소모 (Redis는 연결 전이면 undefined라 호출 시점에 읽어요) */
-		acquireChatTurn: (channelId: string, userId: string) => acquireChatTurn(deps.getRedisStore(), channelId, userId),
-		tryConsumeUserTurn: (userId: string) => tryConsumeUserTurn(deps.getRedisStore(), userId)
+		streamChatCompletion: (options: Parameters<typeof streamChatCompletion>[1]) => streamChatCompletion(deps.logger, options)
 	};
 }
 
