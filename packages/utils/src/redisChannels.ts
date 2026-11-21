@@ -27,6 +27,13 @@ export const redisIdSchema = z
 export const GUILD_SETTINGS_INVALIDATE_CHANNEL = 'sirubot:guild-settings:invalidate';
 
 /**
+ * 장애 공지 키 — 운영자가 대시보드 `/admin`에서 올리면 data-api가 서명 봉투(`wrapRedisMessage`)로 감싼 JSON
+ * (`@sirubot/utils/incidentNotice`의 `IncidentNotice`)을 이 키에 기록하고, TTL은 만료 시각까지 남은 초예요.
+ * 봇은 이 키를 읽기만 해요 (30초 캐시). 길드와 무관한 전역 키 하나예요.
+ */
+export const INCIDENT_NOTICE_KEY = 'sirubot:incident-notice';
+
+/**
  * 봇 프로필(길드 닉네임·아바타) 적용 요청 브로드캐스트.
  * 대시보드 저장 → data-api가 Redis에 pending 페이로드를 적어 두고 이 채널로 guildId를
  * 퍼블리시하면, 해당 길드를 보유한 봇 프로세스가 pending 키를 읽어 discord.js
@@ -49,11 +56,6 @@ export const BOT_PROFILE_STATE_CHANNEL_PREFIX = 'sirubot:bot-profile:state:';
  */
 export function botProfilePendingKey(guildId: string): string {
 	return `sirubot:bot-profile:pending:${guildId}`;
-}
-
-/** 상태 퍼블리시 채널명 — `sirubot:bot-profile:state:{guildId}` */
-export function botProfileStateChannel(guildId: string): string {
-	return `${BOT_PROFILE_STATE_CHANNEL_PREFIX}${guildId}`;
 }
 
 /**

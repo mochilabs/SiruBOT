@@ -36,6 +36,7 @@ function describeOptions(command: ApplicationCommand): string[] {
 export function createBotHelpTool(deps: Pick<AiToolDeps, 'getCommands' | 'fetchCommandIndex'>): AiTool {
 	return {
 		name: 'bot_help',
+		effect: 'read',
 		description:
 			'시루가 사용자에게 보여줄 수 있는 슬래시 명령어 목록과 각 명령어의 속성(설명, 인자, 서브명령, 권한)을 조회해요. ' +
 			'사용자가 "뭐 할 수 있어", "무엇이 가능해", "명령어 알려줘", "사용법" 등을 물으면 호출하세요. ' +

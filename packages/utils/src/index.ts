@@ -17,10 +17,10 @@ export {
 	BOT_PROFILE_SET_CHANNEL,
 	BOT_PROFILE_STATE_CHANNEL_PREFIX,
 	botProfilePendingKey,
-	botProfileStateChannel,
 	GUILD_DATA_REQUEST_CHANNEL,
 	GUILD_DATA_RESPONSE_CHANNEL,
 	GUILD_SETTINGS_INVALIDATE_CHANNEL,
+	INCIDENT_NOTICE_KEY,
 	guildIdFromPlayerStateChannel,
 	JTC_SETUP_REQUEST_CHANNEL,
 	JTC_SETUP_RESPONSE_CHANNEL,
@@ -135,6 +135,7 @@ export {
 } from './rolePanel.js';
 export { type PanelPostResponse, panelPostRequestSchema, panelPostResponseSchema, type PanelPostType, panelPostTypeSchema } from './panelPost.js';
 export {
+	PLAYER_WEB_CODE_SEARCH_EMPTY,
 	type PlayerVoiceContext,
 	playerWebControlActionSchema,
 	type PlayerWebControlRequest,

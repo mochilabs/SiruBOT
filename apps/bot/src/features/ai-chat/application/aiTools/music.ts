@@ -4,6 +4,7 @@ import type { CustomPlayer, MusicToolPort } from '../../../music/index.ts';
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext } from './types.ts';
 import { musicActor, withAppError } from './musicControlBridge.ts';
+import { inlineValue } from './summary.ts';
 import { searchLyrics } from '../../../../services/dataApiClient.ts';
 import * as guildPlayback from '../../../../services/guildSettings/playback.ts';
 
@@ -58,6 +59,8 @@ export function createMusicTools(
 
 	const musicPlayTool: AiTool = {
 		name: 'music_play',
+		effect: 'music',
+		summarize: (args) => `곡 재생: ${inlineValue(args.query)}`,
 		description:
 			'음성 채널에서 음악을 재생해요. 봇이 있는 음성 채널에 곡을 넣고, 사용자는 그 채널에 있어야 해요 (관리자·서버 관리·DJ 역할은 밖에서도 가능). 제목·아티스트·URL을 검색어로 넘기세요. 플레이리스트 결과는 앞 100곡까지 대기열에 넣어요. source: youtube(기본)|spotify|soundcloud.',
 		properties: {
@@ -110,6 +113,8 @@ export function createMusicTools(
 
 	const musicPauseTool: AiTool = {
 		name: 'music_pause',
+		effect: 'music',
+		summarize: () => '재생/일시정지 전환',
 		description: '현재 재생을 일시정지해요. 이미 일시정지 상태라면 재생을 이어 해요 (토글).',
 		properties: {},
 		required: [],
@@ -128,6 +133,8 @@ export function createMusicTools(
 
 	const musicSkipTool: AiTool = {
 		name: 'music_skip',
+		effect: 'music',
+		summarize: () => '다음 곡으로 넘기기',
 		description: '현재 재생 중인 곡을 건너뛰고 다음 곡을 재생해요. 대기열이 비어 있으면 현재 곡을 끝내요.',
 		properties: {},
 		required: [],
@@ -144,6 +151,8 @@ export function createMusicTools(
 
 	const musicStopTool: AiTool = {
 		name: 'music_stop',
+		effect: 'music',
+		summarize: () => '재생을 멈추고 음성 채널에서 내보내기',
 		description: '대기열을 비우고 재생을 중지한 뒤 음성 채널에서 봇이 나가요. 완전히 끄고 싶을 때만 쓰세요.',
 		properties: {},
 		required: [],
@@ -157,6 +166,7 @@ export function createMusicTools(
 
 	const musicQueueTool: AiTool = {
 		name: 'music_queue',
+		effect: 'read',
 		description: '현재 재생 중인 곡과 대기열(최대 15곡)을 확인해요. 사용자가 "무슨 노래 틀어줘 / 다음에 뭐야"라고 물으면 쓰세요.',
 		properties: {},
 		required: [],
@@ -184,6 +194,8 @@ export function createMusicTools(
 
 	const musicVolumeTool: AiTool = {
 		name: 'music_volume',
+		effect: 'music',
+		summarize: (args) => (args.volume === undefined || args.volume === null ? '볼륨 확인' : `볼륨을 ${inlineValue(args.volume)}(으)로 조절`),
 		description: '볼륨을 조회하거나 조절해요. volume을 주면 0~150으로 설정하고, 안 주면 현재 볼륨을 알려줘요.',
 		properties: {
 			volume: {
@@ -209,6 +221,8 @@ export function createMusicTools(
 
 	const musicSeekTool: AiTool = {
 		name: 'music_seek',
+		effect: 'music',
+		summarize: (args) => `현재 곡을 ${inlineValue(args.time)} 위치로 이동`,
 		description: '현재 곡의 특정 시간으로 이동해요. time은 "90"(초), "1:30", "1:02:03" 형식이에요.',
 		properties: {
 			time: { type: 'string', description: '이동할 시간 (예: 90, 1:30)' }
@@ -225,6 +239,8 @@ export function createMusicTools(
 
 	const musicShuffleTool: AiTool = {
 		name: 'music_shuffle',
+		effect: 'music',
+		summarize: () => '대기열 섞기',
 		description: '대기열의 곡 순서를 랜덤으로 섞어요.',
 		properties: {},
 		required: [],
@@ -244,6 +260,8 @@ export function createMusicTools(
 
 	const musicRepeatTool: AiTool = {
 		name: 'music_repeat',
+		effect: 'music',
+		summarize: (args) => (args.mode === undefined || args.mode === null ? '반복 모드 확인' : `반복 모드를 ${inlineValue(args.mode)}(으)로 변경`),
 		description: '반복 모드를 설정하거나 조회해요. mode를 주면 설정하고, 안 주면 현재 모드를 알려줘요.',
 		properties: {
 			mode: { type: 'string', description: '반복 모드', enum: ['off', 'track', 'queue'] }
@@ -265,6 +283,8 @@ export function createMusicTools(
 
 	const musicPreviousTool: AiTool = {
 		name: 'music_previous',
+		effect: 'music',
+		summarize: () => '이전 곡으로 돌아가기',
 		description: '이전에 재생한 곡을 다시 재생해요.',
 		properties: {},
 		required: [],
@@ -278,6 +298,8 @@ export function createMusicTools(
 
 	const musicRemoveTool: AiTool = {
 		name: 'music_remove',
+		effect: 'music',
+		summarize: (args) => `대기열 ${inlineValue(args.position)}번 곡 삭제`,
 		description: '대기열에서 특정 위치의 곡을 삭제해요. position은 music_queue에서 확인한 1-based 번호예요.',
 		properties: {
 			position: { type: 'integer', description: '삭제할 곡의 대기열 번호 (1부터)' }
@@ -302,6 +324,8 @@ export function createMusicTools(
 
 	const musicMoveTool: AiTool = {
 		name: 'music_move',
+		effect: 'music',
+		summarize: (args) => `대기열 ${inlineValue(args.from)}번 곡을 ${inlineValue(args.to)}번으로 이동`,
 		description: '대기열의 곡을 다른 위치로 옮겨요.',
 		properties: {
 			from: { type: 'integer', description: '현재 위치 (1부터)' },
@@ -329,6 +353,8 @@ export function createMusicTools(
 
 	const musicFilterTool: AiTool = {
 		name: 'music_filter',
+		effect: 'music',
+		summarize: (args) => `음질 필터 적용: ${inlineValue(args.preset)}`,
 		description: '오디오 필터 프리셋을 켜거나 꺼요. 같은 프리셋을 또 보내면 꺼지고(토글), reset이면 모든 필터를 초기화해요.',
 		properties: {
 			preset: {
@@ -364,6 +390,7 @@ export function createMusicTools(
 
 	const musicLyricsTool: AiTool = {
 		name: 'music_lyrics',
+		effect: 'read',
 		description: '곡 가사를 찾아줘요. query를 안 주면 현재 재생 중인 곡의 가사를 찾아요.',
 		properties: {
 			query: { type: 'string', description: '가사 검색어 (곡 제목/아티스트). 생략 시 현재 재생 곡' }
@@ -392,6 +419,7 @@ export function createMusicTools(
 
 	const musicHistoryTool: AiTool = {
 		name: 'music_history',
+		effect: 'read',
 		description: '이 서버의 최근 재생 기록을 보여줘요.',
 		properties: {
 			limit: { type: 'integer', description: '가져올 개수 (1~15, 기본 10)' }
@@ -424,6 +452,8 @@ export function createMusicTools(
 
 	const musicPlaylistTool: AiTool = {
 		name: 'music_playlist',
+		effect: 'music',
+		summarize: (args) => `플레이리스트 재생: ${inlineValue(args.name)}`,
 		description: '내 보관함의 플레이리스트를 재생해요. 이름으로 찾고, 최대 100곡까지 대기열에 넣어요.',
 		properties: {
 			name: { type: 'string', description: '플레이리스트 이름' }

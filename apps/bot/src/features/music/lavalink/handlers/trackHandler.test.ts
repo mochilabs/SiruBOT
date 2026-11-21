@@ -51,6 +51,7 @@ const container: Record<string, any> = {
 	playerNotifier: { updateController: playerNotifierUpdate },
 	mixerService,
 	playbackReporter: { reportPlaybackEvent },
+	incidentNotice: { appendTo: async (message: string) => message },
 	// 이 테스트의 곡은 유튜브가 아니라 SponsorBlock이 아무 일도 하지 않아요
 	sponsorBlockService: { startTrack: vi.fn(), stop: vi.fn(), tick: vi.fn(), prefetch: vi.fn(), queueChanged: vi.fn() }
 };
@@ -624,7 +625,7 @@ describe('handleTrackStart (시작 확정과 mixer wiring)', () => {
 		expect(player.transitionState.lastStartedEncoded).toBe('a-enc');
 		expect(player.consecutiveErrors).toBe(0);
 		expect(reportPlaybackEvent).toHaveBeenCalledWith('g-1', 'track_start', started);
-		expect(publishPlayerState).toHaveBeenCalledWith(expect.anything(), player);
+		expect(publishPlayerState).toHaveBeenCalledWith(expect.anything(), player, { immediate: true });
 		expect(mixer.ensureMixerFilter).toHaveBeenCalledWith(player);
 		expect(mixer.preloadUpcoming).toHaveBeenCalledWith(player);
 		expect(queueRelatedUpfront).not.toHaveBeenCalled();

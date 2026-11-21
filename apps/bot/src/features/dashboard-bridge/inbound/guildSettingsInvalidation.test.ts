@@ -11,6 +11,7 @@ const { clearGuildCustomCommandsCache, syncGuildSlashCommands, containerStub } =
 			customSlashRegistry: { syncGuildSlashCommands },
 			audio: { getPlayer: vi.fn() },
 			guildService: { invalidate: vi.fn() },
+			starboardService: { invalidateSettings: vi.fn() },
 			guildMixer: { getMixerSettings: vi.fn() },
 			mixerService: { pushCrossfadeConfig: vi.fn(), preloadUpcoming: vi.fn(), clearNext: vi.fn() }
 		}
@@ -47,6 +48,7 @@ describe('길드 설정 무효화 리스너 (pub/sub 캐시 무효화)', () => {
 		await receive({ guildId: '1234567890' });
 
 		expect(containerStub.guildService.invalidate).toHaveBeenCalledWith('1234567890');
+		expect(containerStub.starboardService.invalidateSettings).toHaveBeenCalledWith('1234567890');
 		expect(clearGuildCustomCommandsCache).toHaveBeenCalledWith('1234567890');
 		expect(syncGuildSlashCommands).toHaveBeenCalledWith('1234567890', logger);
 	});

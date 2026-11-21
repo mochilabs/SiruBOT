@@ -74,10 +74,57 @@ describe('statusFingerprint-driven publish throttling', () => {
 		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(2);
 	});
 
-	it('ignores position-only drift inside the window (no fingerprint change)', () => {
+	it('ignores small position drift (under 1.5s) inside the window', () => {
 		publishPlayerState(container as never, player({ position: 0 }) as never);
-		publishPlayerState(container as never, player({ position: 4_000 }) as never);
+		publishPlayerState(container as never, player({ position: 1_000 }) as never);
 		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(1);
+	});
+
+	it('publishes immediately on a seek (position jumps 1.5s+ from the expected one)', () => {
+		publishPlayerState(container as never, player({ playing: true, position: 10_000 }) as never);
+		vi.setSystemTime(NOW + 1_000);
+		publishPlayerState(container as never, player({ playing: true, position: 60_000 }) as never);
+		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(2);
+		expect(JSON.parse(store.publishRawPlayerState.mock.calls[1]![1] as string).positionMs).toBe(60_000);
+	});
+
+	it('publishes immediately on a backward seek too', () => {
+		publishPlayerState(container as never, player({ playing: true, position: 60_000 }) as never);
+		vi.setSystemTime(NOW + 1_000);
+		publishPlayerState(container as never, player({ playing: true, position: 5_000 }) as never);
+		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(2);
+	});
+
+	it('does not treat normal playback progress as a jump', () => {
+		publishPlayerState(container as never, player({ playing: true, position: 10_000 }) as never);
+		vi.setSystemTime(NOW + 3_000);
+		publishPlayerState(container as never, player({ playing: true, position: 13_000 }) as never);
+		vi.setSystemTime(NOW + 4_000);
+		publishPlayerState(container as never, player({ playing: true, position: 14_800 }) as never);
+		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(1);
+	});
+
+	it('expects no progress while paused', () => {
+		publishPlayerState(container as never, player({ playing: true, paused: true, position: 10_000 }) as never);
+		vi.setSystemTime(NOW + 3_000);
+		publishPlayerState(container as never, player({ playing: true, paused: true, position: 10_000 }) as never);
+		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(1);
+		vi.setSystemTime(NOW + 4_000);
+		publishPlayerState(container as never, player({ playing: true, paused: true, position: 20_000 }) as never);
+		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(2);
+	});
+
+	it('immediate option (track start) bypasses the 5s window for an unchanged snapshot', () => {
+		publishPlayerState(container as never, player() as never);
+		publishPlayerState(container as never, player() as never, { immediate: true });
+		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(2);
+	});
+
+	it('a different track uri with the same title is a fingerprint change', () => {
+		const track = (uri: string) => ({ info: { title: '같은 제목', author: 'a', duration: 1, uri } });
+		publishPlayerState(container as never, player({ playing: true, queue: { current: track('u1'), tracks: [] } }) as never);
+		publishPlayerState(container as never, player({ playing: true, queue: { current: track('u2'), tracks: [] } }) as never);
+		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(2);
 	});
 
 	it('publishes nothing while redis is not ready', () => {

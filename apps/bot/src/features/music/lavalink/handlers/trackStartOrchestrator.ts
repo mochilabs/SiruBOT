@@ -47,8 +47,8 @@ export class TrackStartOrchestrator {
 		}
 		player.consecutiveErrors = 0;
 		this.deps.playbackReporter.reportPlaybackEvent(player.guildId, 'track_start', startedTrack);
-		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)
-		publishPlayerState(this.deps, player);
+		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹). 곡 시작은 5초 제한 없이 바로 보내요.
+		publishPlayerState(this.deps, player, { immediate: true });
 		player.transitionState.stopByCommand = false;
 		// 예열 소비 확인 창(preloadConsumedAt)은 시작 확정과 함께 닫는다 — 남겨두면 창 안에
 		// 도착한 무관한 늦은 queueEnd를 defer해 실제 종료 처리(finishQueue)가 늦어진다.

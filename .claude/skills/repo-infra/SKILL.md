@@ -6,7 +6,7 @@ description: Conventions for packages/prisma schema and migrations, packages/uti
 # Repo Infrastructure
 
 ## Prisma (`packages/prisma`)
-- Schema `src/schema.prisma`, migrations `src/migrations/`. After schema changes run `yarn workspace @sirubot/prisma migrate:dev`. `yarn generate` is required before typecheck/build. No lint script for prisma.
+- Schema `src/schema.prisma`, migrations `src/migrations/`. After schema changes run `yarn workspace @sirubot/prisma migrate:dev`. `yarn generate` is required before typecheck/build. The prisma package's lint is a prettier `--check` of `prisma.config.ts` only (schema and migrations are not linted).
 
 ## Utils (`packages/utils`)
 - Add shared helpers here; apps import from it — grep before duplicating inside an app.
@@ -15,7 +15,7 @@ description: Conventions for packages/prisma schema and migrations, packages/uti
 ## Monorepo
 - Workspace deps use `"*"`, never `"workspace:*"` (corepack Yarn v4).
 - Turbo: `build` dependsOn `^typecheck ^generate ^build`; `typecheck` on `^build ^generate`; `test` needs `^generate ^build`. Common build base: `scripts/tsup.config.ts` (ESM).
-- Lint matrix: prettier (tabs, single quotes, printWidth 150, trailingComma none) for bot/data-api/shardmanager/storage/notifier/packages; **dashboard = eslint --max-warnings=0**; prisma = none.
+- Lint matrix: prettier (tabs, single quotes, printWidth 150, trailingComma none) for bot/data-api/shardmanager/storage/notifier/packages; **dashboard = eslint --max-warnings=0**; prisma = prettier `--check` of `prisma.config.ts` only.
 - pre-push hook: lint:fix + typecheck.
 
 ## ShardManager (`apps/shardmanager`)

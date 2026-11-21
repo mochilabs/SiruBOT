@@ -6,12 +6,10 @@ import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, 
 import { emoji } from '@sirubot/utils';
 import { collectOtherTextChannelIds } from '../../../../discord/utils/channels.ts';
 import { buildTtsPanel } from '../views/ttsView.ts';
+import { TTS_CLIP_MAX_CHARS } from '../../application/chatTts.ts';
 import { TtsError } from '../../application/ttsService.ts';
 import { TTS_PRONUNCIATION_MAX_ENTRIES, TTS_PRONUNCIATION_READING_MAX, TTS_PRONUNCIATION_TERM_MAX } from '../../application/ttsPronunciation.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
-
-/** `/tts 말하기` 문장 상한 — 채팅 낭독 클립 상한과 같은 값으로 맞춰요 */
-const MAX_SAY_LENGTH = 200;
 
 /**
  * /tts — 채널 낭독 on/off + 입장 알림 + 사용자 TTS 설정 패널 + 즉석 발화.
@@ -64,7 +62,7 @@ export class TtsCommand extends Command {
 								.setDescription('Text to speak (up to 200 characters).')
 								.setDescriptionLocalizations({ ko: '음성으로 읽을 문장이에요. (200자 이내)' })
 								.setMinLength(1)
-								.setMaxLength(MAX_SAY_LENGTH)
+								.setMaxLength(TTS_CLIP_MAX_CHARS)
 								.setRequired(true)
 						)
 				)

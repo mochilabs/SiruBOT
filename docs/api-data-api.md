@@ -29,7 +29,7 @@ Routes are registered from `routes/index.ts`, one file per domain.
 | Route | Description | Cache TTL | File |
 |---|---|---|---|
 | GET `/v1/ohaasa` | Daily horoscope, translated | 7 days | `routes/ohaasa.ts` |
-| GET `/v1/lyrics?q=` | Lyrics search (lrclib) | 30 days | `routes/cache-providers.ts` |
+| GET `/v1/lyrics?q=` or `?title=&artist=&durationMs=&source=` | Lyrics (lrclib). `q` is a free search (first result). `title` looks up the playing track: LRCLIB `/api/get` first, then a field search that keeps only same-track results (not instrumental, title and artist match, length within 3 s), then the `q` search as a last resort. The response keeps `trackName`, `artistName`, `plainLyrics`, `syncedLyrics` and adds `durationSec`, `hasWordSync`, `wordSync` (lines with `startMs`, `text`, `words[].startMs`, from the LRCLIB `lyricsfile`) and `matchKind` (`get`, `search` or `query`) | 30 days | `routes/cache-providers.ts`, `providers/lyrics.ts` |
 | GET `/v1/weather?location=&scope=` | Geocoding, forecast and air quality (Open-Meteo). `scope` is `now`, `today`, `tomorrow` or `week` | 15 minutes | `routes/cache-providers.ts` |
 | GET `/v1/delivery/track?carrier=&number=` | Parcel tracking | 5 minutes | `routes/cache-providers.ts` |
 | GET `/v1/delivery/carriers?q=` | Carrier list | | `routes/cache-providers.ts` |
@@ -82,6 +82,7 @@ Routes are registered from `routes/index.ts`, one file per domain.
 | POST `/v1/internal/panel/post` | Ask the bot to post a ticket or role panel. Body: `guildId`, `type` (`ticket` or `rolePanel`), optional `panelId`, `channelId`, `refresh` | Request/reply | `routes/panel.ts` |
 | POST `/v1/internal/role-panel/validate-roles` | Check before saving that the bot can grant the roles. Body: `guildId`, `roleIds`; returns `invalidRoleIds` | Request/reply | `routes/panel.ts` |
 | POST `/v1/internal/bot-admin` | Operator controls: `nodes-status`, `node-reconnect`, `node-disconnect`, `emojis-list`, `emojis-sync`, `reload-stores` | Request/reply | `routes/bot-admin.ts` |
+| GET, POST, DELETE `/v1/internal/incident-notice` | Outage notice. POST body: `message` (max 200 characters, one line) and `expiresInMinutes` (required, 1 to 10080); it overwrites the previous notice. Writes the signed JSON to Redis key `sirubot:incident-notice` with TTL = expiry, and the bot reads it with a 30-second cache. 503 without Redis (the in-memory fallback cannot reach the bot) | Redis key | `routes/incident-notice.ts` |
 
 ### AI
 

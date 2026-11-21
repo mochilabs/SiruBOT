@@ -25,6 +25,7 @@ async function requestPlayerWeb(
       tracks: null,
       voice: null,
       error: result.message ?? null,
+      ...(result.code ? { code: result.code } : {}),
       status: result.status,
     };
   }

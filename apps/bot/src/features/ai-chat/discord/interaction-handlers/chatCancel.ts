@@ -2,7 +2,6 @@ import { notice } from '../../../../lib/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
-import { abortChatTurn } from '../../application/aiChatService.ts';
 import { emoji } from '@sirubot/utils';
 import { chatCancelId } from '../customIds.ts';
 
@@ -16,7 +15,7 @@ export class ChatCancelHandler extends InteractionHandler {
 	}
 
 	public override async run(interaction: ButtonInteraction, { cancelKey }: { cancelKey: string }) {
-		const result = abortChatTurn(cancelKey, interaction.user.id);
+		const result = this.container.aiChat.abortChatTurn(cancelKey, interaction.user.id);
 
 		if (result !== 'ok') {
 			const message =

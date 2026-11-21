@@ -216,6 +216,21 @@ describe('ShardClient 하트비트 ACK 감시', () => {
 	});
 });
 
+describe('ShardClient 하트비트 주기', () => {
+	it('HELLO가 알려 준 주기로 HEARTBEAT를 보내요', async () => {
+		vi.useFakeTimers();
+		const instance = makeClient();
+		const promise = instance.identify();
+		await flush();
+		emit(WsOp.HELLO, { ...HELLO, heartbeatInterval: 10_000 });
+		emit(WsOp.IDENTIFY_ACK, { shardIds: [0], shardCount: 4 });
+		await promise;
+
+		await vi.advanceTimersByTimeAsync(10_000);
+		expect(wsState.sent.filter((message) => message.op === WsOp.HEARTBEAT)).toHaveLength(1);
+	});
+});
+
 describe('ShardClient.destroy', () => {
 	it('destroy 후에는 identify 재시도 루프가 끝나요', async () => {
 		vi.useFakeTimers();

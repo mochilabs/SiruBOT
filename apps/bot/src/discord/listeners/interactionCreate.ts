@@ -1,19 +1,12 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener, container } from '@sapphire/framework';
 import { cyan, yellow } from 'colorette';
-import { usageFeatureKey } from '@sirubot/utils/modules';
 import { Interaction } from 'discord.js';
-import { customIdNamespace } from '../../lib/customId.ts';
 
 @ApplyOptions<Listener.Options>({ event: Events.InteractionCreate })
 export class InteractionCreateDebug extends Listener {
 	public override run(interaction: Interaction) {
-		// 사용 지표: 버튼·셀렉트·모달은 customId namespace로 묶어요 (`ns:{namespace}`). 처리 성공 여부와 관계없이 누른 횟수예요.
-		if (interaction.isMessageComponent() || interaction.isModalSubmit()) {
-			const namespace = customIdNamespace(interaction.customId);
-			if (namespace) container.usageRecorder?.record(interaction.guildId, usageFeatureKey('ns', namespace), interaction.user.id);
-		}
-
+		// 컴포넌트 사용 지표(`ns:`)는 모듈 꺼짐 검사를 통과한 것만 세야 해서 CoreInteractionCreate 라우터가 기록해요.
 		const user = `${interaction.user.username}[${cyan(interaction.user.id)}]`;
 		const guild = interaction.guild ? `${interaction.guild.name}[${cyan(interaction.guild.id)}]` : 'DM';
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { PLAYER_WEB_CODE_SEARCH_EMPTY } from "@sirubot/utils/playerWeb";
 import { formatDuration } from "@sirubot/utils/time";
 import { ListMusic, Loader2, Play, Search, X } from "lucide-react";
 
@@ -193,15 +194,16 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 					body: JSON.stringify({ query: trimmed }),
 					signal: controller.signal,
 				});
-				const body = (await res.json().catch(() => null)) as { tracks?: TrackSummary[]; error?: string } | null;
+				const body = (await res.json().catch(() => null)) as { tracks?: TrackSummary[]; error?: string; code?: string } | null;
 				if (controller.signal.aborted) return;
 
 				if (!res.ok) {
-					const cleaned = playerErrorMessage(body?.error, "검색을 처리하지 못했어요.");
-					if (cleaned.includes("검색 결과가 없어요")) {
+					// 안내 문구가 아니라 오류 코드로 "결과 없음"을 가려요
+					if (body?.code === PLAYER_WEB_CODE_SEARCH_EMPTY) {
 						setResults([]);
 						return;
 					}
+					const cleaned = playerErrorMessage(body?.error, "검색을 처리하지 못했어요.");
 					setResults(null);
 					setSearchNotice(cleaned);
 					if (options?.notifyOnError) {

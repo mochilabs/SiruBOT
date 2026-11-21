@@ -4,6 +4,9 @@ import { ShardWebSocket } from './core/ws.ts';
 import { NoShardsAvailableError } from './errors/NoShardsAvailableError.ts';
 import { WsOp, type HelloPayload, type IdentifyAckPayload, type ShardStatsPayload, type ShardStatusPayload } from './ws-types/index.ts';
 
+/** HELLO를 받기 전에 쓰는 하트비트 주기(ms) — 서버 기본값과 같아요 */
+const DEFAULT_HEARTBEAT_MS = 30_000;
+
 export type ShardClientOptions = {
 	logger: ILogger;
 	serverURL: string;
@@ -21,6 +24,8 @@ export class ShardClient {
 	private readonly ws: ShardWebSocket;
 	private readonly authToken: string;
 	private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+	/** HELLO가 알려 준 하트비트 주기(ms) — HELLO 전에는 기본값을 써요 */
+	private heartbeatMs = DEFAULT_HEARTBEAT_MS;
 	private statsInterval: ReturnType<typeof setInterval> | null = null;
 	private identity: ShardIdentity | null = null;
 	private statsCallback: (() => Omit<ShardStatsPayload, 'shardIds'>) | null = null;
@@ -112,6 +117,7 @@ export class ShardClient {
 
 			this.ws.on(WsOp.HELLO, (msg) => {
 				const hello = msg.payload as HelloPayload;
+				this.heartbeatMs = hello.heartbeatInterval > 0 ? hello.heartbeatInterval : DEFAULT_HEARTBEAT_MS;
 				this.logger.info(
 					`Received HELLO: ${hello.shardCount} shards, ${hello.shardsPerProcess}/process, heartbeat ${hello.heartbeatInterval}ms`
 				);
@@ -183,7 +189,7 @@ export class ShardClient {
 		this.stopHeartbeat();
 		this.awaitingHeartbeatAck = false;
 		this.heartbeatInterval = setInterval(() => {
-			// 직전 HEARTBEAT의 ACK가 한 주기(30s) 동안 오지 않았다면 연결이 반쯤 끊긴 거예요.
+			// 직전 HEARTBEAT의 ACK가 한 주기 동안 오지 않았다면 연결이 반쯤 끊긴 거예요.
 			// 그대로 두면 서버는 하트비트 타임아웃으로 샤드를 회수해 다른 프로세스에 줄 수 있는데
 			// 이쪽은 계속 샤드를 가진 줄 알아요(이중 점유). 소켓을 끊어 close 콜백의 재연결로 보내요.
 			if (this.awaitingHeartbeatAck) {
@@ -197,7 +203,7 @@ export class ShardClient {
 				op: WsOp.HEARTBEAT,
 				payload: { timestamp: Date.now() }
 			});
-		}, 30_000);
+		}, this.heartbeatMs);
 	}
 
 	private stopHeartbeat(): void {

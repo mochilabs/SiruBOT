@@ -4,7 +4,6 @@ import {
 	BOT_ADMIN_RESPONSE_CHANNEL,
 	BOT_PROFILE_REFRESH_CHANNEL,
 	BOT_PROFILE_SET_CHANNEL,
-	botProfileStateChannel,
 	GUILD_DATA_REQUEST_CHANNEL,
 	GUILD_DATA_RESPONSE_CHANNEL,
 	GUILD_SETTINGS_INVALIDATE_CHANNEL,
@@ -90,7 +89,6 @@ describe('Redis 계약의 채널 문자열', () => {
 
 	it('길드별 상태 채널이 기존 빌더와 같아요', () => {
 		expect(botProfileStateEvent.channel('123')).toBe('sirubot:bot-profile:state:123');
-		expect(botProfileStateEvent.channel('123')).toBe(botProfileStateChannel('123'));
 		expect(memberGreetingStateEvent.channel('123')).toBe('sirubot:member-greeting:state:123');
 		expect(memberGreetingStateEvent.channel('123')).toBe(memberGreetingStateChannel('123'));
 	});

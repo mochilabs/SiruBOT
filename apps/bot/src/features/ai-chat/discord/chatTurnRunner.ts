@@ -1,5 +1,6 @@
-import { ChatServiceError, registerChatAbort, releaseChatAbort, type AiChat, type ChatConfig, type ChatImage } from '../application/aiChatService.ts';
+import { ChatServiceError, type AiChat, type ChatConfig, type ChatImage } from '../application/aiChatService.ts';
 import type { AiToolContext } from '../application/aiTools/index.ts';
+import { toolConfirmText } from './views/toolConfirm.ts';
 import { errorPayload, finalPayload, livePayload, statusPayload, stoppedPayload } from './views/chatView.ts';
 
 /** 예상 밖 오류가 났을 때 사용자 화면에 남기는 안내 — 진입점 2곳이 같은 문구를 쓴다. */
@@ -11,11 +12,19 @@ export interface ChatTurnScreen {
 	create(cancelKey: string): Promise<{ id: string }>;
 	/** 라이브/상태/최종 페이로드를 덮어써요. 실패는 조용히 무시해요. */
 	edit(payload: ReturnType<typeof livePayload>): Promise<unknown>;
+	/**
+	 * 라이브 메시지 자리에 확인 창을 띄우고 요청자의 선택을 돌려줘요 (거절·시간 초과는 false).
+	 * 기다리는 동안은 채널 턴 잠금과 중지 키가 그대로 유지돼요. 확인 창이 중지 버튼을 대신하니 최대 60초 뒤에 풀려요.
+	 */
+	confirm(title: string, description: string): Promise<boolean>;
 }
 
 export interface ChatTurnInvocation {
 	/** 턴 실행기 — container.aiChat.runChatTurn을 진입점이 넘겨요 */
 	runChatTurn: AiChat['runChatTurn'];
+	/** 중지 레지스트리 — container.aiChat의 것을 진입점이 넘겨요 */
+	registerChatAbort: AiChat['registerChatAbort'];
+	releaseChatAbort: AiChat['releaseChatAbort'];
 	config: ChatConfig;
 	userId: string;
 	channelId: string;
@@ -39,7 +48,7 @@ export interface ChatTurnInvocation {
  * 그 외=화면 교체 후 재던짐)도 한곳에서만 정의돼요.
  */
 export async function runChatTurnToScreen(invocation: ChatTurnInvocation): Promise<void> {
-	const { key: cancelKey, controller } = registerChatAbort(invocation.userId);
+	const { key: cancelKey, controller } = invocation.registerChatAbort(invocation.userId);
 	const edit = async (payload: ReturnType<typeof livePayload>) => {
 		await invocation.screen.edit(payload).catch(() => undefined);
 	};
@@ -73,6 +82,10 @@ export async function runChatTurnToScreen(invocation: ChatTurnInvocation): Promi
 				assistantMessageId: live.id,
 				...(invocation.userMessageId ? { userMessageId: invocation.userMessageId } : {}),
 				...(invocation.excludeMessageId ? { excludeMessageId: invocation.excludeMessageId } : {}),
+				confirmToolCall: (request) => {
+					const { title, description } = toolConfirmText(request);
+					return invocation.screen.confirm(title, description);
+				},
 				onDelta,
 				onStatus
 			});
@@ -98,6 +111,6 @@ export async function runChatTurnToScreen(invocation: ChatTurnInvocation): Promi
 		await edit(finalPayload(answer, { memoryUpdated }));
 	} finally {
 		// 라이브 메시지 생성이 실패해도 abort 키가 새지 않도록 여기서 보장해요
-		releaseChatAbort(cancelKey);
+		invocation.releaseChatAbort(cancelKey);
 	}
 }

@@ -25,6 +25,7 @@ function requireDataApi(): { url: string; authKey: string } | null {
 async function readForwardFail(res: Response): Promise<DataApiForwardFail> {
   const payload = (await res.json().catch(() => null)) as {
     message?: unknown;
+    error?: unknown;
   } | null;
   return {
     ok: false,
@@ -33,6 +34,7 @@ async function readForwardFail(res: Response): Promise<DataApiForwardFail> {
       typeof payload?.message === "string" && payload.message.trim()
         ? payload.message
         : null,
+    ...(typeof payload?.error === "string" ? { code: payload.error } : {}),
   };
 }
 

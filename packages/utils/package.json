@@ -102,6 +102,11 @@
             "import": "./dist/ticket.js",
             "require": "./dist/ticket.cjs"
         },
+        "./starboard": {
+            "types": "./dist/starboard.d.ts",
+            "import": "./dist/starboard.js",
+            "require": "./dist/starboard.cjs"
+        },
         "./rolePanel": {
             "types": "./dist/rolePanel.d.ts",
             "import": "./dist/rolePanel.js",
@@ -137,10 +142,20 @@
             "import": "./dist/modules.js",
             "require": "./dist/modules.cjs"
         },
+        "./lrc": {
+            "types": "./dist/lrc.d.ts",
+            "import": "./dist/lrc.js",
+            "require": "./dist/lrc.cjs"
+        },
         "./brand": {
             "types": "./dist/brand.d.ts",
             "import": "./dist/brand.js",
             "require": "./dist/brand.cjs"
+        },
+        "./incidentNotice": {
+            "types": "./dist/incidentNotice.d.ts",
+            "import": "./dist/incidentNotice.js",
+            "require": "./dist/incidentNotice.cjs"
         }
     },
     "scripts": {

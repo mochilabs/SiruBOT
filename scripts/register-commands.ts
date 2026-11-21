@@ -124,6 +124,16 @@ async function main() {
 	// 봇 부팅과 같은 피스 루트 목록을 써요 (core/pieceRoots.ts).
 	for (const root of PIECE_ROOTS) client.stores.registerPath(join(botSrcPath, root));
 
+	// 피스 폴더에는 `*.test.ts`·`*.testing.ts`도 있어요. 피스가 아니고 vitest를 require하면 로드 오류만 남기므로 건너뛰어요.
+	const patchedStrategies = new Set<unknown>();
+	for (const store of client.stores.values()) {
+		const strategy = store.strategy;
+		if (patchedStrategies.has(strategy)) continue;
+		patchedStrategies.add(strategy);
+		const baseFilter = strategy.filter.bind(strategy);
+		strategy.filter = (path) => (/\.test(ing)?\.ts$/.test(path) ? null : baseFilter(path));
+	}
+
 	try {
 		// Sapphire Store 내장 로더를 수동으로 기동하여 명령어를 로드합니다.
 		await Promise.all(client.stores.map((store) => store.loadAll()));

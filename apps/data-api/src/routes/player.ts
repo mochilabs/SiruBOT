@@ -144,7 +144,8 @@ export function registerPlayerRoutes(fastify: FastifyInstance, deps: { lavalinkR
 		}
 		// 봇이 검증 실패(음성 미접속·권한 없음 등)를 실어 보낸 경우 — 사용자가 고칠 수 있는 행동이므로 400
 		return replyBotRelayFailure(reply, result.reason, {
-			code: 'web_player_rejected',
+			// 봇이 실은 실패 코드(예: search_empty)가 있으면 그대로 내려요 — 대시보드가 문구 대신 이 값으로 판별해요
+			code: result.code ?? 'web_player_rejected',
 			message: result.message,
 			fallback: '요청을 처리하지 못했어요.'
 		});

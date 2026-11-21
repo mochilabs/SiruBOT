@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { db } from "@/lib/db";
+import { getDataApiEnv } from "@/lib/env";
 import { WRITE_RATE } from "@/lib/rate-limit";
 
 /**
@@ -27,9 +28,8 @@ export const GET = createGuildApiHandler({
 			return NextResponse.json({ error: "이 티켓에는 저장된 대화 기록이 없어요." }, { status: 404 });
 		}
 
-		const env = process.env;
-		const base = (env.DATA_API_URL ?? "http://localhost:3002").replace(/\/+$/, "");
-		const authKey = (env.DATA_API_AUTH_KEY ?? env.AUTH_KEY ?? "").trim();
+		const { url, authKey } = getDataApiEnv();
+		const base = url.replace(/\/+$/, "");
 		if (!authKey) return NextResponse.json({ error: "data-api 키가 설정되지 않았어요." }, { status: 503 });
 
 		try {

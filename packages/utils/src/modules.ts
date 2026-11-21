@@ -49,6 +49,7 @@ export const BOT_MODULES: readonly BotModule[] = [
 		messageFeatures: [
 			{ id: 'greeting', summary: '새 멤버가 오고 갈 때 인사 메시지와 카드를 보내요' },
 			{ id: 'counting', summary: '카운팅 채널에서 다 같이 숫자를 이어 세요' },
+			{ id: 'starboard', summary: '반응이 많이 달린 메시지를 스타보드 채널에 모아요' },
 			{ id: 'custom-command', summary: '서버가 만든 커스텀 명령에 답해요' },
 			{ id: 'temp-voice', summary: '입장용 음성 채널에 들어가면 내 음성 채널을 만들어 줘요' }
 		],
@@ -116,6 +117,46 @@ export function getBotModule(id: BotModuleId): BotModule {
 
 export function commandModule(commandName: string): BotModuleId | null {
 	return MODULE_BY_COMMAND.get(commandName) ?? null;
+}
+
+/* ---------------------------------------------------------------- 서버별 모듈 켜기/끄기 (P-06) */
+
+/** 모듈이 꺼져 있어도 항상 실행되는 슬래시 명령 — 도움말은 끈 뒤에도 켜는 방법을 알려줘야 하고, 개인정보 삭제는 막을 수 없어요. */
+export const ALWAYS_ALLOWED_COMMANDS: readonly string[] = ['help', 'privacy'];
+/** 모듈이 꺼져 있어도 항상 동작하는 컴포넌트 namespace (도움말 셀렉트, 온보딩 버튼) */
+export const ALWAYS_ALLOWED_NAMESPACES: readonly string[] = ['help', 'onboarding'];
+
+/** 저장된 꺼진 모듈 목록을 정리해요: 모르는 id와 끌 수 없는 모듈(관리)을 버리고, 중복을 없애고, 모듈 표 순서로 정렬해요. */
+export function sanitizeDisabledModules(input: readonly string[] | null | undefined): BotModuleId[] {
+	const wanted = new Set(input ?? []);
+	return BOT_MODULES.filter((m) => m.toggleable && wanted.has(m.id)).map((m) => m.id);
+}
+
+/** 이 서버에서 모듈이 꺼져 있는지. 끌 수 없는 모듈은 목록에 있어도 켜진 것으로 봐요. */
+export function isModuleDisabled(disabledModules: readonly string[] | null | undefined, moduleId: BotModuleId): boolean {
+	return getBotModule(moduleId).toggleable && (disabledModules ?? []).includes(moduleId);
+}
+
+/** 슬래시 명령 이름이 꺼짐 검사 대상 모듈이면 그 모듈, 아니면(항상 허용·모르는 명령) null */
+export function gatedModuleForCommand(commandName: string): BotModuleId | null {
+	if (ALWAYS_ALLOWED_COMMANDS.includes(commandName)) return null;
+	return MODULE_BY_COMMAND.get(commandName) ?? null;
+}
+
+/** 컴포넌트 namespace가 꺼짐 검사 대상 모듈이면 그 모듈, 아니면 null */
+export function gatedModuleForNamespace(namespace: string): BotModuleId | null {
+	if (ALWAYS_ALLOWED_NAMESPACES.includes(namespace)) return null;
+	return MODULE_BY_NAMESPACE.get(namespace) ?? null;
+}
+
+/** 메시지 기능 id(`greeting`, `temp-voice` …)의 모듈. 모르는 id는 null */
+export function messageFeatureModule(featureId: string): BotModuleId | null {
+	return MODULE_BY_MESSAGE_FEATURE.get(featureId) ?? null;
+}
+
+/** 꺼진 모듈을 쓰려 할 때 보여주는 안내 문구 */
+export function moduleDisabledMessage(moduleId: BotModuleId): string {
+	return `이 서버에서는 ${getBotModule(moduleId).label} 기능이 꺼져 있어요. 관리자는 /설정에서 켤 수 있어요.`;
 }
 
 /* ---------------------------------------------------------------- 사용 지표 키 */

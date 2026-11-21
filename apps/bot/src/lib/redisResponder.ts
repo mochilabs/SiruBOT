@@ -134,7 +134,7 @@ function buildResponder<TContract extends RedisRpcContract>(
 					if (payload) respond(payload);
 				} catch (error) {
 					if (error instanceof AppError) {
-						respond({ error: plainUserMessage(error) });
+						respond({ error: plainUserMessage(error), ...(error.code ? { code: error.code } : {}) });
 						return;
 					}
 					const where = [correlation.guildId && `guild ${correlation.guildId}`, correlation.kind && `kind ${correlation.kind}`]

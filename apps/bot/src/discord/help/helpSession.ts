@@ -1,4 +1,5 @@
 import { container } from '@sapphire/framework';
+import type { BotModuleId } from '@sirubot/utils/modules';
 import {
 	MessageFlags,
 	PermissionFlagsBits,
@@ -7,6 +8,7 @@ import {
 	type StringSelectMenuInteraction
 } from 'discord.js';
 import { createComponentSession } from '../../lib/componentSession.ts';
+import { getDisabledModules } from '../../services/guildSettings/modules.ts';
 import { fetchCommandIndex } from '../utils/commandMentions.ts';
 import { HELP_HOME, helpCategoryCustomId, helpView, parseHelpPage } from '../views/help.ts';
 import type { HelpContext } from './helpCatalog.ts';
@@ -18,7 +20,10 @@ const SESSION_IDLE_MS = 3 * 60_000;
 export type HelpEntryInteraction = ChatInputCommandInteraction | ButtonInteraction;
 
 async function buildHelpContext(interaction: HelpEntryInteraction): Promise<HelpContext> {
+	// 이 서버에서 꺼진 모듈은 카테고리·명령 목록에서 빼요 (P-06). DM이면 모두 보여요.
+	const disabled = new Set<BotModuleId>(interaction.guildId ? await getDisabledModules(container.guildService, interaction.guildId) : []);
 	return {
+		isModuleEnabled: (moduleId) => !disabled.has(moduleId),
 		index: await fetchCommandIndex(interaction.guildId),
 		loadedCommands: new Set(container.stores.get('commands').keys()),
 		canManageGuild: interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ?? false
