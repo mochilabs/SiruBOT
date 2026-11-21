@@ -194,6 +194,36 @@ model RecordingDailyPlay {
   @@index([day])
 }
 
+/// 서버 생명주기 (온보딩·지표). Guild 설정 행과 수명이 달라 따로 둬요 (나간 뒤에도 남아 재가입을 알아봐요). 외래 키 없음.
+model GuildLifecycle {
+  guildId     String    @id
+  /// 마지막으로 들어온 시각
+  joinedAt    DateTime
+  /// 마지막으로 나간 시각. 다시 들어오면 null로 돌아가요.
+  leftAt      DateTime?
+  /// 안내 메시지를 보낸 시각
+  onboardedAt DateTime?
+  /// 처음으로 기능을 쓴 시각 (사용 지표 flush가 채워요)
+  firstUseAt  DateTime?
+  /// 들어온 횟수
+  joinCount   Int       @default(0)
+
+  @@index([joinedAt])
+}
+
+/// 서버별 일별 기능 사용 집계 (KST 날짜). feature 키 규칙은 @sirubot/utils/modules. 사용자 ID는 남기지 않고 고유 사용자 수만 둬요.
+model FeatureDailyUse {
+  guildId String
+  day     DateTime @db.Date
+  feature String
+  count   Int      @default(0)
+  /// 그날 쓴 고유 사용자 수 (Redis Set 크기로 덮어써요)
+  users   Int      @default(0)
+
+  @@id([guildId, day, feature])
+  @@index([day])
+}
+
 model User {
   id          String          @id // Discord user ID
   // 프로필: 생일(월/일) — 별자리 자동 변환용. 연도는 저장하지 않아요.
