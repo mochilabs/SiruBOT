@@ -12,7 +12,7 @@ export const SITE_DESCRIPTION = `${BOT_TAGLINE}, 시루봇이에요.`;
  * Pretendard로 미리 렌더한 정적 PNG예요(next/og는 woff2·가변 폰트를 못 읽어서 런타임 생성 대신 이렇게 둬요).
  */
 export const OG_IMAGES = {
-	home: { url: "/images/og-image.png", alt: "시루봇 — 음악부터 AI까지, 시루봇 하나면 돼요" },
+	home: { url: "/images/og-image.png", alt: "시루봇 — 음악, AI 대화, 서버 관리를 한 봇으로. 한국어 커뮤니티를 위한 올인원 봇" },
 	invite: { url: "/images/og-invite.png", alt: "시루봇 — 내 서버에 시루봇을 초대해요" },
 	track: { url: "/images/og-track.png", alt: "시루봇 — 지금 뜨는 음악, 바로 재생해요" }
 } as const;
