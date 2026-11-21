@@ -1,6 +1,6 @@
 # data-api HTTP contract
 
-> **As of**: 2026-11-13 · Verified against the route files under `apps/data-api/src/routes/`.
+> **As of**: 2026-11-21 · Verified against the route files under `apps/data-api/src/routes/`.
 
 Shared channels and flows are in `./architecture.md` (5.2 Redis pub/sub channel map, 6.2 Redis request/reply, 6.3 External provider caching). This page lists the HTTP routes as they exist in code. Paths in the tables are relative to `apps/data-api/src/`.
 
@@ -116,3 +116,4 @@ The guild data routes (channels, roles, members) never produce `bot_error`, so t
 
 - **Horoscope**: daily at 06:50 KST (`OHAASA_REFRESH_AT`, default in `config/env.ts`; scheduler in `services/ohaasaScheduler.ts`). When the upstream is down, `GET /v1/ohaasa` serves the last good result (`routes/ohaasa.ts`).
 - **Memory tidy**: runs only with `DATABASE_URL`, a configured translation provider and `MEMORY_TIDY_ENABLED` (default true). Defaults are daily at 00:00 in the server's local time (`MEMORY_TIDY_AT`) with a batch of 40 (`MEMORY_TIDY_BATCH_SIZE`) (`services/memoryTidy.ts`, `config/env.ts`).
+- **ISRC enrichment**: every 10 minutes when `DATABASE_URL` is set and `ISRC_ENRICH_ENABLED` is not `false`. Each run looks up `ISRC_ENRICH_BATCH` tracks (default 25) without an ISRC on Deezer and MusicBrainz (`packages/isrc`), needs no keys, and merges chart recordings that share an ISRC (`services/isrcEnricher.ts`, `services/recordingMerge.ts`). `MUSICBRAINZ_USER_AGENT` is optional and must not carry personal contact details.

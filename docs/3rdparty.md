@@ -1,6 +1,6 @@
 # SiruBOT Third-Party Component Contracts (3rdparty)
 
-> **Document date:** 2026-10-16 · **Verification method:** All `file-path:line` references were checked against the actual source. Code takes precedence over documentation.
+> **As of:** 2026-11-21 · **Verification method:** Every file reference was checked against the source. References are file paths only, never line numbers. Code takes precedence over documentation.
 >
 > **Scope:** This document covers only the contract surfaces of external software and services that SiruBOT depends on through code, configuration, or deployment.
 >
@@ -25,22 +25,22 @@
 
 | ID | Component | Layer | Version / Source | Contract Surface | Most Critical Rule |
 |---|---|---|---|---|---|
-| 3RD-01 | `mixer-plugin` (`lavalink_mixer`) | Lavalink server plugin | Sibling project `../lavalink_mixer`, v1.0.0 | REST `/mixer/*`, `pluginFilters.mixer` | Enable the filter **before** `player.play()` |
+| 3RD-01 | `mixer-plugin` (`lavalink_mixer`) | Lavalink server plugin | Sibling project `../lavalink_mixer` (version from its git tag) | REST `/mixer/*` (v2 protocol), WebSocket `op: "mixer"` events, `pluginFilters.mixer` | Enable the filter **before** `player.play()` |
 | 3RD-02 | `youtube-file-cache` (`lavalink_file_cache`) | Lavalink server plugin | Sibling project `../lavalink_file_cache`, v0.1.0 | lavaplayer `AudioSourceManager`, REST `/youtube-file-cache/stats` | Cache key = YouTube `identifier` (videoId) |
 | 3RD-03 | `youtube-plugin` (official `youtube-source`) | Lavalink server plugin | `dev.lavalink.youtube:youtube-plugin:1.18.2` | Track loading / format resolution | 3RD-02 depends on its **internal APIs** |
 | 3RD-04 | SponsorBlock API | data-api external HTTP | `sponsor.ajay.app/api/skipSegments` | millisecond skip segments | BOT controls current-track seek; mixer receives incoming start |
 | 3RD-05 | `lavalink-client` | Bot client library | Patched `2.11.0` (`apps/bot/package.json`) | `LavalinkManager`, Player / QueueStore hooks | `autoSkip: false` is required |
-| 3RD-06 | `discord.js` + `@sapphire/framework` | Bot framework | `^14.27.0` / `^5.3.6` | Slash command and precondition registration | Bot conventions are in `.claude/skills/sapphire-command` |
-| 3RD-07 | Prisma, Redis, Fastify, Next.js, Sentry, etc. | Runtime dependencies | See table in Section 2 | Type and client contracts | Run `yarn generate` first |
-| 3RD-08 | lrclib, Open-Meteo, tracker.delivery, TV Asahi, YouTube internal API, OpenAI-compatible LLM | External HTTP | `apps/data-api/src/providers/*` | REST, including unofficial APIs | YouTube's internal API can change without notice |
+| 3RD-06 | `discord.js` + `@sapphire/framework` | Bot framework | `^14.27.0` / `^5.5.1` | Slash command and precondition registration | Bot conventions are in `.claude/skills/sapphire-command` |
+| 3RD-07 | Prisma, Redis, Fastify, Next.js, satori, Sentry, etc. | Runtime dependencies | See table in Section 2 | Type and client contracts | Run `yarn generate` first |
+| 3RD-08 | lrclib, Open-Meteo, tracker.delivery, TV Asahi, YouTube internal API, Deezer, MusicBrainz, OpenAI-compatible LLM, side servers | External HTTP | `apps/data-api/src/providers/*`, `packages/isrc/src/providers/*`, bot clients | REST, including unofficial APIs | YouTube's internal API can change without notice |
 
-For the overall system diagram, see [System Context in `architecture.md`, Section 2](./architecture.md#2-시스템-컨텍스트). For the relationship among mixer, file-cache, and SiruBOT, consult the corresponding sibling-project documentation.
+For the overall system diagram, see [System Context in `architecture.md`, Section 2](./architecture.md#2-system-context). For the relationship among mixer, file-cache, and SiruBOT, consult the corresponding sibling-project documentation.
 
 ---
 
 ## 1. Lavalink Node Plugins
 
-Common installation model: place plugin JARs in Lavalink's `plugins/` directory. For Docker deployments, `docker/docker-compose.yml` mounts `./lavalink/plugins:/opt/Lavalink/plugins`. This directory is gitignored, so built and deployed JARs are not tracked in the repository.
+Common installation model: place plugin JARs in Lavalink's `plugins/` directory on the node. The local dev stack in `docker/docker-compose.yml` runs the stock `ghcr.io/lavalink-devs/lavalink:4` image **without** plugins, so mixer, file-cache and YouTube playback are not available there unless you mount the JARs yourself. Built and deployed JARs are not tracked in this repository.
 
 All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavaplayer:2.2.6`. These versions **must match the lavaplayer version used by the node**.
 
@@ -49,28 +49,39 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 - **Purpose:** A standalone plugin that provides gapless playback, crossfade, TTS ducking, and silence skipping without modifying Lavalink itself. It mixes PCM from a hidden secondary player for each guild at the beginning of the main filter chain.
 - **Source:** Sibling project `../lavalink_mixer` (Kotlin, `dev.lavalink.mixer`). The JAR deployed to the server is a release/CI artifact from that repository.
 - **SiruBOT integration:**
-  - `apps/bot/src/features/music/application/mixerService.ts`: complete REST wrapper for `/mixer/*` (protocol types and `MixerRequestError` in `apps/bot/src/features/music/lavalink/mixerProtocol.ts`)
-  - `apps/bot/src/features/music/discord/commands/mixer.ts`: `/music mixer` slash command
-  - `apps/bot/src/features/music/lavalink/handlers/trackHandler.ts`: server-side auto-start and transition handling
-  - `apps/bot/src/services/guildService.ts`, `getMixerSettings()`: `MixerSettings {gaplessEnabled, crossfadeEnabled, crossfadeMs}`
+  - `apps/bot/src/features/music/application/mixerService.ts`: REST wrapper for `/mixer/*` (protocol types and `MixerRequestError` in `apps/bot/src/features/music/lavalink/mixerProtocol.ts`)
+  - `apps/bot/src/features/music/discord/commands/mixer.ts`: the `/mixer` (`/믹서`) slash command; changing settings needs the DJ role or admin rights
+  - `apps/bot/src/features/music/lavalink/handlers/nodeHandler.ts`: receives the plugin's `op: "mixer"` WebSocket events and dispatches them to `mixerHandlers.ts`
+  - `apps/bot/src/features/music/lavalink/handlers/trackStartOrchestrator.ts`, `queueAdvancer.ts`: confirm track starts and advance the queue after server-side transitions
+  - `apps/bot/src/services/guildSettings/mixer.ts`, `getMixerSettings()`: per-guild `MixerSettings` (gapless, crossfade and its length, normalization, AutoMix and its tempo/confidence limits)
 
-**REST contract:** The node password is sent verbatim in the `Authorization` header. The timeout is `MIXER_CALL_TIMEOUT_MS` (default 5 seconds; `mixerService.ts`). Because these paths are outside `/v4/`, the implementation uses plain `fetch` rather than `player.node.request()`.
+**REST contract (v2 protocol):** The node password is sent verbatim in the `Authorization` header. The timeout is `MIXER_CALL_TIMEOUT_MS` (default 5 seconds, `apps/bot/src/lib/config.ts`). Because these paths are outside `/v4/`, the implementation uses plain `fetch` rather than `player.node.request()`. Queue mutations carry an `epoch` and an `Idempotency-Key` header and are serialized per guild.
 
-| Endpoint | Purpose | Caller |
-|---|---|---|
-| `POST /mixer/queue/next` | Preload the next track (`identifier` or `encodedTrack`) | `mixerService.ts` |
-| `DELETE /mixer/queue/next?guildId=` | Remove the preloaded slot | `mixerService.ts` |
-| `POST /mixer/crossfade` | Configure crossfade (`durationMs`) | `mixerService.ts` |
-| `GET /mixer/state?guildId=` | Read state (`hasNext`, `nextTrimMs`, `announcementsQueued`, etc.) | `mixerService.ts` |
-| `POST /mixer/announce` | TTS overlay and music ducking — **queued**, replies `202 {id, position, queueLength}` | `mixerService.ts` |
-| `POST /mixer/announce/cancel`, `DELETE /mixer/announce/queue`, `POST /mixer/silence`, `POST /mixer/fade-in` | Stop the active overlay, drop queued announcements, tune silence, fade in | Not called by the bot; intended for agents/manual use. See the plugin's `api/openapi.yaml`. |
+| Endpoint | Purpose |
+|---|---|
+| `POST /mixer/queue/arm` | Arm the next track (`encodedTrack`, `epoch`, `isEmpty`, optional `startPositionMs`, `outgoingEndPositionMs`, `preserveTransition`) |
+| `POST /mixer/queue/invalidate` | Drop the armed slot for an epoch |
+| `POST /mixer/queue/override` | Play a track now (user skip) |
+| `POST /mixer/reset` | Reset the guild's mixer state for a new epoch |
+| `GET /mixer/state?guildId=` | Read state, including feature flags such as `adaptiveTransitionsSupported`, `bpmDetectionEnabled` and `announcementsQueued` |
+| `GET /mixer/info` | Protocol version and capability flags (`incomingStartPositionSupported`, `outgoingEndPositionSupported`) |
+| `POST /mixer/crossfade` | Crossfade on/off and length; also carries the AutoMix transition config |
+| `POST /mixer/bpm` | AutoMix BPM detection and beatmatching (`maxTempoChange`, `minConfidence`) |
+| `POST /mixer/analyze` | Ask the node to analyze the upcoming track for AutoMix (only when `adaptiveTransitionsSupported`) |
+| `POST /mixer/normalization`, `POST /mixer/silence` | Volume normalization and silence trimming |
+| `POST /mixer/announce` | TTS overlay with music ducking. **Queued**, replies `202 {id, position, queueLength}` |
+| `POST /mixer/announce/cancel`, `DELETE /mixer/announce/queue` | Stop the active overlay; drop queued (not active) announcements. The bot uses both for the TTS `interrupt` announce mode |
 
-**Filter contract:** Register the filter using `player.filterManager.data.pluginFilters['mixer'] = { guildId }` (`enableMixerFilter`, `application/mixerService.ts`). lavaplayer constructs the filter chain **only when a track starts**, so `primeForPlay()` (`mixerService.ts`) must run before `player.play()`. Current call sites include `apps/bot/src/features/music/application/audioService.ts` and `apps/bot/src/features/ai-chat/application/aiTools/music.ts`.
+All callers live in `mixerService.ts`. The plugin's `api/openapi.yaml` is the full contract.
+
+**WebSocket events:** `nodeHandler.ts` handles `MixerNeedNextTrackEvent`, `MixerAdvancedEvent` and `MixerOverriddenEvent` (handlers in `mixerHandlers.ts`) and passes every mixer event to `mixerService.observeMixerEvent`, which records crossfade overlap ends.
+
+**Filter contract:** Register the filter using `player.filterManager.data.pluginFilters['mixer'] = { guildId }` (`enableMixerFilter`, `mixerService.ts`). lavaplayer constructs the filter chain **only when a track starts**, so `primeForPlay()` (`mixerService.ts`) must run before `player.play()`. Call sites include `apps/bot/src/features/music/application/audioService.ts` and the Lavalink handlers (`playerHandler.ts`, `queueAdvancer.ts`, `sessionRestore.ts`). For a track that is already playing, `rebuildMixerChain()` re-sends the filters and seeks to rebuild the chain (used after a node move).
 
 **Announce contract:** Announcements are **queued** — the old HTTP 409 "slot busy" response is gone, every request enqueues and the queue plays back to back in enqueue order through the hidden secondary player.
 
 - `POST /mixer/announce` answers `202 {guildId, id, position, queueLength}` (`MixerAnnounceReceipt`, `mixerService.ts`). This is an enqueue receipt, **not** playback start. `position` is the 1-based order among queued announcements at enqueue time and `queueLength` is the queue size after this enqueue; the currently speaking overlay is in neither count.
-- Progress: `announcementsQueued` (integer) in `GET /mixer/state`, or the plugin's WebSocket frames (raw-message hook, `payload.op === "mixer"`): `{"op":"mixer","type":"announceStart","guildId","announcementId","track":{identifier,title}}` when a queued item starts talking over the music, `{"op":"mixer","type":"announceEnd","guildId"}` when the overlay ends (natural end, cancel, or sub failure). The bot does not consume these events today.
+- Progress: `announcementsQueued` (integer) in `GET /mixer/state`, or the plugin's announce start/end WebSocket events. The bot does not act on the announce events today.
 - `DELETE /mixer/announce/queue` drops queued (not active) announcements and reports the drop count; `POST /mixer/announce/cancel` stops the active overlay only.
 - A queued identifier is resolved at start time, so freshly synthesized TTS URLs stay valid while waiting.
 
@@ -81,8 +92,9 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 1. **Filter priming order:** If the filter is primed after `play()`, the effect is absent. Prime it before playback.
 2. **`guildId` must be a string.** Discord snowflakes exceed JavaScript's safe integer range (`2^53`); sending them as JSON numbers can corrupt them. Keep `guildId` string-valued in filter payloads.
 3. **Announcements queue; there is no 409:** `POST /mixer/announce` never reports "busy" — repeat calls stack into the queue and play sequentially. Surface the `position` from the `202` receipt instead of a retry hint, and do not treat a `202` as "speaking now".
-4. **Clamp crossfade duration:** The plugin accepts 500–30,000 ms; SiruBOT restricts it to 500–15,000 ms (`mixerService.ts`, command options `mixer.ts`). Review both sides when changing the contract.
-5. **Confirm track starts:** Do not trust the server's `trackStart` payload blindly. Match by identifier using `resolveStartedTrack` in `trackHandler.ts`; retain the watchdog controlled by `MIXER_CONFIRM_TIMEOUT_MS` (default 5 seconds, `trackHandler.ts`). This contract interacts with 3RD-02.
+4. **Clamp crossfade duration:** The plugin accepts 500–30,000 ms; SiruBOT restricts it to 500–15,000 ms (`mixerService.ts`, command options `mixer.ts`, `packages/utils/src/guildSettingsContract.ts`). Review both sides when changing the contract.
+5. **Confirm track starts:** Do not trust the server's `trackStart` payload blindly. Match it with `resolveStartedTrack` in `trackStartOrchestrator.ts`; keep the confirmation window controlled by `MIXER_CONFIRM_TIMEOUT_MS` (default 5 seconds, `apps/bot/src/lib/config.ts`, used in `queueAdvancer.ts`). This contract interacts with 3RD-02.
+6. **Respect capability flags:** Send `startPositionMs`/`outgoingEndPositionMs` only when `/mixer/info` reports support, and AutoMix calls only when `/mixer/state` reports the BPM fields; otherwise `setAutomix` throws `AutomixUnsupportedError` (`mixerService.ts`).
 
 ### 3RD-02. `youtube-file-cache` (`lavalink_file_cache`)
 
@@ -92,8 +104,8 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 
 **Contract:**
 
-1. **Cache key = YouTube `identifier` (videoId).** Mixer preloading refers to `identifier: videoId`, matching the file-cache key (`mixerService.ts`, `trackRef()`; comment: for YouTube, `identifier` is the videoId and therefore matches the file-cache key).
-2. **Stale metadata:** A cached track's `trackStart` payload may contain an old title or duration. Reconstruct display metadata using the identifier (`trackHandler.ts` comment).
+1. **Cache key = YouTube `identifier` (videoId).** The bot arms the mixer with `encodedTrack` (`mixerService.ts`, `arm()`); for YouTube tracks the encoded identifier is the videoId, which is also the file-cache key.
+2. **Stale metadata:** A cached track's `trackStart` payload may contain an old title or duration. The bot matches started tracks against the armed and queued tracks instead of trusting the payload (`trackStartOrchestrator.ts`, `resolveStartedTrack`), and `features/music/application/trackData.ts` tolerates an empty identifier.
 3. **Stats endpoint is currently broken:** `GET /youtube-file-cache/stats` always reports zero because the sibling project's `CacheStatsController.snapshotMap()` creates a new collector instance instead of using the actual counters held by `YoutubeFileCacheSourceManager`. Do not use this endpoint for monitoring. To inspect values, examine `.properties` files directly in the configured cache directory.
 4. **Configuration keys** under Lavalink `application.yaml` → `plugins.youtube-file-cache`: `enabled`, `directory` (default `./youtube-cache`), `max-size-mb` (1024), `download-threads` (2), `failure-cooldown-minutes` (30), `min-free-disk-mb` (500), `prefetch-limit` (10), and `max-track-length-minutes` (30).
 
@@ -109,7 +121,7 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 - **Purpose:** The de facto standard implementation for loading YouTube tracks, resolving formats, and streaming. 3RD-02 is built on top of it, and 3RD-01's auxiliary player also decodes tracks through this source.
 - **Version:** `dev.lavalink.youtube:youtube-plugin:1.18.2`, based on the compile dependency in 3RD-02's `build.gradle.kts`. A locally built artifact can replace the Maven artifact; `-PuseMavenYoutube` forces the Maven dependency.
 - **SiruBOT integration:** Indirect. `apps/data-api/src/providers/lavalinkSearch.ts` delegates search to Lavalink REST `GET /v4/loadtracks?identifier=ytsearch:...`; this plugin provides the underlying source implementation.
-- **Fragile Rule:** 3RD-02 depends on **private internal APIs** of this plugin, including `YoutubeAudioSourceManager.getClients()`, `getCipherManager()`, and `buildAudioTrack()` (for example, `YoutubeFileCacheSourceManager.java:390`). Whenever 3RD-03 is upgraded, **rebuild and retest 3RD-02**. Upgrading 3RD-03 alone while leaving the old 3RD-02 JAR in place can cause runtime linkage errors.
+- **Fragile Rule:** 3RD-02 depends on **private internal APIs** of this plugin, including `YoutubeAudioSourceManager.getClients()`, `getCipherManager()`, and `buildAudioTrack()` (see `YoutubeFileCacheSourceManager.java` in the sibling project). Whenever 3RD-03 is upgraded, **rebuild and retest 3RD-02**. Upgrading 3RD-03 alone while leaving the old 3RD-02 JAR in place can cause runtime linkage errors.
 
 ### 3RD-04. SponsorBlock API
 
@@ -130,36 +142,38 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
   - Queue persistence: `apps/bot/src/features/music/lavalink/queue/queueStore.ts` (`CachedQueueStore`)
   - Node lifecycle: `apps/bot/src/features/music/lavalink/handlers/nodeHandler.ts`; session recovery keys `lavalink/session/{nodeId}/shards:{0,1}` (`redisStore.ts`)
 - **Fragile Rules:**
-  1. **`autoSkip: false` is required** (`apps/bot/src/core/botApplication.ts`). If enabled, it conflicts with the server-side auto-start behavior in 3RD-01. Upstream 2.11.0 still shifts the queue or sends a stop after emitting `trackStuck` with this option disabled. The Yarn patch returns after the event so the bot owns recovery in both CJS and ESM (`patches/lavalink-client-npm-2.11.0-5e0ef08b0c.patch:9`, `patches/lavalink-client-npm-2.11.0-5e0ef08b0c.patch:21`). Without it, a mixer skip can be followed by another queue shift or a stop of the replacement track.
+  1. **`autoSkip: false` is required** (`apps/bot/src/core/botApplication.ts`). If enabled, it conflicts with the server-side auto-start behavior in 3RD-01. Upstream 2.11.0 still shifts the queue or sends a stop after emitting `trackStuck` with this option disabled. The Yarn patch returns after the event so the bot owns recovery in both the CJS and ESM builds (`patches/lavalink-client-npm-2.11.0-5e0ef08b0c.patch`). Without it, a mixer skip can be followed by another queue shift or a stop of the replacement track.
   2. **Route skips through the mixer, not `player.skip()`.** See the related rule in 3RD-01.
   3. **Custom Player/QueueStore hooks are internal APIs.** For major upgrades, review `customPlayer.ts`, `queueStore.ts`, and `trackHandler.ts` first.
   4. **Session resume:** Store session IDs in Redis when a node becomes `ready` and restore them after restart. This interacts with Lavalink's five-minute resume window; follow the shutdown order in `docs/runbook-production.md`.
 
 ### 3RD-06. `discord.js` + `@sapphire/framework`
 
-- **Versions:** `discord.js ^14.27.0` (`apps/bot`), `@sapphire/framework ^5.3.6` plus plugins such as `plugin-subcommands ^7.0.1` and `discord.js-utilities ^7.3.3`. In `apps/dashboard` and `apps/data-api`, `discord.js ^14.0.0` is used for types/utilities.
-- **Contract surface:** Registration conventions for slash commands, preconditions, and interaction handlers (Sapphire stores). Follow `AGENTS.md` under “Bot conventions” and the `sapphire-command` skill (`.claude/skills/sapphire-command/SKILL.md`). Avoid duplicating those conventions here.
-- **Fragile Rule:** The order of the precondition chain (`NodeAvailable`, `VoiceConnected`, `SameVoiceChannel`, `DJOrAlone`) is part of the permission and voice-state contract. Changing the order changes command-entry conditions.
+- **Versions:** `discord.js ^14.27.0` (`apps/bot`, `packages/utils`), `@sapphire/framework ^5.5.1` plus `@sapphire/plugin-subcommands ^7.0.1`.
+- **Contract surface:** Registration conventions for slash commands, preconditions, and interaction handlers (Sapphire stores). Follow `apps/bot/AGENTS.md` and the `sapphire-command` skill (`.claude/skills/sapphire-command/SKILL.md`). Avoid duplicating those conventions here.
+- **Fragile Rule:** Each music subcommand exports its precondition list (`preconditions` in `apps/bot/src/features/music/discord/subcommands/*.ts`), and the order is part of the permission and voice-state contract. Control commands run `TextChannelAllowed`, `NodeAvailable`, `VoiceConnected`, `SameVoiceChannel`, `SongPlaying`, `DJOrAlone`; play and search run only `TextChannelAllowed`, `NodeAvailable`, `MemberListenable` and leave the voice-channel decision to the use case (`features/music/application/play.ts`). Changing the order changes which error a user sees first.
 
 ### 3RD-07. Runtime Dependencies (Version Pins)
 
 | Library | Version | Used In | Notes |
 |---|---|---|---|
-| `@prisma/client` / `prisma` | `^7.7.0` | `packages/prisma` | Run `yarn generate` before type checking/building (`AGENTS.md` Commands). |
-| `@prisma/adapter-pg` | `^7.7.0` | bot/dashboard/data-api | PrismaPg adapter |
-| `@redis/client` | `^5.8.2` (bot/data-api/utils/shardclient), `^6.3.0` (dashboard only) | All apps | **Version mismatch:** dashboard may use a different Redis client API. Take care when porting shared code to dashboard. |
-| `fastify` | `^5.12.7` | data-api/shardmanager | `@fastify/websocket ^11.2.0`, `@fastify/autoload ^6.3.1` |
-| `next` / `react` | `16.4.0` / `19.x` | dashboard | Dev uses `--webpack`; build uses `--turbopack` (`AGENTS.md`). |
-| `zod` | `^4.x` (minor differences by app) | All apps | Contract schema language |
-| `ws` | `^8.18.3` | shardmanager/shardclient | Shard WebSocket protocol |
-| `@sentry/node` + `@sentry/profiling-node` | `^9.15.0` | bot/utils | `apps/bot/src/core/sentry.ts` |
-| `undici` / `tslog` | bot/data-api/utils | HTTP / logging | |
+| `@prisma/client` / `prisma` | `^7.10.1` | `packages/prisma` | Run `yarn generate` before type checking/building (`AGENTS.md` Commands). |
+| `@prisma/adapter-pg` | `^7.10.1` | bot/dashboard/data-api | PrismaPg adapter |
+| `@redis/client` | `^5.12.1` (bot/data-api/utils), `^6.3.0` (dashboard only) | All apps | **Version mismatch:** dashboard may use a different Redis client API. Take care when porting shared code to dashboard. |
+| `fastify` | `^5.12.7` | data-api/shardmanager | `@fastify/websocket ^11.3.4`, `@fastify/autoload ^6.5.1` |
+| `next` / `react` | `16.4.3` / `19.3.1` | dashboard | Dev uses `--webpack`; build uses `--turbopack` (`AGENTS.md`). |
+| `satori` / `@resvg/resvg-js` | `^0.63.2` / `^2.6.2` | data-api | Profile, now-playing and Wrapped cards (`apps/data-api/src/renderers/satori/`). The profile and now-playing routes fall back to the skia renderers when satori fails |
+| `youtubei.js` | `18.3.0` (exact pin) | data-api | See 3RD-08e |
+| `zod` | `^4.6.7` | All apps | Contract schema language |
+| `ws` | `^8.22.0` | shardmanager/shardclient | Shard WebSocket protocol |
+| `@sentry/node` + `@sentry/profiling-node` | `^9.47.2` | bot/utils | `apps/bot/src/core/sentry.ts` |
+| `undici` / `tslog` | `^7.30.1` / `^4.11.0` | bot/data-api/shardmanager/utils | HTTP / logging |
 
 ---
 
 ## 3. External HTTP Services
 
-All providers are called from `apps/data-api/src/providers/*`. **TTL behavior, error mapping, and endpoint schemas are defined in [./api-data-api.md](./api-data-api.md)**. This section documents only the contract surface: target, caller, and risk.
+Most providers are called from `apps/data-api/src/providers/*`; the ISRC lookups live in `packages/isrc`, and a few side servers are called by the bot directly (3RD-08j to 3RD-08m). **TTL behavior, error mapping, and endpoint schemas are defined in [./api-data-api.md](./api-data-api.md)**. This section documents only the contract surface: target, caller, and risk.
 
 | ID | Target | Endpoint / Source | Caller | Contract Risk |
 |---|---|---|---|---|
@@ -170,8 +184,14 @@ All providers are called from `apps/data-api/src/providers/*`. **TTL behavior, e
 | 3RD-08e | YouTube.js | `youtubei.js` package | `providers/youtubeClient.ts`, `providers/chapters.ts`, `providers/youtubeSuggestions.ts` | The library wraps unofficial YouTube endpoints; parser/API changes require provider tests and manual chapter checks. |
 | 3RD-08f | OpenAI-compatible LLM | `OPENAI_COMPATIBLE_API_URL` (default `http://127.0.0.1:8080/v1`, `apps/data-api/src/config/env.ts`) | Translation / AI batch providers, including `providers/translate.ts` | Assumes self-hosting; model and key are configured via environment variables. |
 | 3RD-08g | Lavalink REST (search proxy) | `GET {LAVALINK_REST_URL}/v4/loadtracks` | `providers/lavalinkSearch.ts` | Depends on 3RD-03. Sends the node password verbatim in `Authorization`. |
+| 3RD-08h | Deezer (ISRC lookup) | `https://api.deezer.com` | `packages/isrc/src/providers/deezer.ts`, run by `apps/data-api/src/services/isrcEnricher.ts` | Public, keyless API. The enricher is rate-limited (`packages/isrc/src/rateLimit.ts`) and runs every 10 minutes. |
+| 3RD-08i | MusicBrainz (ISRC lookup) | `https://musicbrainz.org/ws/2` | `packages/isrc/src/providers/musicbrainz.ts` | Requires a descriptive User-Agent (`MUSICBRAINZ_USER_AGENT`, default in the provider). Strict per-client rate limit. |
+| 3RD-08j | OpenAI-compatible LLM (bot side) | `OPENAI_COMPATIBLE_API_URL` + `CHAT_MODEL` | `apps/bot/src/features/ai-chat/`, emoji image reading in `apps/bot/src/features/emoji-maker/application/imageReader.ts` | Chat is off without `CHAT_MODEL`. Vision input depends on the model accepting `data:` image URLs. |
+| 3RD-08k | siru-tts (sibling side server) | `SIRU_TTS_URL` | `apps/bot/src/features/tts/`, voice catalog via data-api `routes/tts.ts` | TTS is off without the URL. |
+| 3RD-08l | siru_moji (sibling side server) | `SIRU_MOJI_URL`, key `SIRU_MOJI_AUTH_KEY ?? AUTH_KEY` | `apps/bot/src/features/emoji-maker/application/mojiClient.ts` | `/이모지만들기` is off without the URL. |
+| 3RD-08m | Web search for AI tools | SearXNG at `SEARXNG_BASE_URL` (toggle `ENABLE_SEARXNG`), fallback `lite.duckduckgo.com` | `apps/bot/src/features/ai-chat/application/aiTools/searchEngine.ts` | The DuckDuckGo fallback scrapes HTML and can break without notice. |
 
-Authentication conventions (raw HTTP `Authorization` header and Redis hub channels) are documented in [Shared Contracts, Section 5 of `architecture.md`](./architecture.md#5-공유-계약).
+Authentication conventions (raw HTTP `Authorization` header and Redis hub channels) are documented in [Shared Contracts, Section 5 of `architecture.md`](./architecture.md#5-shared-contracts).
 
 ---
 
@@ -187,7 +207,7 @@ Authentication conventions (raw HTTP `Authorization` header and Redis hub channe
 
 ### B. Upgrading `lavalink-client` (3RD-05)
 
-1. Review `customPlayer.ts`, `queueStore.ts`, `trackHandler.ts`, and `sponsorBlockHandler.ts` first; they depend on internal APIs and event payloads.
+1. Review `customPlayer.ts`, `queueStore.ts`, `trackHandler.ts`, `trackStartOrchestrator.ts`, `queueAdvancer.ts` and `features/music/application/sponsorBlockService.ts` first; they depend on internal APIs and event payloads.
 2. Run `yarn vitest run --config vitest.config.ts apps/bot/src/features/music/lavalink/handlers/trackStuckRecovery.test.ts`. Keep the `trackStuck` patch until the replacement version passes this regression suite without it. The suite exercises the installed CJS and ESM handlers with the real mixer skip, checks that recovery advances once, and preserves `autoSkip: true` behavior (`apps/bot/src/features/music/lavalink/handlers/trackStuckRecovery.test.ts`).
 3. Measure the node session-resume scenario in practice, including recovery of session IDs from Redis.
 
@@ -207,7 +227,7 @@ Authentication conventions (raw HTTP `Authorization` header and Redis hub channe
 ## 5. Update Rules
 
 1. This document is governed by the “Code Is the Source of Truth” rule in [`./README.md`](./README.md). When a contract changes—endpoint, payload, environment variable, event, or key convention—update the relevant `3RD-xx` section in the same PR.
-2. Every behavioral claim must include a `file-path:line` reference. Update references when lines move.
-3. The sibling projects `../lavalink_mixer` and `../lavalink_file_cache` are authoritative. This document is a snapshot as of 2026-10-16. If a discrepancy is found, **the sibling-project code takes precedence** and this document must be corrected.
+2. Every behavioral claim must cite the file that implements it. Use file paths only, never line numbers (`./README.md`, writing rule 2).
+3. The sibling projects `../lavalink_mixer` and `../lavalink_file_cache` are authoritative. This document is a snapshot as of the date at the top. If a discrepancy is found, **the sibling-project code takes precedence** and this document must be corrected.
 4. Add a **Fragile Rule** only when supported by an actual failure or a constraint enforced by code, ordering, or types. Label speculation as a hypothesis.
 5. Do not include statistics or performance figures without a source. The current 3RD-02 stats endpoint's zero-value bug is the only explicitly documented exception.
