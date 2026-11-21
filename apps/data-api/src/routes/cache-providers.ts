@@ -4,7 +4,7 @@ import type { WeatherScope } from '@sirubot/utils/weather';
 import { z } from 'zod';
 import { serveCached } from './serveCached.ts';
 import { sendDomainError, sendError } from './common.ts';
-import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
+import { fetchLyrics, fetchLyricsForTrack, lyricsCacheKey, lyricsTrackCacheKey } from '../providers/lyrics.ts';
 import { fetchWeather, weatherCacheKey } from '../providers/weather.ts';
 import { deliveryTrackCacheKey, searchDeliveryCarriers, trackDelivery } from '../providers/delivery.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
@@ -19,16 +19,31 @@ const WEATHER_TTL_SECONDS = 15 * 60;
 
 export function registerCacheProviderRoutes(fastify: FastifyInstance): void {
 	// 가사
-	const lyricsQuery = z.object({ q: z.string().trim().min(1).max(200) });
+	// `q`(자유 검색)는 기존 소비자용이고, `title`+`artist`(+`durationMs`)는 재생 중인 곡을 정확히 찾을 때 써요.
+	const lyricsQuery = z
+		.object({
+			q: z.string().trim().min(1).max(200).optional(),
+			title: z.string().trim().min(1).max(200).optional(),
+			artist: z.string().trim().max(200).default(''),
+			durationMs: z.coerce
+				.number()
+				.int()
+				.min(0)
+				.max(24 * 3600 * 1000)
+				.default(0),
+			source: z.string().trim().max(40).optional()
+		})
+		.refine((v) => v.q || v.title, { message: 'q 또는 title이 필요해요.' });
 	fastify.get('/v1/lyrics', async (request, reply) => {
 		try {
-			const { q } = lyricsQuery.parse(request.query);
+			const { q, title, artist, durationMs, source } = lyricsQuery.parse(request.query);
+			const track = title ? { title, artist, durationMs, sourceName: source ?? null } : null;
 			const { data, cached } = await serveCached({
 				route: 'lyrics',
-				key: lyricsCacheKey(q),
+				key: track ? lyricsTrackCacheKey(track) : lyricsCacheKey(q!),
 				ttlSeconds: LYRICS_TTL_SECONDS,
 				provider: 'lrclib',
-				fetchFresh: () => fetchLyrics(q),
+				fetchFresh: () => (track ? fetchLyricsForTrack(track) : fetchLyrics(q!)),
 				validate: (d) => Boolean(d.plainLyrics || d.syncedLyrics)
 			});
 			return reply.send({ ...data, _cached: cached });

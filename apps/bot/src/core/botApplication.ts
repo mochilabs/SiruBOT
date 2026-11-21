@@ -17,6 +17,7 @@ import { UsageRecorder } from '../features/usage-metrics/index.ts';
 import { usageFeatureKey } from '@sirubot/utils/modules';
 import { createGuildLifecycleService } from '../services/guildLifecycle.ts';
 import { GuildJobScheduler } from '../services/guildJobScheduler.ts';
+import { createIncidentNoticeService } from '../services/incidentNotice.ts';
 import { BotActivityService } from '../services/botActivity.ts';
 import { KeyedTimers } from '../lib/keyedTimers.ts';
 import { fetchCommandIndex } from '../discord/utils/commandMentions.ts';
@@ -67,6 +68,7 @@ import {
 } from '../features/music/index.ts';
 import { createJtcSetupResponder, createTempVoiceService, tempVoiceMessages } from '../features/temp-voice/index.ts';
 import { BotProfileService, createBotProfileListeners } from '../features/bot-profile/index.ts';
+import { createStarboardService, createStarboardDiscord } from '../features/starboard/index.ts';
 import { createMemberGreetingService, greetingMessages, createMemberGreetingSendListener } from '../features/greeting/index.ts';
 import {
 	createBotAdminResponder,
@@ -83,6 +85,7 @@ import type { RedisBinding, RedisRuntime } from '../lib/redisResponder.ts';
 import { createSharedRedisSubscriber, type RedisSubscriberEntry } from './redisSubscribers.ts';
 import * as guildPlayback from '../services/guildSettings/playback.ts';
 import * as guildJtc from '../services/guildSettings/jtc.ts';
+import { isMessageFeatureEnabled } from '../services/guildSettings/modules.ts';
 
 export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	private rootData: RootData = getRootData();
@@ -189,6 +192,9 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			get playbackReporter() {
 				return container.playbackReporter;
 			},
+			get incidentNotice() {
+				return container.incidentNotice;
+			},
 			get sponsorBlockService() {
 				return container.sponsorBlockService;
 			},
@@ -286,7 +292,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			},
 			messages: tempVoiceMessages,
 			emptyGraceMs: getConfig().tempVoice.emptyGraceMs,
-			recordUsage: (guildId, userId) => container.usageRecorder?.record(guildId, usageFeatureKey('msg', 'temp-voice'), userId)
+			recordUsage: (guildId, userId) => container.usageRecorder?.record(guildId, usageFeatureKey('msg', 'temp-voice'), userId),
+			isEnabled: (guildId) => isMessageFeatureEnabled(container.guildService, guildId, 'temp-voice')
 		});
 		container.stoppables.push(container.chatTtsService, container.tempVoiceService);
 		container.voiceLeaveTimers = new KeyedTimers('빈 음성 채널 퇴장 타이머');
@@ -346,6 +353,11 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			recordUsage: (guildId, type) => container.usageRecorder?.record(guildId, usageFeatureKey('playback', type))
 		});
 		container.stoppables.push(container.playbackReporter);
+		container.incidentNotice = createIncidentNoticeService({
+			getRedisStore: () => container.redisStore,
+			signingKey: getConfig().redis.signingKey,
+			logger: appLogger
+		});
 		container.guildLifecycle = createGuildLifecycleService({ db: container.db });
 		container.usageRecorder = new UsageRecorder({
 			db: container.db,
@@ -362,6 +374,13 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			processId: `${hostname()}:${process.pid}`
 		});
 		container.stoppables.push(container.guildJobScheduler);
+		container.starboardService = createStarboardService({
+			db: container.db,
+			logger: appLogger,
+			discord: createStarboardDiscord({ getClient: () => container.client, logger: appLogger }),
+			recordUsage: (guildId) => container.usageRecorder?.record(guildId, usageFeatureKey('msg', 'starboard'))
+		});
+		container.stoppables.push(container.starboardService);
 		container.customCommandStore = createCustomCommandStore({ db: container.db, logger: appLogger });
 		container.customSlashRegistry = createSlashRegistry({
 			db: container.db,

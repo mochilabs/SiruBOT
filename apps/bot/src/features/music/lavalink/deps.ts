@@ -11,6 +11,7 @@ import type { ILogObj, Logger } from 'tslog';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { GuildService } from '../../../services/guildService.ts';
 import type { DataApiClient } from '../../../services/dataApiClient.ts';
+import type { IncidentNoticeService } from '../../../services/incidentNotice.ts';
 import type { ChatTtsService } from '../../tts/index.ts';
 import type { TrackService } from '../application/trackService.ts';
 import type { MixerService } from '../application/mixerService.ts';
@@ -34,7 +35,16 @@ export interface LavalinkShardInfo {
 }
 
 /** 길드별 마지막 플레이어 상태 퍼블리시 기록 (주기 스로틀 + 변경 지문). */
-export type PlayerStatePublishTracker = Map<string, { at: number; fingerprint: string }>;
+export type PlayerStatePublishTracker = Map<
+	string,
+	{
+		at: number;
+		fingerprint: string;
+		/** 마지막으로 발행한 위치와 진행 여부 — 다음 발행 때 예상 위치(탐색·점프 감지)를 계산해요. */
+		positionMs: number;
+		advancing: boolean;
+	}
+>;
 
 export interface LavalinkDeps {
 	readonly logger: LavalinkLogger;
@@ -43,6 +53,8 @@ export interface LavalinkDeps {
 	readonly dataApi: DataApiClient;
 	readonly chatTtsService: ChatTtsService;
 	readonly playbackReporter: PlaybackReporter;
+	/** 장애 공지 — 재생 실패 알림 끝에 한 줄 덧붙여요 */
+	readonly incidentNotice: IncidentNoticeService;
 	readonly sponsorBlockService: SponsorBlockService;
 	readonly mixerService: MixerService;
 	readonly playerNotifier: PlayerNotifier;

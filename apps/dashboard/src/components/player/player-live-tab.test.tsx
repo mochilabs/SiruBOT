@@ -12,6 +12,7 @@ vi.mock("swr", () => ({ default: () => ({ ...remote, isLoading: !remote.data && 
 vi.mock("next/navigation", () => ({ usePathname: () => "/servers/guild-a", useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("next-auth/react", () => ({ useSession: () => ({ status: "authenticated" }) }));
 vi.mock("@/hooks/use-session-redirect", () => ({ useSessionExpiredRedirect: () => vi.fn() }));
+vi.mock("./lyrics-panel", () => ({ LyricsPanel: () => null }));
 vi.mock("@/components/ui/toast", () => ({ useToast: () => ({ error: vi.fn() }) }));
 
 class Source {

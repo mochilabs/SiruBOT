@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Activity, BarChart3, Bell, RadioTower, Server, UserRound } from "lucide-react";
+import { Activity, BarChart3, Bell, Megaphone, RadioTower, Server, UserRound } from "lucide-react";
 
 import { GuildsDataPanel } from "@/components/admin/guilds-data-panel";
+import { IncidentNoticePanel } from "@/components/admin/incident-notice-panel";
 import { NodesAndControlPanel } from "@/components/admin/nodes-control-panel";
 import { OverviewPanel } from "@/components/admin/overview-panel";
 import { SocialSubscriptionsPanel } from "@/components/admin/social-subscriptions-panel";
@@ -16,6 +17,7 @@ const ADMIN_TABS = [
 	{ key: "overview", label: "전체 현황", icon: <Activity size={16} /> },
 	{ key: "usage", label: "사용 지표", icon: <BarChart3 size={16} /> },
 	{ key: "nodes", label: "노드·봇 제어", icon: <RadioTower size={16} /> },
+	{ key: "notice", label: "장애 공지", icon: <Megaphone size={16} /> },
 	{ key: "guilds", label: "길드 데이터", icon: <Server size={16} /> },
 	{ key: "users", label: "유저·기억 데이터", icon: <UserRound size={16} /> },
 	{ key: "social", label: "소셜 알림 구독", icon: <Bell size={16} /> },
@@ -34,6 +36,8 @@ export function AdminDashboard() {
 				return <UsagePanel />;
 			case "nodes":
 				return <NodesAndControlPanel />;
+			case "notice":
+				return <IncidentNoticePanel />;
 			case "guilds":
 				return <GuildsDataPanel />;
 			case "users":

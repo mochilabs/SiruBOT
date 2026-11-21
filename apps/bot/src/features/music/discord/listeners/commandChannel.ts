@@ -6,8 +6,10 @@ import { Player, Track, UnresolvedTrack } from 'lavalink-client';
 import * as searchView from '../views/search.ts';
 import { createComponentSession, type ComponentSession } from '../../../../lib/componentSession.ts';
 import { errorView } from '../../../../lib/errorView.ts';
+import { unexpectedErrorView } from '../../../../lib/unexpectedErrorView.ts';
 import { AppError } from '../../../../lib/appError.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
+import { isMessageFeatureEnabled } from '../../../../services/guildSettings/modules.ts';
 import { actorFromMember } from '../../application/actor.ts';
 import { trackPlayFeedback } from '../utils/playFeedback.ts';
 import { RESULT_LIMIT, SELECT_TIMEOUT_MS } from '../utils/searchSelect.ts';
@@ -38,7 +40,7 @@ export class CommandChannelListener extends Listener {
 			this.container.logger.error(`[commandChannel] unhandled error (guild ${message.guildId}): ${error}`);
 			await message
 				.reply({
-					components: [errorView(`${emoji('error')} 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`)],
+					components: [await unexpectedErrorView(`${emoji('error')} 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`)],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { repliedUser: false }
 				})
@@ -54,6 +56,7 @@ export class CommandChannelListener extends Listener {
 		if (!content) return;
 
 		const guildId = message.guildId;
+		if (!(await isMessageFeatureEnabled(this.container.guildService, guildId, 'music-channel'))) return;
 		const pinned = await guildChannels.getPinnedChannel(this.container.guildService, guildId);
 		if (!pinned || pinned !== message.channelId) return;
 
@@ -71,7 +74,7 @@ export class CommandChannelListener extends Listener {
 		if (this.container.audio.nodeManager.nodes.filter((node) => node.connected).size === 0) {
 			await message
 				.reply({
-					components: [errorView(`${emoji('error')} 현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.`)],
+					components: [await unexpectedErrorView(`${emoji('error')} 현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.`)],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { repliedUser: false }
 				})

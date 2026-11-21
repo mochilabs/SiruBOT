@@ -70,6 +70,8 @@ model Guild {
   // 채팅 유틸: 카운팅 채널 — 지정 채널에서 숫자를 순서대로 세고 틀리면 초기화해요
   countingEnabled  Boolean @default(false)
   countingChannelId String?
+  // 서버 관리자가 끈 기능 모듈 id 목록 (packages/utils/src/modules.ts). 비어 있으면 모두 켜짐이고, toggleable이 아닌 모듈은 저장돼도 무시해요.
+  disabledModules  String[] @default([])
   // 멤버 인사: 입장/퇴장 메시지 + 커스텀 카드 이미지 설정. 구조는 packages/utils/src/memberGreeting.ts 타입과 동기화.
   welcome       Json?
   goodbye       Json?
@@ -82,6 +84,8 @@ model Guild {
   ticketConfig  TicketConfig?
   tickets       Ticket[]
   rolePanels    RolePanel[]
+  starboardSettings StarboardSettings?
+  starboardEntries  StarboardEntry[]
 }
 
 // 커스텀 명령어 — 대시보드(관리자)가 만드는 접두사 메시지 명령어. 봇의 접두사 리스너가 spec(JSON 스텝 체인)을 순차 실행해요.
@@ -536,4 +540,40 @@ model RolePanelButton {
   panel    RolePanel @relation(fields: [panelId], references: [id], onDelete: Cascade)
 
   @@index([panelId])
+}
+
+// 스타보드 설정 — 길드당 1:1. channelId가 null이면 꺼진 상태예요. 계약은 packages/utils/src/starboard.ts.
+model StarboardSettings {
+  guildId           String   @id
+  guild             Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  /// 스타보드 글이 올라갈 채널 ID (null이면 기능 꺼짐)
+  channelId         String?
+  /// 세는 이모지 — 유니코드 이모지 또는 서버 커스텀 이모지 마크업(`<:name:id>`)
+  emoji             String   @default("⭐")
+  /// 스타보드에 올리는 기준 별 수 (1~50)
+  threshold         Int      @default(3)
+  /// 글쓴이 본인이 단 반응은 세지 않아요
+  excludeSelf       Boolean  @default(true)
+  /// 연령 제한(NSFW) 채널의 메시지는 올리지 않아요
+  excludeNsfw       Boolean  @default(true)
+  /// 스타보드 대상에서 빼는 채널 ID 목록 (최대 25)
+  ignoredChannelIds String[] @default([])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// 스타보드에 올라간 원문 메시지 — 원문 하나당 스타보드 글 하나. 별 수가 기준 아래로 떨어져도 글은 남기고 count만 갱신해요(D-16).
+model StarboardEntry {
+  sourceMessageId    String   @id
+  guildId            String
+  guild              Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  sourceChannelId    String
+  /// 스타보드 글이 올라간 채널 — 설정의 채널을 나중에 바꿔도 기존 글을 고칠 수 있게 함께 저장해요
+  starboardChannelId String
+  starboardMessageId String
+  count              Int
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([guildId])
 }

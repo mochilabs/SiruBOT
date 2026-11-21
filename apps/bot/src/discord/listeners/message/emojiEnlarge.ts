@@ -13,6 +13,7 @@ import { MemoryCache, customEmojiUrl, parseEmojiOnlyMessage } from '@sirubot/uti
 import { emojiEnlargeView } from '../../views/emojiEnlarge.ts';
 import { isChannelToggleEnabled } from '../../../services/guildService.ts';
 import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
+import { isMessageFeatureEnabled } from '../../../services/guildSettings/modules.ts';
 import { usageFeatureKey } from '@sirubot/utils/modules';
 
 const ENLARGE_COOLDOWN_MS = 5_000;
@@ -28,6 +29,7 @@ export class EmojiEnlargeListener extends Listener {
 		if (!message.channel.isSendable()) return;
 
 		try {
+			if (!(await isMessageFeatureEnabled(this.container.guildService, message.guildId, 'emoji-enlarge'))) return;
 			const settings = await guildChatPolicy.getChatToolSettings(this.container.guildService, message.guildId);
 			if (!isChannelToggleEnabled(settings.emojiEnlarge, message.channelId)) return;
 

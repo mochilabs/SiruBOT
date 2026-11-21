@@ -1,14 +1,33 @@
 import { UserError } from '@sapphire/framework';
 import { createContainer } from '@sirubot/utils';
-import { TextDisplayBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, TextDisplayBuilder } from 'discord.js';
 
-export function errorView(message: string) {
+export interface ErrorViewOptions {
+	/**
+	 * 지원 서버 링크. 값이 있으면 "지원 서버" 링크 버튼을 붙여요 (P-14).
+	 * 입력 검증 같은 흔한 안내에는 넘기지 않고, 예기치 못한 오류에만 넘겨요.
+	 */
+	supportUrl?: string | null;
+	/** 컨테이너 강조 색 */
+	accentColor?: number;
+}
+
+export function errorView(message: string, options: ErrorViewOptions = {}) {
 	const containerComponent = createContainer();
 	const textDisplay = new TextDisplayBuilder().setContent(message);
 
 	containerComponent.addTextDisplayComponents(textDisplay);
+	if (options.accentColor !== undefined) containerComponent.setAccentColor(options.accentColor);
+	if (options.supportUrl) {
+		containerComponent.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(supportButton(options.supportUrl)));
+	}
 
 	return containerComponent;
+}
+
+/** "지원 서버" 링크 버튼 — 오류 화면과 `/정보 봇`이 같은 모양을 써요 */
+export function supportButton(url: string): ButtonBuilder {
+	return new ButtonBuilder().setURL(url).setLabel('지원 서버').setEmoji('💬').setStyle(ButtonStyle.Link);
 }
 
 /**

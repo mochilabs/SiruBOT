@@ -1,5 +1,6 @@
 import { InteractionHandler, InteractionHandlerTypes, container } from '@sapphire/framework';
-import { emoji } from '@sirubot/utils';
+import { emoji, GUILD_SETTINGS_INVALIDATE_CHANNEL } from '@sirubot/utils';
+import { BOT_MODULES } from '@sirubot/utils/modules';
 import {
 	MessageFlags,
 	type ButtonInteraction,
@@ -15,6 +16,7 @@ import { queueRelatedUpfront } from '../../lavalink/autoPlayRelated.ts';
 import { errorView } from '../../../../lib/errorView.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 import * as guildJtc from '../../../../services/guildSettings/jtc.ts';
+import * as guildModules from '../../../../services/guildSettings/modules.ts';
 import * as guildPlayback from '../../../../services/guildSettings/playback.ts';
 
 type SettingsComponentAction = Exclude<NonNullable<ReturnType<typeof settingsId.decode>>['action'], 'jtcTemplateModal' | 'jtcTemplateInput'>;
@@ -57,6 +59,22 @@ export const SETTINGS_ACTIONS = {
 		}
 	},
 	back: { mode: 'main' },
+	// 선택된 모듈이 켜짐이에요. 목록에 없는 값과 끌 수 없는 모듈은 서비스가 걸러내요.
+	selectModules: {
+		mode: 'main',
+		apply: async ({ interaction, guildId, services }) => {
+			if (!interaction.isStringSelectMenu()) return;
+			const enabled = new Set(interaction.values);
+			const disabled = BOT_MODULES.filter((m) => m.toggleable && !enabled.has(m.id)).map((m) => m.id);
+			await guildModules.setDisabledModules(services.guildService, guildId, disabled);
+			// 다른 프로세스·대시보드 캐시도 바로 따라오게 알려요 (연결이 없으면 건너뛰어요. 60초 TTL이 폴백이에요)
+			services.redisStore?.publish(
+				GUILD_SETTINGS_INVALIDATE_CHANNEL,
+				JSON.stringify({ guildId }),
+				`Guild settings invalidate (guild ${guildId})`
+			);
+		}
+	},
 	toggleController: {
 		mode: 'music',
 		apply: async ({ guildId, services }) => {

@@ -4,6 +4,7 @@ import { MessageFlags, InteractionReplyOptions } from 'discord.js';
 import * as Sentry from '@sentry/node';
 import { emoji } from '@sirubot/utils';
 import { errorView } from '../../lib/errorView.ts';
+import { unexpectedErrorView } from '../../lib/unexpectedErrorView.ts';
 import { presentError } from '../../lib/errorPresenter.ts';
 
 @ApplyOptions<Listener.Options>({ event: Events.InteractionHandlerError })
@@ -32,15 +33,17 @@ export class InteractionHandlerError extends Listener {
 		if (interaction.isRepliable()) {
 			try {
 				const { ephemeral, message } = presentation;
+				// 예기치 못한 오류에만 지원 서버 버튼과 장애 공지를 붙여요
+				const view = presentation.showSupport ? await unexpectedErrorView(message) : errorView(message);
 
 				const payload = ephemeral
 					? ({
 							flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-							components: [errorView(message)]
+							components: [view]
 						} satisfies InteractionReplyOptions)
 					: ({
 							flags: [MessageFlags.IsComponentsV2],
-							components: [errorView(message)]
+							components: [view]
 						} satisfies InteractionReplyOptions);
 
 				if (interaction.replied || interaction.deferred) {

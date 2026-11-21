@@ -8,6 +8,8 @@ export { stripTags };
 export function createWebSearchTool(deps: Pick<AiToolDeps, 'getSearchConfig'>): AiTool {
 	return {
 		name: 'web_search',
+		effect: 'read',
+		returnsExternalContent: true,
 		description:
 			'웹 검색을 수행해 최신·실시간 정보(뉴스, 일정, 가격, 이슈, 인물, 최신 사건)를 확인해요. 날씨·배송 조회는 각각 전용 도구를 쓰고, 그 외 사실 확인이 필요하면 이 도구를 사용하세요. 반환된 sources의 내용과 출처 ID([S1], [S2] 등)를 문장에 인용해 답변하세요. URL은 본문에 직접 적지 마세요.',
 		properties: {
