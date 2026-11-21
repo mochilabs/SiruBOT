@@ -35,6 +35,8 @@ export class ReadyEvent extends Listener {
 		this.container.botActivity.start();
 		// 사용 지표 60초 flush — 종료 때 stop()이 남은 집계를 보내요
 		this.container.usageRecorder.start();
+		// 예약 작업 15초 tick — 길드 캐시가 찬 뒤에 시작해요. 종료 때 stop()이 진행 중인 핸들러를 기다려요
+		this.container.guildJobScheduler.start();
 	}
 
 	private async printBanner() {

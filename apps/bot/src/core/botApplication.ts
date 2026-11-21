@@ -1,3 +1,4 @@
+import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { PrismaClient } from '@sirubot/prisma';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -15,6 +16,7 @@ import { CountingStateStore } from '../features/counting/index.ts';
 import { UsageRecorder } from '../features/usage-metrics/index.ts';
 import { usageFeatureKey } from '@sirubot/utils/modules';
 import { createGuildLifecycleService } from '../services/guildLifecycle.ts';
+import { GuildJobScheduler } from '../services/guildJobScheduler.ts';
 import { createIncidentNoticeService } from '../services/incidentNotice.ts';
 import { BotActivityService } from '../services/botActivity.ts';
 import { KeyedTimers } from '../lib/keyedTimers.ts';
@@ -364,6 +366,14 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			logger: appLogger
 		});
 		container.stoppables.push(container.usageRecorder);
+		// 예약 작업 실행기 — 이 프로세스가 가진 길드(client.guilds.cache)의 만기 작업만 가져가요. 핸들러는 각 기능이 등록해요
+		container.guildJobScheduler = new GuildJobScheduler({
+			db: container.db,
+			getOwnedGuildIds: () => [...container.client.guilds.cache.keys()],
+			logger: appLogger,
+			processId: `${hostname()}:${process.pid}`
+		});
+		container.stoppables.push(container.guildJobScheduler);
 		container.starboardService = createStarboardService({
 			db: container.db,
 			logger: appLogger,

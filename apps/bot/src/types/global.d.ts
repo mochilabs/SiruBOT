@@ -64,6 +64,8 @@ declare module '@sapphire/pieces' {
 		guildLifecycle: import('../services/guildLifecycle.ts').GuildLifecycleService;
 		/** 기능 사용 지표 메모리 집계 + 60초 flush 소유자 (종료 시 stop()이 flush) */
 		usageRecorder: import('../features/usage-metrics/index.ts').UsageRecorder;
+		/** 길드 예약 작업 실행기 — 15초마다 만기 작업을 가져가요 (종료 시 stop()이 진행 중인 핸들러를 기다려요) */
+		guildJobScheduler: import('../services/guildJobScheduler.ts').GuildJobScheduler;
 		/** 빈 음성 채널 퇴장 유예 타이머 소유자 (길드별) */
 		voiceLeaveTimers: import('../lib/keyedTimers.ts').KeyedTimers;
 		/** 봇 상태 메시지 순환 인터벌 소유자 */
