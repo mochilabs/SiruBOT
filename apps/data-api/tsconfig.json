@@ -1,4 +1,10 @@
 {
 	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"jsx": "react-jsx",
+		// data-api는 데코레이터를 쓰지 않아요. emitDecoratorMetadata가 켜져 있으면 tsup이 swc로 먼저 변환하고, 그 변환은 TSX를 클래식 JSX(React.createElement)로 바꿔요.
+		"emitDecoratorMetadata": false,
+		"experimentalDecorators": false
+	},
 	"exclude": ["**/node_modules/**"]
 }

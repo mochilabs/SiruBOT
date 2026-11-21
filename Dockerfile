@@ -30,6 +30,7 @@ COPY apps/data-api/package.json ./apps/data-api/
 COPY apps/storage/package.json ./apps/storage/
 COPY apps/notifier/package.json ./apps/notifier/
 COPY packages/app-kit/package.json ./packages/app-kit/
+COPY packages/cards/package.json ./packages/cards/
 COPY packages/isrc/package.json ./packages/isrc/
 COPY packages/prisma/package.json ./packages/prisma/
 COPY packages/shardclient/package.json ./packages/shardclient/
@@ -293,9 +294,6 @@ COPY --from=builder-data-api --chown=sirubot:nodejs /app/apps/data-api/package.j
 # Card fonts: Pretendard JP (한·영·일 variable) + Twemoji Mozilla (색 이모지 COLR) — 라이선스 고지: 대시보드 /licenses
 COPY --from=builder-data-api --chown=sirubot:nodejs /app/resources/fonts/PretendardJPVariable.ttf ./resources/fonts/PretendardJPVariable.ttf
 COPY --from=builder-data-api --chown=sirubot:nodejs /app/resources/fonts/TwemojiMozilla.ttf ./resources/fonts/TwemojiMozilla.ttf
-# satori 카드용 정적 굵기(600/900) 서브셋 — satori는 가변 폰트의 굵기 축을 못 써요
-COPY --from=builder-data-api --chown=sirubot:nodejs /app/resources/fonts/PretendardJP-SemiBold.subset.ttf ./resources/fonts/PretendardJP-SemiBold.subset.ttf
-COPY --from=builder-data-api --chown=sirubot:nodejs /app/resources/fonts/PretendardJP-Black.subset.ttf ./resources/fonts/PretendardJP-Black.subset.ttf
 
 # Copy workspace packages
 COPY --from=builder-data-api --chown=sirubot:nodejs /app/packages ./packages

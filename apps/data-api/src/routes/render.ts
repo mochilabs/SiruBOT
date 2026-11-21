@@ -3,27 +3,23 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { greetingConfigSchema, redisIdSchema } from '@sirubot/utils';
 import { deduped } from '../utils/dedup.ts';
-import { getLogger } from '../utils/logger.ts';
 import { metrics } from '../utils/metrics.ts';
 import { DataApiError } from './serveCached.ts';
 import { playerUserIdSchema, sendDomainError, sendError } from './common.ts';
-import { renderProfileCardDark } from '../renderers/profileCardDark.ts';
-import { renderProfileCardSatori } from '../renderers/satori/profileCard.ts';
-import { renderProfileCardTicket } from '../renderers/profileCardTicket.ts';
-import { renderGreetingCard, normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/memberGreetingCard.ts';
-import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
-import { renderNowPlayingCardSatori } from '../renderers/satori/nowPlayingCard.ts';
-import { renderOhaasaCard, renderOhaasaTopCard } from '../renderers/ohaasaCard.ts';
+import { renderProfileCard } from '../renderers/takumi/profileCard.tsx';
+import { renderProfileCardTicket } from '../renderers/takumi/profileCardTicket.tsx';
+import { normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/memberGreetingCard.ts';
+import { renderGreetingCard } from '../renderers/takumi/greetingCard.ts';
+import { renderNowPlayingCard } from '../renderers/takumi/nowPlayingCard.tsx';
+import { renderOhaasaCard, renderOhaasaTopCard } from '../renderers/takumi/ohaasaCard.tsx';
 import { ohaasaCardSchema, ohaasaTopCardSchema } from './ohaasaCardSchema.ts';
-import { renderWeatherCard } from '../renderers/weatherCard.ts';
+import { renderWeatherCard } from '../renderers/takumi/weatherCard.tsx';
 import { weatherCardSchema } from './weatherCardSchema.ts';
-import { renderWrappedCard } from '../renderers/satori/wrappedCard.ts';
+import { renderWrappedCard } from '../renderers/takumi/wrappedCard.tsx';
 import { getDb } from '../services/db.ts';
 import { loadWrappedStats, resolveWrappedRange } from '../services/wrapped.ts';
 
-const logger = getLogger('render');
-
-/** 이미지 렌더 라우트 — 프로필 카드(dark/ticket)·멤버 인사 카드·NowPlaying·운세 카드·날씨 카드 + 인사 이미지 정규화. 렌더러 본체는 renderers/에 있어요. */
+/** 이미지 렌더 라우트 — 프로필 카드·멤버 인사 카드·NowPlaying·운세 카드·날씨 카드 + 인사 이미지 정규화. 렌더러 본체는 renderers/에 있어요. */
 
 /** dedup 키용 페이로드 해시 — 같은 유저의 다른 요청(preset·설정·배경 변경)이 첫 렌더를 공유하지 않게 키에 섞어 넣어요 */
 function payloadHash(payload: unknown): string {
@@ -31,7 +27,7 @@ function payloadHash(payload: unknown): string {
 }
 
 export function registerRenderRoutes(fastify: FastifyInstance): void {
-	// 프로필 카드 이미지 (프리셋: dark=RINE 다크 퍼플 / ticket=RINE 멤버패스 티켓)
+	// 프로필 카드 이미지 (프리셋: dark·dashboard=대시보드 다크 / light / aura / ticket=멤버패스 티켓)
 	const topTracksSchema = z
 		.array(
 			z.object({
@@ -92,61 +88,28 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 			const statusLabelMap: Record<string, string> = { online: '온라인', idle: '자리 비움', dnd: '방해 금지', invisible: '오프라인' };
 			// 키에 페이로드 해시를 넣어요 — 다른 preset·입력의 동시 요청이 첫 렌더 이미지를 공유하지 않게.
 			const buffer = await deduped(`img:card:${body.userId}:${payloadHash(body)}`, () => {
-				// dark/ticket 공통 필드 — 선택된 프리셋 입력만 조립해요.
-				const base = {
-					userId: body.userId,
-					profileId: body.username,
+				const card = {
 					displayName: body.displayName,
+					username: body.username,
 					avatarUrl: body.avatarUrl,
 					guildTag: body.guildTag,
-					guildTagBadgeUrl: body.guildTagBadgeUrl,
 					status: body.status,
-					onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
+					statusLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
 					// 소개는 유저가 등록한 문구 그대로 쓰고, 비어 있으면 렌더러가 소개 칸을 생략해요
 					intro: body.intro,
 					createdText: dateFmt(body.accountCreated),
 					joinedText: dateFmt(body.guildJoinedAt),
 					roleChips: body.roleChips,
+					playlistCount: body.playlistCount,
+					requestedCount: body.requestedCount,
+					listenText: body.listenText,
+					checkinStreak: body.checkinStreak,
 					topTracks: body.topTracks,
 					nowPlaying: body.nowPlaying
 				};
-				if (body.preset === 'dashboard' || body.preset === 'light' || body.preset === 'aura') {
-					const variant = body.preset;
-					return renderProfileCardSatori({
-						variant,
-						displayName: base.displayName,
-						username: base.profileId,
-						avatarUrl: base.avatarUrl,
-						bannerUrl: body.bannerUrl,
-						guildTag: base.guildTag,
-						status: base.status,
-						statusLabel: base.onlineLabel,
-						intro: base.intro,
-						createdText: base.createdText,
-						joinedText: base.joinedText,
-						roleChips: base.roleChips,
-						playlistCount: body.playlistCount,
-						requestedCount: body.requestedCount,
-						listenText: body.listenText,
-						checkinStreak: body.checkinStreak,
-						topTracks: base.topTracks,
-						nowPlaying: base.nowPlaying
-					}).catch((error: unknown) => {
-						logger.warn(`satori profile card failed, falling back to skia: ${error instanceof Error ? error.message : String(error)}`);
-						return renderProfileCardDark({ ...base, statusColor: '#3ecf8e' });
-					});
-				}
-				if (body.preset === 'dark') {
-					return renderProfileCardDark({ ...base, statusColor: '#3ecf8e' });
-				}
-				return renderProfileCardTicket({
-					...base,
-					statusColor: '#2f9e5f',
-					stats: [
-						{ label: '플레이리스트', value: `${body.playlistCount}개`, icon: 'list-music' },
-						{ label: '신청한 곡', value: `${body.requestedCount.toLocaleString('ko-KR')}곡`, icon: 'music' }
-					]
-				});
+				if (body.preset === 'ticket') return renderProfileCardTicket(card);
+				// dark는 dashboard와 같은 다크 대시보드 모양이에요 (구 skia 퍼플 프리셋 대체)
+				return renderProfileCard({ ...card, variant: body.preset === 'dark' ? 'dashboard' : body.preset, bannerUrl: body.bannerUrl });
 			});
 			metrics.request(`image-profile-${body.preset}`);
 			return reply.type('image/png').send(buffer);
@@ -181,14 +144,15 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 				throw new DataApiError(400, 'greeting_image_missing', '이미지 설정이 비어 있어요. useImage를 켜고 배경을 지정해 주세요.');
 			}
 			// 키에 페이로드 해시를 넣어요 — 배경·설정·유저 컨텍스트가 다른 동시 미리보기 요청이 첫 렌더를 공유하지 않게.
+			const context = {
+				userId: body.context.userId,
+				displayName: body.context.displayName,
+				guildName: body.context.guildName ?? '',
+				memberCount: body.context.memberCount,
+				avatarUrl: body.context.avatarUrl
+			};
 			const buffer = await deduped(`img:greeting:${body.guildId}:${body.kind}:${body.context.userId}:${payloadHash(body)}`, () =>
-				renderGreetingCard(image, {
-					userId: body.context.userId,
-					displayName: body.context.displayName,
-					guildName: body.context.guildName ?? '',
-					memberCount: body.context.memberCount,
-					avatarUrl: body.context.avatarUrl
-				})
+				renderGreetingCard(image, context)
 			);
 			metrics.request(`image-member-card-${body.kind}`);
 			return reply.type('image/png').send(buffer);
@@ -299,11 +263,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 			// 카드에는 재생 위치가 그려지지 않아요 — 위치를 뺀 페이로드 해시를 키로 써서, 같은 곡이라도 볼륨·일시정지·반복·챕터가
 			// 다른 동시 요청이 첫 응답으로 합쳐지지 않게 하고 위치만 다른 요청은 합쳐요.
 			const buffer = await deduped(`img:nowplaying:${body.trackId}:${payloadHash({ ...body, positionMs: 0 })}`, () =>
-				// satori 카드가 기본이에요. 렌더에 실패하면(폰트 누락 등) 기존 skia 카드로 폴백해서 고정 채널 컨트롤러가 비지 않게 해요.
-				renderNowPlayingCardSatori(body).catch((error) => {
-					logger.warn(`satori now-playing card failed, falling back to skia: ${error instanceof Error ? error.message : String(error)}`);
-					return renderNowPlayingCard(body);
-				})
+				renderNowPlayingCard(body)
 			);
 			metrics.request('image-nowplaying');
 			return reply.type('image/png').send(buffer);
@@ -352,7 +312,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		}
 	});
 
-	// Wrapped 카드 이미지 (satori) — 신청 이력을 data-api가 직접 집계해서 그려요 (봇은 표시 정보만 보내요).
+	// Wrapped 카드 이미지 (Takumi) — 신청 이력을 data-api가 직접 집계해서 그려요 (봇은 표시 정보만 보내요).
 	// guildId가 null이면 모든 서버를 합쳐요. DATABASE_URL이 없으면 503이에요.
 	const wrappedCardSchema = z.object({
 		userId: playerUserIdSchema,
