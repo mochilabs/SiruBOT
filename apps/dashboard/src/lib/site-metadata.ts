@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
+import { BOT_TAGLINE } from "@sirubot/utils/brand";
 
 export const SITE_NAME = "시루봇";
+
+/** 사이트 기본 제목과 설명. 정체성 문구는 봇과 같은 BOT_TAGLINE을 써요. */
+export const SITE_TITLE = "시루봇 | 한국어 커뮤니티 올인원 Discord 봇";
+export const SITE_DESCRIPTION = `${BOT_TAGLINE}, 시루봇이에요.`;
 
 /**
  * 페이지별 Open Graph 이미지(1200×630) — public/images에 있어요. 컴포넌트 임베드(lib/discord-embed)도 같이 써요.

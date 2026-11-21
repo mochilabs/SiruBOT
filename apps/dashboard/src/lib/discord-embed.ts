@@ -103,9 +103,9 @@ export function getDiscordEmbedInput(name: string, base: string): DiscordEmbedIn
 	switch (name) {
 		case "home":
 			return {
-				eyebrow: "Discord 음악·AI 봇",
+				eyebrow: "한국어 커뮤니티 올인원 봇",
 				title: "음악부터 AI까지, 시루봇 하나면 돼요",
-				description: "명령어는 Discord에서, 설정은 웹 대시보드에서. 서버에 맞게 골라 쓰는 음악·AI 봇이에요.",
+				description: "명령어는 Discord에서, 설정은 웹 대시보드에서. 한국어 커뮤니티를 위한 올인원 봇이에요.",
 				url: base,
 				thumbnailUrl,
 				imageUrl: `${base}${OG_IMAGES.home.url}`,
