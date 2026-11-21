@@ -85,6 +85,7 @@ const EXPECTED_PIECES: string[] = [
 	'listeners:chatTts',
 	'listeners:clientReady',
 	'listeners:commandChannel',
+	'listeners:commandRegistrationAudit',
 	'listeners:countingChannel',
 	'listeners:customCommandPrefix',
 	'listeners:customCommandSlash',
