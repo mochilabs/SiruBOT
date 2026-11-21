@@ -3630,7 +3630,9 @@ __metadata:
     "@sirubot/isrc": "npm:*"
     "@sirubot/prisma": "npm:*"
     "@sirubot/utils": "npm:*"
+    "@types/js-yaml": "npm:^4.0.9"
     fastify: "npm:^5.12.7"
+    js-yaml: "npm:^4.3.2"
     satori: "npm:^0.63.2"
     skia-canvas: "npm:^3.0.8"
     tslog: "npm:^4.11.0"
@@ -4364,6 +4366,13 @@ __metadata:
   version: 7946.0.16
   resolution: "@types/geojson@npm:7946.0.16"
   checksum: 10c0/1ff24a288bd5860b766b073ead337d31d73bdc715e5b50a2cee5cb0af57a1ed02cc04ef295f5fa68dc40fe3e4f104dd31282b2b818a5ba3231bc1001ba084e3c
+  languageName: node
+  linkType: hard
+
+"@types/js-yaml@npm:^4.0.9":
+  version: 4.0.9
+  resolution: "@types/js-yaml@npm:4.0.9"
+  checksum: 10c0/24de857aa8d61526bbfbbaa383aa538283ad17363fcd5bb5148e2c7f604547db36646440e739d78241ed008702a8920665d1add5618687b6743858fae00da211
   languageName: node
   linkType: hard
 

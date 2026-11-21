@@ -6,8 +6,23 @@ import { memberPermissionPort } from '../../../../lib/discordPorts.ts';
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext } from './types.ts';
 import { musicActor, withAppError } from './musicControlBridge.ts';
+import { describeSettingLines } from './summary.ts';
 import * as guildMixer from '../../../../services/guildSettings/mixer.ts';
 import * as guildPlayback from '../../../../services/guildSettings/playback.ts';
+
+/** 확인 창에 보여줄 항목 이름 — 도구 스키마의 인자 이름과 같아요 */
+const MUSIC_SETTING_LABELS: Record<string, string> = {
+	volume: '기본 볼륨',
+	repeat: '반복 모드',
+	autoplay: '연관 재생',
+	gapless: '갭리스 재생',
+	crossfade_enabled: '크로스페이드',
+	crossfade_duration_seconds: '크로스페이드 길이(초)',
+	normalization: '음량 평준화',
+	announce_mode: '곡 안내 낭독 모드',
+	controller: '컨트롤러 카드',
+	sponsorblock: '스폰서블록'
+};
 
 function requireGuild(ctx: AiToolContext): string {
 	if (!ctx.guildId) throw new Error('서버 채널에서만 음악 설정을 사용할 수 있어요.');
@@ -49,6 +64,7 @@ export function createMusicSettingsTools(
 
 	const musicSettingsGetTool: AiTool = {
 		name: 'music_settings_get',
+		effect: 'read',
 		description:
 			'현재 서버의 음악 재생 설정(기본 볼륨, 반복 모드, 추천곡 자동재생, 갭리스, 크로스페이드, 음량 평준화, 곡 안내 낭독 모드, 컨트롤러 카드 표시 여부, 스폰서블록 건너뛰기)을 조회해요. 모든 사용자가 조회할 수 있어요.',
 		properties: {},
@@ -92,6 +108,7 @@ export function createMusicSettingsTools(
 
 	const musicSettingsSetTool: AiTool = {
 		name: 'music_settings_set',
+		effect: 'settings',
 		description:
 			'서버의 음악 재생 설정을 변경해요. DJ 역할 또는 서버 관리자 권한이 필요해요. ' +
 			'지정한 항목만 변경돼요. 볼륨, 반복(off|track|queue), 연관재생(autoplay), 갭리스(gapless), 크로스페이드(crossfade_enabled, crossfade_duration_seconds), ' +
@@ -141,6 +158,7 @@ export function createMusicSettingsTools(
 			}
 		},
 		required: [],
+		summarize: (args) => `서버 음악 설정 변경\n${describeSettingLines(args, MUSIC_SETTING_LABELS)}`,
 		status: '시루가 음악 설정을 변경하는 중..',
 		execute: async (args, ctx) => {
 			const guildId = requireGuild(ctx);

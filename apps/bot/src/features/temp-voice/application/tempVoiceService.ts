@@ -80,6 +80,8 @@ export interface TempVoiceServiceDeps {
 	emptyGraceMs: number;
 	/** 사용 지표 — 입장용 채널로 내 방을 만들 때 불러요 */
 	recordUsage?: (guildId: string, userId: string) => void;
+	/** 모듈 꺼짐 검사 (P-06) — false면 새 방을 만들지 않아요. 이미 있는 방의 정리는 계속해요. 없으면 항상 켜짐이에요. */
+	isEnabled?: (guildId: string) => Promise<boolean>;
 }
 
 export class TempVoiceService implements Stoppable {
@@ -103,6 +105,7 @@ export class TempVoiceService implements Stoppable {
 			const member = newState.member;
 			if (!member || member.user.bot) return;
 			if (newState.channelId === settings.markerChannelId && oldState.channelId !== settings.markerChannelId) {
+				if (this.deps.isEnabled && !(await this.deps.isEnabled(guildId))) return;
 				this.deps.recordUsage?.(guildId, member.id);
 				await this.createRoom(member, settings);
 			}

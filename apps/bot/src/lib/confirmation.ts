@@ -1,17 +1,21 @@
 import { emoji } from '@sirubot/utils';
 import { randomUUID } from 'node:crypto';
-import { ComponentType, MessageFlags, type ButtonInteraction, type ChatInputCommandInteraction } from 'discord.js';
+import { ComponentType, MessageFlags, type ContainerBuilder, type Message } from 'discord.js';
 import { confirmationView } from './confirmationView.ts';
 import { confirmId } from './confirmationId.ts';
 import { ownerOnly } from './ownerOnlyFilter.ts';
 import { notice } from './notice.ts';
 
-/** 응답을 이미 defer한 슬래시 명령어·버튼 상호작용에서 확인 버튼을 띄워요. */
-export async function confirmAction(
-	interaction: ChatInputCommandInteraction | ButtonInteraction,
-	title: string,
-	description: string
-): Promise<boolean> {
+/**
+ * 확인 창을 띄울 화면 — 슬래시 명령 상호작용이 그대로 들어맞고, 상호작용이 없는 진입점(멘션 답변)은
+ * 자기 라이브 메시지를 `editReply`로 감싸 넘겨요. `user`만 버튼을 누를 수 있어요.
+ */
+export interface ConfirmationSurface {
+	user: { id: string };
+	editReply(options: { components: ContainerBuilder[]; flags: MessageFlags.IsComponentsV2[]; allowedMentions?: { parse: [] } }): Promise<Message>;
+}
+
+export async function confirmAction(interaction: ConfirmationSurface, title: string, description: string): Promise<boolean> {
 	const sessionId = randomUUID();
 	const message = await interaction.editReply({
 		components: [confirmationView(sessionId, title, description)],

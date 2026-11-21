@@ -49,6 +49,16 @@ describe('도움말 카탈로그', () => {
 		expect(parseHelpPage('nope', ctx())).toBeNull();
 	});
 
+	it('서버에서 꺼진 모듈은 카테고리 선택지와 페이지에서 빠지고, 켜면 다시 나와요', () => {
+		const off = ctx({ canManageGuild: true, isModuleEnabled: (id) => id !== 'fun' });
+		expect(visibleHelpModules(off).map((m) => m.id)).not.toContain('fun');
+		expect(visibleHelpModules(off).map((m) => m.id)).toContain('music');
+		expect(parseHelpPage('fun', off)).toBeNull();
+		const on = ctx({ canManageGuild: true, isModuleEnabled: () => true });
+		expect(visibleHelpModules(on).map((m) => m.id)).toContain('fun');
+		expect(parseHelpPage('fun', on)).toBe('fun');
+	});
+
 	it('로드되지 않은 명령은 목록에서 빠져요', () => {
 		const lines = helpCategoryLines('ai', ctx({ loadedCommands: new Set(['emojimaker']) }));
 		expect(lines.some((l) => l.includes('/tts'))).toBe(false);

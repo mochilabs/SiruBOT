@@ -8,6 +8,7 @@ const CATEGORY_HINT = 'facts: 이름·거주지·상황 등 사실 / preferences
 export function createMemoryTools(deps: Pick<AiToolDeps, 'aiMemory'>): AiTool[] {
 	const memorySaveTool: AiTool = {
 		name: 'memory_save',
+		effect: 'memory',
 		description:
 			'장기 기억 파일(MEMORY.md)에 항목 하나를 추가해요. 이름·호칭·선호·취미·약속·상황 등 오래 기억할 만한 정보가 나올 때 쓰세요. ' +
 			'섹션은 사실이면 facts, 선호면 preferences, 약속·미결이면 commitments로 골라요. 날짜가 중요한 사실은 "(2026-10-01 확인)"처럼 날짜를 본문에 함께 적어요. ' +
@@ -36,6 +37,7 @@ export function createMemoryTools(deps: Pick<AiToolDeps, 'aiMemory'>): AiTool[] 
 
 	const memoryForgetTool: AiTool = {
 		name: 'memory_forget',
+		effect: 'memory',
 		description:
 			'장기 기억 파일(MEMORY.md)에서 항목을 삭제해요. 사용자가 "그건 틀렸어 / 잊어 / 지워"라고 했을 때 쓰세요. ' +
 			'파일에 적힌 항목 텍스트 일부를 match로 넘기면 해당 항목이 지워져요.',

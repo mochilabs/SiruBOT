@@ -4,6 +4,7 @@ import type { VoiceState } from 'discord.js';
 import { truncateText } from '../../../../lib/text.ts';
 import type { CustomPlayer } from '../../../music/index.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
+import { isMessageFeatureEnabled } from '../../../../services/guildSettings/modules.ts';
 
 /** 읽을 이름 상한 — 긴 닉네임이 안내를 늘리지 않게 자른다 */
 const ANNOUNCE_NAME_MAX_CHARS = 20;
@@ -42,6 +43,7 @@ export class TtsMemberAnnounceListener extends Listener {
 		if (!joined && !left) return;
 
 		if (!this.container.ttsService.isEnabled()) return;
+		if (!(await isMessageFeatureEnabled(this.container.guildService, guildId, 'chat-tts'))) return;
 		const enabled = joined
 			? await guildChatPolicy.getTtsJoinAnnounce(this.container.guildService, guildId)
 			: await guildChatPolicy.getTtsLeaveAnnounce(this.container.guildService, guildId);

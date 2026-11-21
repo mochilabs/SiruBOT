@@ -174,6 +174,8 @@ async function readCapped(body: ReadableStream<Uint8Array>): Promise<{ bytes: Bu
 
 export const webFetchTool: AiTool = {
 	name: 'web_fetch',
+	effect: 'read',
+	returnsExternalContent: true,
 	description:
 		'웹 페이지의 본문 텍스트를 가져와요. web_search 결과 URL의 원문이 필요하거나 사용자가 준 주소를 요약할 때 써요. http/https만 가능하고 텍스트(HTML·plain)만 읽어요. 결과의 text를 바탕으로 한국어로 요약하세요.',
 	properties: {
