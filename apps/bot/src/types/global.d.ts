@@ -54,8 +54,12 @@ declare module '@sapphire/pieces' {
 		aiChatHistory: import('../features/ai-chat/index.ts').ChannelHistoryStore;
 		/** 카운팅 채널 상태(샤드 메모리 + Redis write-behind) 소유자 */
 		countingState: import('../features/counting/index.ts').CountingStateStore;
+		/** 스타보드 반응 디바운스·게시·갱신 소유자 (features/starboard/application/starboardService.ts) */
+		starboardService: import('../features/starboard/index.ts').StarboardService;
 		/** 재생 이벤트 data-api 리포트 소유자 — 진행 중인 요청을 종료 때 기다려요 */
 		playbackReporter: PlaybackReporter;
+		/** 장애 공지 읽기 (Redis 키, 30초 캐시) — 오류 화면·재생 실패 알림에 덧붙여요 */
+		incidentNotice: import('../services/incidentNotice.ts').IncidentNoticeService;
 		/** 서버 생명주기 기록 (들어옴·나감·안내·첫 사용) */
 		guildLifecycle: import('../services/guildLifecycle.ts').GuildLifecycleService;
 		/** 기능 사용 지표 메모리 집계 + 60초 flush 소유자 (종료 시 stop()이 flush) */
@@ -94,6 +98,7 @@ declare module '@sapphire/pieces' {
 declare module '@sapphire/framework' {
 	interface Preconditions {
 		ManageGuild: never;
+		ModuleEnabled: never;
 		OwnerOnly: never;
 
 		DJOrAlone: never;

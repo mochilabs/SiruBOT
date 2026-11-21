@@ -7,6 +7,7 @@ import {
   normalizeSponsorBlockSegments,
   normalizeTtsAnnounceMode,
 } from "@sirubot/utils/guildSettingsContract";
+import { sanitizeDisabledModules } from "@sirubot/utils/modules";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { notifyGuildSettingsChanged } from "@/lib/data-api/client";
@@ -64,6 +65,7 @@ function toSettings(guild: PrismaGuild | null): GuildSettings {
     embedFixTranslateLang: normalizeEmbedFixTranslateLang(guild.embedFixTranslateLang),
     countingEnabled: guild.countingEnabled,
     countingChannelId: guild.countingChannelId,
+    disabledModules: sanitizeDisabledModules(guild.disabledModules),
   };
 }
 
@@ -95,6 +97,8 @@ export const PUT = createGuildApiHandler({
       if (!body.ok) return body.response;
 
       const data = normalizeMixerToggles(body.data);
+      // 모르는 id와 끌 수 없는 모듈(관리)은 저장해도 무시해요 — 봇도 읽을 때 같은 규칙으로 걸러요
+      if (data.disabledModules) data.disabledModules = sanitizeDisabledModules(data.disabledModules);
       if (Object.keys(data).length > 0) {
         await db.guild.upsert({
           where: { id: guildId },

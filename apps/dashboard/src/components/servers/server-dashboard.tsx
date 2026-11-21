@@ -9,12 +9,14 @@ import {
   Bot,
   Hash,
   Images,
+  LayoutGrid,
   MessageSquare,
   Music,
   Radio,
   ShieldAlert,
   ShieldCheck,
   SquareSlash,
+  Star,
   Ticket,
   UserPlus,
   UserRoundCog,
@@ -35,6 +37,7 @@ function TabLoadingFallback() {
   return <PanelLoading label="불러오는 중…" decorative />;
 }
 
+const ModulesSettings = dynamic(() => import("./modules-settings").then((m) => m.ModulesSettings), { loading: TabLoadingFallback });
 const AiSettings = dynamic(() => import("./ai-settings").then((m) => m.AiSettings), { loading: TabLoadingFallback });
 const CustomCommandsSettings = dynamic(() => import("./custom-commands-settings").then((m) => m.CustomCommandsSettings), { loading: TabLoadingFallback });
 const AssetsSettings = dynamic(() => import("./assets-settings").then((m) => m.AssetsSettings), { loading: TabLoadingFallback });
@@ -48,8 +51,10 @@ const JtcSettings = dynamic(() => import("./jtc-settings").then((m) => m.JtcSett
 const SocialAlertsSettings = dynamic(() => import("./social-alerts-settings"), { loading: TabLoadingFallback });
 const MemberGreetingSettings = dynamic(() => import("./member-greeting-settings").then((m) => m.MemberGreetingSettings), { loading: TabLoadingFallback });
 const TicketSettings = dynamic(() => import("./ticket-settings").then((m) => m.TicketSettings), { loading: TabLoadingFallback });
+const StarboardSettings = dynamic(() => import("./starboard-settings").then((m) => m.StarboardSettings), { loading: TabLoadingFallback });
 const RolePanelsSettings = dynamic(() => import("./role-panels-settings").then((m) => m.RolePanelsSettings), { loading: TabLoadingFallback });
 const ICONS = {
+  modules: <LayoutGrid size={14} />,
   ai: <Bot size={14} />,
   "custom-commands": <SquareSlash size={14} />,
   assets: <Images size={14} />,
@@ -63,6 +68,7 @@ const ICONS = {
   social: <Bell size={14} />,
   greeting: <UserPlus size={14} />,
   ticket: <Ticket size={14} />,
+  starboard: <Star size={14} />,
   "role-panels": <ShieldCheck size={14} />,
 } as const;
 // 탭 목록(키·라벨)은 server-tabs.ts가 단일 소스예요 — loading.tsx 스켈레톤도 여기를 따라가요
@@ -193,6 +199,7 @@ export function ServerDashboard({
                 <SettingsPanelActive.Provider value={tab === item.key}>
                 {visitedTabs.has(item.key) && (
                   <Fragment key={panelResets[item.key] ?? 0}>
+                    {item.key === "modules" && <ModulesSettings guildId={guildId} />}
                     {item.key === "ai" && <AiSettings guildId={guildId} />}
                     {item.key === "custom-commands" && (
                       <CustomCommandsSettings guildId={guildId} />
@@ -228,6 +235,9 @@ export function ServerDashboard({
                     )}
                     {item.key === "ticket" && (
                       <TicketSettings guildId={guildId} />
+                    )}
+                    {item.key === "starboard" && (
+                      <StarboardSettings guildId={guildId} />
                     )}
                     {item.key === "role-panels" && (
                       <RolePanelsSettings guildId={guildId} />

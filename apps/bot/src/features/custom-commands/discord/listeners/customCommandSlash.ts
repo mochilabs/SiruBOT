@@ -16,7 +16,8 @@ import { CUSTOM_COMMAND_MAX_ARGS, emoji, normalizeCustomCommandName } from '@sir
 import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../application/context.ts';
 import { runCustomCommandSpec, type CustomCommandContext } from '../../application/interpreter.ts';
 import { customCommandDesignView } from '../views/customCommand.ts';
-import { usageFeatureKey } from '@sirubot/utils/modules';
+import { moduleDisabledMessage, usageFeatureKey } from '@sirubot/utils/modules';
+import { isMessageFeatureEnabled } from '../../../../services/guildSettings/modules.ts';
 
 /** 인터랙션 1건을 처리해요. 이 봇의 슬래시형 커스텀 명령어가 아니면 false를 돌려줘요. */
 export async function handleCustomCommandSlashInteraction(interaction: ChatInputCommandInteraction): Promise<boolean> {
@@ -25,6 +26,16 @@ export async function handleCustomCommandSlashInteraction(interaction: ChatInput
 	if (!guild) return false;
 	const entry = await container.customCommandStore.findCustomCommand(interaction.guildId, normalizeCustomCommandName(interaction.commandName));
 	if (!entry || entry.method !== 'slash') return false;
+
+	// 커뮤니티 모듈이 꺼진 서버: 슬래시형 커스텀 명령어도 같은 문구로 거절해요 (P-06)
+	if (!(await isMessageFeatureEnabled(container.guildService, interaction.guildId, 'custom-command'))) {
+		await interaction.reply({
+			components: [noticeView(moduleDisabledMessage('community'))],
+			flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral],
+			allowedMentions: { parse: [] }
+		});
+		return true;
+	}
 
 	await interaction.deferReply();
 

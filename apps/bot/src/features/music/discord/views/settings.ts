@@ -16,6 +16,7 @@ import {
 } from 'discord.js';
 import { Guild } from '@sirubot/prisma';
 import { emoji, createContainer, type AppEmojiFallbackKey } from '@sirubot/utils';
+import { BOT_MODULES, isModuleDisabled } from '@sirubot/utils/modules';
 import { SPONSORBLOCK_SEGMENTS as SPONSORBLOCK_SEGMENT_NAMES, type SponsorBlockSegment } from '@sirubot/utils/guildSettingsContract';
 import { settingsId } from '../customIds.ts';
 import { jtcEmptyGraceText } from '../../../temp-voice/index.ts';
@@ -99,7 +100,8 @@ function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuil
 		`${emoji('scroll')} **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
 		`${emoji('music_note')} **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,
 		`${emoji('pin')} **고정 채널**: ${guild.pinnedChannelId ? `<#${guild.pinnedChannelId}>` : '설정 안 됨'}`,
-		`${emoji('volume_up')} **임시 음성 채널**: ${guild.jtcEnabled ? '켜짐' : '꺼짐'}`
+		`${emoji('volume_up')} **임시 음성 채널**: ${guild.jtcEnabled ? '켜짐' : '꺼짐'}`,
+		`${emoji('tools')} **기능 모듈**: ${moduleSummary(guild)}`
 	];
 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
@@ -122,7 +124,34 @@ function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuil
 		)
 	);
 
+	// 기능 모듈 켜기/끄기 (P-06): 켜져 있는 모듈이 선택된 상태예요. 관리 모듈은 끌 수 없어서 목록에 없어요.
+	const toggleable = BOT_MODULES.filter((m) => m.toggleable);
+	container.addActionRowComponents(
+		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+			new StringSelectMenuBuilder()
+				.setCustomId(settingsId.encode('selectModules'))
+				.setPlaceholder('이 서버에서 쓸 기능을 고르세요')
+				.setMinValues(0)
+				.setMaxValues(toggleable.length)
+				.addOptions(
+					toggleable.map((m) => ({
+						label: m.label,
+						value: m.id,
+						emoji: { name: m.emoji },
+						description: m.description,
+						default: !isModuleDisabled(guild.disabledModules, m.id)
+					}))
+				)
+		)
+	);
+
 	return container;
+}
+
+/** 첫 화면 요약 한 줄 — 꺼진 모듈 이름만 보여줘요 */
+function moduleSummary(guild: Guild): string {
+	const off = BOT_MODULES.filter((m) => isModuleDisabled(guild.disabledModules, m.id)).map((m) => m.label);
+	return off.length > 0 ? `${off.join(', ')} 꺼짐` : '모두 켜짐';
 }
 
 function buildMusicView(container: ContainerBuilder, guild: Guild): ContainerBuilder {

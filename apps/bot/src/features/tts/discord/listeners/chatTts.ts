@@ -4,6 +4,7 @@ import { ChannelType, Message } from 'discord.js';
 import { isChannelToggleEnabled } from '../../../../services/guildService.ts';
 import { preprocessTtsMessage } from '../../application/chatTts.ts';
 import type { CustomPlayer } from '../../../music/index.ts';
+import { isMessageFeatureEnabled } from '../../../../services/guildSettings/modules.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 import { usageFeatureKey } from '@sirubot/utils/modules';
 
@@ -32,6 +33,7 @@ export class ChatTtsListener extends Listener {
 
 		const content = message.content?.trim();
 		if (!content) return;
+		if (!(await isMessageFeatureEnabled(this.container.guildService, message.guildId, 'chat-tts'))) return;
 
 		// 봇이 음성에 연결돼 있을 때만 읽는다 — 자동 조인은 하지 않는다 (명세 4.1)
 		const player = this.container.audio.getPlayer(message.guildId) as CustomPlayer | null | undefined;

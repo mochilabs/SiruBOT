@@ -4,6 +4,7 @@ import type { AiTool } from './types.ts';
 
 export const deliveryTool: AiTool = {
 	name: 'delivery_track',
+	effect: 'read',
 	description:
 		'택배 배송 상태를 조회해요. tracking_number(운송장 번호)와 carrier(택배사: 대한통운, 우체국, 로젠 등)가 필요해요. 택배사 이름을 모르면 사용자에게 물어보세요.',
 	properties: {

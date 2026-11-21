@@ -11,6 +11,7 @@ import type { ILogObj, Logger } from 'tslog';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { GuildService } from '../../../services/guildService.ts';
 import type { DataApiClient } from '../../../services/dataApiClient.ts';
+import type { IncidentNoticeService } from '../../../services/incidentNotice.ts';
 import type { ChatTtsService } from '../../tts/index.ts';
 import type { TrackService } from '../application/trackService.ts';
 import type { MixerService } from '../application/mixerService.ts';
@@ -52,6 +53,8 @@ export interface LavalinkDeps {
 	readonly dataApi: DataApiClient;
 	readonly chatTtsService: ChatTtsService;
 	readonly playbackReporter: PlaybackReporter;
+	/** 장애 공지 — 재생 실패 알림 끝에 한 줄 덧붙여요 */
+	readonly incidentNotice: IncidentNoticeService;
 	readonly sponsorBlockService: SponsorBlockService;
 	readonly mixerService: MixerService;
 	readonly playerNotifier: PlayerNotifier;

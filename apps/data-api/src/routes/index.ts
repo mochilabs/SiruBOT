@@ -23,6 +23,7 @@ import { registerStorageProxyRoutes } from './storage.ts';
 import { registerTtsRoutes } from './tts.ts';
 import { registerBotAdminRoutes } from './bot-admin.ts';
 import { registerPanelRoutes } from './panel.ts';
+import { registerIncidentNoticeRoutes } from './incident-notice.ts';
 
 export interface RouteDeps {
 	translationProvider: OpenAICompatTranslationProvider;
@@ -85,6 +86,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	registerStorageProxyRoutes(fastify, { storageUrl: deps.storageUrl, storageAuthKey: deps.storageAuthKey });
 	registerTtsRoutes(fastify, { ttsUrl: deps.ttsUrl });
 	registerBotAdminRoutes(fastify);
+	registerIncidentNoticeRoutes(fastify);
 	registerPanelRoutes(fastify);
 
 	// 소셜 알림 프록시 — 구독 도메인은 notifier가 단일 소유해요.

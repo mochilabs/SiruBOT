@@ -22,7 +22,7 @@ const GENERIC = '기본 오류 문구';
 describe('presentError', () => {
 	it('UserError는 메시지를 그대로 쓰고 보고하지 않으며 기본은 전체공개예요', () => {
 		const result = presentError(new UserError({ identifier: 'x', message: '안내예요.' }), GENERIC);
-		expect(result).toEqual({ userFacing: true, message: '안내예요.', ephemeral: false, report: false });
+		expect(result).toEqual({ userFacing: true, message: '안내예요.', ephemeral: false, report: false, showSupport: false });
 	});
 
 	it('UserError의 context.ephemeral을 따라요', () => {
@@ -39,7 +39,7 @@ describe('presentError', () => {
 		['internal', true]
 	])('AppError(%s)는 report=%s예요', (kind, report) => {
 		const result = presentError(new AppError(kind, '사용자 문구'), GENERIC);
-		expect(result).toEqual({ userFacing: true, message: '사용자 문구', ephemeral: report, report });
+		expect(result).toEqual({ userFacing: true, message: '사용자 문구', ephemeral: report, report, showSupport: report });
 	});
 
 	it('AppError의 ephemeral 옵션이 기본값보다 우선해요', () => {
@@ -48,12 +48,18 @@ describe('presentError', () => {
 	});
 
 	it('일반 Error는 호출자 기본 문구로 보고 대상이에요', () => {
-		expect(presentError(new Error('boom'), GENERIC)).toEqual({ userFacing: false, message: GENERIC, ephemeral: true, report: true });
+		expect(presentError(new Error('boom'), GENERIC)).toEqual({
+			userFacing: false,
+			message: GENERIC,
+			ephemeral: true,
+			report: true,
+			showSupport: true
+		});
 	});
 
 	it('Error가 아닌 값도 안전하게 처리해요', () => {
 		for (const value of ['문자열', 42, null, undefined, { a: 1 }]) {
-			expect(presentError(value, GENERIC)).toEqual({ userFacing: false, message: GENERIC, ephemeral: true, report: true });
+			expect(presentError(value, GENERIC)).toEqual({ userFacing: false, message: GENERIC, ephemeral: true, report: true, showSupport: true });
 		}
 	});
 });

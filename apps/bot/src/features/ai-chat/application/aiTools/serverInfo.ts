@@ -5,6 +5,7 @@ import type { AiTool } from './types.ts';
 export function createServerInfoTool(deps: Pick<AiToolDeps, 'db' | 'getClient'>): AiTool {
 	return {
 		name: 'server_info',
+		effect: 'read',
 		description:
 			'현재 디스코드 서버(길드)의 기본 정보(서버 이름, 멤버 수, 텍스트/음성 채널 수, 서버 생성일, 티켓 시스템 활성화 여부 등)를 조회해요. ' +
 			'사용자가 서버 현황, 인원 수, 개설일, 문의 방법/티켓 설정 등을 물어볼 때 사용하세요.',
