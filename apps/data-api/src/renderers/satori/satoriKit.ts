@@ -4,11 +4,12 @@
  */
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 import type { Resvg as ResvgType } from '@resvg/resvg-js';
 import type { Font } from 'satori';
 import satori from 'satori';
-import { CARD_FONT, type SatoriElement } from '@sirubot/cards';
+import { CARD_FONT, createAsyncLru, type SatoriElement, twemojiCandidates } from '@sirubot/cards';
 import { getLogger } from '../../utils/logger.ts';
 import { getIconDef, type IconName } from '../canvas/icons.ts';
 import { isAllowedImageUrl } from '../canvas/images.ts';
@@ -55,6 +56,30 @@ export function loadCardFonts(): Promise<Font[]> {
 /** 투명한 1x1 SVG — 이모지 자리를 비워 두는 용도예요. */
 const EMPTY_EMOJI = `data:image/svg+xml;base64,${Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>').toString('base64')}`;
 
+/** `@twemoji/svg` 파일 폴더 — 패키지를 못 찾으면 null (이모지는 빈칸으로 그려요). */
+const TWEMOJI_DIR = (() => {
+	try {
+		return dirname(createRequire(import.meta.url).resolve('@twemoji/svg/package.json'));
+	} catch {
+		logger.warn('@twemoji/svg를 찾지 못했어요. satori 카드의 이모지가 빈칸으로 그려져요.');
+		return null;
+	}
+})();
+
+/** 색 이모지 한 글자 → Twemoji SVG data URI. 없는 이모지는 빈칸이에요. 최근 500개를 기억해요. */
+const loadEmoji = createAsyncLru<string>(500, async (segment) => {
+	if (!TWEMOJI_DIR) return EMPTY_EMOJI;
+	for (const code of twemojiCandidates(segment)) {
+		try {
+			const svg = await readFile(join(TWEMOJI_DIR, `${code}.svg`));
+			return `data:image/svg+xml;base64,${svg.toString('base64')}`;
+		} catch {
+			// 다음 후보를 시도해요
+		}
+	}
+	return EMPTY_EMOJI;
+});
+
 type SatoriInput = Parameters<typeof satori>[0];
 
 let resvgPromise: Promise<typeof import('@resvg/resvg-js')> | null = null;
@@ -94,10 +119,12 @@ export async function renderSatoriPng(node: SatoriElement, size: { width: number
 		{
 			...layoutSize,
 			fonts,
-			// 색 이모지는 아직 지원하지 않아요 — 깨진 글리프(tofu) 대신 빈칸으로 두고, 폰트에 없는 글자는 건너뛰어요.
+			// 색 이모지는 Twemoji SVG로 그려요 (없는 이모지는 빈칸).
 			// 600·900 서브셋엔 한자가 없어서, 폰트에 없는 글자(한자 등)는 한자를 담은 400 가변 원본으로 그려요.
-			loadAdditionalAsset: async (code) =>
-				code === 'emoji' ? EMPTY_EMOJI : fonts.slice(0, 1).map((font) => ({ ...font, name: `${CARD_FONT}-fallback-${code}` }))
+			loadAdditionalAsset: async (code, segment) =>
+				code === 'emoji'
+					? ((await loadEmoji(segment)) ?? EMPTY_EMOJI)
+					: fonts.slice(0, 1).map((font) => ({ ...font, name: `${CARD_FONT}-fallback-${code}` }))
 		} as Parameters<typeof satori>[1]
 	);
 	const rendered = await renderSvgAsync(svg, { fitTo: { mode: 'width', value: outputWidth ?? size.width } });

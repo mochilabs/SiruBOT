@@ -136,7 +136,7 @@ describe('greetingCard — 텍스트', () => {
 		expect(textOf(layerNodes(root)[0]!)).toBe('시루 시루 시루봇 서버 42');
 	});
 
-	it('색 이모지는 지우고, 비면 글자 노드를 만들지 않아요', () => {
+	it('색 이모지는 그대로 두고(렌더러가 Twemoji로 그려요), 비면 글자 노드를 만들지 않아요', () => {
 		const make = (value: string) =>
 			layerNodes(
 				greetingCard(
@@ -144,8 +144,9 @@ describe('greetingCard — 텍스트', () => {
 					vars
 				)
 			)[0]!;
-		expect(textOf(make('환영해요 🎉'))).toBe('환영해요');
-		expect(textOf(make('🎉'))).toBeNull();
+		expect(textOf(make('환영해요 🎉'))).toBe('환영해요 🎉');
+		expect(textOf(make('🎉'))).toBe('🎉');
+		expect(textOf(make('   '))).toBeNull();
 	});
 });
 

@@ -24,6 +24,7 @@
         "@sirubot/isrc": "*",
         "@sirubot/prisma": "*",
         "@sirubot/utils": "*",
+        "@twemoji/svg": "15.0.0",
         "fastify": "^5.12.7",
         "satori": "^0.63.2",
         "skia-canvas": "^3.0.8",

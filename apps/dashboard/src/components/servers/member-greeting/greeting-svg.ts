@@ -1,4 +1,4 @@
-import { CARD_FONT, greetingCard } from "@sirubot/cards";
+import { CARD_FONT, greetingCard, twemojiCandidates, twemojiCdnUrl } from "@sirubot/cards";
 import {
   GREETING_CARD_H,
   GREETING_CARD_W,
@@ -48,10 +48,36 @@ function loadRuntime() {
   return runtimePromise;
 }
 
-/** 투명한 1x1 SVG — 색 이모지 자리를 비워 두는 용도예요 (greetingCard가 이모지를 지워서 거의 쓰이지 않아요). */
+/** 투명한 1x1 SVG — 그림이 없는 이모지 자리를 비워 두는 용도예요. */
 const EMPTY_EMOJI = `data:image/svg+xml;utf8,${encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>',
 )}`;
+
+/**
+ * 색 이모지 → Twemoji SVG data URI. 서버(data-api `@twemoji/svg`)와 같은 버전을 jsDelivr에서 받아요.
+ * SVG를 <img>로 보여주면 외부 리소스를 못 읽어서 data URI로 넣어요. 실패하면 빈칸이고, 같은 글자는 다시 받지 않아요.
+ */
+const emojiCache = new Map<string, Promise<string>>();
+
+function loadEmojiDataUri(segment: string): Promise<string> {
+  let hit = emojiCache.get(segment);
+  if (!hit) {
+    hit = (async () => {
+      for (const code of twemojiCandidates(segment)) {
+        try {
+          const res = await fetch(twemojiCdnUrl(code));
+          if (!res.ok) continue;
+          return `data:image/svg+xml;utf8,${encodeURIComponent(await res.text())}`;
+        } catch {
+          // 다음 후보를 시도해요
+        }
+      }
+      return EMPTY_EMOJI;
+    })();
+    emojiCache.set(segment, hit);
+  }
+  return hit;
+}
 
 /** 아바타 URL → data URI. SVG를 <img>로 보여주면 외부 리소스를 못 읽어서 이미지를 SVG 안에 넣어야 해요. 실패하면 null(자리표시자). */
 const avatarCache = new Map<string, Promise<string | null>>();
@@ -108,9 +134,9 @@ export async function renderGreetingSvg(
     height: GREETING_CARD_H,
     fonts,
     // 폰트에 없는 글자(한자 등)는 600 서브셋으로 그려요 — 서버와 달리 가변 원본이 없어 빈 글리프로 남을 수 있어요.
-    loadAdditionalAsset: async (code: string) =>
+    loadAdditionalAsset: async (code: string, segment: string) =>
       code === "emoji"
-        ? EMPTY_EMOJI
+        ? loadEmojiDataUri(segment)
         : fonts.slice(0, 1).map((font) => ({ ...font, name: `${CARD_FONT}-fallback-${code}` })),
   });
 }

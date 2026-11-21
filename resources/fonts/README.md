@@ -19,3 +19,8 @@
 - twemoji-colr v0.7.0 — 카드 캔버스의 색 이모지 렌더와 대시보드 이모지 폴백에 써요.
 - 폰트 코드: Apache License 2.0 (Copyright 2016-2018 Mozilla Foundation, <https://github.com/mozilla/twemoji-colr>)
 - 이모지 아트: Twemoji by Twitter, Inc and other contributors — **CC-BY 4.0** (<https://github.com/jdecked/twemoji>). CC-BY 4.0 고지 조건은 대시보드 `/licenses` 페이지에서 이행해요.
+
+## Twemoji SVG (`@twemoji/svg` 15.0.0)
+
+- satori 카드는 색 이모지 폰트를 못 그려서, 이모지마다 Twemoji SVG를 이미지로 넣어요 (`packages/cards/src/emoji.ts`). data-api는 `@twemoji/svg` 패키지 파일을, 대시보드 인사 카드 미리보기는 같은 버전을 jsDelivr에서 받아요. 버전을 바꾸면 `TWEMOJI_VERSION`과 data-api 의존성을 함께 바꿔요.
+- 이모지 아트 라이선스는 위 TwemojiMozilla와 같은 CC-BY 4.0이에요 (대시보드 `/licenses`에서 고지).

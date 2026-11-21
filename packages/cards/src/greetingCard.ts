@@ -18,7 +18,7 @@ import {
 	type GreetingShapeLayer,
 	type GreetingTextLayer
 } from '@sirubot/utils/memberGreeting';
-import { CARD_FONT, h, img, stripEmoji, type SatoriChild, type SatoriElement } from './kit.js';
+import { CARD_FONT, h, img, type SatoriChild, type SatoriElement } from './kit.js';
 import { W } from './tokens.js';
 
 /** 텍스트 좌우 여백 — 카드 가장자리에 붙지 않게 (skia 렌더러와 같은 값) */
@@ -95,10 +95,12 @@ function round(value: number): number {
  */
 function textNode(layer: GreetingTextLayer, vars: GreetingCardVars): SatoriElement {
 	// 이미지 카드에는 멘션을 못 그려요 — {유저}는 표시 이름으로 폴백해요 (renderGreetingTemplate 계약).
-	// 색 이모지는 satori가 못 그려서 지워요 (남기면 이모지 폭만큼 빈칸이 생겨요).
-	const text = stripEmoji(
-		renderGreetingTemplate(layer.text, { displayName: vars.displayName, guildName: vars.guildName, memberCount: vars.memberCount })
-	);
+	// 색 이모지는 렌더러의 loadAdditionalAsset이 Twemoji SVG로 그려요 (emoji.ts).
+	const text = renderGreetingTemplate(layer.text, {
+		displayName: vars.displayName,
+		guildName: vars.guildName,
+		memberCount: vars.memberCount
+	}).trim();
 	const { cx, cy } = center(layer);
 	const maxW = Math.max(120, 2 * Math.min(cx, GREETING_CARD_W - cx) - TEXT_MARGIN);
 	const boxH = Math.ceil(layer.size * 1.5);

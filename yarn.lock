@@ -3643,6 +3643,7 @@ __metadata:
     "@sirubot/isrc": "npm:*"
     "@sirubot/prisma": "npm:*"
     "@sirubot/utils": "npm:*"
+    "@twemoji/svg": "npm:15.0.0"
     fastify: "npm:^5.12.7"
     satori: "npm:^0.63.2"
     skia-canvas: "npm:^3.0.8"
@@ -4165,6 +4166,13 @@ __metadata:
   version: 2.11.10
   resolution: "@turbo/windows-arm64@npm:2.11.10"
   conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@twemoji/svg@npm:15.0.0":
+  version: 15.0.0
+  resolution: "@twemoji/svg@npm:15.0.0"
+  checksum: 10c0/c313da7dd640056463a887a31a7f7f1dde88b21126fe42e4063e5c7e674d6887daeae2783bd5f92ecac3edb2ca1362561d4c5c65da4007acaa95af01af96bfec
   languageName: node
   linkType: hard
 
