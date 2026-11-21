@@ -10,3 +10,10 @@ export const evalId = defineCustomId({
 	version: 1,
 	actions: { modal: {}, code: {} }
 });
+
+/** `/도움말` 카테고리 셀렉트 — `views/help.ts` ↔ `help/helpSession.ts`(컬렉터) */
+export const helpId = defineCustomId({
+	namespace: 'help',
+	version: 1,
+	actions: { category: {} }
+});
