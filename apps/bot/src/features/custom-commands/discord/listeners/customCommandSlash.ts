@@ -16,6 +16,7 @@ import { CUSTOM_COMMAND_MAX_ARGS, emoji, normalizeCustomCommandName } from '@sir
 import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../application/context.ts';
 import { runCustomCommandSpec, type CustomCommandContext } from '../../application/interpreter.ts';
 import { customCommandDesignView } from '../views/customCommand.ts';
+import { usageFeatureKey } from '@sirubot/utils/modules';
 
 /** 인터랙션 1건을 처리해요. 이 봇의 슬래시형 커스텀 명령어가 아니면 false를 돌려줘요. */
 export async function handleCustomCommandSlashInteraction(interaction: ChatInputCommandInteraction): Promise<boolean> {
@@ -70,6 +71,7 @@ export async function handleCustomCommandSlashInteraction(interaction: ChatInput
 		}
 	};
 
+	container.usageRecorder?.record(interaction.guildId, usageFeatureKey('msg', 'custom-command'), interaction.user.id);
 	const result = await runCustomCommandSpec(entry.spec, ctx);
 	const notice = customCommandNotice(result, `\`/${entry.name}\``);
 	if (notice) await notify(notice);

@@ -11,6 +11,7 @@ import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 import { actorFromMember } from '../../application/actor.ts';
 import { trackPlayFeedback } from '../utils/playFeedback.ts';
 import { RESULT_LIMIT, SELECT_TIMEOUT_MS } from '../utils/searchSelect.ts';
+import { usageFeatureKey } from '@sirubot/utils/modules';
 
 /** 검색어로 취급할 최대 길이 — 일반 대화로 보이는 긴 메시지는 거절 안내를 보낸다. */
 const MAX_QUERY_LENGTH = 100;
@@ -101,6 +102,7 @@ export class CommandChannelListener extends Listener {
 				pinTextChannel: true
 			};
 
+			this.container.usageRecorder?.record(guildId, usageFeatureKey('msg', 'music-channel'), message.author.id);
 			const mode = await guildChannels.getPinnedChannelMode(this.container.guildService, guildId);
 			if (mode === 'select') {
 				const found = await this.container.musicPlay.search(actor, input);

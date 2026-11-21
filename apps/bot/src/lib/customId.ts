@@ -128,6 +128,17 @@ export function registeredCustomIdNamespaces(): string[] {
 	return [...registry];
 }
 
+/**
+ * customId의 namespace — 선언된 namespace일 때만 돌려줘요 (사용 지표가 버튼·셀렉트를 기능으로 묶을 때 써요).
+ * 커스텀 명령 버튼 등 `defineCustomId`로 만들지 않은 ID는 null이에요.
+ */
+export function customIdNamespace(customId: string): string | null {
+	const sep = customId.indexOf(':');
+	if (sep <= 0) return null;
+	const namespace = customId.slice(0, sep);
+	return registry.has(namespace) ? namespace : null;
+}
+
 /** 테스트에서 선언을 비울 때만 써요. */
 export function resetCustomIdRegistryForTesting(): void {
 	registry.clear();

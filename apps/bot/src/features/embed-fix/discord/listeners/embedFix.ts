@@ -29,6 +29,7 @@ import { fetchEmbedFixMetadata } from '../../application/embedFixGateway.ts';
 import { dataApiAuthHeaders, gatewayBaseUrl } from '../../../../lib/dataApi.ts';
 import { isChannelToggleEnabled } from '../../../../services/guildService.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
+import { usageFeatureKey } from '@sirubot/utils/modules';
 
 const EMBED_FIX_COOLDOWN_MS = 3_000;
 const BOOTH_FETCH_TIMEOUT_MS = 10_000;
@@ -61,6 +62,7 @@ export class EmbedFixListener extends Listener {
 			if (this.cooldowns.has(cooldownKey)) return;
 			this.cooldowns.set(cooldownKey, true);
 
+			this.container.usageRecorder?.record(message.guildId, usageFeatureKey('msg', 'embed-fix'), message.author.id);
 			const payloads = await this.buildPayloads(links, settings.embedFixTranslateLang);
 			if (payloads.length > 0) await this.sendPayloads(message, payloads);
 
