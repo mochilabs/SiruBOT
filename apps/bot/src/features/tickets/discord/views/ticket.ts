@@ -74,31 +74,6 @@ export function ticketWelcomeView(ticket: Ticket): { flags: number; components: 
 }
 
 /**
- * 티켓 닫기 확인 프롬프트 (Ephemeral)
- */
-export function ticketCloseConfirmView(): { flags: number; components: [ContainerBuilder, ActionRowBuilder<ButtonBuilder>] } {
-	const container = new ContainerBuilder()
-		.setAccentColor(DEFAULT_COLOR)
-		.addTextDisplayComponents(
-			new TextDisplayBuilder().setContent(
-				`### ${emoji('lock')} 티켓을 닫으시겠어요?\n닫기를 누르면 유저의 채널 접근이 종료되고 티켓이 마감돼요.`
-			)
-		);
-	const confirmButton = new ButtonBuilder()
-		.setCustomId(ticketId.encode('confirmClose'))
-		.setLabel('확인하고 닫기')
-		.setEmoji(emoji('lock'))
-		.setStyle(ButtonStyle.Danger);
-	const cancelButton = new ButtonBuilder().setCustomId(ticketId.encode('cancelClose')).setLabel('취소').setStyle(ButtonStyle.Secondary);
-	const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton, cancelButton);
-
-	return {
-		flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-		components: [container, actionRow]
-	};
-}
-
-/**
  * 티켓 명령어 처리 결과 피드백 뷰 (Components V2)
  */
 export function ticketMessageView(message: string): { flags: number; components: [ContainerBuilder] } {

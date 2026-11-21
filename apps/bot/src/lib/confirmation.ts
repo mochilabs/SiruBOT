@@ -1,12 +1,17 @@
 import { emoji } from '@sirubot/utils';
 import { randomUUID } from 'node:crypto';
-import { ComponentType, MessageFlags, type ChatInputCommandInteraction } from 'discord.js';
+import { ComponentType, MessageFlags, type ButtonInteraction, type ChatInputCommandInteraction } from 'discord.js';
 import { confirmationView } from './confirmationView.ts';
 import { confirmId } from './confirmationId.ts';
 import { ownerOnly } from './ownerOnlyFilter.ts';
 import { notice } from './notice.ts';
 
-export async function confirmAction(interaction: ChatInputCommandInteraction, title: string, description: string): Promise<boolean> {
+/** 응답을 이미 defer한 슬래시 명령어·버튼 상호작용에서 확인 버튼을 띄워요. */
+export async function confirmAction(
+	interaction: ChatInputCommandInteraction | ButtonInteraction,
+	title: string,
+	description: string
+): Promise<boolean> {
 	const sessionId = randomUUID();
 	const message = await interaction.editReply({
 		components: [confirmationView(sessionId, title, description)],

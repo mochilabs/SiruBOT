@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import TicketButtonHandler from './ticketButton.ts';
-import { ticketCloseConfirmView, ticketPanelView, ticketWelcomeView } from '../views/ticket.ts';
+import { ticketPanelView, ticketWelcomeView } from '../views/ticket.ts';
 import { ticketId } from '../customIds.ts';
 
 vi.mock('@sapphire/framework', () => ({
@@ -26,13 +26,12 @@ describe('ticket custom ids', () => {
 	it('every button the views render is decoded by the handler', () => {
 		const panel = ids(ticketPanelView({ panelTitle: 't', panelDescription: 'd' } as never));
 		const welcome = ids(ticketWelcomeView({ ownerId: '1', ticketNumber: 1, claimedById: null } as never));
-		const confirm = ids(ticketCloseConfirmView());
-		const actions = [...panel, ...welcome, ...confirm].map((id) => {
+		const actions = [...panel, ...welcome].map((id) => {
 			const parsed = parse(id);
 			return parsed.isSome() ? (parsed.unwrap() as { action: string }).action : null;
 		});
-		expect(actions).toEqual(['open', 'close', 'claim', 'confirmClose', 'cancelClose']);
-		expect(ticketId.encode('confirmClose')).toBe('ticket:v1:confirmClose');
+		expect(actions).toEqual(['open', 'close', 'claim']);
+		expect(ticketId.encode('close')).toBe('ticket:v1:close');
 	});
 
 	it.each(['ticket:open', 'ticket:close', 'ticket:confirm_close', 'ticket:v2:open', 'ticket:v1:bogus', 'role:v1:open'])(

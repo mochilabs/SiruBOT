@@ -2,7 +2,8 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { ButtonInteraction, MessageFlags } from 'discord.js';
 import { ticketId } from '../customIds.ts';
 import { emoji } from '@sirubot/utils';
-import { ticketCloseConfirmView, ticketMessageView } from '../views/ticket.ts';
+import { confirmAction } from '../../../../lib/confirmation.ts';
+import { ticketMessageView } from '../views/ticket.ts';
 
 type TicketAction = NonNullable<ReturnType<typeof ticketId.decode>>['action'];
 
@@ -38,20 +39,14 @@ export default class TicketButtonHandler extends InteractionHandler {
 			}
 
 			case 'close': {
-				// 확인 프롬프트 전송
-				const confirmPayload = ticketCloseConfirmView();
-				await interaction.reply(confirmPayload);
-				return;
-			}
-
-			case 'cancelClose': {
-				await interaction.update(ticketMessageView('티켓 닫기를 취소했어요.'));
-				return;
-			}
-
-			case 'confirmClose': {
-				// 확인 프롬프트 자체를 결과로 교체해 버튼이 남아 재클릭되지 않게 해요.
-				await interaction.deferUpdate();
+				// 확인은 공용 confirmAction으로 받고, 결과는 같은 ephemeral 응답에 이어서 보여줘요.
+				await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+				const confirmed = await confirmAction(
+					interaction,
+					`${emoji('lock')} 티켓을 닫으시겠어요?`,
+					'닫기를 누르면 유저의 채널 접근이 종료되고 티켓이 마감돼요.'
+				);
+				if (!confirmed) return;
 				const result = await ticketService.closeTicket(guild, interaction.channelId, member);
 				if (!result.ok) {
 					await interaction.editReply(ticketMessageView(`${emoji('error')} ${result.reason}`));
