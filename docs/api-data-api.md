@@ -29,7 +29,7 @@ Routes are registered from `routes/index.ts`, one file per domain.
 | Route | Description | Cache TTL | File |
 |---|---|---|---|
 | GET `/v1/ohaasa` | Daily horoscope, translated | 7 days | `routes/ohaasa.ts` |
-| GET `/v1/lyrics?q=` | Lyrics search (lrclib) | 30 days | `routes/cache-providers.ts` |
+| GET `/v1/lyrics?q=` or `?title=&artist=&durationMs=&source=` | Lyrics (lrclib). `q` is a free search (first result). `title` looks up the playing track: LRCLIB `/api/get` first, then a field search that keeps only same-track results (not instrumental, title and artist match, length within 3 s), then the `q` search as a last resort. The response keeps `trackName`, `artistName`, `plainLyrics`, `syncedLyrics` and adds `durationSec`, `hasWordSync`, `wordSync` (lines with `startMs`, `text`, `words[].startMs`, from the LRCLIB `lyricsfile`) and `matchKind` (`get`, `search` or `query`) | 30 days | `routes/cache-providers.ts`, `providers/lyrics.ts` |
 | GET `/v1/weather?location=&scope=` | Geocoding, forecast and air quality (Open-Meteo). `scope` is `now`, `today`, `tomorrow` or `week` | 15 minutes | `routes/cache-providers.ts` |
 | GET `/v1/delivery/track?carrier=&number=` | Parcel tracking | 5 minutes | `routes/cache-providers.ts` |
 | GET `/v1/delivery/carriers?q=` | Carrier list | | `routes/cache-providers.ts` |

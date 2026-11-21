@@ -104,7 +104,8 @@ export function publishPlayerState(deps: LavalinkDeps, player: CustomPlayer, opt
 	const expectedPositionMs = previous ? previous.positionMs + (previous.advancing ? now - previous.at : 0) : payload.positionMs;
 	const positionJumped = previous !== undefined && Math.abs(payload.positionMs - expectedPositionMs) >= POSITION_JUMP_THRESHOLD_MS;
 
-	if (!options.immediate && !positionJumped && previous && previous.fingerprint === fingerprint && now - previous.at < IMMEDIATE_INTERVAL_MS) return;
+	if (!options.immediate && !positionJumped && previous && previous.fingerprint === fingerprint && now - previous.at < IMMEDIATE_INTERVAL_MS)
+		return;
 
 	tracker.set(player.guildId, {
 		at: now,
