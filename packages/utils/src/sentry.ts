@@ -52,6 +52,11 @@ export function captureSentryException(error: unknown): void {
 	Sentry.captureException(error);
 }
 
+/** Sentry에 메시지 이벤트를 보고한다 (예외가 아닌 경고성 상태). 초기화되지 않았으면 no-op이다. */
+export function captureSentryMessage(message: string, level: 'info' | 'warning' | 'error' = 'warning', extra?: Record<string, unknown>): void {
+	Sentry.captureMessage(message, { level, extra });
+}
+
 type MinimalLogger = {
 	error: (...args: unknown[]) => void;
 };

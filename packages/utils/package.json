@@ -131,6 +131,16 @@
             "types": "./dist/trackIdentity.d.ts",
             "import": "./dist/trackIdentity.js",
             "require": "./dist/trackIdentity.cjs"
+        },
+        "./modules": {
+            "types": "./dist/modules.d.ts",
+            "import": "./dist/modules.js",
+            "require": "./dist/modules.cjs"
+        },
+        "./brand": {
+            "types": "./dist/brand.d.ts",
+            "import": "./dist/brand.js",
+            "require": "./dist/brand.cjs"
         }
     },
     "scripts": {

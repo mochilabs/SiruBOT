@@ -123,6 +123,8 @@ export interface MemberGreetingServiceDeps {
 	/** 카드 이미지 렌더(data-api) — 실패·미설정이면 null */
 	renderMemberCard(guildId: string, kind: GreetingKind, config: GreetingConfig, context: GreetingCardContext): Promise<Buffer | null>;
 	messages: GreetingMessagePort;
+	/** 사용 지표 — 실제 이벤트로 인사를 보내기로 했을 때 불러요 (테스트 전송은 세지 않아요) */
+	recordUsage?: (guildId: string, userId: string) => void;
 }
 
 export class MemberGreetingService {
@@ -241,6 +243,7 @@ export class MemberGreetingService {
 			const config = await this.getConfig(guild.id, kind);
 			if (!config.enabled) return;
 			if (!config.channelId) return; // 채널 미설정 — 실제 이벤트에서는 조용히 건너뛰어요
+			this.deps.recordUsage?.(guild.id, member.user.id);
 
 			const result = await this.send(guild.id, kind, member, guild.memberCount, config, {
 				isTest: false

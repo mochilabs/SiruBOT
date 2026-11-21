@@ -10,3 +10,17 @@ export const evalId = defineCustomId({
 	version: 1,
 	actions: { modal: {}, code: {} }
 });
+
+/** `/도움말` 카테고리 셀렉트 — `views/help.ts` ↔ `help/helpSession.ts`(컬렉터) */
+export const helpId = defineCustomId({
+	namespace: 'help',
+	version: 1,
+	actions: { category: {} }
+});
+
+/** 서버 가입 안내 버튼 — `views/welcome.ts` ↔ `interaction-handlers/onboardingButton.ts`. 메시지가 남아 있어서 영구 핸들러로 받아요. */
+export const onboardingId = defineCustomId({
+	namespace: 'onboarding',
+	version: 1,
+	actions: { settings: {}, tour: {} }
+});

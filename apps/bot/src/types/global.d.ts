@@ -56,6 +56,10 @@ declare module '@sapphire/pieces' {
 		countingState: import('../features/counting/index.ts').CountingStateStore;
 		/** 재생 이벤트 data-api 리포트 소유자 — 진행 중인 요청을 종료 때 기다려요 */
 		playbackReporter: PlaybackReporter;
+		/** 서버 생명주기 기록 (들어옴·나감·안내·첫 사용) */
+		guildLifecycle: import('../services/guildLifecycle.ts').GuildLifecycleService;
+		/** 기능 사용 지표 메모리 집계 + 60초 flush 소유자 (종료 시 stop()이 flush) */
+		usageRecorder: import('../features/usage-metrics/index.ts').UsageRecorder;
 		/** 빈 음성 채널 퇴장 유예 타이머 소유자 (길드별) */
 		voiceLeaveTimers: import('../lib/keyedTimers.ts').KeyedTimers;
 		/** 봇 상태 메시지 순환 인터벌 소유자 */

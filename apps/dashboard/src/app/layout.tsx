@@ -6,7 +6,7 @@ import { Navbar } from "@/components/navbar";
 import { GlobalCommandPalette } from "@/components/overlay/global-command-palette";
 import { Providers } from "@/components/Providers";
 import { ScrollToTop } from "@/components/scroll-to-top";
-import { OG_IMAGES, socialMetadata } from "@/lib/site-metadata";
+import { OG_IMAGES, SITE_DESCRIPTION, SITE_TITLE, socialMetadata } from "@/lib/site-metadata";
 
 import "./globals.css";
 
@@ -19,15 +19,15 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: {
-    default: "시루봇 | Discord 음악·AI·서버 관리 봇",
+    default: SITE_TITLE,
     template: "%s | 시루봇",
   },
-  description: "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.",
+  description: SITE_DESCRIPTION,
   applicationName: "시루봇",
   keywords: ["시루봇", "디스코드 음악봇", "Discord 음악 봇", "디스코드 봇", "AI 채팅", "서버 관리"],
   ...socialMetadata({
-    title: "시루봇 | Discord 음악·AI·서버 관리 봇",
-    description: "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     path: "/",
     image: OG_IMAGES.home,
   }),

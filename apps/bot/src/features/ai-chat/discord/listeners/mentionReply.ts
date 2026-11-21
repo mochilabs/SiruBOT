@@ -8,6 +8,7 @@ import type { AiToolContext } from '../../application/aiTools/index.ts';
 import { emoji } from '@sirubot/utils';
 import { runChatTurnToScreen } from '../chatTurnRunner.ts';
 import { errorPayload, livePayload } from '../views/chatView.ts';
+import { usageFeatureKey } from '@sirubot/utils/modules';
 @ApplyOptions<Listener.Options>({
 	event: Events.MessageCreate
 })
@@ -48,6 +49,8 @@ export class MentionReplyListener extends Listener {
 			await message.reply(errorPayload(text)).catch(() => undefined);
 			return;
 		}
+
+		this.container.usageRecorder?.record(message.guildId, usageFeatureKey('msg', 'ai-mention'), message.author.id);
 
 		const prompt = message.content.replace(new RegExp(`<@!?${client.user.id}>`, 'g'), '').trim();
 		const images = collectImageUrls([...message.attachments.values()]);

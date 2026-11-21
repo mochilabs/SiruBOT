@@ -1,7 +1,7 @@
 <h1 align="center">SiruBOT</h1>
 
 <p align="center">
-  디스코드 음악 봇 플랫폼입니다. Lavalink 재생, 웹 대시보드, 그 뒤의 서비스들이 하나의 모노레포에 들어 있습니다.
+  음악, AI 대화, 서버 관리를 한 봇으로. 한국어 커뮤니티를 위한 디스코드 봇입니다. 봇, 웹 대시보드, 그 뒤의 서비스들이 하나의 모노레포에 들어 있습니다. 봇의 안내와 대답은 한국어로만 합니다.
 </p>
 
 <p align="center">
@@ -40,7 +40,7 @@
 
 ## 아키텍처
 
-독립 프로세스 6개와 공용 패키지 4개로 이루어져 있습니다. 앱끼리는 서로 import하지 않고, Redis pub/sub, 인증된 HTTP, 샤드 매니저의 WebSocket 프로토콜로만 통신합니다.
+독립 프로세스 6개와 공용 패키지 5개로 이루어져 있습니다. 앱끼리는 서로 import하지 않고, Redis pub/sub, 인증된 HTTP, 샤드 매니저의 WebSocket 프로토콜로만 통신합니다.
 
 ```mermaid
 graph LR
@@ -76,7 +76,7 @@ graph LR
 
 | 워크스페이스 | 역할 | 스택 |
 |---|---|---|
-| `apps/bot` | 디스코드 게이트웨이, 슬래시 명령어, 오디오, AI 채팅, TTS, 티켓 | Sapphire (discord.js), lavalink-client |
+| `apps/bot` | 디스코드 게이트웨이, 슬래시 명령어, 음악, AI 채팅, TTS, 커뮤니티 도구 | Sapphire (discord.js), lavalink-client |
 | `apps/dashboard` | 서버 관리 웹 앱 | Next.js App Router, React 19 |
 | `apps/data-api` | 게이트웨이: 외부 API 캐시, Redis 허브, 이미지 렌더링, 예약 LLM 작업 | Fastify 5 |
 | `apps/shardmanager` | 샤드 배정과 상태 집계 | Fastify 5, WebSocket |
@@ -86,6 +86,7 @@ graph LR
 | `packages/utils` | Redis 채널 계약, zod 스키마, 공용 헬퍼 | zod |
 | `packages/app-kit` | 공용 Fastify 인증, env 검증, 로거 | Fastify |
 | `packages/shardclient` | 샤드 매니저용 WebSocket 클라이언트 | ws |
+| `packages/isrc` | 차트용 ISRC 조회 (Deezer, MusicBrainz) | fetch |
 
 대시보드는 봇과 직접 통신하지 않습니다. 요청은 대시보드 → data-api → Redis → 해당 서버를 맡은 봇 순서로 전달됩니다. Redis 채널 맵과 부팅/종료 순서를 포함한 전체 구조는 [docs/architecture.md](docs/architecture.md)에 있습니다.
 

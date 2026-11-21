@@ -13,6 +13,7 @@ import { MemoryCache, customEmojiUrl, parseEmojiOnlyMessage } from '@sirubot/uti
 import { emojiEnlargeView } from '../../views/emojiEnlarge.ts';
 import { isChannelToggleEnabled } from '../../../services/guildService.ts';
 import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
+import { usageFeatureKey } from '@sirubot/utils/modules';
 
 const ENLARGE_COOLDOWN_MS = 5_000;
 
@@ -36,6 +37,8 @@ export class EmojiEnlargeListener extends Listener {
 			const cooldownKey = `${message.guildId}:${message.author.id}`;
 			if (this.cooldowns.has(cooldownKey)) return;
 			this.cooldowns.set(cooldownKey, true);
+
+			this.container.usageRecorder?.record(message.guildId, usageFeatureKey('msg', 'emoji-enlarge'), message.author.id);
 
 			const container = emojiEnlargeView(emojis.map((item) => customEmojiUrl(item)));
 

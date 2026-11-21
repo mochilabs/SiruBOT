@@ -9,11 +9,15 @@ type PlaybackReportType = 'track_start' | 'track_end' | 'track_stuck' | 'track_e
 type NodeReportType = 'node_disconnect' | 'node_error';
 
 const REPORT_TIMEOUT_MS = 5_000;
+/** 사용 지표로 세는 재생 이벤트 — 시작 대비 실패 비율을 볼 수 있어요 */
+const USAGE_PLAYBACK_TYPES: ReadonlySet<PlaybackReportType> = new Set(['track_start', 'track_error', 'track_stuck', 'playback_abort']);
 
 export interface PlaybackReporterDeps {
 	logger: AppLogger;
 	/** client는 로그인 뒤에 준비돼서 호출 시점에 읽어요 */
 	getClient: () => Client;
+	/** 사용 지표 — 재생 시작과 실패 유형을 서버별로 세요 (`playback:{type}`). 실패 이유 원문은 넘기지 않아요. */
+	recordUsage?: (guildId: string, type: PlaybackReportType) => void;
 }
 
 /**
@@ -60,6 +64,7 @@ export class PlaybackReporter implements Stoppable {
 		track: Track | UnresolvedTrack | null,
 		extra?: { reason?: string; consecutiveErrors?: number }
 	): void {
+		if (USAGE_PLAYBACK_TYPES.has(type)) this.deps.recordUsage?.(guildId, type);
 		this.post({
 			type,
 			guildId,

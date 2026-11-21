@@ -57,7 +57,7 @@ export function HeroSection() {
           <p className="max-w-xl text-[0.9375rem] font-medium leading-relaxed text-muted-foreground break-keep sm:text-lg">
             명령어는 Discord에서, 설정은 웹 대시보드에서.
             <br />
-            서버에 맞게 골라 쓰는 음악·AI 봇이에요.
+            한국어 커뮤니티를 위한 올인원 봇이에요.
           </p>
 
           <div className="flex flex-wrap items-center justify-start gap-2.5 sm:gap-3">

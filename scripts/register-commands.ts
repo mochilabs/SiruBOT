@@ -7,6 +7,7 @@ config({ path: join(process.cwd(), 'apps', 'bot', '.env') });
 
 import { BotApplication } from '../apps/bot/src/core/botApplication.ts';
 import { PIECE_ROOTS } from '../apps/bot/src/core/pieceRoots.ts';
+import { diffCommandNames, formatCommandDiff, hasCommandDiff } from '../apps/bot/src/lib/commandRegistrationDiff.ts';
 import { GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder } from 'discord.js';
 import { ApplicationCommandRegistry } from '@sapphire/framework';
 import { blue, green, yellow, red, bold, gray, cyan } from 'colorette';
@@ -34,7 +35,7 @@ if (showHelp) {
 	console.log(gray('  yarn dlx tsx scripts/register-commands.ts [옵션]\n'));
 	console.log(bold('옵션 목록:'));
 	console.log(`  ${bold('-h, --help')}       : 현재 도움말 화면을 출력하고 종료합니다.`);
-	console.log(`  ${bold('-d, --dry-run')}    : 실제로 Discord API를 호출하지 않고 로컬 파싱 명세를 검증합니다.`);
+	console.log(`  ${bold('-d, --dry-run')}    : 배포하지 않고 로컬 명세를 검증하고, 등록된 명령과 이름 차이를 보여줍니다 (읽기만 함).`);
 	console.log(`  ${bold('-g, --global')}     : 길드 설정을 무시하고 글로벌 슬래시 커맨드로 배포합니다.`);
 	console.log(`  ${bold('--guild <id>')}     : 특정 Discord 길드 ID에 슬래시 커맨드를 즉시 동기화합니다.`);
 	console.log(gray('                       (길드 ID 미지정 시 .env 파일의 DEV_GUILD_IDS 또는 GUILD_ID 값을 기본 적용합니다.)\n'));
@@ -174,7 +175,22 @@ async function main() {
 		});
 		console.log(gray('---------------------------------------------\n'));
 
+		const rest = new REST({ version: '10' }).setToken(token);
+
 		if (isDryRun) {
+			// 지금 디스코드에 등록된 명령과 이름을 비교해요 (읽기만 해요). 조회 실패는 경고만 남기고 넘어가요.
+			try {
+				const route = guildId ? Routes.applicationGuildCommands(clientId, guildId) : Routes.applicationCommands(clientId);
+				const remote = (await rest.get(route)) as { name: string }[];
+				const diff = diffCommandNames(
+					serializedCommands.map((c) => c.name),
+					remote.map((c) => c.name)
+				);
+				if (hasCommandDiff(diff)) console.log(bold(yellow(`[차이 있음] ${formatCommandDiff(diff)}`)));
+				else console.log(green(`등록된 명령 ${remote.length}개와 이름이 같아요.`));
+			} catch (error) {
+				console.warn(yellow(`등록된 명령을 가져오지 못해 비교를 건너뛰어요: ${error instanceof Error ? error.message : String(error)}`));
+			}
 			console.log(bold(green('[DRY RUN 성공] 모든 슬래시 커맨드가 정상적으로 동적 파싱 및 로드되었습니다.')));
 			console.log(gray(`- 로드된 총 명령어 수: ${serializedCommands.length}개`));
 			console.log(gray(`- 배포 예정 형태: ${guildId ? `길드 전용 (${guildId})` : '글로벌 배포'}`));
@@ -182,7 +198,6 @@ async function main() {
 			return;
 		}
 
-		const rest = new REST({ version: '10' }).setToken(token);
 		const rawPayloads = serializedCommands.map((c) => c.raw);
 
 		if (guildId) {

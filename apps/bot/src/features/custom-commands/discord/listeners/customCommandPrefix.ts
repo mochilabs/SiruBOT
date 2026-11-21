@@ -16,6 +16,7 @@ import { CUSTOM_COMMAND_MAX_ARGS, CUSTOM_COMMAND_RESERVED_NAMES, MemoryCache, em
 
 import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../application/context.ts';
 import { runCustomCommandSpec, type CustomCommandContext } from '../../application/interpreter.ts';
+import { usageFeatureKey } from '@sirubot/utils/modules';
 
 /** 유저별 실행 쿨다운 (ms) — 길드+유저 키 */
 const EXECUTE_COOLDOWN_MS = 3_000;
@@ -68,6 +69,8 @@ export class CustomCommandPrefixListener extends Listener {
 
 		const entry = await this.container.customCommandStore.findCustomCommand(message.guildId, name);
 		if (!entry || entry.method !== 'prefix') return; // 등록되지 않은 이름·슬래시형 — 조용히 무시
+		// 사용 지표: 서버마다 이름이 달라서 커스텀 명령은 하나로 묶어요
+		this.container.usageRecorder?.record(message.guildId, usageFeatureKey('msg', 'custom-command'), message.author.id);
 
 		const member = message.member;
 		if (!member) return;

@@ -73,6 +73,10 @@ const botEnvSchema = z.object({
 	LAVALINK_DEFAULT_PASSWORD: z.string().optional(),
 	/** data-api(게이트웨이) 주소 — 미설정이면 게이트웨이 기능 비활성 (lib/dataApi.ts). */
 	DATA_API_URL: z.string().optional(),
+	/** 웹 대시보드 주소 — 온보딩 "대시보드 열기" 버튼. 비어 있으면 버튼을 숨겨요. */
+	DASHBOARD_URL: z.string().optional(),
+	/** 지원 서버 초대 링크 — 온보딩·오류 안내. 비어 있으면 링크를 숨겨요. */
+	SUPPORT_SERVER_URL: z.string().optional(),
 	/** data-api 인증 키 — DATA_API_AUTH_KEY ?? AUTH_KEY 폴백 (lib/dataApi.ts). */
 	DATA_API_AUTH_KEY: z.string().optional(),
 
@@ -171,6 +175,12 @@ export interface Config {
 		/** HEALTH_PORT — 미설정·빈 값이면 8080이에요. */
 		readonly port: number;
 	};
+	readonly links: {
+		/** DASHBOARD_URL. http(s) URL이 아니거나 비어 있으면 null → 버튼 숨김. */
+		readonly dashboardUrl: string | null;
+		/** SUPPORT_SERVER_URL. http(s) URL이 아니거나 비어 있으면 null → 링크 숨김. */
+		readonly supportServerUrl: string | null;
+	};
 	readonly dataApi: {
 		/** DATA_API_URL을 trim하고 끝 슬래시를 잘라낸 값. 미설정/빈 값이면 null → 게이트웨이 기능 off. */
 		readonly baseUrl: string | null;
@@ -253,6 +263,18 @@ const numberOr = (raw: string | undefined, fallback: number): number => Number(r
 /** URL 정규화 — trim하고 끝의 슬래시를 잘라내요. */
 const trimUrl = (raw: string): string => raw.trim().replace(/\/+$/, '');
 
+/** 링크 버튼용 주소 — http(s) URL만 받아요. 디스코드 링크 버튼은 다른 스킴을 거부해요. */
+const linkUrlOrNull = (raw: string | undefined): string | null => {
+	const value = trimUrl(raw ?? '');
+	if (!value) return null;
+	try {
+		const { protocol } = new URL(value);
+		return protocol === 'https:' || protocol === 'http:' ? value : null;
+	} catch {
+		return null;
+	}
+};
+
 /** CHAT_CONTEXT_TOKEN_BUDGET 파싱 — 유한한 정수면 [1500, 100000]으로 클램프, 아니면 기본 60000(64k 윈도우 기준 시스템 프롬프트 예산). */
 function parseContextTokenBudget(raw: string | undefined): number {
 	const parsed = parseInt(raw ?? '', 10);
@@ -307,6 +329,10 @@ export function loadConfig(env: RawEnv): Config {
 		}),
 		health: Object.freeze({
 			port: intOrDefault(env.HEALTH_PORT, 8080)
+		}),
+		links: Object.freeze({
+			dashboardUrl: linkUrlOrNull(env.DASHBOARD_URL),
+			supportServerUrl: linkUrlOrNull(env.SUPPORT_SERVER_URL)
 		}),
 		dataApi: Object.freeze({
 			baseUrl: trimUrl(env.DATA_API_URL ?? '') || null,

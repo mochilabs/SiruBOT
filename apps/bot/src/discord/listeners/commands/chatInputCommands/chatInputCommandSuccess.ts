@@ -1,5 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { type ChatInputCommandSuccessPayload, Events, Listener, container } from '@sapphire/framework';
+import { usageFeatureKey } from '@sirubot/utils/modules';
 import { cyan } from 'colorette';
 
 @ApplyOptions<Listener.Options>({ event: Events.ChatInputCommandSuccess })
@@ -11,5 +12,13 @@ export class ChatInputCommandSuccess extends Listener {
 		const author = `${interaction.user.username}[${cyan(interaction.user.id)}]`;
 		const sentAt = guild ? `${guild.name}[${cyan(guild.id)}]` : 'Direct Messages';
 		container.logger.debug(`${shard} - ${cyan(command.name)} ${author} ${sentAt}`);
+
+		// 사용 지표: `cmd:{명령}` 또는 `cmd:{명령}.{서브커맨드}`
+		const sub = interaction.options.getSubcommand(false);
+		container.usageRecorder?.record(
+			interaction.guildId,
+			usageFeatureKey('cmd', sub ? `${command.name}.${sub}` : command.name),
+			interaction.user.id
+		);
 	}
 }

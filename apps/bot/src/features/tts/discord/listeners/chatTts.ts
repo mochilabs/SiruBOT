@@ -5,6 +5,7 @@ import { isChannelToggleEnabled } from '../../../../services/guildService.ts';
 import { preprocessTtsMessage } from '../../application/chatTts.ts';
 import type { CustomPlayer } from '../../../music/index.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
+import { usageFeatureKey } from '@sirubot/utils/modules';
 
 /**
  * 채팅 TTS 리스너 — 설정된 채널의 메시지를 음성으로 읽는다 (명세 4.1 트리거).
@@ -54,6 +55,7 @@ export class ChatTtsListener extends Listener {
 		const text = preprocessTtsMessage(message);
 		if (!text) return;
 
+		this.container.usageRecorder?.record(message.guildId, usageFeatureKey('msg', 'chat-tts'), message.author.id);
 		await this.container.chatTtsService.handleMessage(message, text, preset);
 	}
 }

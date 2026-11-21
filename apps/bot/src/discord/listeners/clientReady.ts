@@ -33,6 +33,8 @@ export class ReadyEvent extends Listener {
 
 		// 상태 메시지 순환은 container.botActivity가 소유해요 — 종료 때 stop()이 인터벌을 해제해요
 		this.container.botActivity.start();
+		// 사용 지표 60초 flush — 종료 때 stop()이 남은 집계를 보내요
+		this.container.usageRecorder.start();
 	}
 
 	private async printBanner() {
