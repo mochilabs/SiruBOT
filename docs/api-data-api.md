@@ -57,7 +57,7 @@ Routes are registered from `routes/index.ts`, one file per domain.
 | Route | Description | Notes | File |
 |---|---|---|---|
 | POST `/v1/image/profile` | Profile card PNG, preset `dark`, `ticket` (skia) or `dashboard`, `light`, `aura` (satori; falls back to `dark` on render failure) | Dedup key `img:card:` | `routes/render.ts` |
-| POST `/v1/image/member-card` | Greeting card, kind `welcome` or `goodbye` | Dedup key `img:greeting:`; body limit 4 MB | `routes/render.ts` |
+| POST `/v1/image/member-card` | Greeting card, kind `welcome` or `goodbye`. Rendered with satori from the same `greetingCard` node as the dashboard preview (`packages/cards`); falls back to the skia card if satori fails. Colored emoji in the text are dropped by the satori card | Dedup key `img:greeting:`; body limit 4 MB | `routes/render.ts`, `renderers/satori/greetingCard.ts` |
 | POST `/v1/image/member-card/background` | Normalize an uploaded background to JPEG (longest side 1600 px, at most 900 KB) | Body limit 8 MB | `routes/render.ts` |
 | POST `/v1/image/member-card/layer-image` | Normalize an uploaded sticker layer to PNG | Body limit 8 MB | `routes/render.ts` |
 | POST `/v1/image/nowplaying` | Now-playing card for the pinned controller (artwork-tinted backdrop, queue preview, variable height). Rendered with satori, falls back to the skia card if satori fails | Dedup key `img:nowplaying:` plus a hash of the payload without the position | `routes/render.ts`, `renderers/satori/nowPlayingCard.ts` |

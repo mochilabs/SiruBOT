@@ -1,6 +1,6 @@
 /**
- * satori 렌더 공용 키트 — 폰트 로딩, 요소 헬퍼, SVG→PNG 변환, 원격 이미지 data URI 변환을 한곳에서 해요.
- * JSX 대신 `h()`로 요소를 만들어서 TSX 빌드 설정 없이 쓸 수 있어요. skia-canvas 렌더러(renderers/*.ts)와는 독립이에요.
+ * satori 렌더 공용 키트(node 전용) — 폰트 로딩, SVG→PNG 변환, 원격 이미지 data URI 변환, 아이콘 요소를 한곳에서 해요.
+ * 런타임 독립 부분(요소 헬퍼 `h`·`img`, `stripEmoji`, `createAsyncLru`, 토큰)은 `@sirubot/cards`에 있어요. skia-canvas 렌더러(renderers/*.ts)와는 독립이에요.
  */
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -8,31 +8,12 @@ import { join } from 'node:path';
 import type { Resvg as ResvgType } from '@resvg/resvg-js';
 import type { Font } from 'satori';
 import satori from 'satori';
+import { CARD_FONT, type SatoriElement } from '@sirubot/cards';
 import { getLogger } from '../../utils/logger.ts';
 import { getIconDef, type IconName } from '../canvas/icons.ts';
 import { isAllowedImageUrl } from '../canvas/images.ts';
 
 const logger = getLogger('satoriKit');
-
-/** satori 요소 — React 타입에 의존하지 않는 최소 형태예요. */
-export interface SatoriElement {
-	type: string;
-	props: { style?: Record<string, string | number>; children?: SatoriChild | SatoriChild[]; [key: string]: unknown };
-}
-export type SatoriChild = SatoriElement | string | number | null | false;
-
-/** flex 컨테이너 요소 — satori는 모든 div가 `display: flex`여야 해서 기본값으로 넣어요. */
-export function h(type: string, style: Record<string, string | number>, children?: SatoriChild | SatoriChild[]): SatoriElement {
-	return { type, props: { style: { display: 'flex', ...style }, children } };
-}
-
-/** 이미지 요소 — src는 data URI(또는 Buffer)를 권장해요. 원격 URL은 satori가 직접 받아 SSRF 경계가 사라져요. */
-export function img(src: string, style: Record<string, string | number>): SatoriElement {
-	return { type: 'img', props: { src, style } };
-}
-
-/** 카드 폰트 패밀리 이름 — fontFamily에 이 값을 써요. */
-export const CARD_FONT = 'Pretendard';
 
 let fontsPromise: Promise<Font[]> | null = null;
 
@@ -76,17 +57,6 @@ const EMPTY_EMOJI = `data:image/svg+xml;base64,${Buffer.from('<svg xmlns="http:/
 
 type SatoriInput = Parameters<typeof satori>[0];
 
-/**
- * 색 이모지를 지원하지 않아서 렌더 전에 이모지를 지워요 — 지우지 않으면 이모지 폭만큼 빈칸이 남아 제목 사이가 벌어져요.
- * 숫자·#·*는 Extended_Pictographic이 아니라 그대로 남아요. 지운 뒤 생긴 연속 공백은 하나로 줄여요.
- */
-export function stripEmoji(text: string): string {
-	return text
-		.replace(/\p{Extended_Pictographic}|\p{Regional_Indicator}|\p{Emoji_Modifier}|[\u200d\ufe0f\u20e3]/gu, '')
-		.replace(/\s{2,}/g, ' ')
-		.trim();
-}
-
 let resvgPromise: Promise<typeof import('@resvg/resvg-js')> | null = null;
 
 /** resvg-js 모듈 — 네이티브 바이너리라 처음 쓸 때 한 번만 로드해요. */
@@ -113,14 +83,16 @@ export async function renderSvgAsync(svg: string, options: { fitTo?: { mode: 'wi
 /**
  * satori로 SVG를 만들고 resvg로 PNG까지 변환해요. 폰트를 못 찾으면 throw해서 라우트가 500으로 알려요.
  * height를 생략하면 레이아웃이 정한 높이로 그려요 (대기열 길이처럼 내용에 따라 달라지는 카드용).
+ * outputWidth를 주면 레이아웃 크기(width)는 그대로 두고 출력 PNG만 그 너비로 균일 축소/확대해요 (인사 카드 1200→800).
  */
-export async function renderSatoriPng(node: SatoriElement, size: { width: number; height?: number }): Promise<Buffer> {
+export async function renderSatoriPng(node: SatoriElement, size: { width: number; height?: number; outputWidth?: number }): Promise<Buffer> {
+	const { outputWidth, ...layoutSize } = size;
 	const fonts = await loadCardFonts();
 	if (fonts.length === 0) throw new Error('card font unavailable');
 	const svg = await satori(
 		node as unknown as SatoriInput,
 		{
-			...size,
+			...layoutSize,
 			fonts,
 			// 색 이모지는 아직 지원하지 않아요 — 깨진 글리프(tofu) 대신 빈칸으로 두고, 폰트에 없는 글자는 건너뛰어요.
 			// 600·900 서브셋엔 한자가 없어서, 폰트에 없는 글자(한자 등)는 한자를 담은 400 가변 원본으로 그려요.
@@ -128,7 +100,7 @@ export async function renderSatoriPng(node: SatoriElement, size: { width: number
 				code === 'emoji' ? EMPTY_EMOJI : fonts.slice(0, 1).map((font) => ({ ...font, name: `${CARD_FONT}-fallback-${code}` }))
 		} as Parameters<typeof satori>[1]
 	);
-	const rendered = await renderSvgAsync(svg, { fitTo: { mode: 'width', value: size.width } });
+	const rendered = await renderSvgAsync(svg, { fitTo: { mode: 'width', value: outputWidth ?? size.width } });
 	return Buffer.from(rendered.asPng());
 }
 
@@ -174,33 +146,4 @@ export async function fetchImageDataUri(url: string | null | undefined): Promise
 	} catch {
 		return null;
 	}
-}
-
-/**
- * 키별 비동기 결과를 최근 사용 순으로 max개까지 기억하는 캐시예요 (동시 요청은 하나로 합쳐요). null·실패는 기억하지 않아 다음에 다시 시도해요.
- * 같은 곡의 볼륨·일시정지·반복·챕터 변경처럼 입력이 거의 같은 재렌더에서 이미지 다운로드와 처리를 건너뛰는 용도예요.
- */
-export function createAsyncLru<T>(max: number, load: (key: string) => Promise<T | null>): (key: string) => Promise<T | null> {
-	const entries = new Map<string, Promise<T | null>>();
-	return (key) => {
-		const hit = entries.get(key);
-		if (hit) {
-			entries.delete(key); // 최근 사용으로 갱신
-			entries.set(key, hit);
-			return hit;
-		}
-		const promise = load(key).then(
-			(value) => {
-				if (value === null && entries.get(key) === promise) entries.delete(key);
-				return value;
-			},
-			(error: unknown) => {
-				if (entries.get(key) === promise) entries.delete(key);
-				throw error;
-			}
-		);
-		entries.set(key, promise);
-		if (entries.size > max) entries.delete(entries.keys().next().value as string);
-		return promise;
-	};
 }

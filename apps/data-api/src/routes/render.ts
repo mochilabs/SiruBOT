@@ -11,6 +11,7 @@ import { renderProfileCardDark } from '../renderers/profileCardDark.ts';
 import { renderProfileCardSatori } from '../renderers/satori/profileCard.ts';
 import { renderProfileCardTicket } from '../renderers/profileCardTicket.ts';
 import { renderGreetingCard, normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/memberGreetingCard.ts';
+import { renderGreetingCardSatori } from '../renderers/satori/greetingCard.ts';
 import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
 import { renderNowPlayingCardSatori } from '../renderers/satori/nowPlayingCard.ts';
 import { renderOhaasaCard, renderOhaasaTopCard } from '../renderers/ohaasaCard.ts';
@@ -181,13 +182,18 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 				throw new DataApiError(400, 'greeting_image_missing', '이미지 설정이 비어 있어요. useImage를 켜고 배경을 지정해 주세요.');
 			}
 			// 키에 페이로드 해시를 넣어요 — 배경·설정·유저 컨텍스트가 다른 동시 미리보기 요청이 첫 렌더를 공유하지 않게.
+			const context = {
+				userId: body.context.userId,
+				displayName: body.context.displayName,
+				guildName: body.context.guildName ?? '',
+				memberCount: body.context.memberCount,
+				avatarUrl: body.context.avatarUrl
+			};
 			const buffer = await deduped(`img:greeting:${body.guildId}:${body.kind}:${body.context.userId}:${payloadHash(body)}`, () =>
-				renderGreetingCard(image, {
-					userId: body.context.userId,
-					displayName: body.context.displayName,
-					guildName: body.context.guildName ?? '',
-					memberCount: body.context.memberCount,
-					avatarUrl: body.context.avatarUrl
+				// satori 카드가 기본이에요 (대시보드 미리보기와 같은 greetingCard 노드). 렌더에 실패하면(폰트 누락 등) 기존 skia 카드로 폴백해요.
+				renderGreetingCardSatori(image, context).catch((error: unknown) => {
+					logger.warn(`satori greeting card failed, falling back to skia: ${error instanceof Error ? error.message : String(error)}`);
+					return renderGreetingCard(image, context);
 				})
 			);
 			metrics.request(`image-member-card-${body.kind}`);

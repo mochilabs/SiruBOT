@@ -20,6 +20,7 @@
         "@redis/client": "^5.12.1",
         "@resvg/resvg-js": "^2.6.2",
         "@sirubot/app-kit": "workspace:^",
+        "@sirubot/cards": "*",
         "@sirubot/isrc": "*",
         "@sirubot/prisma": "*",
         "@sirubot/utils": "*",

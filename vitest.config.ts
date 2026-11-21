@@ -14,6 +14,7 @@ export default defineConfig({
       { find: /^@sirubot\/utils\/(.*)$/, replacement: path.join(rootDir, "packages/utils/src/$1.ts") },
       { find: /^@sirubot\/app-kit$/, replacement: path.join(rootDir, "packages/app-kit/src/index.ts") },
       { find: /^@sirubot\/isrc$/, replacement: path.join(rootDir, "packages/isrc/src/index.ts") },
+      { find: /^@sirubot\/cards$/, replacement: path.join(rootDir, "packages/cards/src/index.ts") },
       // dashboard tsconfig paths(@/*) — 워크스페이스 스크립트가 이 루트 config를 공유하므로 함께 등록.
       { find: /^@\//, replacement: path.join(rootDir, "apps/dashboard/src") + "/" },
     ],

@@ -5,21 +5,10 @@
  *  - aura:      배너(없으면 아바타)에서 따온 색 번짐 배경 + 대표색 강조 — 서버 태그/역할 칩도 그 색을 따라가요
  * 높이는 내용(역할 칩·최근 곡 수)에 따라 달라요. 그림자는 resvg에서 비싸서 쓰지 않고, 경계선과 서피스 단차로 층을 나눠요.
  */
+import { CARD_FONT, createAsyncLru, h, hexToRgba, img, mixHex, RADIUS, stripEmoji, T, W, type SatoriChild, type SatoriElement } from '@sirubot/cards';
 import { BOT_NAME } from '@sirubot/utils';
-import { hexToRgba, mixHex, prepareArtwork, type PreparedArtwork } from './artwork.ts';
-import {
-	CARD_FONT,
-	createAsyncLru,
-	fetchImageDataUri,
-	h,
-	iconElement,
-	img,
-	renderSatoriPng,
-	stripEmoji,
-	type SatoriChild,
-	type SatoriElement
-} from './satoriKit.ts';
-import { RADIUS, T, W } from './tokens.ts';
+import { prepareArtwork, type PreparedArtwork } from './artwork.ts';
+import { fetchImageDataUri, iconElement, renderSatoriPng } from './satoriKit.ts';
 
 export type ProfileSatoriVariant = 'dashboard' | 'light' | 'aura';
 

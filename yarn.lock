@@ -3574,6 +3574,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@sirubot/cards@npm:*, @sirubot/cards@workspace:packages/cards":
+  version: 0.0.0-use.local
+  resolution: "@sirubot/cards@workspace:packages/cards"
+  dependencies:
+    "@sirubot/utils": "npm:*"
+    "@types/node": "npm:^22.20.5"
+  languageName: unknown
+  linkType: soft
+
 "@sirubot/dashboard@workspace:apps/dashboard":
   version: 0.0.0-use.local
   resolution: "@sirubot/dashboard@workspace:apps/dashboard"
@@ -3583,6 +3592,7 @@ __metadata:
     "@prisma/adapter-pg": "npm:^7.10.1"
     "@redis/client": "npm:^6.3.0"
     "@sentry/nextjs": "npm:^9.47.2"
+    "@sirubot/cards": "npm:*"
     "@sirubot/prisma": "npm:*"
     "@sirubot/utils": "npm:*"
     "@tailwindcss/postcss": "npm:^4.3.3"
@@ -3628,6 +3638,7 @@ __metadata:
     "@redis/client": "npm:^5.12.1"
     "@resvg/resvg-js": "npm:^2.6.2"
     "@sirubot/app-kit": "workspace:^"
+    "@sirubot/cards": "npm:*"
     "@sirubot/isrc": "npm:*"
     "@sirubot/prisma": "npm:*"
     "@sirubot/utils": "npm:*"

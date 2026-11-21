@@ -34,6 +34,7 @@ SiruBOT is an all-in-one Discord bot for Korean communities (music, AI chat, ser
 | App | `apps/storage` | Object storage — authenticated upload, public GET (Discord embed assets), private bucket (ticket transcripts) | Fastify 5 (port 3003) |
 | App | `apps/notifier` | Social alerts — YouTube (WebSub + RSS), Twitch (EventSub), Chzzk (polling) → Discord webhooks | Fastify 5 (port 3004) |
 | Package | `packages/prisma` | PostgreSQL schema + Prisma client (24 models) | Prisma 7 + PrismaPg |
+| Package | `packages/cards` | Runtime-independent satori card nodes (tokens, artwork helpers, `greetingCard`) shared by data-api (PNG) and the dashboard (SVG preview). Root export has no node-only imports | satori nodes |
 | Package | `packages/isrc` | ISRC lookup for a track (Deezer, MusicBrainz). Pure module: no env reads, `fetch` injected; data-api owns scheduling | fetch |
 | Package | `packages/shardclient` | WS client for shardmanager (retry and backoff built in) | ws |
 | Package | `packages/utils` | Redis channel constants, signed envelopes, zod contracts, shared utilities | zod |
@@ -121,6 +122,7 @@ graph BT
     utils["@sirubot/utils"]
     ak["@sirubot/app-kit"]
     isrc["@sirubot/isrc"]
+    cards["@sirubot/cards"]
     bot["@sirubot/bot"]
     da["@sirubot/data-api"]
     dash["@sirubot/dashboard"]
@@ -135,8 +137,10 @@ graph BT
     da --> utils
     da --> ak
     da --> isrc
+    da --> cards
     dash --> prisma
     dash --> utils
+    dash --> cards
     sm --> sc
     sm --> utils
     sm --> ak
@@ -214,7 +218,7 @@ Shutdown: stop the three schedulers → stop 8 hubs → cache Redis → DB → F
 graph TB
     R1["routes/<br/>index · cache-providers · ohaasa · embed-fix · render · ai · tts<br/>player · guild-data · panel · social · storage · bot-admin · dashboard"] --> P["providers/<br/>weather · lyrics · ohaasa · chapters · delivery · sponsorblock<br/>youtubeSuggestions · lavalinkSearch · embedFix · translate"]
     R1 --> S["services/<br/>8 hubs · ohaasaScheduler · memoryTidy · isrcEnricher · recordingMerge<br/>playbackStore · wrapped · db"]
-    R1 --> RD["renderers/<br/>skia: profileCard(Ticket/Dark) · memberGreetingCard · ohaasaCard · weatherCard · nowPlayingCard<br/>satori/: profileCard · nowPlayingCard · wrappedCard"]
+    R1 --> RD["renderers/<br/>skia: profileCard(Ticket/Dark) · memberGreetingCard · ohaasaCard · weatherCard · nowPlayingCard<br/>satori/: profileCard · nowPlayingCard · wrappedCard · greetingCard"]
     P --> U["utils/<br/>cache · dedup · breaker · metrics · hubSubscriber · hubCorrelate · requestReplyHub"]
     S --> U
 ```
@@ -243,7 +247,7 @@ graph TB
 | `GET /v1/tts/voices` | siru_tts voice catalog proxy | 5 min, in memory |
 | `GET /v1/sponsorblock/segments` | SponsorBlock skip segments | 24 h, empty result 1 h, positive stale copy 7 days |
 | `POST /v1/embed-fix/metadata` | Social link embed-fix metadata (+ auto translation) | constants in `routes/embed-fix.ts` |
-| `POST /v1/image/{profile,member-card,nowplaying,ohaasa,ohaasa/top,weather,wrapped}` · `POST /v1/image/member-card/{background,layer-image}` | PNG rendering (now-playing, Wrapped and the `dashboard`/`light`/`aura` profile presets use satori; profile and now-playing fall back to skia) · greeting upload normalization | — |
+| `POST /v1/image/{profile,member-card,nowplaying,ohaasa,ohaasa/top,weather,wrapped}` · `POST /v1/image/member-card/{background,layer-image}` | PNG rendering (now-playing, Wrapped, the greeting card and the `dashboard`/`light`/`aura` profile presets use satori; profile, now-playing and greeting fall back to skia) · greeting upload normalization | — |
 | `POST /v1/ai/custom-command-{draft,refine}` | Custom command draft/refine (503 without a key) | — |
 | `POST /v1/playback/events` | Collect shard playback events (`services/playbackStore.ts`) | — |
 | `GET /v1/player/:guildId` (+ `/stream` SSE, `/voice-context`) · `POST /v1/internal/player/{search,play,control}` | Web player | — |

@@ -5,9 +5,9 @@
  * (rounded-card 1rem → 32, rounded-control 0.625rem → 20, p-5 → 40). 새 색을 만들지 말고 아래 토큰에서 골라요.
  * 레이아웃은 flex 선언만 쓰고, 좌표 계산은 하지 않아요.
  */
+import { CARD_FONT, h, img, RADIUS, stripEmoji, T, W, type SatoriChild, type SatoriElement } from '@sirubot/cards';
 import type { WrappedRanking, WrappedStats } from '../../services/wrapped.ts';
-import { RADIUS, T, W } from './tokens.ts';
-import { CARD_FONT, fetchImageDataUri, h, img, renderSatoriPng, stripEmoji, type SatoriChild, type SatoriElement } from './satoriKit.ts';
+import { fetchImageDataUri, renderSatoriPng } from './satoriKit.ts';
 
 export const WRAPPED_CARD_SIZE = { width: 900, height: 1700 } as const;
 /** 기록이 없을 때는 안내 카드 하나뿐이라 짧게 그려요. */

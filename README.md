@@ -40,7 +40,7 @@
 
 ## Architecture
 
-Six independent processes and five shared packages. Apps never import each other; they communicate over Redis pub/sub, authenticated HTTP and the shard manager's WebSocket protocol.
+Six independent processes and six shared packages. Apps never import each other; they communicate over Redis pub/sub, authenticated HTTP and the shard manager's WebSocket protocol.
 
 ```mermaid
 graph LR
@@ -87,6 +87,7 @@ graph LR
 | `packages/app-kit` | Shared Fastify auth, env validation, logger | Fastify |
 | `packages/shardclient` | WebSocket client for the shard manager | ws |
 | `packages/isrc` | ISRC lookup (Deezer, MusicBrainz) for the track chart | fetch |
+| `packages/cards` | Runtime-independent satori card nodes (greeting card) shared by data-api and the dashboard | satori |
 
 The dashboard never talks to the bot directly: requests go dashboard → data-api → Redis → the bot that owns the guild. The full picture, including the Redis channel map and boot/shutdown order, is in [docs/architecture.md](docs/architecture.md).
 

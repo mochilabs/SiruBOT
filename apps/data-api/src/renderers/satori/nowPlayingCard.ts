@@ -6,23 +6,12 @@
  * (카드 크기에서 블러 필터를 걸면 resvg에서 비싸요). 그 위에 대시보드 배경색 스크림을 얹어 글자 대비를 지켜요.
  * 카드는 정적이에요 — 진행바는 넣지 않고 시간은 디스코드 타임스탬프가 맡아요. 높이는 다음 곡 개수에 따라 달라져요.
  */
+import { CARD_FONT, createAsyncLru, h, hexToRgba, img, mixHex, RADIUS, stripEmoji, T, W, type SatoriChild, type SatoriElement } from '@sirubot/cards';
 import { BOT_NAME } from '@sirubot/utils';
 import { formatClock } from '../canvas/shapes.ts';
 import type { NowPlayingCardInput } from '../nowPlayingCard.ts';
-import { hexToRgba, mixHex, prepareArtwork, type PreparedArtwork } from './artwork.ts';
-import {
-	CARD_FONT,
-	createAsyncLru,
-	fetchImageDataUri,
-	h,
-	iconElement,
-	img,
-	renderSatoriPng,
-	stripEmoji,
-	type SatoriChild,
-	type SatoriElement
-} from './satoriKit.ts';
-import { RADIUS, T, W } from './tokens.ts';
+import { prepareArtwork, type PreparedArtwork } from './artwork.ts';
+import { fetchImageDataUri, iconElement, renderSatoriPng } from './satoriKit.ts';
 
 export const NOW_PLAYING_CARD_WIDTH = 960;
 const ART = 232;
