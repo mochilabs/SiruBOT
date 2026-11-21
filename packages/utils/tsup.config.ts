@@ -32,6 +32,7 @@ export default createConfig({
 		'src/trackIdentity.ts',
 		'src/modules.ts',
 		'src/brand.ts',
+		'src/incidentNotice.ts',
 	],
 	format: ['esm', 'cjs'],
 	dts: true,

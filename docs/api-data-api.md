@@ -82,6 +82,7 @@ Routes are registered from `routes/index.ts`, one file per domain.
 | POST `/v1/internal/panel/post` | Ask the bot to post a ticket or role panel. Body: `guildId`, `type` (`ticket` or `rolePanel`), optional `panelId`, `channelId`, `refresh` | Request/reply | `routes/panel.ts` |
 | POST `/v1/internal/role-panel/validate-roles` | Check before saving that the bot can grant the roles. Body: `guildId`, `roleIds`; returns `invalidRoleIds` | Request/reply | `routes/panel.ts` |
 | POST `/v1/internal/bot-admin` | Operator controls: `nodes-status`, `node-reconnect`, `node-disconnect`, `emojis-list`, `emojis-sync`, `reload-stores` | Request/reply | `routes/bot-admin.ts` |
+| GET, POST, DELETE `/v1/internal/incident-notice` | Outage notice. POST body: `message` (max 200 characters, one line) and `expiresInMinutes` (required, 1 to 10080); it overwrites the previous notice. Writes the signed JSON to Redis key `sirubot:incident-notice` with TTL = expiry, and the bot reads it with a 30-second cache. 503 without Redis (the in-memory fallback cannot reach the bot) | Redis key | `routes/incident-notice.ts` |
 
 ### AI
 
