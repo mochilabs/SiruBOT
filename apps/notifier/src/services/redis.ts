@@ -44,10 +44,6 @@ export class NotifierRedis {
 		}
 	}
 
-	public get connected(): boolean {
-		return this.client?.isReady === true;
-	}
-
 	/** Pub/Sub 등 전용 연결이 필요한 소비자를 위한 클라이언트 접근자 (duplicate해서 쓸 것) */
 	public getClient(): RedisClientType | null {
 		return this.client?.isReady ? this.client : null;

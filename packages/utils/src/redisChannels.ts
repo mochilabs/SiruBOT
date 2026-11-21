@@ -51,11 +51,6 @@ export function botProfilePendingKey(guildId: string): string {
 	return `sirubot:bot-profile:pending:${guildId}`;
 }
 
-/** 상태 퍼블리시 채널명 — `sirubot:bot-profile:state:{guildId}` */
-export function botProfileStateChannel(guildId: string): string {
-	return `${BOT_PROFILE_STATE_CHANNEL_PREFIX}${guildId}`;
-}
-
 /**
  * 멤버 인사 테스트 전송 요청 브로드캐스트.
  * 대시보드 테스트 버튼 → data-api가 pending 키에 요청 본문({kind, userId, requestId})을

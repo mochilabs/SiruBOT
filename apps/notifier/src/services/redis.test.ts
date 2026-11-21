@@ -16,7 +16,6 @@ describe('NotifierRedis memory fallback (REDIS_URL 없이 동작하는 단일 �
 
 	it('stays unconnected without a url', async () => {
 		const redis = await memoryOnly();
-		expect(redis.connected).toBe(false);
 		expect(redis.getClient()).toBeNull();
 	});
 
