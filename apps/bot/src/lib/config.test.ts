@@ -98,6 +98,7 @@ describe('loadConfig — 기본값 (선택 키가 전부 없을 때)', () => {
 		expect(config.lavalink.defaultPassword).toBe('');
 		expect(config.redis.signingKey).toBe('');
 		expect(config.dataApi).toEqual({ baseUrl: null, authKey: '' });
+		expect(config.links).toEqual({ dashboardUrl: null, supportServerUrl: null });
 		expect(config.tts).toEqual({ url: '', defaultVoice: null });
 		expect(config.moji).toEqual({ url: '', authKey: '' });
 		expect(config.search).toEqual({ searxngEnabled: true, searxngBaseUrl: undefined });
@@ -310,6 +311,14 @@ describe('loadConfig — 키 하나를 서로 다르게 읽던 소비자들 (일
 		expect(configWith({ AUTH_KEY: ' b ' }).dataApi.authKey).toBe('b');
 		expect(configWith({ DATA_API_AUTH_KEY: '', AUTH_KEY: 'b' }).dataApi.authKey).toBe('');
 		expect(configWith({}).dataApi.authKey).toBe('');
+	});
+
+	it('안내 링크 — http(s) URL만 받고 끝 슬래시를 잘라요. 다른 스킴이나 잘못된 값은 null', () => {
+		const links = configWith({ DASHBOARD_URL: ' https://siru.example/ ', SUPPORT_SERVER_URL: 'https://discord.gg/abc' }).links;
+		expect(links).toEqual({ dashboardUrl: 'https://siru.example', supportServerUrl: 'https://discord.gg/abc' });
+		expect(configWith({ DASHBOARD_URL: 'http://localhost:3000' }).links.dashboardUrl).toBe('http://localhost:3000');
+		expect(configWith({ DASHBOARD_URL: 'javascript:alert(1)' }).links.dashboardUrl).toBeNull();
+		expect(configWith({ SUPPORT_SERVER_URL: 'discord.gg/abc' }).links.supportServerUrl).toBeNull();
 	});
 
 	it('Redis 서명 키 — REDIS_AUTH_KEY가 비어 있지 않으면 우선, 비어 있으면 AUTH_KEY로 폴백 (resolveRedisSigningKey)', () => {
