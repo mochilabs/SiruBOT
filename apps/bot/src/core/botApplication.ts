@@ -15,6 +15,7 @@ import { CountingStateStore } from '../features/counting/index.ts';
 import { UsageRecorder } from '../features/usage-metrics/index.ts';
 import { usageFeatureKey } from '@sirubot/utils/modules';
 import { createGuildLifecycleService } from '../services/guildLifecycle.ts';
+import { createIncidentNoticeService } from '../services/incidentNotice.ts';
 import { BotActivityService } from '../services/botActivity.ts';
 import { KeyedTimers } from '../lib/keyedTimers.ts';
 import { fetchCommandIndex } from '../discord/utils/commandMentions.ts';
@@ -187,6 +188,9 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			get playbackReporter() {
 				return container.playbackReporter;
 			},
+			get incidentNotice() {
+				return container.incidentNotice;
+			},
 			get sponsorBlockService() {
 				return container.sponsorBlockService;
 			},
@@ -344,6 +348,11 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			recordUsage: (guildId, type) => container.usageRecorder?.record(guildId, usageFeatureKey('playback', type))
 		});
 		container.stoppables.push(container.playbackReporter);
+		container.incidentNotice = createIncidentNoticeService({
+			getRedisStore: () => container.redisStore,
+			signingKey: getConfig().redis.signingKey,
+			logger: appLogger
+		});
 		container.guildLifecycle = createGuildLifecycleService({ db: container.db });
 		container.usageRecorder = new UsageRecorder({
 			db: container.db,

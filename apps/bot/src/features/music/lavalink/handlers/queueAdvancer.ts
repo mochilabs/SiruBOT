@@ -123,7 +123,7 @@ export class QueueAdvancer {
 				reason: 'max_consecutive_errors',
 				consecutiveErrors: player.consecutiveErrors
 			});
-			await this.sendNotification(
+			await this.sendFailureNotification(
 				player,
 				`🚫 연속 재생 오류가 ${maxConsecutiveErrors()}회 발생했어요. 음성 서버에 문제가 있을 수 있어요. 재생을 중단했어요.`
 			);
@@ -160,7 +160,7 @@ export class QueueAdvancer {
 				this.host.armWatchdog(player);
 			});
 		} else {
-			await this.sendNotification(player, `${emoji('error')} **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.`);
+			await this.sendFailureNotification(player, `${emoji('error')} **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.`);
 			// 오류 종료 뒤 queueEnd의 일반 종료 안내가 덧붙지 않도록 억제
 			player.transitionState.stopByCommand = true;
 			cancelPendingInvalidate(player);
@@ -313,6 +313,12 @@ export class QueueAdvancer {
 		if (!player.transitionState.stopByCommand) {
 			await this.sendNotification(player, `${emoji('inbox_tray')} 대기열의 모든 곡을 재생했어요.`);
 		}
+	}
+
+	/** 재생 실패 알림 — 운영자가 올린 장애 공지가 있으면 한 줄 덧붙여요 (공지 조회 실패는 알림을 막지 않아요) */
+	private async sendFailureNotification(player: CustomPlayer, message: string) {
+		const withNotice = await this.deps.incidentNotice.appendTo(message).catch(() => message);
+		await this.sendNotification(player, withNotice);
 	}
 
 	private async sendNotification(player: CustomPlayer, message: string) {

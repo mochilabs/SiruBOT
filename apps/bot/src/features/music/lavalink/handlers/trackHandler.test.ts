@@ -51,6 +51,7 @@ const container: Record<string, any> = {
 	playerNotifier: { updateController: playerNotifierUpdate },
 	mixerService,
 	playbackReporter: { reportPlaybackEvent },
+	incidentNotice: { appendTo: async (message: string) => message },
 	// 이 테스트의 곡은 유튜브가 아니라 SponsorBlock이 아무 일도 하지 않아요
 	sponsorBlockService: { startTrack: vi.fn(), stop: vi.fn(), tick: vi.fn(), prefetch: vi.fn(), queueChanged: vi.fn() }
 };

@@ -3,6 +3,7 @@ import { ChatInputCommandErrorPayload, Events } from '@sapphire/framework';
 import { Listener } from '@sapphire/framework';
 import { emoji, DEFAULT_COLOR, WARN_COLOR } from '@sirubot/utils';
 import { notice } from '../../../../lib/notice.ts';
+import { unexpectedErrorView } from '../../../../lib/unexpectedErrorView.ts';
 import { sendComponent } from './chatInputCommandDenied.ts';
 import { presentError } from '../../../../lib/errorPresenter.ts';
 import * as Sentry from '@sentry/node';
@@ -32,7 +33,11 @@ export class ChatInputCommandError extends Listener {
 			});
 		}
 
-		await sendComponent(interaction, notice(presentation.message, presentation.report ? WARN_COLOR : DEFAULT_COLOR), {
+		// 예기치 못한 오류에만 지원 서버 버튼과 장애 공지를 붙여요
+		const view = presentation.showSupport
+			? await unexpectedErrorView(presentation.message, { accentColor: WARN_COLOR })
+			: notice(presentation.message, presentation.report ? WARN_COLOR : DEFAULT_COLOR);
+		await sendComponent(interaction, view, {
 			ephemeral: presentation.ephemeral
 		});
 	}

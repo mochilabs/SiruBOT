@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 import { botInfoView } from '../views/botInfo.ts';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { formatDayHourMinute } from '../utils/uptime.ts';
+import { getConfig } from '../../lib/config.ts';
 
 export const name = 'bot';
 export const ko = '봇';
@@ -31,7 +32,10 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const shardInfo = client.shard ? `샤드 ${client.shard.ids.join(', ')} / 총 ${client.shard.count}개` : '샤딩 없음';
 	const latency = Math.round(client.ws.ping);
 
-	const containerComponent = botInfoView({ guilds, users, players, channels, heapUsedMB, heapTotalMB, uptimeStr, shardInfo, latency });
+	const containerComponent = botInfoView(
+		{ guilds, users, players, channels, heapUsedMB, heapTotalMB, uptimeStr, shardInfo, latency },
+		getConfig().links
+	);
 
 	await interaction.editReply({
 		components: [containerComponent],

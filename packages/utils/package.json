@@ -141,6 +141,11 @@
             "types": "./dist/brand.d.ts",
             "import": "./dist/brand.js",
             "require": "./dist/brand.cjs"
+        },
+        "./incidentNotice": {
+            "types": "./dist/incidentNotice.d.ts",
+            "import": "./dist/incidentNotice.js",
+            "require": "./dist/incidentNotice.cjs"
         }
     },
     "scripts": {
