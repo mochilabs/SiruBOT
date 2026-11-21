@@ -3,6 +3,7 @@ import type { AiMode, PinnedChannelMode } from '../../../../services/guildSettin
 import type { MusicToolPort } from '../../../music/index.ts';
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext } from './types.ts';
+import { describeSettingLines } from './summary.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 import * as guildJtc from '../../../../services/guildSettings/jtc.ts';
 import * as guildPlayback from '../../../../services/guildSettings/playback.ts';
@@ -99,10 +100,32 @@ function resolveRole(guild: Guild, input: string): Role {
 	throw new Error(`'${input}' 역할을 찾을 수 없어요. 역할 이름이나 멘션을 확인해 주세요.`);
 }
 
+/** 확인 창에 보여줄 항목 이름 — 도구 스키마의 인자 이름과 같아요 */
+const BOT_SETTING_LABELS: Record<string, string> = {
+	default_text_channel: '기본 텍스트 채널',
+	default_voice_channel: '기본 음성 채널',
+	pinned_channel: '고정 채널',
+	pinned_mode: '고정 채널 재생 모드',
+	pinned_delete_input: '고정 채널 입력 메시지 삭제',
+	dj_role: 'DJ 역할',
+	jtc_enabled: '임시 음성방',
+	jtc_category: '임시 음성방 카테고리',
+	jtc_template: '임시 음성방 이름 템플릿',
+	jtc_user_limit: '임시 음성방 인원 제한',
+	ai_mode: 'AI 채팅 범위',
+	ai_channel_toggle: 'AI 채팅 채널',
+	tts_volume: '채팅 TTS 음량',
+	tts_duck: '채팅 TTS 더킹',
+	tts_channel_toggle: '채팅 TTS 채널',
+	counting_enabled: '숫자 세기',
+	counting_channel: '숫자 세기 채널'
+};
+
 /** 봇 설정 도구를 만들어요 — 의존성은 deps로 받아요 */
 export function createBotSettingsTools(deps: Pick<AiToolDeps, 'guildService' | 'tempVoice' | 'getClient' | 'musicPort'>): AiTool[] {
 	const botSettingsGetTool: AiTool = {
 		name: 'bot_settings_get',
+		effect: 'read',
 		description:
 			'현재 서버의 봇 설정(기본 텍스트/음성 채널, 음악 고정 채널 및 모드, DJ 역할, 임시 음성방(JTC), AI 채팅 모드, 채팅 TTS, 숫자 세기 채널 등)을 조회해요. 모든 사용자가 조회할 수 있어요.',
 		properties: {},
@@ -191,6 +214,7 @@ export function createBotSettingsTools(deps: Pick<AiToolDeps, 'guildService' | '
 
 	const botSettingsSetTool: AiTool = {
 		name: 'bot_settings_set',
+		effect: 'settings',
 		description:
 			'서버의 봇 설정을 변경해요. 서버 관리(ManageGuild) 권한이 필요해요. ' +
 			'지정한 항목만 변경돼요. 기본 채널(default_text_channel, default_voice_channel), 고정 채널(pinned_channel, pinned_mode: play|select, pinned_delete_input), ' +
@@ -280,6 +304,7 @@ export function createBotSettingsTools(deps: Pick<AiToolDeps, 'guildService' | '
 			}
 		},
 		required: [],
+		summarize: (args) => `서버 봇 설정 변경\n${describeSettingLines(args, BOT_SETTING_LABELS)}`,
 		status: '시루가 봇 설정을 변경하는 중..',
 		execute: async (args, ctx) => {
 			const guildId = requireGuild(ctx);

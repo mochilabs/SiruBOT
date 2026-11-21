@@ -7,6 +7,7 @@ const VALID_SCOPES: WeatherScope[] = ['now', 'today', 'tomorrow', 'week'];
 
 export const weatherTool: AiTool = {
 	name: 'weather_get',
+	effect: 'read',
 	description:
 		'특정 지역의 현재 날씨·예보·미세먼지를 조회해요. location은 한국어 지명(서울, 부산 등) 또는 주소를 쓰세요. when으로 기간을 고르고, 결과의 weatherTextKo와 airQuality를 사용자에게 한국어로 요약하세요.',
 	properties: {

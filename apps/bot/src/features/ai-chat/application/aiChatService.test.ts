@@ -30,7 +30,14 @@ const mocks = vi.hoisted(() => ({
 	logger: { error: vi.fn(), warn: vi.fn() }
 }));
 
-const toolMocks = vi.hoisted(() => ({ getDefinitions: vi.fn(() => []), getStatus: vi.fn(() => '도구 실행 중이에요'), execute: vi.fn() }));
+const toolMocks = vi.hoisted(() => ({
+	getDefinitions: vi.fn(() => []),
+	getStatus: vi.fn(() => '도구 실행 중이에요'),
+	getEffect: vi.fn(() => 'read' as const),
+	returnsExternalContent: vi.fn(() => false),
+	describeCall: vi.fn(() => '요약'),
+	execute: vi.fn()
+}));
 const executeAiTool = toolMocks.execute;
 const getAiToolStatus = toolMocks.getStatus;
 

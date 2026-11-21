@@ -1,4 +1,5 @@
 import { notice } from '../../../../lib/notice.ts';
+import { confirmAction } from '../../../../lib/confirmation.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { Message, MessageFlags } from 'discord.js';
@@ -120,7 +121,13 @@ export class MentionReplyListener extends Listener {
 					live = await message.reply(livePayload('', cancelKey));
 					return live;
 				},
-				edit: (payload) => (live ? live.edit(payload) : Promise.resolve(null))
+				edit: (payload) => (live ? live.edit(payload) : Promise.resolve(null)),
+				// 상호작용이 없어서 라이브 메시지를 확인 창 자리로 써요 — 요청자(메시지 작성자)만 누를 수 있어요
+				confirm: (title, description) => {
+					const target = live as Message | null;
+					if (!target) return Promise.resolve(false);
+					return confirmAction({ user: message.author, editReply: (options) => target.edit(options) }, title, description);
+				}
 			}
 		});
 	}
