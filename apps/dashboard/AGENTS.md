@@ -18,3 +18,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Import `@sirubot/utils` by subpath only (eslint enforces; see `packages/utils/AGENTS.md`).
 - Bot-bound work goes through data-api (root `AGENTS.md`, cross-app communication). Server-only env lives in `src/lib/env.ts` and never reaches the client bundle.
 - `SHARD_MANAGER_AUTH_KEY` has no fallback key. API reference: `docs/api-dashboard.md`.
+
+## Run and test
+
+- Dev server: `yarn dev` from the root (or `yarn workspace @sirubot/dashboard dev`) on port 3000, with webpack. `.claude/launch.json` has the same `dashboard` entry for the preview pane. Production build uses turbopack (`yarn workspace @sirubot/dashboard build`), so a change can pass `dev` and still fail `build`.
+- Minimum env: `DATABASE_URL`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL`. `NEXT_PUBLIC_*` values are inlined at build time.
+- Most pages need Discord sign-in; server pages also need you to manage that guild. Channel, role and player features need data-api and a bot that owns the guild.
+- Lint is eslint (`--max-warnings=0`), not prettier. Tests use `apps/dashboard/vitest.config.ts`, not the root config. Its default environment is `node`; a file that needs the DOM opts in with a `// @vitest-environment happy-dom` comment. Example: `yarn workspace @sirubot/dashboard test src/components/servers/music-settings.test.tsx`.

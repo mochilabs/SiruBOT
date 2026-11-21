@@ -25,3 +25,12 @@ Repo-wide rules live in the root `AGENTS.md`. Paths are relative to `apps/bot/sr
 - Config comes from `getConfig()` (`lib/config.ts`), never `process.env`. Tests use `makeTestConfig` / `setConfigForTesting`.
 - User-facing failures in use cases throw `AppError` (`lib/appError.ts`); `UserError` stays for preconditions.
 - Guards: `architecture.test.ts` (import-rule ratchet) and `core/pieceInventory.test.ts` (piece snapshot). Allowlists may only shrink: fix the violation instead of growing a list. An intended piece change updates the snapshot in the same commit.
+
+## Run and test
+
+- Start: `yarn workspace @sirubot/bot build && yarn workspace @sirubot/bot start` (runs `dist/`). Minimum env: `DISCORD_TOKEN`, `DATABASE_URL`, `REDIS_URL`, `LAVALINK_HOSTS`. Without `NODE_ENV=production` it runs standalone on shard 0 and needs no shardmanager.
+- Health: `GET /` on `HEALTH_PORT` (8080) returns 503 until the client is first ready (`core/healthServer.ts`).
+- Optional features turn off when their env is empty: AI chat (`CHAT_MODEL`), TTS (`SIRU_TTS_URL`), emoji maker (`SIRU_MOJI_URL`). Gateway features need `DATA_API_URL` and the shared data-api key.
+- Single test: `yarn workspace @sirubot/bot test src/core/pieceInventory.test.ts`. Run `architecture.test.ts` and `core/pieceInventory.test.ts` after moving files, adding a piece or adding an import across folders.
+- Adding, removing or renaming a command or piece: update `EXPECTED_PIECES` / `EXPECTED_COMMAND_CATEGORIES` in `core/pieceInventory.test.ts`, then check registration with `yarn dlx tsx scripts/register-commands.ts --dry-run`. Dev-only commands register to `DEV_GUILD_IDS`.
+- Playing YouTube or testing the mixer needs a Lavalink node with the plugins in `docs/3rdparty.md` §1; the compose Lavalink has none.

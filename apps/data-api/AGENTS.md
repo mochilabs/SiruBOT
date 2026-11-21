@@ -7,7 +7,9 @@ Repo-wide rules live in the root `AGENTS.md`. Paths are relative to `apps/data-a
 - `server.ts` builds Fastify, installs the key auth hook (`plugins/auth.ts`), registers `routes/index.ts`, and starts/stops every Redis hub listed there. A new hub needs both a `start` and a `stop` entry.
 - `services/*Hub.ts`: Redis hubs. Request/reply hubs (guild data, player web, JTC setup, bot admin, panel) are built with `createRequestReplyHub` (`utils/requestReplyHub.ts`). Configure a new pair the same way, and don't hand-roll correlation, pending pools or subscribers. Channel names and schemas come from the `@sirubot/utils` RPC contract, never from strings here.
 - `services/playerHub.ts`: fan-in of `sirubot:player:{guildId}` into the dashboard SSE stream.
-- `providers/`: outbound HTTP clients (translate, lyrics, chapters, weather, SponsorBlock, YouTube). `renderers/`: canvas image cards. `utils/breaker.ts`, `cache.ts`, `dedup.ts` wrap flaky upstreams.
+- `providers/`: outbound HTTP clients (translate, lyrics, chapters, weather, SponsorBlock, YouTube, delivery, embed-fix, Lavalink search). ISRC lookups are in `@sirubot/isrc`, not here. `utils/breaker.ts`, `cache.ts`, `dedup.ts` wrap flaky upstreams.
+- `renderers/`: PNG cards. skia-canvas cards at the top level (greeting, horoscope, weather, profile `dark`/`ticket`, now-playing fallback); satori cards in `renderers/satori/` (now-playing, profile `dashboard`/`light`/`aura`, Wrapped) on the shared `satoriKit.ts`. The profile and now-playing routes fall back to skia when satori throws (`routes/render.ts`), so keep both paths working.
+- Schedulers started in `server.ts`: horoscope prefetch, memory tidy, ISRC enrichment. Each needs a `stop` in `close()`.
 
 ## Env and auth
 
@@ -16,3 +18,11 @@ Repo-wide rules live in the root `AGENTS.md`. Paths are relative to `apps/data-a
 - `OPENAI_COMPATIBLE_API_URL` + `OPENAI_API_KEY` serve translation and custom-command drafts (`CUSTOM_COMMAND_DRAFT_MODEL`, falling back to `TRANSLATION_MODEL`). Without a key, translation returns the original text and drafts return 503.
 - `SIRU_TTS_URL` unset makes the voice-list API return 503. The memory tidy job runs only when `DATABASE_URL` is set.
 - ISRC enrichment (`services/isrcEnricher.ts`, `@sirubot/isrc`) runs every 10 minutes when `DATABASE_URL` is set and `ISRC_ENRICH_ENABLED` is not `false`. It looks up tracks with no ISRC (`ISRC_ENRICH_BATCH` per run) on Deezer and MusicBrainz, needs no keys, and merges chart recordings that share an ISRC (`services/recordingMerge.ts`). `MUSICBRAINZ_USER_AGENT` is optional and must not carry personal contact details.
+
+## Run and test
+
+- Start: `yarn workspace @sirubot/data-api build && yarn workspace @sirubot/data-api start`. Port 3002. Only `DATA_API_AUTH_KEY` (or `AUTH_KEY`) is required; without Redis the cache falls back to process memory and the hubs cannot reach a bot.
+- Health: `GET /api/health`, the only unauthenticated path. `GET /dashboard` is a built-in status page and needs the key.
+- Calls need `Authorization: <raw key>`.
+- Single test: `yarn workspace @sirubot/data-api test src/routes/common.test.ts`.
+- One-off chart backfill: `yarn workspace @sirubot/data-api backfill:recordings` (dry run by default; `--apply`, `--enrich=N`). It writes to the database, so back it up first.
