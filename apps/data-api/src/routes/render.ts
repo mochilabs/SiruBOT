@@ -10,7 +10,7 @@ import { playerUserIdSchema, sendDomainError, sendError } from './common.ts';
 import { renderProfileCardDark } from '../renderers/profileCardDark.ts';
 import { renderProfileCardSatori } from '../renderers/satori/profileCard.ts';
 import { renderProfileCardTicket } from '../renderers/profileCardTicket.ts';
-import { renderGreetingCard, normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/memberGreetingCard.ts';
+import { normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/memberGreetingCard.ts';
 import { renderGreetingCardSatori } from '../renderers/satori/greetingCard.ts';
 import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
 import { renderNowPlayingCardSatori } from '../renderers/satori/nowPlayingCard.ts';
@@ -190,11 +190,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 				avatarUrl: body.context.avatarUrl
 			};
 			const buffer = await deduped(`img:greeting:${body.guildId}:${body.kind}:${body.context.userId}:${payloadHash(body)}`, () =>
-				// satori 카드가 기본이에요 (대시보드 미리보기와 같은 greetingCard 노드). 렌더에 실패하면(폰트 누락 등) 기존 skia 카드로 폴백해요.
-				renderGreetingCardSatori(image, context).catch((error: unknown) => {
-					logger.warn(`satori greeting card failed, falling back to skia: ${error instanceof Error ? error.message : String(error)}`);
-					return renderGreetingCard(image, context);
-				})
+				renderGreetingCardSatori(image, context)
 			);
 			metrics.request(`image-member-card-${body.kind}`);
 			return reply.type('image/png').send(buffer);

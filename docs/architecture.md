@@ -218,7 +218,7 @@ Shutdown: stop the three schedulers → stop 8 hubs → cache Redis → DB → F
 graph TB
     R1["routes/<br/>index · cache-providers · ohaasa · embed-fix · render · ai · tts<br/>player · guild-data · panel · social · storage · bot-admin · dashboard"] --> P["providers/<br/>weather · lyrics · ohaasa · chapters · delivery · sponsorblock<br/>youtubeSuggestions · lavalinkSearch · embedFix · translate"]
     R1 --> S["services/<br/>8 hubs · ohaasaScheduler · memoryTidy · isrcEnricher · recordingMerge<br/>playbackStore · wrapped · db"]
-    R1 --> RD["renderers/<br/>skia: profileCard(Ticket/Dark) · memberGreetingCard · ohaasaCard · weatherCard · nowPlayingCard<br/>satori/: profileCard · nowPlayingCard · wrappedCard · greetingCard"]
+    R1 --> RD["renderers/<br/>skia: profileCard(Ticket/Dark) · ohaasaCard · weatherCard · nowPlayingCard<br/>satori/: profileCard · nowPlayingCard · wrappedCard · greetingCard"]
     P --> U["utils/<br/>cache · dedup · breaker · metrics · hubSubscriber · hubCorrelate · requestReplyHub"]
     S --> U
 ```
