@@ -61,10 +61,12 @@ export function ServerMobileNav({ items, active, onSelect, groupLabels }: Server
 									className={cn(
 										"flex min-h-11 w-full items-center gap-3 rounded-menu px-3.5 text-left text-sm transition-colors duration-fast focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
 										isActive ? "bg-primary-control/15 font-extrabold text-primary-text" : "font-medium text-foreground/80 hover:bg-accent/15",
+										item.dimmed && !isActive && "opacity-55",
 									)}
 								>
 									<span aria-hidden className="shrink-0">{item.icon}</span>
 									<span className="flex-1 truncate">{item.label}</span>
+									{item.dimmed && <span className="shrink-0 text-2xs font-semibold text-muted-foreground">꺼짐</span>}
 									{isActive && <Check size={14} aria-hidden className="shrink-0" />}
 								</button>
 							</div>

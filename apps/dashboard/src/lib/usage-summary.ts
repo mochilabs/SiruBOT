@@ -50,6 +50,20 @@ export interface UsageSummary {
 	playback: PlaybackUsage[];
 }
 
+export interface GuildModuleUsage {
+	id: BotModuleId;
+	label: string;
+	emoji: string;
+	uses: number;
+}
+
+/** GET /api/servers/[id]/usage 응답 */
+export interface GuildUsageResponse {
+	modules: GuildModuleUsage[];
+	totalUses: number;
+	usageDays: number;
+}
+
 /** GET /api/admin/usage 응답 */
 export type AdminUsageResponse = UsageSummary & { activationDays: number; usageDays: number };
 
@@ -83,6 +97,27 @@ export function summarizeModules(rows: readonly UsageGroupRow[]): ModuleUsage[] 
 		activeGuilds: guilds.get(m.id)?.size ?? 0,
 		uses: uses.get(m.id) ?? 0,
 	}));
+}
+
+/** 한 서버의 모듈별 사용 횟수와 합계. 재생 실패·온보딩 발송은 빼고 BOT_MODULES 순서로 돌려줘요. */
+export function summarizeGuildModules(rows: readonly Pick<UsageGroupRow, "feature" | "count">[]): {
+	modules: GuildModuleUsage[];
+	totalUses: number;
+} {
+	const uses = new Map<BotModuleId, number>();
+	for (const row of rows) {
+		if (row.feature.startsWith("playback:") || row.feature === "onboarding:sent") continue;
+		const moduleId = featureModule(row.feature);
+		if (!moduleId) continue;
+		uses.set(moduleId, (uses.get(moduleId) ?? 0) + row.count);
+	}
+	let totalUses = 0;
+	const modules = BOT_MODULES.map((m) => {
+		const count = uses.get(m.id) ?? 0;
+		totalUses += count;
+		return { id: m.id, label: m.label, emoji: m.emoji, uses: count };
+	});
+	return { modules, totalUses };
 }
 
 /** 재생 이벤트(`playback:{type}`) 유형별 합계. 많은 순서예요. */

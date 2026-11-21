@@ -11,8 +11,9 @@ import type { GuildSettings } from "@/types/settings";
 const settingsFetcher = createApiFetcher<GuildSettings>("설정을 불러오지 못했어요.", { sessionRetry: true });
 
 /** 서버 일반 설정 조회 + 부분 저장 (SWR 캐시는 훅 간 공유돼요) */
-export function useGuildSettings(guildId: string) {
+export function useGuildSettings(guildId: string, enabled = true) {
 	const { data, error, isLoading, mutate, guildUrl, redirectToLogin } = useGuildResource<GuildSettings>(guildId, "/settings", {
+		enabled,
 		fetcher: settingsFetcher,
 	});
 	const [saving, setSaving] = useState(false);
