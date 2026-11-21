@@ -13,6 +13,7 @@ import { toError } from "@/lib/api-error";
 import { createApiFetcher, useGuildResource } from "@/lib/swr";
 
 import { QueueList } from "./live-queue-list";
+import { LyricsPanel } from "./lyrics-panel";
 import { NowPlaying } from "./now-playing-card";
 
 /** 라이브 탭 공통 셸 — 다른 설정 탭과 같은 패널 카드 + 헤더 */
@@ -177,6 +178,12 @@ function LivePlayerSession({ guildId }: { guildId: string }) {
         connected={connected}
         mode={mode}
         guildId={guildId}
+      />
+      <LyricsPanel
+        state={data.player}
+        receivedAt={receivedAt}
+        guildId={guildId}
+        unavailable={data.player.stale || (mode === "stream" && !connected)}
       />
       <QueueList
         state={data.player}

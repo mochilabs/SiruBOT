@@ -35,7 +35,16 @@ export interface LavalinkShardInfo {
 }
 
 /** 길드별 마지막 플레이어 상태 퍼블리시 기록 (주기 스로틀 + 변경 지문). */
-export type PlayerStatePublishTracker = Map<string, { at: number; fingerprint: string }>;
+export type PlayerStatePublishTracker = Map<
+	string,
+	{
+		at: number;
+		fingerprint: string;
+		/** 마지막으로 발행한 위치와 진행 여부 — 다음 발행 때 예상 위치(탐색·점프 감지)를 계산해요. */
+		positionMs: number;
+		advancing: boolean;
+	}
+>;
 
 export interface LavalinkDeps {
 	readonly logger: LavalinkLogger;
