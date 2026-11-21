@@ -79,8 +79,8 @@ export function UsagePanel() {
 			<Card padding="md" className="space-y-4">
 				<PanelHeader
 					icon={<BarChart3 size={20} />}
-					title="모듈별 활성 서버"
-					description={`최근 ${usageDays}일(KST) 동안 그 모듈 기능을 한 번이라도 쓴 서버 수와 사용 횟수예요.`}
+					title="모듈별 사용량 (익명)"
+					description={`최근 ${usageDays}일(KST) 동안 전체 서버에서 익명으로 집계된 모듈별 사용 횟수예요.`}
 				/>
 				<div className="divide-y divide-border-subtle rounded-card bg-surface-2">
 					{modules.map((m) => (
@@ -92,7 +92,7 @@ export function UsagePanel() {
 								{m.label}
 							</span>
 							<span className="tabular-nums text-muted-foreground">
-								서버 <span className="font-semibold text-foreground">{formatCount(m.activeGuilds)}</span>개 · 사용 {formatCount(m.uses)}회
+								<span className="font-semibold text-foreground">{formatCount(m.uses)}</span>회
 							</span>
 						</div>
 					))}

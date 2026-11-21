@@ -216,15 +216,13 @@ model GuildLifecycle {
 }
 
 /// 서버별 일별 기능 사용 집계 (KST 날짜). feature 키 규칙은 @sirubot/utils/modules. 사용자 ID는 남기지 않고 고유 사용자 수만 둬요.
+/// 익명 일별 기능 사용 횟수 — 서버·사용자 식별자 없이 KST 날짜×기능 합계만 기록해요
 model FeatureDailyUse {
-  guildId String
   day     DateTime @db.Date
   feature String
   count   Int      @default(0)
-  /// 그날 쓴 고유 사용자 수 (Redis Set 크기로 덮어써요)
-  users   Int      @default(0)
 
-  @@id([guildId, day, feature])
+  @@id([day, feature])
   @@index([day])
 }
 

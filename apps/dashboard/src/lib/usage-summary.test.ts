@@ -21,20 +21,20 @@ describe("summarizeActivation", () => {
 });
 
 describe("summarizeModules", () => {
-	it("서버를 모듈별로 한 번만 세고 횟수는 더해요", () => {
+	it("익명 사용 횟수를 모듈별로 합치고 재생·온보딩 이벤트는 빼요", () => {
 		const modules = summarizeModules([
-			{ guildId: "g1", feature: "cmd:play", count: 3 },
-			{ guildId: "g1", feature: "ns:controller", count: 2 },
-			{ guildId: "g2", feature: "msg:music-channel", count: 1 },
-			{ guildId: "g1", feature: "msg:ai-mention", count: 5 },
-			{ guildId: "g3", feature: "playback:track_error", count: 9 },
-			{ guildId: "g3", feature: "onboarding:sent", count: 1 },
-			{ guildId: "g4", feature: "cmd:unknown", count: 1 },
+			{ feature: "cmd:play", count: 3 },
+			{ feature: "ns:controller", count: 2 },
+			{ feature: "msg:music-channel", count: 1 },
+			{ feature: "msg:ai-mention", count: 5 },
+			{ feature: "playback:track_error", count: 9 },
+			{ feature: "onboarding:sent", count: 1 },
+			{ feature: "cmd:unknown", count: 1 },
 		]);
 		const byId = Object.fromEntries(modules.map((m) => [m.id, m]));
-		expect(byId.music).toMatchObject({ activeGuilds: 2, uses: 6 });
-		expect(byId.ai).toMatchObject({ activeGuilds: 1, uses: 5 });
-		expect(byId.utility).toMatchObject({ activeGuilds: 0, uses: 0 });
+		expect(byId.music).toMatchObject({ uses: 6 });
+		expect(byId.ai).toMatchObject({ uses: 5 });
+		expect(byId.utility).toMatchObject({ uses: 0 });
 		expect(modules.map((m) => m.id)).toEqual(["music", "community", "ai", "fun", "utility", "admin"]);
 	});
 });
@@ -43,10 +43,10 @@ describe("summarizePlayback", () => {
 	it("재생 이벤트만 유형별로 합쳐 많은 순서로 줘요", () => {
 		expect(
 			summarizePlayback([
-				{ guildId: "g1", feature: "playback:track_start", count: 10 },
-				{ guildId: "g2", feature: "playback:track_start", count: 5 },
-				{ guildId: "g1", feature: "playback:track_error", count: 2 },
-				{ guildId: "g1", feature: "cmd:play", count: 99 },
+				{ feature: "playback:track_start", count: 10 },
+				{ feature: "playback:track_start", count: 5 },
+				{ feature: "playback:track_error", count: 2 },
+				{ feature: "cmd:play", count: 99 },
 			]),
 		).toEqual([
 			{ type: "track_start", count: 15 },
