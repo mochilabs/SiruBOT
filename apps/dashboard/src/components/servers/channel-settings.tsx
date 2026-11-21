@@ -87,11 +87,8 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
       title="채널·권한 설정"
       description="기본 채널, 고정 채널 동작, DJ 역할을 관리해요."
       notice={
-      <InfoBox>
-          <p>
-            채널·역할은 디스코드에서 삭제되면 자동으로 무시돼요. 목록이 비어
-            있으면 새로고침해 주세요.
-          </p>
+        <InfoBox>
+          <p>목록이 비어 있으면 새로고침해 주세요.</p>
         </InfoBox>
       }
     >

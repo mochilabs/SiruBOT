@@ -34,9 +34,7 @@ function buttons(options: WelcomeViewOptions): ActionRowBuilder<ButtonBuilder> {
 
 function bodyText(options: WelcomeViewOptions): string {
 	if (options.kind === 'rejoin') {
-		return [`### 다시 와 주셔서 고마워요! ${emoji('music_note')}`, '예전 설정은 그대로 남아 있어요. 아래 버튼으로 바로 확인할 수 있어요.'].join(
-			'\n'
-		);
+		return [`### 다시 와 주셔서 고마워요! ${emoji('music_note')}`, '기존 설정은 그대로 남아 있어요.'].join('\n');
 	}
 	const lines = [
 		`### 시루를 초대해 주셔서 고마워요! ${emoji('music_note')}`,
@@ -48,8 +46,7 @@ function bodyText(options: WelcomeViewOptions): string {
 		'- 채팅에서 저를 멘션하면 AI로 대답해요.',
 		`- ${commandMention('help', options.index)}로 할 수 있는 일을 카테고리별로 볼 수 있어요.`
 	];
-	if (options.supportServerUrl) lines.push('', `-# 궁금한 점이나 문제는 [지원 서버](${options.supportServerUrl})에 알려 주세요.`);
-	lines.push('-# 서버 설정은 서버 관리 권한이 있는 분만 열 수 있어요.');
+	if (options.supportServerUrl) lines.push('', `-# 문의는 [지원 서버](${options.supportServerUrl})로 남겨 주세요.`);
 	return lines.join('\n');
 }
 
