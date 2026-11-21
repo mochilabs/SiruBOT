@@ -1,45 +1,37 @@
 import { describe, expect, it, vi } from 'vitest';
-import { UsageRecorder, usageUserSetKey, type UsageRecorderDeps } from './usageRecorder.ts';
+import { UsageRecorder, type UsageRecorderDeps } from './usageRecorder.ts';
 
 const NOW = new Date('2026-11-21T03:00:00Z'); // KST 12:00 → 날짜 2026-11-21
 
-function setup(redisSize: number | null = 2) {
+function setup() {
 	const upsert = vi.fn(async () => ({}));
-	const addToSetAndCount = vi.fn(async () => redisSize);
 	const markFirstUse = vi.fn(async () => undefined);
 	const deps: UsageRecorderDeps = {
 		db: { featureDailyUse: { upsert } } as never,
-		getRedisStore: () => ({ addToSetAndCount }),
 		firstUse: { markFirstUse },
 		logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 		now: () => NOW
 	};
-	return { recorder: new UsageRecorder(deps), upsert, addToSetAndCount, markFirstUse, deps };
+	return { recorder: new UsageRecorder(deps), upsert, markFirstUse, deps };
 }
 
 describe('UsageRecorder', () => {
-	it('같은 서버·날짜·feature는 한 행으로 모아 count를 더해요', async () => {
-		const { recorder, upsert, addToSetAndCount } = setup(2);
+	it('여러 서버의 같은 날짜·feature를 서버·사용자 식별자 없이 한 행으로 합쳐요', async () => {
+		const { recorder, upsert } = setup();
 		recorder.record('g1', 'cmd:play', 'u1');
-		recorder.record('g1', 'cmd:play', 'u2');
+		recorder.record('g2', 'cmd:play', 'u2');
 		recorder.record('g1', 'cmd:play', 'u1');
 		await recorder.flush();
 
-		expect(addToSetAndCount).toHaveBeenCalledWith(usageUserSetKey('2026-11-21', 'g1', 'cmd:play'), ['u1', 'u2'], 48 * 60 * 60);
 		expect(upsert).toHaveBeenCalledTimes(1);
-		const arg = (upsert.mock.calls[0] as unknown[])[0] as { create: Record<string, unknown>; update: Record<string, unknown> };
-		expect(arg.create).toMatchObject({ guildId: 'g1', feature: 'cmd:play', count: 3, users: 2 });
-		expect(arg.update).toEqual({ count: { increment: 3 }, users: 2 });
-	});
-
-	it('Redis가 없으면 새 행은 메모리 크기로 근사하고 기존 행의 users는 건드리지 않아요', async () => {
-		const { recorder, upsert } = setup(null);
-		recorder.record('g1', 'msg:counting', 'u1');
-		recorder.record('g1', 'msg:counting', 'u2');
-		await recorder.flush();
-		const arg = (upsert.mock.calls[0] as unknown[])[0] as { create: Record<string, unknown>; update: Record<string, unknown> };
-		expect(arg.create).toMatchObject({ count: 2, users: 2 });
-		expect(arg.update).toEqual({ count: { increment: 2 } });
+		const arg = (upsert.mock.calls[0] as unknown[])[0] as {
+			where: Record<string, unknown>;
+			create: Record<string, unknown>;
+			update: Record<string, unknown>;
+		};
+		expect(arg.where).toEqual({ day_feature: { day: new Date('2026-11-21T00:00:00.000Z'), feature: 'cmd:play' } });
+		expect(arg.create).toEqual({ day: new Date('2026-11-21T00:00:00.000Z'), feature: 'cmd:play', count: 3 });
+		expect(arg.update).toEqual({ count: { increment: 3 } });
 	});
 
 	it('DM과 빈 서버 ID는 버려요', async () => {

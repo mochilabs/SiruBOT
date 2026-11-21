@@ -361,7 +361,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.guildLifecycle = createGuildLifecycleService({ db: container.db });
 		container.usageRecorder = new UsageRecorder({
 			db: container.db,
-			getRedisStore: () => container.redisStore,
 			firstUse: container.guildLifecycle,
 			logger: appLogger
 		});
