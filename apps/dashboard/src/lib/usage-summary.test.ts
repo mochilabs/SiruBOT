@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { summarizeActivation, summarizeGuildModules, summarizeModules, summarizePlayback } from "./usage-summary";
+import { summarizeActivation, summarizeModules, summarizePlayback } from "./usage-summary";
 
 const at = (h: number) => new Date(Date.UTC(2026, 10, 1, h));
 
@@ -36,29 +36,6 @@ describe("summarizeModules", () => {
 		expect(byId.ai).toMatchObject({ activeGuilds: 1, uses: 5 });
 		expect(byId.utility).toMatchObject({ activeGuilds: 0, uses: 0 });
 		expect(modules.map((m) => m.id)).toEqual(["music", "community", "ai", "fun", "utility", "admin"]);
-	});
-});
-
-describe("summarizeGuildModules", () => {
-	it("한 서버의 사용 횟수를 모듈별로 합치고 재생·온보딩 이벤트는 빼요", () => {
-		const result = summarizeGuildModules([
-			{ feature: "cmd:play", count: 4 },
-			{ feature: "ns:controller", count: 3 },
-			{ feature: "msg:ai-mention", count: 2 },
-			{ feature: "playback:track_error", count: 10 },
-			{ feature: "onboarding:sent", count: 1 },
-			{ feature: "cmd:unknown", count: 5 },
-		]);
-		const byId = Object.fromEntries(result.modules.map((m) => [m.id, m.uses]));
-		expect(byId).toEqual({
-			music: 7,
-			community: 0,
-			ai: 2,
-			fun: 0,
-			utility: 0,
-			admin: 0,
-		});
-		expect(result.totalUses).toBe(9);
 	});
 });
 

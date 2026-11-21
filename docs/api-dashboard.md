@@ -1,6 +1,6 @@
 # Dashboard API route contract
 
-> **As of**: 2026-11-21 · Verified against `apps/dashboard/src/app/api/**/route.ts` (66 route files).
+> **As of**: 2026-11-21 · Verified against `apps/dashboard/src/app/api/**/route.ts` (65 route files).
 
 Higher-level flows are in `./architecture.md` (4.3 apps/dashboard, 6.2 Redis request/reply). Paths below are relative to `apps/dashboard/src/` unless they start with `apps/` or `packages/`.
 
@@ -37,7 +37,7 @@ All paths are under `/api`. `[id]` is the guild id.
 | Favorites (1) | `favorites` | user | Database |
 | Playlists (5) | `playlists`, `playlists/search`, `playlists/[id]`, `playlists/[id]/tracks`, `playlists/[id]/reorder` | user | Database |
 | Profile (3) | `profile/birthday`, `profile/tts`, `profile/tts-voices` | user | Database; `tts-voices` reads the voice catalog through data-api |
-| Guild settings (6) | `servers/[id]/settings`, `channels`, `roles`, `stats`, `usage`, `bot-profile` | manage | Database; `channels` and `roles` come from the bot's cache through data-api; `usage` aggregates 7-day `FeatureDailyUse` by module |
+| Guild settings (5) | `servers/[id]/settings`, `channels`, `roles`, `stats`, `bot-profile` | manage | Database; `channels` and `roles` come from the bot's cache through data-api |
 | AI (2) | `servers/[id]/ai`, `ai/history` | manage | Database |
 | Custom commands (4) | `servers/[id]/custom-commands`, `custom-commands/draft`, `custom-commands/refine`, `custom-commands/[cmdId]` | manage | Database; `draft` and `refine` call the data-api LLM routes. A command's execution method cannot change after creation |
 | Greeting (5) | `servers/[id]/greeting`, `greeting/background`, `greeting/layer-image`, `greeting/status`, `greeting/test` | manage | Images and the test send go through data-api |
