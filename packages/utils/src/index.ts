@@ -135,6 +135,7 @@ export {
 } from './rolePanel.js';
 export { type PanelPostResponse, panelPostRequestSchema, panelPostResponseSchema, type PanelPostType, panelPostTypeSchema } from './panelPost.js';
 export {
+	PLAYER_WEB_CODE_SEARCH_EMPTY,
 	type PlayerVoiceContext,
 	playerWebControlActionSchema,
 	type PlayerWebControlRequest,

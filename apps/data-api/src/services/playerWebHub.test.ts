@@ -111,6 +111,19 @@ describe('playerWebHub pending correlation', () => {
 		await expect(promise).resolves.toEqual({ ok: true, tracks: undefined, voice: undefined });
 	});
 
+	it('carries the bot error code back so callers need not compare messages', async () => {
+		vi.useFakeTimers();
+		const registry = makeRegistry();
+		const promise = registry.register(REQUEST_ID, 'guild-1', 'search', 12_000);
+		const assertion = expect(promise).resolves.toEqual({ ok: false, reason: 'bot_error', message: '검색 결과가 없어요.', code: 'search_empty' });
+		expect(
+			registry.handleRaw(
+				JSON.stringify({ requestId: REQUEST_ID, guildId: 'guild-1', kind: 'search', error: '검색 결과가 없어요.', code: 'search_empty' })
+			)
+		).toBe('resolved');
+		await assertion;
+	});
+
 	it('carries the bot error message back as a bot_error failure', async () => {
 		vi.useFakeTimers();
 		const registry = makeRegistry();

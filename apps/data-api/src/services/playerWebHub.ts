@@ -42,7 +42,8 @@ const PENDING_LIMIT = 200;
 
 export type PlayerWebFailureReason = 'redis_unavailable' | 'timeout' | 'bot_error';
 export type PlayerWebResult =
-	{ ok: true; tracks?: PlayerWebTrack[]; voice?: PlayerVoiceContext } | { ok: false; reason: PlayerWebFailureReason; message: string | null };
+	| { ok: true; tracks?: PlayerWebTrack[]; voice?: PlayerVoiceContext }
+	| { ok: false; reason: PlayerWebFailureReason; message: string | null; code?: string };
 
 /** 등록할 때 requestId에 묶어두는 요청 메타데이터 — 응답의 guildId·kind가 요청과 일치하는지 검증에 써요 */
 export interface PlayerWebPendingMeta {
@@ -63,7 +64,7 @@ export const hub = createRequestReplyHub<typeof playerWebRpc, PlayerWebPendingMe
 	toResult: (response) => {
 		if (response.error) {
 			// 봇이 검증 실패(음성 미접속·권한 없음·노드 없음 등)를 한국어로 실어 보낸 경우: 실제 사유를 그대로 전달해요.
-			return { ok: false, reason: 'bot_error', message: response.error };
+			return { ok: false, reason: 'bot_error', message: response.error, ...(response.code ? { code: response.code } : {}) };
 		}
 		return { ok: true, tracks: response.tracks, voice: response.voice };
 	},

@@ -30,6 +30,9 @@ export const playerWebControlActionSchema = z.enum([
 ]);
 export type PlayerWebControlAction = z.infer<typeof playerWebControlActionSchema>;
 
+/** 응답 `code` — 문구가 아니라 이 값으로 실패 종류를 가려요. 검색은 됐지만 결과가 없을 때 봇이 실어요 */
+export const PLAYER_WEB_CODE_SEARCH_EMPTY = 'search_empty';
+
 /** 검색 결과 요약 — 봇이 Lavalink SearchResult에서 뽑아 응답에 실어요 */
 export const playerWebTrackSchema = z.object({
 	title: z.string(),
@@ -139,6 +142,8 @@ export const playerWebResponseSchema = z.object({
 	guildId: redisIdSchema,
 	kind: playerWebKindSchema,
 	error: z.string().optional(),
+	/** 실패 종류를 가리는 기계용 코드 — 문구가 바뀌어도 판별이 깨지지 않게 해요. 모르는 값은 무시해요 */
+	code: z.string().optional(),
 	tracks: z.array(playerWebTrackSchema).max(5).optional(),
 	voice: playerVoiceContextSchema.optional()
 });
