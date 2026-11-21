@@ -1,17 +1,20 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { getBotModule, isModuleDisabled, sanitizeDisabledModules } from "@sirubot/utils/modules";
 import {
   BarChart3,
   Bell,
   Bot,
   Hash,
   Images,
+  LayoutDashboard,
   LayoutGrid,
   MessageSquare,
   Music,
+  Power,
   Radio,
   ShieldAlert,
   ShieldCheck,
@@ -27,10 +30,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { useGuildSettings } from "@/hooks/use-guild-settings";
+import { notifyApiError, notifySaved } from "@/lib/notify";
 
+import { toggleModuleDisabled } from "./modules-settings";
 import { ServerFeatureSidebar } from "./server-feature-sidebar";
 import { ServerMobileNav } from "./server-mobile-nav";
-import { SERVER_TAB_GROUPS, SERVER_TABS, type ServerTabKey } from "./server-tabs";
+import { getTabModule, resolveServerTab, SERVER_TAB_GROUPS, SERVER_TABS, type ServerTabKey } from "./server-tabs";
 import { hasUnsavedActiveSettings, PanelLoading, registerSettingsDiscardHandler, saveActiveSettings, SettingsPanelActive } from "./settings-shared";
 import { UnsavedNavigationGuard } from "./unsaved-navigation-guard";
 
@@ -38,6 +44,7 @@ function TabLoadingFallback() {
   return <PanelLoading label="불러오는 중…" decorative />;
 }
 
+const ServerOverviewTab = dynamic(() => import("./server-overview-tab").then((m) => m.ServerOverviewTab), { loading: TabLoadingFallback });
 const ModulesSettings = dynamic(() => import("./modules-settings").then((m) => m.ModulesSettings), { loading: TabLoadingFallback });
 const AiSettings = dynamic(() => import("./ai-settings").then((m) => m.AiSettings), { loading: TabLoadingFallback });
 const CustomCommandsSettings = dynamic(() => import("./custom-commands-settings").then((m) => m.CustomCommandsSettings), { loading: TabLoadingFallback });
@@ -55,6 +62,7 @@ const TicketSettings = dynamic(() => import("./ticket-settings").then((m) => m.T
 const StarboardSettings = dynamic(() => import("./starboard-settings").then((m) => m.StarboardSettings), { loading: TabLoadingFallback });
 const RolePanelsSettings = dynamic(() => import("./role-panels-settings").then((m) => m.RolePanelsSettings), { loading: TabLoadingFallback });
 const ICONS = {
+  overview: <LayoutDashboard size={14} />,
   modules: <LayoutGrid size={14} />,
   ai: <Bot size={14} />,
   "custom-commands": <SquareSlash size={14} />,
@@ -111,11 +119,7 @@ export function ServerDashboard({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const tabFromUrl = (value: string | null): ServerTabKey => {
-    const normalized = value === "mixer" ? "music" : value;
-    return TABS.some((item) => item.key === normalized) ? (normalized as ServerTabKey) : "ai";
-  };
-  const initialTab = tabFromUrl(searchParams.get("tab"));
+  const initialTab = resolveServerTab(searchParams.get("tab"));
   const [tab, setTab] = useState<ServerTabKey>(initialTab);
   // 한 번이라도 방문한 탭만 마운트하여 초기 진입 번들/요청을 최소화하고, 방문한 탭은 상태를 보존해요
   const [visitedTabs, setVisitedTabs] = useState<Set<ServerTabKey>>(() => new Set([initialTab]));
@@ -124,8 +128,21 @@ export function ServerDashboard({
   const [savingBeforeLeave, setSavingBeforeLeave] = useState(false);
   /** 변경 취소 시 해당 탭 패널을 새로 마운트해 편집 중이던 값을 버려요 */
   const [panelResets, setPanelResets] = useState<Partial<Record<ServerTabKey, number>>>({});
+  const { settings, saving: savingModules, save: saveSettings } = useGuildSettings(guildId, manageable);
+  const disabledModules = useMemo(() => sanitizeDisabledModules(settings?.disabledModules), [settings?.disabledModules]);
+  const navItems = useMemo(
+    () =>
+      TABS.map((item) => ({
+        ...item,
+        dimmed: "module" in item && isModuleDisabled(disabledModules, item.module),
+      })),
+    [disabledModules],
+  );
+  const activeTabModule = getTabModule(tab);
+  const activeDisabledModule =
+    activeTabModule && isModuleDisabled(disabledModules, activeTabModule) ? getBotModule(activeTabModule) : null;
   useEffect(() => {
-    const next = tabFromUrl(searchParams.get("tab"));
+    const next = resolveServerTab(searchParams.get("tab"));
     setTab(next);
     setVisitedTabs((prev) => (prev.has(next) ? prev : new Set(prev).add(next)));
   }, [searchParams]);
@@ -137,7 +154,7 @@ export function ServerDashboard({
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
   const selectTab = (value: string) => {
-    const nextTab = tabFromUrl(value);
+    const nextTab = resolveServerTab(value);
     if (nextTab === tab) return;
     // 저장하지 않은 변경이 있으면 저장하거나 취소하기 전에는 다른 탭으로 못 가요
     if (hasUnsavedActiveSettings()) {
@@ -145,6 +162,17 @@ export function ServerDashboard({
       return;
     }
     commitTab(nextTab);
+  };
+  const enableActiveModule = async () => {
+    if (!activeDisabledModule || savingModules) return;
+    try {
+      await saveSettings({
+        disabledModules: toggleModuleDisabled(disabledModules, activeDisabledModule.id, true),
+      });
+      notifySaved(`${activeDisabledModule.label} 모듈을 켰어요.`);
+    } catch (err) {
+      notifyApiError(err, "모듈을 켜지 못했어요.");
+    }
   };
   // 저장 바의 "취소" — 현재 탭 패널을 새로 마운트해 편집 중이던 값을 버려요
   useEffect(
@@ -180,7 +208,7 @@ export function ServerDashboard({
     <div className="animate-page-in">
       <UnsavedNavigationGuard />
       <div className="flex flex-col items-start gap-4 lg:flex-row lg:gap-8">
-        <ServerFeatureSidebar items={TABS} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} />
+        <ServerFeatureSidebar items={navItems} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} />
 
         <div className="w-full min-w-0 flex-1">
           <Tabs
@@ -190,7 +218,33 @@ export function ServerDashboard({
             aria-label="서버 설정 패널"
           >
             {/* 모바일 기능 네비게이션 — 현재 기능 한 줄 버튼, 누르면 그룹별 전체 목록이 바텀시트로 열려요 */}
-            <ServerMobileNav items={TABS} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} />
+            <ServerMobileNav items={navItems} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} />
+            {activeDisabledModule && (
+              <div
+                role="status"
+                className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-card bg-surface-2 px-4 py-3 text-sm"
+              >
+                <p className="min-w-0 text-muted-foreground">
+                  <span className="font-bold text-foreground">
+                    <span aria-hidden className="mr-1">
+                      {activeDisabledModule.emoji}
+                    </span>
+                    {activeDisabledModule.label}
+                  </span>{" "}
+                  모듈이 꺼져 있어요. 설정은 바꿀 수 있지만 디스코드에서는 동작하지 않아요.
+                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  loading={savingModules}
+                  onClick={() => void enableActiveModule()}
+                  className="shrink-0"
+                >
+                  <Power size={14} aria-hidden />
+                  모듈 켜기
+                </Button>
+              </div>
+            )}
             {TABS.map((item) => (
               <TabsContent
                 key={item.key}
@@ -201,6 +255,7 @@ export function ServerDashboard({
                 <SettingsPanelActive.Provider value={tab === item.key}>
                 {visitedTabs.has(item.key) && (
                   <Fragment key={panelResets[item.key] ?? 0}>
+                    {item.key === "overview" && <ServerOverviewTab guildId={guildId} onSelectTab={selectTab} />}
                     {item.key === "modules" && <ModulesSettings guildId={guildId} />}
                     {item.key === "ai" && <AiSettings guildId={guildId} />}
                     {item.key === "custom-commands" && (
