@@ -63,7 +63,7 @@ export function IncidentNoticePanel() {
 			}
 			await mutate({ notice: body.notice }, { revalidate: false });
 			setMessage("");
-			toast.success("장애 공지를 올렸어요. 봇에는 최대 30초 안에 반영돼요.");
+			toast.success("장애 공지를 올렸어요.");
 		} catch (err) {
 			notifyApiError(err, "장애 공지를 올리지 못했어요.");
 		} finally {
@@ -81,7 +81,7 @@ export function IncidentNoticePanel() {
 				return;
 			}
 			await mutate({ notice: null }, { revalidate: false });
-			toast.success("장애 공지를 내렸어요. 봇에는 최대 30초 안에 반영돼요.");
+			toast.success("장애 공지를 내렸어요.");
 		} catch (err) {
 			notifyApiError(err, "장애 공지를 내리지 못했어요.");
 		} finally {
@@ -96,7 +96,7 @@ export function IncidentNoticePanel() {
 			<PanelHeader
 				icon={<Megaphone size={20} />}
 				title="장애 공지"
-				description="봇의 오류 화면과 재생 실패 알림 끝에 한 줄로 덧붙여요. 만료 시간이 지나면 저절로 사라져요."
+				description="오류 화면과 재생 실패 알림에 함께 표시돼요."
 			/>
 
 			{isLoading && !data ? (

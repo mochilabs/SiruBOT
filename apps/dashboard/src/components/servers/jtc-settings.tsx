@@ -102,7 +102,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
       description="마커 채널에 들어가면 방장 이름으로 개인 음성방을 만들어 줘요."
       notice={
         <InfoBox>
-          <p>비어 있는 임시방은 30초 후 자동으로 삭제돼요.</p>
+          <p>비어 있는 임시방은 잠시 뒤 자동으로 정리돼요.</p>
         </InfoBox>
       }
     >
@@ -183,9 +183,8 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
               {form.jtcMarkerChannelId && (
                 <InfoBox>
                   <p>
-                    마커 채널: <span className="font-semibold text-foreground">{markerName}</span>. 멤버가 이 채널에 들어가면 임시방이 생겨요. 채널을 삭제해도 다음 설정 시 다시 만들어져요.
+                    마커 채널: <span className="font-semibold text-foreground">{markerName}</span>
                   </p>
-                  <p>마커 채널을 아예 제거하려면 Discord 서버에서 해당 채널을 삭제해 주세요.</p>
                 </InfoBox>
               )}
             </SettingsSection>

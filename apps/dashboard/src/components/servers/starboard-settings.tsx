@@ -98,10 +98,7 @@ export function StarboardSettings({ guildId }: { guildId: string }) {
       description="반응이 많이 달린 메시지를 스타보드 채널에 모아 보여줘요."
       notice={
         <InfoBox>
-          <p>
-            한 번 올라간 글은 별 수가 기준 아래로 줄어도 지워지지 않고 수만 바뀌어요. 원문이 지워지면 스타보드 글도 함께 지워져요.
-          </p>
-          <p>봇에게 스타보드 채널의 메시지 보내기·읽기 권한이 필요해요.</p>
+          <p>봇에게 스타보드 채널의 읽기·보내기 권한이 필요해요.</p>
         </InfoBox>
       }
     >

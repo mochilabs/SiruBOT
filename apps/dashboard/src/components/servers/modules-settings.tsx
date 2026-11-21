@@ -37,10 +37,7 @@ function ModulesSettingsPanel({ guildId }: { guildId: string }) {
 			description="이 서버에서 쓸 기능 묶음을 켜고 꺼요."
 			notice={
 				<InfoBox>
-					<p>
-						끈 모듈의 명령어는 디스코드 명령어 목록에 남아 있지만, 실행하면 꺼져 있다고 안내하고 도움말에서도 빠져요. 이미 설정해 둔 값은 지워지지 않고, 다시 켜면 그대로 돌아와요.
-						디스코드에서는 /설정 첫 화면에서도 바꿀 수 있어요.
-					</p>
+					<p>끈 모듈의 기존 설정은 유지돼요. 디스코드 /설정에서도 바꿀 수 있어요.</p>
 				</InfoBox>
 			}
 		>
@@ -60,9 +57,6 @@ function ModulesSettingsPanel({ guildId }: { guildId: string }) {
 										{!module.toggleable && <span className="ml-2 text-xs font-medium text-muted-foreground">항상 켜져 있어요</span>}
 									</p>
 									<p className="text-xs text-muted-foreground sm:text-sm">{module.description}</p>
-									<p className="text-xs text-muted-foreground">
-										명령어 {module.commands.length}개{module.messageFeatures.length > 0 ? ` · 명령 없이 쓰는 기능 ${module.messageFeatures.length}개` : ""}
-									</p>
 								</div>
 								<div className="shrink-0 pt-0.5">
 									<Switch

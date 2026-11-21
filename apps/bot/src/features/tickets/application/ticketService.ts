@@ -251,7 +251,7 @@ export class TicketService implements Stoppable {
 		// 채널 삭제 (스케줄링 또는 즉시 삭제)
 		const channel = guild.channels.cache.get(channelId);
 		if (channel && channel.isTextBased()) {
-			await channel.send(this.deps.messages.notice(`${emoji('lock')} 티켓이 마감되었어요. 5초 뒤 채널이 정리돼요.`)).catch(() => null);
+			await channel.send(this.deps.messages.notice(`${emoji('lock')} 티켓이 마감되었어요. 곧 채널이 삭제돼요.`)).catch(() => null);
 			this.scheduleChannelDelete(channelId, () =>
 				channel.delete('티켓 마감 및 채널 정리').then(
 					() => undefined,
