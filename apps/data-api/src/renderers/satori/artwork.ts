@@ -1,11 +1,10 @@
 /**
  * 아트워크 처리 — 썸네일에서 레터박스를 잘라낸 정사각 이미지, 카드 배경용 초소형 이미지, 대표색을 뽑아요.
- * 전부 resvg의 `<image>` 렌더로 처리해서 skia·sharp 없이 동작해요 (satori 카드 전용, node 전용).
- * resvg-js 2.6은 webp를 못 읽어서 png/jpeg/gif만 받아요 (fetchImageDataUri가 그 밖은 null로 돌려요).
+ * Takumi의 SVG `<image>` 래스터로 처리해서 skia·sharp·resvg 없이 동작해요 (node 전용).
  * 색·크기 계산 같은 순수 헬퍼는 `@sirubot/cards`에 있어요.
  */
 import { BACKDROP_SIZE, type CropBox, detectContentBounds, dominantColor, imageSizeOf, normalizeAccent, type PreparedArtwork } from '@sirubot/cards';
-import { renderSvgAsync } from './satoriKit.ts';
+import { renderSvgRaster } from './satoriKit.ts';
 
 export type { PreparedArtwork } from '@sirubot/cards';
 
@@ -13,7 +12,7 @@ export type { PreparedArtwork } from '@sirubot/cards';
 const BACKDROP_BLUR = 6;
 const PROBE_WIDTH = 96;
 
-/** data URI를 `<image>`로 넣은 SVG를 만들어요 — resvg가 자르기·축소·확대를 한꺼번에 해줘요. */
+/** data URI를 `<image>`로 넣은 SVG를 만들어요 — 자르기·축소·확대를 한꺼번에 해줘요. */
 function imageSvg(
 	uri: string,
 	attrs: { width: number; height: number; viewBox?: string; aspect: string },
@@ -56,10 +55,22 @@ export async function prepareArtwork(dataUri: string | null, artSize: number): P
 		// 2) 가장자리 검은 띠 감지용 초소형 래스터 (비율 유지, 너비 96)
 		const pw = Math.min(PROBE_WIDTH, nw);
 		const ph = Math.max(4, Math.round((pw * nh) / nw));
-		const probe = await renderSvgAsync(imageSvg(dataUri, { width: pw, height: ph, aspect: 'none' }, { width: pw, height: ph }));
-		// 디코딩에 실패한 이미지(미지원 형식 등)는 resvg가 아무것도 안 그려서 알파가 전부 0이에요.
-		if (!probe.pixels.some((v, i) => i % 4 === 3 && v > 0)) return null;
-		const bounds = detectContentBounds(probe.pixels, pw, ph);
+		const probePixels = await renderSvgRaster(
+			imageSvg(dataUri, { width: pw, height: ph, aspect: 'none' }, { width: pw, height: ph }),
+			pw,
+			ph,
+			'raw'
+		);
+		// 디코딩에 실패한 이미지(미지원 형식 등)는 아무것도 안 그려서 알파가 전부 0이에요.
+		let visible = false;
+		for (let i = 3; i < probePixels.length; i += 4)
+			if (probePixels[i]! > 0) {
+				visible = true;
+				break;
+			}
+		if (!visible) return null;
+
+		const bounds = detectContentBounds(probePixels, pw, ph);
 		const crop: CropBox = {
 			sx: (bounds.left / pw) * nw,
 			sy: (bounds.top / ph) * nh,
@@ -68,13 +79,20 @@ export async function prepareArtwork(dataUri: string | null, artSize: number): P
 		};
 		const viewBox = `${crop.sx} ${crop.sy} ${crop.sw} ${crop.sh}`;
 
-		// 3) 정사각 아트워크 (cover)와 4) 배경용 초소형 이미지 — 서로 독립이라 스레드풀에서 같이 돌려요
-		const [art, back] = await Promise.all([
-			renderSvgAsync(imageSvg(dataUri, { width: artSize, height: artSize, viewBox, aspect: 'xMidYMid slice' }, { width: nw, height: nh })),
-			renderSvgAsync(backdropSvg(dataUri, viewBox, { width: nw, height: nh }))
+		// 3) 정사각 아트워크 + 블러 배경(PNG·대표색용 RGBA)을 병렬로 래스터해요.
+		const backSvg = backdropSvg(dataUri, viewBox, { width: nw, height: nh });
+		const [artPng, backdropPng, backdropPixels] = await Promise.all([
+			renderSvgRaster(
+				imageSvg(dataUri, { width: artSize, height: artSize, viewBox, aspect: 'xMidYMid slice' }, { width: nw, height: nh }),
+				artSize,
+				artSize,
+				'png'
+			),
+			renderSvgRaster(backSvg, BACKDROP_SIZE.width, BACKDROP_SIZE.height, 'png'),
+			renderSvgRaster(backSvg, BACKDROP_SIZE.width, BACKDROP_SIZE.height, 'raw')
 		]);
-		const dominant = dominantColor(back.pixels);
-		return { art: toDataUri(art.asPng()), backdrop: toDataUri(back.asPng()), accent: dominant ? normalizeAccent(dominant) : null };
+		const dominant = dominantColor(backdropPixels);
+		return { art: toDataUri(artPng), backdrop: toDataUri(backdropPng), accent: dominant ? normalizeAccent(dominant) : null };
 	} catch {
 		return null;
 	}

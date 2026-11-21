@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { prepareArtwork } from './artwork.ts';
-import { loadResvg } from './satoriKit.ts';
+import { renderSvgRaster } from './satoriKit.ts';
 
 describe('prepareArtwork', () => {
 	/** 위아래 검은 띠 + 가운데 빨간 사각형인 480x360 PNG data URI */
 	async function letterboxed(): Promise<string> {
-		const Resvg = await loadResvg();
 		const svg =
 			'<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"><rect width="480" height="360" fill="#000"/>' +
 			'<rect x="0" y="45" width="480" height="270" fill="#e0283c"/></svg>';
-		return `data:image/png;base64,${Buffer.from(new Resvg(svg).render().asPng()).toString('base64')}`;
+		const png = await renderSvgRaster(svg, 480, 360, 'png');
+		return `data:image/png;base64,${png.toString('base64')}`;
 	}
 
 	it('returns a cropped square, a backdrop and a reddish accent, without the black bars', async () => {
@@ -21,10 +21,12 @@ describe('prepareArtwork', () => {
 		expect((n >> 16) & 255).toBeGreaterThan((n & 255) + 40);
 
 		// 잘라낸 정사각 아트워크는 가장자리까지 빨강이어야 해요 (검은 띠가 남아 있으면 위아래가 어두워요)
-		const Resvg = await loadResvg();
-		const art = new Resvg(
-			`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><image href="${prepared!.art}" width="120" height="120"/></svg>`
-		).render().pixels;
+		const art = await renderSvgRaster(
+			`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><image href="${prepared!.art}" width="120" height="120"/></svg>`,
+			120,
+			120,
+			'raw'
+		);
 		const at = (x: number, y: number) => Array.from(art.slice((y * 120 + x) * 4, (y * 120 + x) * 4 + 3));
 		for (const [x, y] of [
 			[60, 2],

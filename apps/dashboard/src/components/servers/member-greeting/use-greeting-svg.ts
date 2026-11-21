@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { GreetingImage } from "@sirubot/utils/memberGreeting";
 
-import { renderGreetingSvg, svgToDataUri } from "./greeting-svg";
+import { renderGreetingPreviewUrl } from "./greeting-svg";
 
 /** 입력(타이핑·슬라이더)이 멈춘 뒤 이만큼 기다렸다가 다시 그려요 */
 export const GREETING_RENDER_DEBOUNCE_MS = 150;
@@ -37,11 +37,11 @@ export function useGreetingSvg({
     let cancelled = false;
     const delay = renderedOnceRef.current ? GREETING_RENDER_DEBOUNCE_MS : 0;
     const timer = window.setTimeout(() => {
-      renderGreetingSvg(image, { avatarSrc, guildName })
-        .then((svg) => {
+      renderGreetingPreviewUrl(image, { avatarSrc, guildName })
+        .then((dataUrl) => {
           if (cancelled) return;
           renderedOnceRef.current = true;
-          setSrc(svgToDataUri(svg));
+          setSrc(dataUrl);
           setError(false);
         })
         .catch(() => {

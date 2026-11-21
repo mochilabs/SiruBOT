@@ -1,137 +1,112 @@
 /**
- * satori 렌더 공용 키트(node 전용) — 폰트 로딩, SVG→PNG 변환, 원격 이미지 data URI 변환, 아이콘 요소를 한곳에서 해요.
- * 런타임 독립 부분(요소 헬퍼 `h`·`img`, `stripEmoji`, `createAsyncLru`, 토큰)은 `@sirubot/cards`에 있어요. skia-canvas 렌더러(renderers/*.ts)와는 독립이에요.
+ * Takumi 카드 렌더 공용 키트(node 전용) — 폰트 등록, PNG/RGBA 래스터, 원격 이미지 data URI 변환, 아이콘 요소를 한곳에서 해요.
+ * 런타임 독립 부분(요소 헬퍼 `h`·`img`, `stripEmoji`, `createAsyncLru`, 토큰)은 `@sirubot/cards`에 있어요.
  */
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
-import type { Resvg as ResvgType } from '@resvg/resvg-js';
-import type { Font } from 'satori';
-import satori from 'satori';
-import { CARD_FONT, createAsyncLru, type SatoriElement, twemojiCandidates } from '@sirubot/cards';
+import { join } from 'node:path';
+import { Renderer } from '@takumi-rs/core';
+import { fromJsx } from '@takumi-rs/helpers/jsx';
+import { CARD_FONT, h, img, type SatoriElement } from '@sirubot/cards';
 import { getLogger } from '../../utils/logger.ts';
 import { getIconDef, type IconName } from '../canvas/icons.ts';
 import { isAllowedImageUrl } from '../canvas/images.ts';
 
 const logger = getLogger('satoriKit');
 
-let fontsPromise: Promise<Font[]> | null = null;
+let rendererPromise: Promise<{ renderer: Renderer; hasFont: boolean }> | null = null;
+
+function findFontFile(fileName: string): string | null {
+	// 런타임 CWD는 프로덕션(/app)·dev(apps/data-api)로 달라요 — canvas/fonts.ts와 같은 후보를 탐색해요.
+	const dirs = [join(process.cwd(), 'resources/fonts'), join(process.cwd(), '../../resources/fonts')];
+	for (const dir of dirs) {
+		const path = join(dir, fileName);
+		if (existsSync(path)) return path;
+	}
+	return null;
+}
 
 /**
- * Pretendard JP를 굵기별로 1회 읽어 캐시해요. satori는 가변 폰트의 굵기 축을 쓰지 못해서
- * 400은 가변 원본(13MB), 600·900은 거기서 뽑은 정적 서브셋(resources/fonts/README.md)을 써요.
- * 서브셋이 없으면 400으로 폴백해서 굵기만 못 살리고 그려져요.
+ * Takumi Renderer 싱글턴 — PretendardJP 가변 폰트(100~900 굵기 + 한글·일본어·한자)와 TwemojiMozilla 컬러 이모지 폰트를 1회 등록해요.
  */
-export function loadCardFonts(): Promise<Font[]> {
-	fontsPromise ??= (async () => {
-		// 런타임 CWD는 프로덕션(/app)·dev(apps/data-api)로 달라요 — canvas/fonts.ts와 같은 후보를 탐색해요.
-		const dirs = [join(process.cwd(), 'resources/fonts'), join(process.cwd(), '../../resources/fonts')];
-		const find = (fileName: string): string | null => {
-			for (const dir of dirs) {
-				const path = join(dir, fileName);
-				if (existsSync(path)) return path;
-			}
-			return null;
-		};
-		const regularPath = find('PretendardJPVariable.ttf');
-		if (!regularPath) {
-			logger.warn('PretendardJPVariable.ttf를 찾지 못했어요. satori 카드를 그릴 수 없어요.');
-			return [];
+export function getCardRenderer(): Promise<{ renderer: Renderer; hasFont: boolean }> {
+	rendererPromise ??= (async () => {
+		const renderer = new Renderer();
+		let hasFont = false;
+		const varPath = findFontFile('PretendardJPVariable.ttf');
+		if (varPath) {
+			await renderer.registerFont({ name: CARD_FONT, data: await readFile(varPath) });
+			hasFont = true;
+		} else {
+			logger.warn('PretendardJPVariable.ttf를 찾지 못했어요. 카드를 그릴 수 없어요.');
 		}
-		const fonts: Font[] = [{ name: CARD_FONT, data: await readFile(regularPath), weight: 400, style: 'normal' }];
-		for (const [fileName, weight] of [
-			['PretendardJP-SemiBold.subset.ttf', 600],
-			['PretendardJP-Black.subset.ttf', 900]
-		] as const) {
-			const path = find(fileName);
-			if (path) fonts.push({ name: CARD_FONT, data: await readFile(path), weight, style: 'normal' });
-			else logger.warn(`${fileName}를 찾지 못했어요. 해당 굵기는 400으로 그려져요.`);
+		const emojiPath = findFontFile('TwemojiMozilla.ttf');
+		if (emojiPath) {
+			await renderer.registerFont({ name: 'Twemoji', data: await readFile(emojiPath), generic: 'emoji' });
+		} else {
+			logger.warn('TwemojiMozilla.ttf를 찾지 못했어요. 컬러 이모지가 표시되지 않을 수 있어요.');
 		}
-		return fonts;
+		return { renderer, hasFont };
 	})();
-	return fontsPromise;
+	return rendererPromise;
 }
 
-/** 투명한 1x1 SVG — 이모지 자리를 비워 두는 용도예요. */
-const EMPTY_EMOJI = `data:image/svg+xml;base64,${Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>').toString('base64')}`;
-
-/** `@twemoji/svg` 파일 폴더 — 패키지를 못 찾으면 null (이모지는 빈칸으로 그려요). */
-const TWEMOJI_DIR = (() => {
-	try {
-		return dirname(createRequire(import.meta.url).resolve('@twemoji/svg/package.json'));
-	} catch {
-		logger.warn('@twemoji/svg를 찾지 못했어요. satori 카드의 이모지가 빈칸으로 그려져요.');
-		return null;
-	}
-})();
-
-/** 색 이모지 한 글자 → Twemoji SVG data URI. 없는 이모지는 빈칸이에요. 최근 500개를 기억해요. */
-const loadEmoji = createAsyncLru<string>(500, async (segment) => {
-	if (!TWEMOJI_DIR) return EMPTY_EMOJI;
-	for (const code of twemojiCandidates(segment)) {
-		try {
-			const svg = await readFile(join(TWEMOJI_DIR, `${code}.svg`));
-			return `data:image/svg+xml;base64,${svg.toString('base64')}`;
-		} catch {
-			// 다음 후보를 시도해요
-		}
-	}
-	return EMPTY_EMOJI;
-});
-
-type SatoriInput = Parameters<typeof satori>[0];
-
-let resvgPromise: Promise<typeof import('@resvg/resvg-js')> | null = null;
-
-/** resvg-js 모듈 — 네이티브 바이너리라 처음 쓸 때 한 번만 로드해요. */
-export function loadResvgModule(): Promise<typeof import('@resvg/resvg-js')> {
-	resvgPromise ??= import('@resvg/resvg-js');
-	return resvgPromise;
-}
-
-/** resvg 생성자(동기 API) — 크기가 아주 작은 SVG나 테스트용이에요. 카드 렌더에는 renderSvgAsync를 써요. */
-export async function loadResvg(): Promise<typeof ResvgType> {
-	return (await loadResvgModule()).Resvg as unknown as typeof ResvgType;
+/** SVG 문자열을 Takumi로 래스터해 PNG 또는 raw RGBA 버퍼로 돌려줘요 (아트워크 크롭·블러·테스트용). */
+export async function renderSvgRaster(svg: string, width: number, height: number, format: 'png' | 'raw'): Promise<Buffer> {
+	const { renderer } = await getCardRenderer();
+	const uri = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+	const { node } = await fromJsx(img(uri, { width, height }));
+	return Buffer.from(await renderer.render(node, { width, height, format }));
 }
 
 /**
- * SVG를 libuv 스레드풀에서 래스터해요. resvg-js의 동기 `render()`는 메인 스레드를 막아서 렌더가 몰리면 같은 프로세스의
- * 다른 요청(Redis 허브·SSE)까지 지연돼요 — 카드 렌더는 항상 이 함수를 써요.
- */
-export async function renderSvgAsync(svg: string, options: { fitTo?: { mode: 'width'; value: number } } = {}) {
-	const { renderAsync } = await loadResvgModule();
-	// satori가 글자를 path로 바꿔 줘서 폰트가 필요 없어요 — system font 스캔(첫 호출 1초 넘게)을 꺼요.
-	return renderAsync(svg, { ...options, font: { loadSystemFonts: false } });
-}
-
-/**
- * satori로 SVG를 만들고 resvg로 PNG까지 변환해요. 폰트를 못 찾으면 throw해서 라우트가 500으로 알려요.
+ * Takumi로 카드 노드를 PNG 버퍼로 그려요. 폰트를 못 찾으면 throw해서 라우트가 500으로 알려요.
  * height를 생략하면 레이아웃이 정한 높이로 그려요 (대기열 길이처럼 내용에 따라 달라지는 카드용).
  * outputWidth를 주면 레이아웃 크기(width)는 그대로 두고 출력 PNG만 그 너비로 균일 축소/확대해요 (인사 카드 1200→800).
  */
 export async function renderSatoriPng(node: SatoriElement, size: { width: number; height?: number; outputWidth?: number }): Promise<Buffer> {
-	const { outputWidth, ...layoutSize } = size;
-	const fonts = await loadCardFonts();
-	if (fonts.length === 0) throw new Error('card font unavailable');
-	const svg = await satori(
-		node as unknown as SatoriInput,
-		{
-			...layoutSize,
-			fonts,
-			// 색 이모지는 Twemoji SVG로 그려요 (없는 이모지는 빈칸).
-			// 600·900 서브셋엔 한자가 없어서, 폰트에 없는 글자(한자 등)는 한자를 담은 400 가변 원본으로 그려요.
-			loadAdditionalAsset: async (code, segment) =>
-				code === 'emoji'
-					? ((await loadEmoji(segment)) ?? EMPTY_EMOJI)
-					: fonts.slice(0, 1).map((font) => ({ ...font, name: `${CARD_FONT}-fallback-${code}` }))
-		} as Parameters<typeof satori>[1]
+	const { renderer, hasFont } = await getCardRenderer();
+	if (!hasFont) throw new Error('card font unavailable');
+
+	let targetNode = node;
+	let renderWidth = size.width;
+	let renderHeight = size.height;
+
+	if (size.outputWidth && size.outputWidth !== size.width) {
+		const scale = size.outputWidth / size.width;
+		renderWidth = size.outputWidth;
+		renderHeight = size.height ? Math.round(size.height * scale) : undefined;
+		targetNode = h(
+			'div',
+			{
+				width: renderWidth,
+				...(renderHeight ? { height: renderHeight } : {}),
+				overflow: 'hidden'
+			},
+			h(
+				'div',
+				{
+					width: size.width,
+					...(size.height ? { height: size.height } : {}),
+					transform: `scale(${scale})`,
+					transformOrigin: 'top left'
+				},
+				node
+			)
+		);
+	}
+
+	const { node: takumiNode } = await fromJsx(targetNode as unknown as Parameters<typeof fromJsx>[0]);
+	return Buffer.from(
+		await renderer.render(takumiNode, {
+			width: renderWidth,
+			...(renderHeight ? { height: renderHeight } : {}),
+			format: 'png'
+		})
 	);
-	const rendered = await renderSvgAsync(svg, { fitTo: { mode: 'width', value: outputWidth ?? size.width } });
-	return Buffer.from(rendered.asPng());
 }
 
-/** lucide 아이콘을 satori `<svg>` 요소로 — skia 카드와 같은 경로 DB(canvas/icons.ts)를 써요. 선 아이콘만 지원해요. */
+/** lucide 아이콘을 `<svg>` 요소로 — skia 카드와 같은 경로 DB(canvas/icons.ts)를 써요. 선 아이콘만 지원해요. */
 export function iconElement(name: IconName, size: number, color: string, strokeWidth = 2): SatoriElement {
 	const def = getIconDef(name);
 	const children: SatoriElement[] = [
@@ -155,11 +130,11 @@ export function iconElement(name: IconName, size: number, color: string, strokeW
 	} as unknown as SatoriElement;
 }
 
-const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif']);
+const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 /** 썸네일·아바타는 수백 KB 안쪽이에요 — 이보다 크면 받지 않아요. */
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
-/** 허용 도메인의 이미지를 data URI로 받아요. 실패하거나 webp 같은 미지원 형식이면 null이라 호출부가 폴백을 그려요. */
+/** 허용 도메인의 이미지를 data URI로 받아요. 실패하거나 미지원 형식이면 null이라 호출부가 폴백을 그려요. */
 export async function fetchImageDataUri(url: string | null | undefined): Promise<string | null> {
 	if (!url || !isAllowedImageUrl(url)) return null;
 	try {

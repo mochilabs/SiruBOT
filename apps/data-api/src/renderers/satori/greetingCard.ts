@@ -1,5 +1,5 @@
 /**
- * 인사 카드 렌더러(satori) — 환영/작별 카드 PNG예요. 노드는 `@sirubot/cards`의 `greetingCard`가 만들어요.
+ * 인사 카드 렌더러(Takumi) — 환영/작별 카드 PNG예요. 노드는 `@sirubot/cards`의 `greetingCard`가 만들어요.
  * 대시보드 미리보기도 같은 함수를 쓰니, 여기서는 node 전용 일(아바타 받기, 읽을 수 없는 이미지 걸러내기, PNG 변환)만 해요.
  */
 import { createAsyncLru, greetingCard, imageSizeOf } from '@sirubot/cards';

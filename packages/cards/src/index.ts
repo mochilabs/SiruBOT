@@ -13,4 +13,3 @@ export {
 	type PreparedArtwork
 } from './artwork.js';
 export { greetingCard, type GreetingCardVars } from './greetingCard.js';
-export { TWEMOJI_CODE_RE, TWEMOJI_VERSION, twemojiCandidates, twemojiCdnUrl } from './emoji.js';

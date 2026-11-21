@@ -1,4 +1,4 @@
-import { CARD_FONT, greetingCard, twemojiCandidates, twemojiCdnUrl } from "@sirubot/cards";
+import { CARD_FONT, greetingCard } from "@sirubot/cards";
 import {
   GREETING_CARD_H,
   GREETING_CARD_W,
@@ -6,41 +6,46 @@ import {
 } from "@sirubot/utils/memberGreeting";
 
 /**
- * 인사 카드 미리보기 SVG — data-api가 Discord로 보내는 PNG와 같은 `greetingCard` 노드를 브라우저에서 satori로 그려요.
- * satori(와 yoga wasm)는 처음 미리보기를 그릴 때 동적 import로 받고, 폰트(한글 서브셋 600·900)도 그때 한 번만 받아요.
- * 서브셋 파일은 resources/fonts의 정적 서브셋과 같은 파일이에요 (public/fonts, 약 2.6MB씩, 압축 전송 시 약 1MB).
+ * 인사 카드 브라우저 미리보기 — data-api가 Discord로 보내는 PNG와 같은 `greetingCard` 노드를 `@takumi-rs/wasm`으로 그려요.
+ * WASM 바이너리와 폰트(한글 서브셋 600·900 + TwemojiMozilla)는 처음 미리보기를 열 때 한 번만 받아요.
  */
 
 const FONT_FILES = [
-  { path: "/fonts/PretendardJP-SemiBold.subset.ttf", weight: 600 },
-  { path: "/fonts/PretendardJP-Black.subset.ttf", weight: 900 },
+  { path: "/fonts/PretendardJP-SemiBold.subset.ttf", name: CARD_FONT, weight: 600 },
+  { path: "/fonts/PretendardJP-Black.subset.ttf", name: CARD_FONT, weight: 900 },
+  { path: "/fonts/TwemojiMozilla.ttf", name: "Twemoji", generic: "emoji" as const },
 ] as const;
 
-type SatoriModule = typeof import("satori");
-type SatoriFont = Parameters<SatoriModule["default"]>[1]["fonts"][number];
+type TakumiRenderer = import("@takumi-rs/wasm").Renderer;
+type FromJsxFn = typeof import("@takumi-rs/helpers/jsx").fromJsx;
 
-let runtimePromise: Promise<{ satori: SatoriModule["default"]; fonts: SatoriFont[] }> | null =
-  null;
+let runtimePromise: Promise<{ renderer: TakumiRenderer; fromJsx: FromJsxFn }> | null = null;
 
-/** satori + 폰트를 처음 한 번만 받아요. 실패하면 다음 호출에서 다시 시도하도록 캐시를 비워요. */
+/** Takumi WASM + 폰트를 처음 한 번만 초기화해요. 실패하면 다음 호출에서 다시 시도하도록 캐시를 비워요. */
 function loadRuntime() {
   runtimePromise ??= (async () => {
-    const [satoriModule, fonts] = await Promise.all([
-      import("satori"),
+    const [{ init, Renderer }, wasmUrl, { fromJsx }, fontBuffers] = await Promise.all([
+      import("@takumi-rs/wasm"),
+      import("@takumi-rs/wasm/wasm-url").then((m) => m.default),
+      import("@takumi-rs/helpers/jsx"),
       Promise.all(
-        FONT_FILES.map(async ({ path, weight }): Promise<SatoriFont> => {
-          const res = await fetch(path);
-          if (!res.ok) throw new Error(`font ${path} ${res.status}`);
-          return {
-            name: CARD_FONT,
-            data: await res.arrayBuffer(),
-            weight,
-            style: "normal",
-          };
+        FONT_FILES.map(async (entry) => {
+          const res = await fetch(entry.path);
+          if (!res.ok) throw new Error(`font ${entry.path} ${res.status}`);
+          return { entry, data: await res.arrayBuffer() };
         }),
       ),
     ]);
-    return { satori: satoriModule.default, fonts };
+    await init({ module_or_path: wasmUrl });
+    const renderer = new Renderer();
+    for (const { entry, data } of fontBuffers) {
+      await renderer.registerFont(
+        "generic" in entry
+          ? { name: entry.name, data, generic: entry.generic }
+          : { name: entry.name, data, weight: entry.weight },
+      );
+    }
+    return { renderer, fromJsx };
   })().catch((error: unknown) => {
     runtimePromise = null;
     throw error;
@@ -48,38 +53,7 @@ function loadRuntime() {
   return runtimePromise;
 }
 
-/** 투명한 1x1 SVG — 그림이 없는 이모지 자리를 비워 두는 용도예요. */
-const EMPTY_EMOJI = `data:image/svg+xml;utf8,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>',
-)}`;
-
-/**
- * 색 이모지 → Twemoji SVG data URI. 서버(data-api `@twemoji/svg`)와 같은 버전을 jsDelivr에서 받아요.
- * SVG를 <img>로 보여주면 외부 리소스를 못 읽어서 data URI로 넣어요. 실패하면 빈칸이고, 같은 글자는 다시 받지 않아요.
- */
-const emojiCache = new Map<string, Promise<string>>();
-
-function loadEmojiDataUri(segment: string): Promise<string> {
-  let hit = emojiCache.get(segment);
-  if (!hit) {
-    hit = (async () => {
-      for (const code of twemojiCandidates(segment)) {
-        try {
-          const res = await fetch(twemojiCdnUrl(code));
-          if (!res.ok) continue;
-          return `data:image/svg+xml;utf8,${encodeURIComponent(await res.text())}`;
-        } catch {
-          // 다음 후보를 시도해요
-        }
-      }
-      return EMPTY_EMOJI;
-    })();
-    emojiCache.set(segment, hit);
-  }
-  return hit;
-}
-
-/** 아바타 URL → data URI. SVG를 <img>로 보여주면 외부 리소스를 못 읽어서 이미지를 SVG 안에 넣어야 해요. 실패하면 null(자리표시자). */
+/** 아바타 URL → data URI. 실패하면 null(자리표시자). */
 const avatarCache = new Map<string, Promise<string | null>>();
 
 export function loadAvatarDataUri(url: string | null): Promise<string | null> {
@@ -112,36 +86,27 @@ export interface GreetingSvgOptions {
   guildName: string;
 }
 
-/** 미리보기 샘플 값 — 이전 canvas 미리보기와 같아요 ({유저이름}은 "유저", {멤버수}는 1) */
+/** 미리보기 샘플 값 ({유저이름}은 "유저", {멤버수}는 1) */
 const SAMPLE = { displayName: "유저", memberCount: 1 } as const;
 
-/** 인사 카드를 SVG 문자열로 그려요 (1200×675). */
-export async function renderGreetingSvg(
+/** 인사 카드를 PNG data URL로 그려요 (1200×675). */
+export async function renderGreetingPreviewUrl(
   image: GreetingImage,
   options: GreetingSvgOptions,
 ): Promise<string> {
-  const [{ satori, fonts }, avatar] = await Promise.all([
+  const [{ renderer, fromJsx }, avatar] = await Promise.all([
     loadRuntime(),
     loadAvatarDataUri(options.avatarSrc),
   ]);
-  const node = greetingCard(image, {
+  const element = greetingCard(image, {
     ...SAMPLE,
     guildName: options.guildName,
     avatar,
   });
-  return satori(node as unknown as Parameters<typeof satori>[0], {
+  const { node } = await fromJsx(element as unknown as Parameters<typeof fromJsx>[0]);
+  return renderer.renderAsDataUrl(node, {
     width: GREETING_CARD_W,
     height: GREETING_CARD_H,
-    fonts,
-    // 폰트에 없는 글자(한자 등)는 600 서브셋으로 그려요 — 서버와 달리 가변 원본이 없어 빈 글리프로 남을 수 있어요.
-    loadAdditionalAsset: async (code: string, segment: string) =>
-      code === "emoji"
-        ? loadEmojiDataUri(segment)
-        : fonts.slice(0, 1).map((font) => ({ ...font, name: `${CARD_FONT}-fallback-${code}` })),
+    format: "png",
   });
-}
-
-/** `<img src>`에 쓰는 data URI */
-export function svgToDataUri(svg: string): string {
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
