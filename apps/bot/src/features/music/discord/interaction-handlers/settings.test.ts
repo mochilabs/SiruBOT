@@ -4,6 +4,7 @@ import SettingsInteractionHandler, { SETTINGS_ACTIONS } from './settings.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 import * as guildJtc from '../../../../services/guildSettings/jtc.ts';
 import * as guildPlayback from '../../../../services/guildSettings/playback.ts';
+import * as guildModules from '../../../../services/guildSettings/modules.ts';
 import { queueRelatedUpfront } from '../../lavalink/autoPlayRelated.ts';
 import { checkManageGuild } from '../utils/permissionCheck.ts';
 import { settingsView } from '../views/settings.ts';
@@ -19,6 +20,7 @@ vi.mock('@sapphire/framework', () => ({
 vi.mock('../../../../services/guildSettings/channels.ts');
 vi.mock('../../../../services/guildSettings/jtc.ts');
 vi.mock('../../../../services/guildSettings/playback.ts');
+vi.mock('../../../../services/guildSettings/modules.ts');
 vi.mock('../../lavalink/autoPlayRelated.ts', () => ({ queueRelatedUpfront: vi.fn() }));
 vi.mock('../utils/permissionCheck.ts', () => ({ checkManageGuild: vi.fn(() => true) }));
 vi.mock('../views/settings.ts', async (importOriginal) => ({ ...(await importOriginal<object>()), settingsView: vi.fn(() => 'VIEW') }));
@@ -52,6 +54,7 @@ function setup(guild: Record<string, unknown> = GUILD) {
 		mixerService: { clearNext: vi.fn().mockResolvedValue(undefined) },
 		sponsorBlockService: { refreshSettings: vi.fn() },
 		tempVoiceService: { setupMarkerChannel: vi.fn().mockResolvedValue(undefined) },
+		redisStore: { publish: vi.fn() },
 		logger: { warn: vi.fn(), error: vi.fn() }
 	};
 	const handler = new SettingsInteractionHandler({} as never, {} as never) as unknown as {
@@ -78,7 +81,7 @@ describe('settings 액션 표', () => {
 
 	it('표의 모든 항목이 settingsId 액션과 일치해요 (모달 ID 제외)', () => {
 		const actions = Object.keys(SETTINGS_ACTIONS).sort();
-		expect(actions).toHaveLength(21);
+		expect(actions).toHaveLength(22);
 		for (const action of actions) expect(settingsId.decode(settingsId.encode(action as 'back'))?.action).toBe(action);
 	});
 
@@ -121,6 +124,27 @@ describe('settings 액션 표', () => {
 			allowedMentions: { roles: [], users: [] }
 		});
 		expect(settingsView).toHaveBeenCalledWith(GUILD, 'music');
+	});
+
+	it('selectModules는 선택하지 않은 끌 수 있는 모듈을 꺼짐으로 저장하고 무효화를 알려요 (관리 모듈은 보내지 않아요)', async () => {
+		const { services } = await run('selectModules', makeInteraction('string', ['music', 'community', 'ai', 'utility']));
+		expect(guildModules.setDisabledModules).toHaveBeenCalledWith(services.guildService, 'g1', ['fun']);
+		expect(services.redisStore.publish).toHaveBeenCalledWith(
+			'sirubot:guild-settings:invalidate',
+			JSON.stringify({ guildId: 'g1' }),
+			expect.any(String)
+		);
+		expect(lastMode()).toBe('main');
+	});
+
+	it('selectModules에서 모두 해제하면 끌 수 있는 모듈 전부를 꺼요', async () => {
+		await run('selectModules', makeInteraction('string', []));
+		expect(guildModules.setDisabledModules).toHaveBeenCalledWith(expect.anything(), 'g1', ['music', 'community', 'ai', 'fun', 'utility']);
+	});
+
+	it('selectModules는 셀렉트가 아니면 아무것도 저장하지 않아요', async () => {
+		await run('selectModules', makeInteraction('button'));
+		expect(guildModules.setDisabledModules).not.toHaveBeenCalled();
 	});
 
 	it('toggleController는 컨트롤러 설정을 뒤집어요', async () => {

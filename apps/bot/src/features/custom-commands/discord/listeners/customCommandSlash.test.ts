@@ -13,10 +13,13 @@ const { deferReply, editReply, deleteReply, channelSend, addRole, react, pin } =
 	pin: vi.fn(async () => undefined)
 }));
 
-const { findCustomCommand } = vi.hoisted(() => ({ findCustomCommand: vi.fn(async () => null) }));
+const { findCustomCommand, getGuild } = vi.hoisted(() => ({
+	findCustomCommand: vi.fn(async () => null),
+	getGuild: vi.fn(async () => ({ disabledModules: [] as string[] }))
+}));
 
 vi.mock('@sapphire/framework', () => ({
-	container: { customCommandStore: { findCustomCommand } },
+	container: { customCommandStore: { findCustomCommand }, guildService: { getGuild } },
 	Events: { InteractionCreate: 'interactionCreate' },
 	Listener: class {}
 }));
@@ -62,6 +65,7 @@ async function mockEntry(entry: unknown) {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	getGuild.mockResolvedValue({ disabledModules: [] });
 });
 
 describe('handleCustomCommandSlashInteraction', () => {
@@ -90,6 +94,23 @@ describe('handleCustomCommandSlashInteraction', () => {
 		expect(deferReply).toHaveBeenCalled();
 		expect(editReply).toHaveBeenCalledWith(expect.objectContaining({ content: '첫 인사 홍길동' }));
 		expect(channelSend).toHaveBeenCalledWith(expect.objectContaining({ content: '둘째' }));
+	});
+
+	it('커뮤니티 모듈이 꺼진 서버에서는 실행하지 않고 ephemeral로 거절해요', async () => {
+		await mockEntry({
+			id: 'row-1',
+			name: '인사',
+			description: 'd',
+			method: 'slash',
+			spec: { version: 2, steps: [{ type: 'send_message', text: '안녕' }] }
+		});
+		getGuild.mockResolvedValue({ disabledModules: ['community'] });
+		const reply = vi.fn(async () => undefined);
+		const interaction = Object.assign(fakeInteraction(), { reply });
+		expect(await handleCustomCommandSlashInteraction(interaction)).toBe(true);
+		expect(JSON.stringify(reply.mock.calls)).toContain('커뮤니티 기능이 꺼져 있어요');
+		expect(deferReply).not.toHaveBeenCalled();
+		expect(channelSend).not.toHaveBeenCalled();
 	});
 
 	it('reports access denial through the reply', async () => {

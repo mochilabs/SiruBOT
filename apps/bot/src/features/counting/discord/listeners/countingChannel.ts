@@ -1,5 +1,6 @@
 import { notice } from '../../../../lib/notice.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
+import { isMessageFeatureEnabled } from '../../../../services/guildSettings/modules.ts';
 /**
  * 카운팅 채널 리스너 — 지정 채널에서 숫자를 순서대로 세요.
  *
@@ -36,6 +37,7 @@ export class CountingChannelListener extends Listener {
 
 	private async processCounting(guildId: string, message: Message): Promise<void> {
 		try {
+			if (!(await isMessageFeatureEnabled(this.container.guildService, guildId, 'counting'))) return;
 			const settings = await guildChatPolicy.getChatToolSettings(this.container.guildService, guildId);
 			if (!settings.countingEnabled || !settings.countingChannelId) return;
 			if (message.channelId !== settings.countingChannelId) return;
