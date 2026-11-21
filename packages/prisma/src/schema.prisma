@@ -70,6 +70,8 @@ model Guild {
   // 채팅 유틸: 카운팅 채널 — 지정 채널에서 숫자를 순서대로 세고 틀리면 초기화해요
   countingEnabled  Boolean @default(false)
   countingChannelId String?
+  // 서버 관리자가 끈 기능 모듈 id 목록 (packages/utils/src/modules.ts). 비어 있으면 모두 켜짐이고, toggleable이 아닌 모듈은 저장돼도 무시해요.
+  disabledModules  String[] @default([])
   // 멤버 인사: 입장/퇴장 메시지 + 커스텀 카드 이미지 설정. 구조는 packages/utils/src/memberGreeting.ts 타입과 동기화.
   welcome       Json?
   goodbye       Json?
