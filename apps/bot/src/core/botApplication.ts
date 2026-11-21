@@ -66,6 +66,7 @@ import {
 } from '../features/music/index.ts';
 import { createJtcSetupResponder, createTempVoiceService, tempVoiceMessages } from '../features/temp-voice/index.ts';
 import { BotProfileService, createBotProfileListeners } from '../features/bot-profile/index.ts';
+import { createStarboardService, createStarboardDiscord } from '../features/starboard/index.ts';
 import { createMemberGreetingService, greetingMessages, createMemberGreetingSendListener } from '../features/greeting/index.ts';
 import {
 	createBotAdminResponder,
@@ -363,6 +364,13 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			logger: appLogger
 		});
 		container.stoppables.push(container.usageRecorder);
+		container.starboardService = createStarboardService({
+			db: container.db,
+			logger: appLogger,
+			discord: createStarboardDiscord({ getClient: () => container.client, logger: appLogger }),
+			recordUsage: (guildId) => container.usageRecorder?.record(guildId, usageFeatureKey('msg', 'starboard'))
+		});
+		container.stoppables.push(container.starboardService);
 		container.customCommandStore = createCustomCommandStore({ db: container.db, logger: appLogger });
 		container.customSlashRegistry = createSlashRegistry({
 			db: container.db,

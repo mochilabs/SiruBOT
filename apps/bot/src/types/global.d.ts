@@ -54,6 +54,8 @@ declare module '@sapphire/pieces' {
 		aiChatHistory: import('../features/ai-chat/index.ts').ChannelHistoryStore;
 		/** 카운팅 채널 상태(샤드 메모리 + Redis write-behind) 소유자 */
 		countingState: import('../features/counting/index.ts').CountingStateStore;
+		/** 스타보드 반응 디바운스·게시·갱신 소유자 (features/starboard/application/starboardService.ts) */
+		starboardService: import('../features/starboard/index.ts').StarboardService;
 		/** 재생 이벤트 data-api 리포트 소유자 — 진행 중인 요청을 종료 때 기다려요 */
 		playbackReporter: PlaybackReporter;
 		/** 장애 공지 읽기 (Redis 키, 30초 캐시) — 오류 화면·재생 실패 알림에 덧붙여요 */

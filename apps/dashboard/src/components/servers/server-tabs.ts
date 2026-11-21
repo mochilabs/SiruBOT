@@ -14,6 +14,7 @@ export const SERVER_TABS = [
   { key: "channels", label: "채널·권한", group: "community" },
   { key: "greeting", label: "멤버", group: "community" },
   { key: "ticket", label: "티켓", group: "community" },
+  { key: "starboard", label: "스타보드", group: "community" },
   { key: "role-panels", label: "역할 패널", group: "community" },
   { key: "social", label: "소셜 알림", group: "community" },
   { key: "jtc", label: "임시 음성", group: "community" },
