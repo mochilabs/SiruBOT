@@ -13,3 +13,10 @@ Repo-wide rules live in the root `AGENTS.md`. Paths are relative to `apps/storag
 - `STORAGE_PUBLIC_URL` (a public https domain) is baked into every issued URL. Changing the domain means rewriting URLs already stored in the database.
 - `STORAGE_DATA_DIR` (default `./data`, `/data` in Docker) must be a persisted volume.
 - Two callers hold the URL and key. Dashboard API routes upload and delete guild image assets through `apps/dashboard/src/lib/storage.ts`. data-api relays private objects such as ticket transcripts. The bot never gets either.
+
+## Run and test
+
+- Start: `yarn workspace @sirubot/storage build && yarn workspace @sirubot/storage start`. Port 3003. Health: `GET /health`. No database or Redis.
+- Discord only shows embedded images when `STORAGE_PUBLIC_URL` is reachable from the internet, so locally uploads work but previews in Discord do not.
+- The private bucket (`ticket-transcripts/`) returns 404 on public GET.
+- Single test: `yarn workspace @sirubot/storage test src/routes/objects.get.test.ts`.

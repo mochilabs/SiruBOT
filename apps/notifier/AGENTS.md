@@ -13,3 +13,11 @@ Repo-wide rules live in the root `AGENTS.md`. Paths are relative to `apps/notifi
 - Env schema: `config/env.ts`. The auth key is `NOTIFIER_AUTH_KEY ?? AUTH_KEY`. Startup fails closed without one (`config/env.test.ts`).
 - Webhook tokens are encrypted at rest (`services/secretStorage.ts`) with `DATA_ENCRYPTION_KEY`, which is derived from `AUTH_KEY` when unset. **When rotating `AUTH_KEY`, put the old value in `DATA_ENCRYPTION_KEY`**, or existing rows can't be decrypted.
 - Push delivery is opt-in per source. WebSub needs `NOTIFIER_PUBLIC_URL` + `YOUTUBE_HUB_SECRET` (otherwise RSS polling only). EventSub needs the Twitch client ID/secret, the public URL and `TWITCH_EVENTSUB_SECRET` (20–100 chars). `CHZZK_POLLING_ENABLED` turns off only on the exact string `'false'`, so don't switch it to `z.coerce.boolean()`.
+
+## Run and test
+
+- Start: `yarn workspace @sirubot/notifier build && yarn workspace @sirubot/notifier start`. Port 3004. Health: `GET /health`.
+- Without `DATABASE_URL` the social worker is disabled. Without Redis it keeps state in process memory (one replica only). Subscribing a channel needs a running bot to create the webhook.
+- Only data-api calls it; the dashboard goes through data-api's `/v1/guilds/:guildId/social/*` proxy.
+- WebSub and EventSub callbacks need a public URL, so locally only RSS and Chzzk polling run.
+- Single test: `yarn workspace @sirubot/notifier test src/config/env.test.ts`.

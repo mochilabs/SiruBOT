@@ -1,6 +1,6 @@
 # Dashboard API route contract
 
-> **As of**: 2026-11-13 · Verified against `apps/dashboard/src/app/api/**/route.ts` (65 route files).
+> **As of**: 2026-11-21 · Verified against `apps/dashboard/src/app/api/**/route.ts` (65 route files).
 
 Higher-level flows are in `./architecture.md` (4.3 apps/dashboard, 6.2 Redis request/reply). Paths below are relative to `apps/dashboard/src/` unless they start with `apps/` or `packages/`.
 
@@ -40,7 +40,7 @@ All paths are under `/api`. `[id]` is the guild id.
 | Guild settings (5) | `servers/[id]/settings`, `channels`, `roles`, `stats`, `bot-profile` | manage | Database; `channels` and `roles` come from the bot's cache through data-api |
 | AI (2) | `servers/[id]/ai`, `ai/history` | manage | Database |
 | Custom commands (4) | `servers/[id]/custom-commands`, `custom-commands/draft`, `custom-commands/refine`, `custom-commands/[cmdId]` | manage | Database; `draft` and `refine` call the data-api LLM routes. A command's execution method cannot change after creation |
-| Greeting (6) | `servers/[id]/greeting`, `greeting/background`, `greeting/layer-image`, `greeting/preview`, `greeting/status`, `greeting/test` | manage | Images and the test send go through data-api |
+| Greeting (5) | `servers/[id]/greeting`, `greeting/background`, `greeting/layer-image`, `greeting/status`, `greeting/test` | manage | Images and the test send go through data-api |
 | Join-to-create (1) | `servers/[id]/jtc/setup` | manage | data-api → bot (creating the marker channel needs the bot token) |
 | Live state (2) | `servers/[id]/live`, `live/stream` | manage | data-api; `live/stream` relays SSE |
 | Player (5) | `servers/[id]/player`, `player/command`, `player/play`, `player/search`, `player/voice-context` | member | data-api request/reply |
@@ -50,7 +50,7 @@ All paths are under `/api`. `[id]` is the guild id.
 | Tickets (4) | `servers/[id]/ticket`, `ticket/post`, `ticket/tickets`, `ticket/[ticketId]/transcript` | manage | Settings in the database; posting goes data-api → bot; transcripts through the data-api storage proxy |
 | Role panels (3) | `servers/[id]/role-panels`, `role-panels/[panelId]`, `role-panels/[panelId]/post` | manage | Database for list, create, update and delete (create and update ask the bot to validate the roles; update refreshes the posted message); posting goes data-api → bot. Every read, write and post checks that the panel belongs to guild `[id]` |
 | Operator (10) | `admin/overview`, `admin/usage`, `admin/guilds`, `admin/guilds/[id]`, `admin/users`, `admin/users/[id]`, `admin/social`, `admin/social/[subId]`, `admin/bot-control`, `data-api` | admin | `bot-control` delegates to data-api `bot-admin`; `data-api` proxies data-api status; `usage` reads `FeatureDailyUse` and `GuildLifecycle` (summary math in `src/lib/usage-summary.ts`) |
-| Public (4) | `shards`, `tracks`, `voice-servers`, `voice-servers/history` | public | Shard status from shardmanager, the track chart from the database, Lavalink stream counts |
+| Public (4) | `shards`, `tracks`, `voice-servers`, `voice-servers/history` | public | Shard status from shardmanager; the track chart from the database, grouped by `Recording` with `period` `today`, `week` (default), `month` or `all` (`lib/track-chart.ts`); Lavalink stream counts |
 
 ## Rate limits
 
@@ -61,7 +61,6 @@ Rules are defined in `lib/rate-limit.ts`. All windows are one minute.
 | `READ_RATE` | 30 | Most reads |
 | `WRITE_RATE` | 12 | Most writes |
 | `HEAVY_WRITE_RATE` | 5 | Channel creation (`jtc/setup`), LLM calls (`custom-commands/draft`, `refine`), greeting image uploads |
-| `RENDER_RATE` | 60 | Image render preview (`greeting/preview`) |
 | `UPLOAD_RATE` | 10 | Asset uploads |
 | `PUBLIC_RATE` | 120 | Anonymous requests to public routes, in one shared bucket. Signed-in callers get `READ_RATE` per user |
 

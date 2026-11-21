@@ -1,6 +1,6 @@
 # Development setup
 
-> **As of**: 2026-11-13
+> **As of**: 2026-11-21
 
 Structure and contracts are in `./architecture.md`. This page is the shortest path to a running local environment.
 
@@ -35,6 +35,7 @@ Structure and contracts are in `./architecture.md`. This page is the shortest pa
 
 ## Environment essentials
 
+- The Lavalink in `docker/docker-compose.yml` is the stock image without plugins, so YouTube playback, the mixer (gapless, crossfade, AutoMix) and the file cache do not work against it. Point `LAVALINK_HOSTS` at a node with the plugins from `./3rdparty.md` §1 when you need them.
 - `LAVALINK_HOSTS` is a comma-separated list of `id_host_port[_password]`, for example `main_localhost_2333_youshallnotpass`. The parser is `packages/utils/src/lavalinkHosts.ts`; a malformed value stops the bot before it boots.
 - The data-api key is `DATA_API_AUTH_KEY ?? AUTH_KEY`. The bot, the dashboard and data-api must share it. Callers send the raw key in `Authorization`, with no `Bearer` prefix.
 - Without that key the dashboard skips every data-api call (`apps/dashboard/src/lib/data-api/client.ts`), so player, channel and role features fail.

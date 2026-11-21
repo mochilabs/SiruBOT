@@ -1,6 +1,6 @@
 # SiruBOT documentation
 
-> **As of**: 2026-11-13
+> **As of**: 2026-11-21
 
 ## Documents
 

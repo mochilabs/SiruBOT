@@ -1,6 +1,6 @@
 # Production runbook
 
-> **As of**: 2026-11-13
+> **As of**: 2026-11-21
 
 Architecture and contracts are in `./architecture.md`; the cross-app environment table is `./architecture.md#10-environment-variables`. This page covers operational behavior only.
 
@@ -29,7 +29,7 @@ Architecture and contracts are in `./architecture.md`; the cross-app environment
 ## Shutdown order
 
 - **bot** (`apps/bot/src/core/shutdown.ts`): close the health server → save Lavalink node sessions to Redis → clean up the Lavalink handler and audio listeners → stop the shared Redis subscription (`container.redisSubscribers`) → stop state owners in `container.stoppables` (flush pending writes, clear timers; capped at 5 s by `apps/bot/src/lib/lifecycle.ts`) → flush the pending-write journal → disconnect Redis → disconnect the database → destroy the gateway client → destroy the shard client → flush Sentry.
-- **data-api** (`apps/data-api/src/server.ts`): stop both schedulers → stop the eight hubs (player, bot-profile, greeting, guild-data, player-web, jtc, bot-admin, panel) → disconnect Redis → disconnect the database → close Fastify.
+- **data-api** (`apps/data-api/src/server.ts`): stop the three schedulers (horoscope, memory tidy, ISRC enrichment) → stop the eight hubs (player, bot-profile, greeting, guild-data, player-web, jtc, bot-admin, panel) → disconnect Redis → disconnect the database → close Fastify.
 - **shardmanager** (`apps/shardmanager/src/server.ts`): destroy the registry → close Fastify.
 - **storage** (`apps/storage/src/index.ts`): close Fastify. It has a local volume only, with no database or other connection.
 - **notifier** (`apps/notifier/src/index.ts`): stop the poller, the scheduler, the Twitch scheduler and the hub → disconnect the database → disconnect Redis → close Fastify.
