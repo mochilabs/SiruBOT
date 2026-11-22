@@ -165,7 +165,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
       notice={
         <InfoBox>
           <p>
-            디스코드에서 <span className="font-semibold text-foreground">/채팅설정</span> 커맨드로도 바꿀 수 있어요.
+            디스코드에서 <span className="font-semibold text-foreground">/설정</span> 명령어의 AI 채팅 페이지에서도 사용 범위를 바꿀 수 있어요.
           </p>
         </InfoBox>
       }

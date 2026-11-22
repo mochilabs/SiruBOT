@@ -19,7 +19,7 @@ export class SettingsCommand extends Command {
 				.setName(this.name)
 				.setNameLocalizations({ ko: '설정' })
 				.setDescription(this.description)
-				.setDescriptionLocalizations({ ko: '봇의 서버 설정을 관리해요.' })
+				.setDescriptionLocalizations({ ko: '음악·믹서·채널·AI 채팅 등 봇의 서버 설정을 관리해요.' })
 				.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 		});
 	}

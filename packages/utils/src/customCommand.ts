@@ -47,7 +47,6 @@ export const CUSTOM_COMMAND_RESERVED_NAMES = [
 	'지금재생',
 	'플레이리스트',
 	'즐겨찾기',
-	'믹서',
 	'설정',
 	'정보',
 	'프로필',
