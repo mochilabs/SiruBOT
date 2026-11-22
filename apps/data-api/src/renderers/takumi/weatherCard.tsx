@@ -12,7 +12,7 @@ type DailyDay = WeatherCardInput['daily'][number];
 const W = 960;
 /** 라이트 테마에서도 글자가 읽히도록 옅은 그림자를 깔아요(다크에서는 거의 보이지 않아요). */
 const SHADOW = '0 1px 4px rgba(0, 0, 0, 0.85)';
-const ellipsis = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
+const ellipsis = { display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
 const PAD = 16;
 // 배경을 칠하지 않는 투명 PNG예요 — Discord 컨테이너 위에 그대로 얹혀 면이 섞여 보여요. 색은 Discord 다크 테마의 텍스트 톤을 따라요.
 const TEXT = '#f2f3f5';

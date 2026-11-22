@@ -61,7 +61,7 @@ const NEXT_MAX = 3;
 const loadArtwork = createAsyncLru<PreparedArtwork>(32, async (url) => prepareArtwork(await fetchImageDataUri(url), ART));
 const loadAvatar = createAsyncLru<string>(64, (url) => fetchImageDataUri(url));
 
-const ellipsis = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
+const ellipsis = { display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
 const fill = { position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' } as const satisfies CSSProperties;
 
 /** 뱃지(`Badge`): 텍스트 색 위에 같은 색 10~20% 배경 */

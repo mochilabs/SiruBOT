@@ -62,7 +62,7 @@ const PAD = 16;
 
 /** 라이트 테마에서도 글자가 읽히도록 옅은 그림자를 깔아요(다크에서는 거의 보이지 않아요). */
 const SHADOW = '0 1px 4px rgba(0, 0, 0, 0.85)';
-const ellipsis = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
+const ellipsis = { display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
 
 /** 별자리 코드('01'~'12') 순서의 lucide 스타일 벡터 아이콘 이름 */
 const ZODIAC_ICON_NAMES = [
