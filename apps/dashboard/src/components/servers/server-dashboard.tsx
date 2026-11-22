@@ -36,6 +36,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useGuildSettings } from "@/hooks/use-guild-settings";
 import { notifyApiError, notifySaved } from "@/lib/notify";
 
+import { FeatureSwitcherProvider } from "./feature-switcher";
 import { ModuleIcon } from "./module-icon";
 import { toggleModuleDisabled } from "./modules-settings";
 import { ServerFeatureSidebar } from "./server-feature-sidebar";
@@ -226,6 +227,7 @@ export function ServerDashboard({
       <div className="flex flex-col items-start gap-4 lg:flex-row lg:gap-8">
         <ServerFeatureSidebar items={navItems} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} header={switcher} collapsibleGroups={["community"]} />
 
+        <FeatureSwitcherProvider>
         <div className="w-full min-w-0 flex-1">
           <Tabs
             value={tab}
@@ -333,6 +335,7 @@ export function ServerDashboard({
             ))}
           </Tabs>
         </div>
+        </FeatureSwitcherProvider>
       </div>
       <Dialog open={pendingTab !== null} onOpenChange={(open) => { if (!open && !savingBeforeLeave) setPendingTab(null); }}>
         <DialogContent showCloseButton={false}>
