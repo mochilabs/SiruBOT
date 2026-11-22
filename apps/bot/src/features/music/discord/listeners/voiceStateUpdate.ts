@@ -8,6 +8,7 @@ import { Logger, ILogObj } from 'tslog';
 import { CustomPlayer } from '../../lavalink/player/customPlayer.ts';
 import { emoji } from '@sirubot/utils';
 import { getConfig } from '../../../../lib/config.ts';
+import { inGuildTheme } from '../../../../lib/guildThemeScope.ts';
 
 @ApplyOptions<Listener.Options>({
 	event: Events.VoiceStateUpdate
@@ -70,7 +71,11 @@ export class VoiceStateUpdateListener extends Listener {
 							const textChannel = this.container.client.channels.cache.get(player.textChannelId);
 							if (textChannel?.isSendable()) {
 								await textChannel.send({
-									components: [notice(`${emoji('sleep')} 장시간 아무도 음악을 듣지 않아서 음성 채널에서 퇴장했어요.`)],
+									components: [
+										await inGuildTheme(guildId, () =>
+											notice(`${emoji('sleep')} 장시간 아무도 음악을 듣지 않아서 음성 채널에서 퇴장했어요.`)
+										)
+									],
 									flags: [MessageFlags.IsComponentsV2]
 								});
 							}

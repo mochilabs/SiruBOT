@@ -2,6 +2,7 @@ import { type Client, type GuildBasedChannel, type Message, MessageFlags, type M
 import { rolePanelEmojiKey } from '@sirubot/utils/rolePanel';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { StarboardDiscordPort, StarboardMessageRef, StarboardSource } from '../application/starboardService.ts';
+import { inGuildTheme } from '../../../lib/guildThemeScope.ts';
 import { starboardCard } from './views/starboardCard.ts';
 
 /** 반응한 사용자 조회 한 번의 상한 — 이보다 많으면 기준(최대 50)을 이미 훌쩍 넘어서 본인 반응 한 개로 판정이 바뀌지 않아요 */
@@ -86,7 +87,10 @@ export function createStarboardDiscord(deps: StarboardDiscordDeps): StarboardDis
 			try {
 				const channel = await getTextChannel(channelId);
 				if (!channel || !channel.isSendable()) return null;
-				const sent = await channel.send({ components: [starboardCard(source, count, emoji)], ...sendOptions });
+				const sent = await channel.send({
+					components: [await inGuildTheme(source.guildId, () => starboardCard(source, count, emoji))],
+					...sendOptions
+				});
 				return sent.id;
 			} catch (error) {
 				deps.logger.warn(`[starboard] 스타보드 글 게시 실패 (${channelId}): ${error instanceof Error ? error.message : String(error)}`);
@@ -99,7 +103,7 @@ export function createStarboardDiscord(deps: StarboardDiscordDeps): StarboardDis
 				const channel = await getTextChannel(channelId);
 				if (!channel) return 'gone';
 				await channel.messages.edit(messageId, {
-					components: [starboardCard(source, count, emoji)],
+					components: [await inGuildTheme(source.guildId, () => starboardCard(source, count, emoji))],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { parse: [] }
 				});

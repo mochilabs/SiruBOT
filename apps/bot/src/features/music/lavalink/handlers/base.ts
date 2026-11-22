@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/node';
 import { ILogObj, Logger } from 'tslog';
 import type { LavalinkDeps } from '../deps.ts';
+import { withGuildTheme } from '../../../../lib/guildTheme.ts';
 
 export abstract class BaseLavalinkHandler {
 	protected logger: Logger<ILogObj>;
@@ -16,7 +17,12 @@ export abstract class BaseLavalinkHandler {
 	protected wrapAsyncHandler<T extends (...args: any[]) => Promise<any> | any>(handler: T, context?: string): T {
 		return (async (...args: Parameters<T>) => {
 			try {
-				const result = await handler(...args);
+				// 플레이어 이벤트는 상호작용 맥락이 없어서 서버 테마를 여기서 한 번 싣는다 (길드 설정 캐시를 읽는다).
+				const result = await withGuildTheme(
+					extractGuildId(args),
+					async (guildId) => (await this.deps.guildService.getGuild(guildId)).themePreset,
+					() => handler(...args)
+				);
 				return result;
 			} catch (error) {
 				const errorContext = context ? ` (${context})` : '';

@@ -46,6 +46,8 @@ export interface GuildJobSchedulerDeps {
 	intervalMs?: number;
 	staleAfterMs?: number;
 	stopTimeoutMs?: number;
+	/** 핸들러를 길드 맥락(서버 테마 등) 안에서 실행해요 — 없으면 그대로 실행해요 */
+	runInGuild?: <T>(guildId: string, fn: () => Promise<T> | T) => Promise<T>;
 }
 
 const errorMessage = (error: unknown): string => {
@@ -196,7 +198,8 @@ export class GuildJobScheduler implements Stoppable {
 				return;
 			}
 			try {
-				await handler(job);
+				const runInGuild = this.deps.runInGuild;
+				await (runInGuild ? runInGuild(job.guildId, () => handler(job)) : handler(job));
 			} catch (error) {
 				await this.fail(job, error);
 				return;

@@ -11,6 +11,7 @@ import { runChatTurnToScreen } from '../chatTurnRunner.ts';
 import { errorPayload, livePayload } from '../views/chatView.ts';
 import { usageFeatureKey } from '@sirubot/utils/modules';
 import { isMessageFeatureEnabled } from '../../../../services/guildSettings/modules.ts';
+import { inGuildTheme } from '../../../../lib/guildThemeScope.ts';
 @ApplyOptions<Listener.Options>({
 	event: Events.MessageCreate
 })
@@ -62,7 +63,11 @@ export class MentionReplyListener extends Listener {
 		if (!prompt && images.length === 0) {
 			await message
 				.reply({
-					components: [notice(`-# ${emoji('bulb')} 질문을 멘션 뒤에 이어서 써 주세요. 예: \`@시루 내일 날씨 어때?\``)],
+					components: [
+						await inGuildTheme(message.guildId, () =>
+							notice(`-# ${emoji('bulb')} 질문을 멘션 뒤에 이어서 써 주세요. 예: \`@시루 내일 날씨 어때?\``)
+						)
+					],
 					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
@@ -74,13 +79,18 @@ export class MentionReplyListener extends Listener {
 		// 채널 턴을 확보한 뒤에 유저 사용량을 소모하고, 소모에 실패하면 채널 턴도 바로 돌려줘요.
 		const turn = await this.container.aiChat.acquireChatTurn(channelId, message.author.id);
 		if (!turn.ok) {
-			const text =
-				turn.denial === 'channel_busy'
-					? `-# ${emoji('hourglass')} 방금 멘션에 답변하는 중이에요. 잠시 후 다시 멘션해 주세요.`
-					: `-# ${emoji('hourglass')} AI 대화 10분 사용량을 모두 썼어요. 잠시 후 다시 멘션해 주세요.`;
+			const denial = turn.denial;
 			await message
 				.reply({
-					components: [notice(text)],
+					components: [
+						await inGuildTheme(message.guildId, () =>
+							notice(
+								denial === 'channel_busy'
+									? `-# ${emoji('hourglass')} 방금 멘션에 답변하는 중이에요. 잠시 후 다시 멘션해 주세요.`
+									: `-# ${emoji('hourglass')} AI 대화 10분 사용량을 모두 썼어요. 잠시 후 다시 멘션해 주세요.`
+							)
+						)
+					],
 					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})

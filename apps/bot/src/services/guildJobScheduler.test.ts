@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { GuildJobScheduler, JOB_BACKOFF_MS, JOB_MAX_ATTEMPTS, JOB_STALE_AFTER_MS, type ScheduledJob } from './guildJobScheduler.ts';
+import {
+	GuildJobScheduler,
+	type GuildJobSchedulerDeps,
+	JOB_BACKOFF_MS,
+	JOB_MAX_ATTEMPTS,
+	JOB_STALE_AFTER_MS,
+	type ScheduledJob
+} from './guildJobScheduler.ts';
 
 const NOW = new Date('2026-11-21T00:00:00Z');
 
@@ -20,7 +27,7 @@ const makeJob = (over: Partial<ScheduledJob> = {}): ScheduledJob => ({
 	...over
 });
 
-function setup(opts: { jobs?: ScheduledJob[][]; guilds?: string[]; stopTimeoutMs?: number } = {}) {
+function setup(opts: { jobs?: ScheduledJob[][]; guilds?: string[]; stopTimeoutMs?: number; runInGuild?: GuildJobSchedulerDeps['runInGuild'] } = {}) {
 	const claims = [...(opts.jobs ?? [[]])];
 	const db = {
 		$queryRaw: vi.fn(async () => claims.shift() ?? []),
@@ -37,7 +44,8 @@ function setup(opts: { jobs?: ScheduledJob[][]; guilds?: string[]; stopTimeoutMs
 		logger,
 		now: () => NOW,
 		processId: 'p1',
-		stopTimeoutMs: opts.stopTimeoutMs
+		stopTimeoutMs: opts.stopTimeoutMs,
+		runInGuild: opts.runInGuild
 	});
 	return { db, logger, scheduler };
 }
@@ -59,6 +67,24 @@ describe('tick 실행', () => {
 			where: { id: 'j1', status: 'running', lockedBy: 'p1' },
 			data: { status: 'done', lockedBy: null, lockedAt: null }
 		});
+	});
+
+	it('runInGuild가 있으면 핸들러를 작업의 길드 맥락 안에서 실행해요', async () => {
+		const seen: string[] = [];
+		const runInGuild: GuildJobSchedulerDeps['runInGuild'] = async (guildId, fn) => {
+			seen.push(`enter:${guildId}`);
+			try {
+				return await fn();
+			} finally {
+				seen.push(`exit:${guildId}`);
+			}
+		};
+		const { scheduler } = setup({ jobs: [[makeJob({ guildId: 'g1' })]], runInGuild });
+		scheduler.register('test', async () => {
+			seen.push('handler');
+		});
+		await scheduler.tick();
+		expect(seen).toEqual(['enter:g1', 'handler', 'exit:g1']);
 	});
 
 	it('가진 길드가 없으면 DB를 건드리지 않아요', async () => {
