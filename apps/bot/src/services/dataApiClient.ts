@@ -225,7 +225,7 @@ export interface NowPlayingCardRequest {
 	isPaused?: boolean;
 	/** 반복 모드 — off가 아니면 카드에 상단 반복 뱃지로 표기돼요 */
 	repeatMode?: 'off' | 'track' | 'queue';
-	/** 현재 곡이 봇 추천(related) 곡인지 — 카드에 봇 추천 뱃지를 박아요 */
+	/** 현재 곡이 추천 곡(related) 곡인지 — 카드에 추천 곡 뱃지를 박아요 */
 	isRecommended?: boolean;
 	/** 다음 곡 목록(유저 대기열 기준, 최대 3) — 있으면 카드에 목록으로 그려요 */
 	nextTracks?: Array<{ title: string; artist: string | null }>;

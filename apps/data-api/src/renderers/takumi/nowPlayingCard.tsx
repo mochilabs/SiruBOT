@@ -30,7 +30,7 @@ export interface NowPlayingCardInput {
 	isPaused?: boolean;
 	/** 반복 모드 — off가 아니면 상단에 반복 뱃지로 표기해요 */
 	repeatMode?: 'off' | 'track' | 'queue';
-	/** 현재 곡이 봇 추천(related) 곡인지 — 봇 추천 뱃지를 박아요 */
+	/** 현재 곡이 추천 곡(related) 곡인지 — 추천 곡 뱃지를 박아요 */
 	isRecommended?: boolean;
 	/** 다음 곡 목록(유저 대기열 기준) — 공간이 허용되는 만큼(최대 3) 그려요 */
 	nextTracks?: Array<{ title: string; artist: string | null }>;
@@ -154,7 +154,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 					)}
 					<Box style={{ flexDirection: 'column', flex: 1, minWidth: 0, minHeight: ART, marginLeft: 28 }}>
 						<Box style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-							{/* 상단 뱃지: 재생 상태 + 상태 텍스트(LIVE · 봇 추천 · 반복) */}
+							{/* 상단 뱃지: 재생 상태 + 상태 텍스트(LIVE · 추천 곡 · 반복) */}
 							<Box style={{ flex: 1, minWidth: 0 }}>
 								{input.isPaused ? (
 									<Badge
@@ -172,7 +172,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 									/>
 								)}
 								{input.isStream ? <Badge label="LIVE" color={T.destructive} background={hexToRgba(T.destructive, 0.18)} /> : null}
-								{input.isRecommended ? <Badge label="봇 추천" color={T.mutedForeground} background={mutedBadgeBg} /> : null}
+								{input.isRecommended ? <Badge label="추천 곡" color={T.mutedForeground} background={mutedBadgeBg} /> : null}
 								{input.repeatMode === 'track' ? (
 									<Badge
 										label="반복: 현재 곡"
