@@ -32,6 +32,9 @@ interface GreetingPreviewSectionProps {
   onPointerMove: (event: React.PointerEvent<HTMLCanvasElement>) => void;
   /** 포인터 놓기·취소 둘 다 같은 정리(드래그 종료 + 커밋)를 해요 */
   onPointerEnd: (event: React.PointerEvent<HTMLCanvasElement>) => void;
+  /** 드래그 중 가이드선에 붙이는 스냅 — Alt를 누르고 있으면 잠시 꺼져요 */
+  snapEnabled: boolean;
+  onToggleSnap: () => void;
 }
 
 /** 미리보기 — 실행취소/다시실행 버튼과 드래그로 조작하는 카드 캔버스 */
@@ -54,12 +57,25 @@ export function GreetingPreviewSection({
   onPointerDown,
   onPointerMove,
   onPointerEnd,
+  snapEnabled,
+  onToggleSnap,
 }: GreetingPreviewSectionProps) {
   return (
     <div className="min-w-0 lg:col-start-1 lg:row-start-1">
       <div className="flex items-center justify-between gap-2 pb-1">
         <SectionLabel as="p">미리보기</SectionLabel>
         <div className="flex items-center gap-1">
+          <Button
+            variant="state-toggle"
+            size="sm"
+            active={snapEnabled}
+            aria-pressed={snapEnabled}
+            title="가이드선에 붙이기 (드래그 중 Alt를 누르면 잠시 꺼져요)"
+            onClick={onToggleSnap}
+            disabled={saving}
+          >
+            스냅
+          </Button>
           <Button
             variant="icon"
             size="sm"
@@ -112,6 +128,9 @@ export function GreetingPreviewSection({
           onPointerCancel={onPointerEnd}
         />
       </div>
+      <p className="pt-1 text-2xs text-muted-foreground/80">
+        Shift 클릭·빈 곳 드래그로 여러 개 선택, Ctrl+C/V 복사·붙여넣기, Ctrl+D 복제, 방향키로 미세 이동(Shift는 10배)해요.
+      </p>
       {animated && (
         <div className="flex items-center gap-3 pt-2">
           <Button
