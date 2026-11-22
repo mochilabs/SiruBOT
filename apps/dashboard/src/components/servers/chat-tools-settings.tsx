@@ -103,7 +103,7 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 			description="메시지에 자동으로 반응하는 편의 기능을 채널 단위로 관리해요."
 			notice={
 			<InfoBox>
-					<p>디스코드에서 /채팅유틸 커맨드로도 채널을 켜고 끌 수 있어요.</p>
+					<p>디스코드에서 /설정 명령어의 채팅 유틸 페이지에서도 현재 채널의 기능을 켜고 끌 수 있어요.</p>
 				</InfoBox>
 			}
 		>

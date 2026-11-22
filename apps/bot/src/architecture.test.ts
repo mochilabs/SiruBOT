@@ -80,10 +80,6 @@ const ALLOWED_APPLICATION_TO_DISCORD: string[] = [];
  * Removal path: move the helper to `lib/` (or into the feature) so the feature no longer reaches into `src/discord/`.
  */
 const ALLOWED_FEATURE_TO_DISCORD: string[] = [
-	'features/ai-chat/discord/commands/chatSettings.ts -> discord/utils/channels.ts', // shared channel picker for the chat settings command
-	'features/ai-chat/discord/commands/chatSettings.ts -> discord/views/settingResult.ts', // shared setting-result view
-	'features/ai-chat/discord/commands/chatTools.ts -> discord/utils/channels.ts', // shared channel picker for the chat tools command
-	'features/ai-chat/discord/commands/chatTools.ts -> discord/views/settingResult.ts', // shared setting-result view
 	'features/tts/discord/commands/tts.ts -> discord/utils/channels.ts', // shared channel picker for the TTS command
 	'features/tts/discord/commands/tts.ts -> discord/views/settingResult.ts' // shared setting-result view
 ];

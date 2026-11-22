@@ -6,7 +6,9 @@ import FilterSelectMenuHandler from './filterSelectMenu.ts';
 import SettingsInteractionHandler, { SETTINGS_ACTIONS } from './settings.ts';
 import { SettingsModalHandler } from './settingsModal.ts';
 import { filterView } from '../views/filter.ts';
-import { jtcTemplateModal, settingsView, type SettingsMode } from '../views/settings.ts';
+import { settingsView, type SettingsMode } from '../views/settings.ts';
+import { automixModal, crossfadeModal, jtcTemplateModal } from '../settings/modals.ts';
+import { SETTINGS_SCREENS } from '../settings/types.ts';
 import { searchResults } from '../views/search.ts';
 import { playlistLibraryView } from '../views/playlist.ts';
 import { askPlaylistAdd } from '../views/play.ts';
@@ -28,6 +30,46 @@ function ids(rendered: unknown): string[] {
 }
 
 const ctx = {} as never;
+const BASE_GUILD = {
+	sponsorBlockSegments: [],
+	djRoleId: null,
+	textChannelId: null,
+	voiceChannelId: null,
+	pinnedChannelId: null,
+	pinnedChannelMode: 'play',
+	pinnedChannelDeleteInput: false,
+	enableController: true,
+	related: false,
+	repeat: 'off',
+	jtcEnabled: false,
+	jtcMarkerChannelId: null,
+	jtcTemplate: '{user}',
+	jtcUserLimit: 0
+};
+/** 오디오·AI·채팅 유틸 페이지가 읽는 길드 값 */
+const EXTRA_GUILD = {
+	volume: 100,
+	disabledModules: [],
+	gaplessEnabled: true,
+	crossfadeEnabled: false,
+	crossfadeMs: 5000,
+	normalizationEnabled: false,
+	automixEnabled: false,
+	automixMaxTempoChange: 0.06,
+	automixMinConfidence: 0.3,
+	ttsAnnounceMode: 'sequential',
+	aiMode: 'channels',
+	aiChannelIds: ['9'],
+	emojiEnlargeMode: 'off',
+	emojiEnlargeChannelIds: [],
+	quoteMode: 'all',
+	quoteChannelIds: [],
+	embedFixMode: 'channels',
+	embedFixChannelIds: ['9'],
+	embedFixSites: [],
+	countingEnabled: true,
+	countingChannelId: '8'
+};
 const claims = (handler: { parse(i: never): { isSome(): boolean } }, customId: string) =>
 	handler.parse({ customId, inCachedGuild: () => true } as never).isSome();
 
@@ -45,35 +87,33 @@ describe('audio custom id round trips', () => {
 		expect(claims(button as never, 'filter:reset')).toBe(false);
 	});
 
-	it.each(['main', 'music', 'sponsorblock', 'dj', 'channel', 'jtc'] as SettingsMode[])(
-		'settings %s view ids are claimed by the settings handler',
-		(mode) => {
-			const guild = {
-				sponsorBlockSegments: [],
-				djRoleId: null,
-				textChannelId: null,
-				voiceChannelId: null,
-				pinnedChannelId: null,
-				pinnedChannelMode: 'play',
-				pinnedChannelDeleteInput: false,
-				enableController: true,
-				related: false,
-				repeat: 'off',
-				jtcEnabled: false,
-				jtcMarkerChannelId: null,
-				jtcTemplate: '{user}',
-				jtcUserLimit: 0
-			};
-			const rendered = ids(settingsView(guild as never, mode).toJSON());
-			const handler = new SettingsInteractionHandler(ctx, ctx);
-			for (const id of rendered) {
-				expect(settingsId.decode(id), id).not.toBeNull();
-				expect(claims(handler as never, id), id).toBe(true);
-			}
-			if (mode !== 'main') expect(rendered).toContain(settingsId.encode('back'));
-			expect(claims(handler as never, 'settings:toggle:controller')).toBe(false);
+	it.each([...SETTINGS_SCREENS] as SettingsMode[])('settings %s view ids are claimed by the settings handler', (mode) => {
+		const guild = {
+			sponsorBlockSegments: [],
+			djRoleId: null,
+			textChannelId: null,
+			voiceChannelId: null,
+			pinnedChannelId: null,
+			pinnedChannelMode: 'play',
+			pinnedChannelDeleteInput: false,
+			enableController: true,
+			related: false,
+			repeat: 'off',
+			jtcEnabled: false,
+			jtcMarkerChannelId: null,
+			jtcTemplate: '{user}',
+			jtcUserLimit: 0,
+			...EXTRA_GUILD
+		};
+		const rendered = ids(settingsView(guild as never, mode).toJSON());
+		const handler = new SettingsInteractionHandler(ctx, ctx);
+		for (const id of rendered) {
+			expect(settingsId.decode(id), id).not.toBeNull();
+			expect(claims(handler as never, id), id).toBe(true);
 		}
-	);
+		if (mode !== 'main') expect(rendered).toContain(settingsId.encode('back'));
+		expect(claims(handler as never, 'settings:toggle:controller')).toBe(false);
+	});
 
 	it('every settings action redraws the screen that holds its own control', () => {
 		const guild = {
@@ -90,7 +130,8 @@ describe('audio custom id round trips', () => {
 			jtcEnabled: true,
 			jtcMarkerChannelId: '5',
 			jtcTemplate: '{user}',
-			jtcUserLimit: 0
+			jtcUserLimit: 0,
+			...EXTRA_GUILD
 		};
 		// 설정을 바꾸는 액션(고정 화면 + apply)만 검사해요. 화면 이동(navigate/back)과 모달(jtcTemplate)은 표의 다른 형태예요.
 		for (const [action, entry] of Object.entries(SETTINGS_ACTIONS)) {
@@ -98,6 +139,33 @@ describe('audio custom id round trips', () => {
 			const mode = entry.mode;
 			const actions = ids(settingsView(guild as never, mode).toJSON()).map((id) => settingsId.decode(id)?.action);
 			expect(actions, `${action} -> ${mode}`).toContain(action);
+		}
+	});
+
+	it('표의 모든 컨트롤이 자기 화면에만 그려지고, 컨트롤 없는 액션은 뒤로가기뿐이에요 (B-08)', () => {
+		const guild = { ...BASE_GUILD, ...EXTRA_GUILD };
+		const noControl = Object.entries(SETTINGS_ACTIONS)
+			.filter(([, entry]) => !entry.control)
+			.map(([action]) => action);
+		expect(noControl).toEqual(['back']);
+		const renderedActions = (screen: SettingsMode) =>
+			ids(settingsView(guild as never, screen, { channelId: '9' }).toJSON()).map((id) => settingsId.decode(id)?.action);
+		for (const [action, entry] of Object.entries(SETTINGS_ACTIONS)) {
+			if (!entry.control) continue;
+			expect(renderedActions(entry.control.screen), `${action} on ${entry.control.screen}`).toContain(action);
+			for (const other of SETTINGS_SCREENS.filter((screen) => screen !== entry.control!.screen)) {
+				expect(renderedActions(other), `${action} not on ${other}`).not.toContain(action);
+			}
+		}
+	});
+
+	it('모달 ID는 모달 핸들러만 받아요 (믹서 모달 포함)', () => {
+		const modalHandler = new SettingsModalHandler(ctx, ctx);
+		const componentHandler = new SettingsInteractionHandler(ctx, ctx);
+		for (const modal of [crossfadeModal(5), automixModal({ maxTempoChangePercent: 6, minConfidence: 0.3 })]) {
+			const [modalId, ...inputs] = [...JSON.stringify(modal.toJSON()).matchAll(/"custom_id":"([^"]+)"/g)].map((match) => match[1]!);
+			expect(modalHandler.parse({ customId: modalId } as never).isSome()).toBe(true);
+			for (const id of [modalId!, ...inputs]) expect(claims(componentHandler as never, id)).toBe(false);
 		}
 	});
 

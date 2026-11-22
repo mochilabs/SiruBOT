@@ -39,11 +39,8 @@ export const HELP_COMMAND_SUMMARIES: Readonly<Record<string, string>> = {
 	privacy: '내 데이터를 확인하거나 지워요. (AI 기억·프로필·게임 전적)',
 	help: '사용 가능한 명령어 목록을 보여줘요.',
 	// 관리
-	settings: '봇의 서버 설정을 관리해요.',
-	purge: '최근 14일 이내의 메시지를 확인 후 삭제해요.',
-	mixer: '믹서 설정과 상태를 보여줘요.',
-	'chat-settings': 'AI 사용 범위와 현재 채널 상태를 확인해요.',
-	chattools: '이 채널에서 채팅 유틸 기능을 켜거나 꺼요.'
+	settings: '음악·믹서·채널·AI 채팅 등 봇의 서버 설정을 관리해요.',
+	purge: '최근 14일 이내의 메시지를 확인 후 삭제해요.'
 };
 
 /** 서브커맨드나 승격 명령으로 따로 그리는 명령 */

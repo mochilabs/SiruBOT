@@ -104,8 +104,8 @@ export const BOT_MODULES: readonly BotModule[] = [
 		label: '관리',
 		emoji: '🛠️',
 		appEmoji: 'shield',
-		description: '서버 설정, 메시지 청소, 믹서와 AI 채팅 설정',
-		commands: ['settings', 'purge', 'mixer', 'chat-settings', 'chattools'],
+		description: '서버 설정(믹서·AI 채팅·채팅 유틸 포함), 메시지 청소',
+		commands: ['settings', 'purge'],
 		componentNamespaces: ['settings', 'confirm'],
 		messageFeatures: [],
 		toggleable: false
