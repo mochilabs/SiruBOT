@@ -23,7 +23,7 @@ interface ThemePresetPickerProps {
 function Preview({ color }: { color: string }) {
 	return (
 		<div
-			className="space-y-2 rounded-control bg-discord-embed px-3 py-2.5 text-discord-text"
+			className="space-y-2 rounded-control-inner bg-discord-embed px-3 py-2.5 text-discord-text"
 			style={{ borderLeft: `4px solid ${color}` }}
 		>
 			<div className="flex items-center gap-2 text-2xs font-medium">

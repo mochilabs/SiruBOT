@@ -349,6 +349,21 @@
 	animation: page-in var(--motion-base) var(--ease-out-expo) both;
 }
 
+/* 토스트 자동 닫힘 진행 막대 — 길이는 토스트 timeout(--toast-duration)과 같아요. 일시정지는 data-expanded(호버·포커스)와 맞춰요. */
+@utility animate-toast-progress {
+	animation: toast-progress var(--toast-duration, 5000ms) linear forwards;
+}
+
+@keyframes toast-progress {
+	from {
+		transform: scaleX(1);
+	}
+
+	to {
+		transform: scaleX(0);
+	}
+}
+
 @utility animate-pulse-soft {
 	animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 	will-change: transform, opacity;
