@@ -102,6 +102,11 @@
             "import": "./dist/ticket.js",
             "require": "./dist/ticket.cjs"
         },
+        "./birthdayCelebration": {
+            "types": "./dist/birthdayCelebration.d.ts",
+            "import": "./dist/birthdayCelebration.js",
+            "require": "./dist/birthdayCelebration.cjs"
+        },
         "./scheduledMessage": {
             "types": "./dist/scheduledMessage.d.ts",
             "import": "./dist/scheduledMessage.js",

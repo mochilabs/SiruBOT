@@ -14,6 +14,24 @@ export function birthdaySavedView(month: number, day: number, zodiacText: string
 	);
 }
 
+/** 이 서버에서 생일 축하를 켜거나 끈 결과 — 생일이 없으면 먼저 등록하라고 안내해요 */
+export function birthdayAnnounceView(enabled: boolean, hasBirthday: boolean) {
+	if (!enabled) {
+		return notice(`${emoji('success')} 이 서버에서 생일 축하를 받지 않도록 바꿨어요.`);
+	}
+	const lines = [
+		`### ${emoji('cake')} 이 서버에서 생일 축하를 받아요`,
+		'',
+		hasBirthday
+			? '생일 당일, 서버가 정한 시각에 서버 채널로 축하 카드가 올라와요. 이 서버에서만 적용돼요.'
+			: `${emoji('warning')} 아직 생일을 등록하지 않았어요. \`/프로필 생일설정\`으로 등록해야 축하받을 수 있어요.`,
+		'',
+		'-# 서버가 생일 축하를 켜 둔 경우에만 보내요. 새로 켠 서버는 다음 날부터 축하해요.',
+		'-# 나이는 저장하지 않아요. 언제든 `/프로필 생일축하`로 끌 수 있어요.'
+	];
+	return notice(lines.join('\n'));
+}
+
 export function birthdayClearedView(cleared: boolean) {
 	return notice(cleared ? `${emoji('trash')} 등록된 생일을 지웠어요.` : `${emoji('info')} 등록된 생일이 없어요.`);
 }

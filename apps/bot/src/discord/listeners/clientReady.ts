@@ -37,6 +37,10 @@ export class ReadyEvent extends Listener {
 		this.container.usageRecorder.start();
 		// 예약 작업 15초 tick — 길드 캐시가 찬 뒤에 시작해요. 종료 때 stop()이 진행 중인 핸들러를 기다려요
 		this.container.guildJobScheduler.start();
+		// 생일 축하는 켜져 있는데 다음 작업이 끊긴 서버를 다시 이어 줘요 (대시보드 저장 실패, 3회 실패 등)
+		await this.container.birthday
+			?.reconcile([...this.container.client.guilds.cache.keys()])
+			.catch((error: unknown) => this.container.logger.warn(`[birthday] 작업 복구 실패: ${error}`));
 	}
 
 	private async printBanner() {

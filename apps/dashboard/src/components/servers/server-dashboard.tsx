@@ -8,6 +8,7 @@ import {
   BarChart3,
   Bell,
   Bot,
+  Cake,
   CalendarClock,
   Hash,
   Images,
@@ -59,6 +60,7 @@ const ChatToolsSettings = dynamic(() => import("./chat-tools-settings").then((m)
 const JtcSettings = dynamic(() => import("./jtc-settings").then((m) => m.JtcSettings), { loading: TabLoadingFallback });
 const SocialAlertsSettings = dynamic(() => import("./social-alerts-settings"), { loading: TabLoadingFallback });
 const MemberGreetingSettings = dynamic(() => import("./member-greeting-settings").then((m) => m.MemberGreetingSettings), { loading: TabLoadingFallback });
+const BirthdaySettings = dynamic(() => import("./birthday-settings").then((m) => m.BirthdaySettings), { loading: TabLoadingFallback });
 const TicketSettings = dynamic(() => import("./ticket-settings").then((m) => m.TicketSettings), { loading: TabLoadingFallback });
 const StarboardSettings = dynamic(() => import("./starboard-settings").then((m) => m.StarboardSettings), { loading: TabLoadingFallback });
 const ScheduledMessagesSettings = dynamic(() => import("./scheduled-messages-settings").then((m) => m.ScheduledMessagesSettings), { loading: TabLoadingFallback });
@@ -80,6 +82,7 @@ const ICONS = {
   greeting: <UserPlus size={14} />,
   ticket: <Ticket size={14} />,
   starboard: <Star size={14} />,
+  birthday: <Cake size={14} />,
   "scheduled-messages": <CalendarClock size={14} />,
   "role-panels": <ShieldCheck size={14} />,
 } as const;
@@ -290,6 +293,13 @@ export function ServerDashboard({
                       <MemberGreetingSettings
                         guildId={guildId}
                         visible={tab === "greeting"}
+                        guildName={guildName}
+                      />
+                    )}
+                    {item.key === "birthday" && (
+                      <BirthdaySettings
+                        guildId={guildId}
+                        visible={tab === "birthday"}
                         guildName={guildName}
                       />
                     )}

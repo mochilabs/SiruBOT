@@ -33,19 +33,19 @@ Not verified here: the current 8000-character size of each existing command (nob
 
 ### 1.3 Current count
 
-Counted from the command pieces and `BOT_MODULES` on current `origin/beta`: **37 command pieces, 6 of them dev-only, so 31 global slash commands**. That is 31% of the 100 limit, with 69 slots free.
+Counted from the command pieces and `BOT_MODULES` on current `origin/beta`: **37 command pieces, 6 of them dev-only, so 31 global slash commands**. That is 31% of the 100 limit, with 69 slots free. The merged `announce` command (scheduled messages) makes it 32 (68 free), or 29 after the `/설정` consolidation. The birthday PR adds no top-level command: it adds the `/프로필 생일축하` subcommand to `profile`.
 
 The count is for current beta. When the `/설정` consolidation PR merges, `mixer`, `chat-settings` and `chattools` are deleted and their features move into `settings`, so the global count drops by 3 to 28 (72 free) and the admin row below becomes 2 commands. Re-count before relying on these numbers.
 
 | Module (`BOT_MODULES`) | Commands now | Count | Subcommands (sum) |
 |---|---|---|---|
 | `music` | `music`, `play`, `skip`, `stop`, `nowplaying`, `queue`, `playlist`, `favorites` | 8 | 32 (music 15, playlist 8, queue 5, favorites 4) |
-| `community` | `rolepanel`, `ticket`, `profile`, `checkin` | 4 | 12 (ticket 4, profile 5, rolepanel 3) |
+| `community` | `rolepanel`, `ticket`, `profile`, `checkin` (and `announce` from the scheduled-message PR) | 5 | 15 (ticket 4, profile 6, rolepanel 3, announce 3) |
 | `ai` | `tts`, `emojimaker` | 2 | 9 (tts 9) |
 | `fun` | `dice`, `guess`, `rps`, `ohaasa` | 4 | 0 |
 | `utility` | `avatar`, `delivery`, `info`, `invite`, `ping`, `weather`, `privacy`, `help` | 8 | 8 (weather 4, info 2, privacy 2) |
 | `admin` | `settings`, `purge`, `mixer`, `chat-settings`, `chattools` | 5 (2 after the `/설정` PR) | 13 (mixer 7, chat-settings 4, chattools 2); 0 after the PR |
-| Total global | | 31 (28 after the `/설정` PR) | 74 |
+| Total global | | 32 (29 after the `/설정` PR) | 78 |
 | Dev-only (not global) | `emojis`, `eval`, `nodes`, `reload`, `shards`, `wrapped` | 6 | |
 
 How to recount:
@@ -100,7 +100,7 @@ Only what the code or Discord enforces is listed. Put the answers in the PR body
    - Decide the `/privacy forget` behavior. `purgeUserData` in `apps/bot/src/features/user-data/application/userDataService.ts` currently clears AI memory (long term, short term, summary), birthday and intro, TTS settings and game records. New personal data is not covered until it is added there, and `/privacy view` (`summarizeUserData` in the same file) should show it too.
    - Name the storage (table or Redis key) and who can delete it in the PR.
    - Update the privacy policy text in the same PR if it does not already cover the data.
-6. **Scheduled per-guild work.** Timed actions (reminders, giveaways, birthdays) use `GuildJobScheduler` in `apps/bot/src/services/guildJobScheduler.ts`; do not add a new `setInterval`. Register a handler with `register(kind, handler)` for a new `kind` string (registering the same kind twice throws; an unknown kind is closed as failed). Create rows with `schedule()` and cancel with `cancel()`. A repeating job schedules its next row from the handler using `nextRunAt()` in `apps/bot/src/services/jobRecurrence.ts`. A job gets 3 attempts with 30 second and 2 minute backoff, and a handler must tolerate a re-run after a crash (jobs stuck in running for 5 minutes are reset to pending). As of this document no `kind` handler is registered anywhere, so the first feature to use the scheduler is also its first real user. `start()` is called from `apps/bot/src/discord/listeners/clientReady.ts`, so register handlers during bot setup, before that.
+6. **Scheduled per-guild work.** Timed actions (reminders, giveaways, birthdays) use `GuildJobScheduler` in `apps/bot/src/services/guildJobScheduler.ts`; do not add a new `setInterval`. Register a handler with `register(kind, handler)` for a new `kind` string (registering the same kind twice throws; an unknown kind is closed as failed). Create rows with `schedule()` and cancel with `cancel()`. A repeating job schedules its next row from the handler using `nextRunAt()` in `apps/bot/src/services/jobRecurrence.ts`. A job gets 3 attempts with 30 second and 2 minute backoff, and a handler must tolerate a re-run after a crash (jobs stuck in running for 5 minutes are reset to pending). Registered kinds: `scheduled-message` (`features/scheduled-messages/`) and `birthday_daily` (`features/birthday/`: one pending row per guild, the handler inserts the next day's row before it sends, and `reconcile()` at `clientReady` recreates a chain that broke). A feature with no command still counts its use: birthday celebrations record `msg:birthday` and `birthday` is listed in the `community` module's `messageFeatures`. `start()` is called from `apps/bot/src/discord/listeners/clientReady.ts`, so register handlers during bot setup, before that.
 7. **Gateway intents.** The bot requests `Guilds`, `GuildMembers`, `GuildMessages`, `GuildMessageReactions`, `GuildModeration`, `GuildVoiceStates` and `MessageContent` in `apps/bot/src/core/botClient.ts`. Message Content is already approved for this bot (decision D-13), so there is no approval to chase. The rule for new features: the PR states which intents the feature needs. An intent outside the list above must be called out explicitly, since a new privileged intent needs Discord approval first. For Message Content, prefer a slash command, button or modal when it can do the job; use message content only when typing in chat is the feature itself (a pinned music channel, counting, chat TTS). The message features that read content today are `music-channel`, `custom-command` (prefix form), `emoji-enlarge`, `message-quote`, `embed-fix`, `counting`, `ai-mention` and `chat-tts`.
 8. **External dependencies.** A feature that calls a new external API, LLM or GPU service names the dependency in the PR and adds it to `docs/3rdparty.md`. There is no cost budget mechanism in code today.
 

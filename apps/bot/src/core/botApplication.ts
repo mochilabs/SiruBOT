@@ -71,6 +71,7 @@ import { BotProfileService, createBotProfileListeners } from '../features/bot-pr
 import { createStarboardService, createStarboardDiscord } from '../features/starboard/index.ts';
 import { createScheduledMessageService, createScheduledMessageDiscord } from '../features/scheduled-messages/index.ts';
 import { createMemberGreetingService, greetingMessages, createMemberGreetingSendListener } from '../features/greeting/index.ts';
+import { createBirthdayService, createBirthdayDiscord } from '../features/birthday/index.ts';
 import {
 	createBotAdminResponder,
 	createGuildDataResponder,
@@ -432,6 +433,20 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			renderMemberCard: container.dataApi.renderMemberCard,
 			messages: greetingMessages,
 			recordUsage: (guildId, userId) => container.usageRecorder?.record(guildId, usageFeatureKey('msg', 'greeting'), userId)
+		});
+
+		container.birthday = createBirthdayService({
+			db: container.db,
+			scheduler: container.guildJobScheduler,
+			logger: appLogger,
+			discord: createBirthdayDiscord({
+				getClient: () => container.client,
+				logger: appLogger,
+				renderMemberCard: container.dataApi.renderMemberCard,
+				messages: greetingMessages
+			}),
+			isFeatureEnabled: (guildId) => isMessageFeatureEnabled(container.guildService, guildId, 'birthday'),
+			recordUsage: (guildId) => container.usageRecorder?.record(guildId, usageFeatureKey('msg', 'birthday'))
 		});
 
 		const redisRuntime: RedisRuntime = {

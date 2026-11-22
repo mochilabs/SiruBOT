@@ -67,6 +67,7 @@ export class PrivacyCommand extends Subcommand {
 			`${emoji('pin')} 프로필 소개: ${summary.hasIntro ? '등록됨' : '없음'}`,
 			`${emoji('music_note')} 채팅 TTS 설정: ${summary.ttsSettings}개 길드`,
 			`${emoji('gamepad')} 게임 전적: ${summary.gameRecords}건`,
+			`${emoji('cake')} 생일 축하를 켠 서버: ${summary.birthdayOptIns}곳`,
 			'',
 			'-# 채널 AI 대화 기록에는 회원님 발화가 섞여 있어요. 이 기록은 서버 단위로만 지울 수 있어요',
 			'-# 채널 기록은 서버 관리자에게 /설정의 AI 채팅 페이지에서 대화 기록 초기화를 요청해 주세요.',
@@ -83,7 +84,7 @@ export class PrivacyCommand extends Subcommand {
 			!(await confirmAction(
 				interaction,
 				'내 개인 설정을 삭제할까요?',
-				`AI 장기 기억 ${summary.memoryFacts}개 · 단기 기억 ${summary.shortTermTurns}개${summary.hasShortTermSummary ? '(대화 요약 포함)' : ''}\n생일·소개 · TTS 설정 ${summary.ttsSettings}개 서버 · 게임 전적 ${summary.gameRecords}건\n\n모든 서버에 걸친 위 데이터를 삭제하며 되돌릴 수 없어요.\n채널 AI 기록·플레이리스트·즐겨찾기·음악 이용 기록은 유지돼요.`
+				`AI 장기 기억 ${summary.memoryFacts}개 · 단기 기억 ${summary.shortTermTurns}개${summary.hasShortTermSummary ? '(대화 요약 포함)' : ''}\n생일·소개 · TTS 설정 ${summary.ttsSettings}개 서버 · 게임 전적 ${summary.gameRecords}건 · 생일 축하 ${summary.birthdayOptIns}곳\n\n모든 서버에 걸친 위 데이터를 삭제하며 되돌릴 수 없어요.\n채널 AI 기록·플레이리스트·즐겨찾기·음악 이용 기록은 유지돼요.`
 			))
 		)
 			return;
@@ -96,7 +97,7 @@ export class PrivacyCommand extends Subcommand {
 				notice(
 					[
 						`${emoji('trash')} 확인한 개인 설정과 AI 기억·게임 전적을 지웠어요.`,
-						`-# AI 기억 ${result.memoryRows} · 프로필 ${result.profileRows} · TTS 설정 ${result.ttsRows} · 게임 전적 ${result.gameRecords}건 삭제`
+						`-# AI 기억 ${result.memoryRows} · 프로필 ${result.profileRows} · TTS 설정 ${result.ttsRows} · 게임 전적 ${result.gameRecords}건 · 생일 축하 ${result.birthdayOptIns}곳 삭제`
 					].join('\n')
 				)
 			]

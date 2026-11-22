@@ -1,10 +1,18 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji, formatTimeToKorean } from '@sirubot/utils';
-import { birthdayClearedView, birthdaySavedView, introClearedView, introSavedView, profileCardView, profileTextView } from '../views/profile.ts';
+import {
+	birthdayAnnounceView,
+	birthdayClearedView,
+	birthdaySavedView,
+	introClearedView,
+	introSavedView,
+	profileCardView,
+	profileTextView
+} from '../views/profile.ts';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { getZodiacFromDate, streakBadge, ZODIAC_MAP } from '../../../games/index.ts';
-import { clearUserBirthday, clearUserIntro, isValidBirthday, setUserBirthday, setUserIntro } from '../utils/userProfile.ts';
+import { clearUserBirthday, clearUserIntro, getUserProfile, isValidBirthday, setUserBirthday, setUserIntro } from '../utils/userProfile.ts';
 import { buildProfileCardData, formatGameStatsLines } from '../utils/profileCardData.ts';
 
 function zodiacLabel(code: string): string {
@@ -101,6 +109,21 @@ export class ProfileCommand extends Command {
 				)
 				.addSubcommand((sub) =>
 					sub
+						.setName('birthday-announce')
+						.setNameLocalizations({ ko: '생일축하' })
+						.setDescription('Choose whether this server celebrates my birthday.')
+						.setDescriptionLocalizations({ ko: '이 서버에서 내 생일을 축하받을지 정해요. 서버마다 따로 켜요.' })
+						.addBooleanOption((option) =>
+							option
+								.setName('enabled')
+								.setNameLocalizations({ ko: '받기' })
+								.setDescription('On to be celebrated in this server, off to stop.')
+								.setDescriptionLocalizations({ ko: '켜면 이 서버에서 축하해요. 끄면 더 이상 축하하지 않아요.' })
+								.setRequired(true)
+						)
+				)
+				.addSubcommand((sub) =>
+					sub
 						.setName('set-intro')
 						.setNameLocalizations({ ko: '소개설정' })
 						.setDescription('Set my one-line intro (shown on the profile card).')
@@ -143,6 +166,26 @@ export class ProfileCommand extends Command {
 			const zodiacCode = getZodiacFromDate(month, day);
 			await interaction.editReply({
 				components: [birthdaySavedView(month, day, zodiacCode ? zodiacLabel(zodiacCode) : '알 수 없음')],
+				flags: [MessageFlags.IsComponentsV2]
+			});
+			return;
+		}
+
+		if (subcommand === 'birthday-announce') {
+			if (!interaction.inCachedGuild()) {
+				throw new UserError({
+					identifier: 'profile_birthday_announce_not_in_guild',
+					message: `${emoji('error')} 서버 안에서만 사용할 수 있어요.`,
+					context: { ephemeral: true }
+				});
+			}
+			await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+			const enabled = interaction.options.getBoolean('enabled', true);
+			await this.container.birthday.setOptIn(interaction.guildId, interaction.user.id, enabled);
+			const profile = await getUserProfile(interaction.user.id);
+			const hasBirthday = profile?.birthMonth != null && profile?.birthDay != null;
+			await interaction.editReply({
+				components: [birthdayAnnounceView(enabled, hasBirthday)],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;

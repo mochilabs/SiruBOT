@@ -25,6 +25,13 @@ export class GuildDeleteListener extends Listener {
 				);
 		}
 
+		// 생일 축하의 대기 중 작업도 지워요 (다시 들어오면 부팅 복구나 대시보드 저장이 다시 이어 줘요)
+		if (guild.available !== false) {
+			await this.container.birthday
+				?.purgeGuild(guild.id)
+				.catch((error: unknown) => this.container.logger.warn(`[birthday] 나간 서버의 작업 정리 실패 (guild ${guild.id}): ${error}`));
+		}
+
 		if (this.container.audio) {
 			const player = this.container.audio.getPlayer(guild.id);
 			if (player) {

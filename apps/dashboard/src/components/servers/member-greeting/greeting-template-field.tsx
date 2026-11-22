@@ -1,11 +1,8 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import {
-  DEFAULT_GREETINGS,
-  GREETING_TEMPLATE_VARIABLES,
-  type GreetingKind,
-} from "@sirubot/utils/memberGreeting";
+import { DEFAULT_CARD_CONFIGS, type GreetingCardKind } from "@sirubot/utils/birthdayCelebration";
+import { GREETING_TEMPLATE_VARIABLES } from "@sirubot/utils/memberGreeting";
 
 import { Field } from "@/components/primitives/field";
 import { Button } from "@/components/ui/button";
@@ -24,7 +21,7 @@ function sampleTemplate(template: string): string {
 }
 
 interface GreetingTemplateFieldProps {
-  kind: GreetingKind;
+  kind: GreetingCardKind;
   /** 편집 중인 템플릿 (저장 전) */
   value: string;
   disabled: boolean;
@@ -69,7 +66,7 @@ export function GreetingTemplateField({
         rows={3}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        placeholder={DEFAULT_GREETINGS[kind].template}
+        placeholder={DEFAULT_CARD_CONFIGS[kind].template}
       />
       <div
         className="flex flex-wrap items-center gap-1.5 pt-1"
@@ -97,7 +94,7 @@ export function GreetingTemplateField({
       <p className="text-sm text-muted-foreground">
         {value.length}/{TEMPLATE_MAX} · 예시:{" "}
         <span className="text-foreground font-semibold">
-          {sampleTemplate(value.trim() || DEFAULT_GREETINGS[kind].template)}
+          {sampleTemplate(value.trim() || DEFAULT_CARD_CONFIGS[kind].template)}
         </span>
       </p>
     </Field>
