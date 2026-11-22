@@ -94,7 +94,7 @@ export function ServerSwitcher({ guildId, guildName, icon, variant = "header" }:
   // 트리거는 표면 채움으로 배경과 구분되고, 열림·누름에서 chevron 회전과
   // 눌림(scale)으로 "작동하는 느낌"을 줘요
   const triggerClass = (open: boolean) =>
-    (sidebar ? `h-auto min-h-12 w-full max-w-full min-w-0 justify-start gap-3 px-3 py-1 text-base font-bold tracking-normal ` : `h-auto min-h-12 max-w-full min-w-0 justify-start gap-3 px-2 py-1 text-xl font-bold tracking-normal sm:text-2xl `) +
+    (sidebar ? `h-auto min-h-12 w-full max-w-full min-w-0 justify-start gap-3 px-3 py-1 text-base font-bold tracking-normal ` : `h-auto min-h-10 max-w-full min-w-0 justify-start gap-2.5 px-2 py-0.5 text-lg font-bold tracking-normal sm:min-h-12 sm:gap-3 sm:py-1 sm:text-2xl `) +
     `bg-surface-1 transition-[background-color,transform] duration-fast hover:bg-surface-2 active:scale-[0.98] ` +
     (open ? "bg-surface-2" : "");
 

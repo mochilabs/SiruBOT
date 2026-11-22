@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 
 import Container from "@/components/container";
-import { PageHeader } from "@/components/layout/page-header";
 import { ServerDashboard } from "@/components/servers/server-dashboard";
 import { ServerSwitcher } from "@/components/servers/server-switcher";
 import { STUB_GUILD_ID } from "@/lib/stub/guild-stub";
@@ -19,18 +18,10 @@ export default function DashboardLayoutPreview() {
   return (
     <Container>
       <StubGate>
-        <div className="lg:hidden">
-          <PageHeader
-            className="mb-2 pb-0 sm:mb-4 sm:pb-2"
-            title={
-              <ServerSwitcher
-                guildId={STUB_GUILD_ID}
-                guildName="데모 서버"
-                icon={null}
-              />
-            }
-          />
-        </div>
+        <div className="mb-2 lg:hidden">
+					<h1 className="sr-only">데모 서버</h1>
+					<ServerSwitcher guildId={STUB_GUILD_ID} guildName="데모 서버" icon={null} />
+				</div>
         <ServerDashboard
           guildId={STUB_GUILD_ID}
           manageable

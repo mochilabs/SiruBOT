@@ -18,16 +18,12 @@ export default function ServerDashboardLoading() {
   return (
     <Container>
       <section aria-busy="true" aria-label="서버 대시보드">
-        {/* PageHeader(!mb-2 !pb-2) + ServerSwitcher 트리거 모양 */}
-        <header className="relative mb-2 flex lg:hidden flex-col justify-between gap-6 pb-2 md:flex-row md:items-end">
-          <div className="min-w-0 flex-1">
-            <div className="inline-flex min-h-12 items-center gap-3 px-2 py-1">
-              <Skeleton className="size-8 shrink-0 rounded-control" />
-              <Skeleton.Line width="10rem" height="h-7 sm:h-8" />
-              <Skeleton className="size-4 shrink-0 rounded-sm" />
-            </div>
-          </div>
-        </header>
+        {/* 모바일 ServerSwitcher 트리거 모양 (PC는 사이드바 안에 있어요) */}
+        <div className="mb-2 inline-flex min-h-10 items-center gap-2.5 px-2 py-0.5 lg:hidden">
+          <Skeleton className="size-8 shrink-0 rounded-control" />
+          <Skeleton.Line width="9rem" height="h-6" />
+          <Skeleton className="size-4 shrink-0 rounded-sm" />
+        </div>
 
         <span role="status" className="sr-only">
           대시보드를 불러오는 중…

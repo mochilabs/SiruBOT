@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 
 import Container from "@/components/container";
-import { PageHeader } from "@/components/layout/page-header";
 import { GuildUnavailablePanel } from "@/components/servers/guild-unavailable-panel";
 import { ServerDashboard } from "@/components/servers/server-dashboard";
 import { ServerSwitcher } from "@/components/servers/server-switcher";
@@ -64,11 +63,9 @@ export default async function ServerDashboardPage({
   return (
     <Container>
       {/* 모바일은 제목 자리에, PC(lg+)는 사이드바 맨 위에 서버 선택기를 둬요 */}
-      <div className="lg:hidden">
-        <PageHeader
-          className="mb-2 pb-0 sm:mb-4 sm:pb-2"
-          title={<ServerSwitcher guildId={id} guildName={guildMeta?.name || "서버 대시보드"} icon={guildMeta?.icon ?? null} />}
-        />
+      <div className="mb-2 lg:hidden">
+        <h1 className="sr-only">{guildMeta?.name || "서버 대시보드"}</h1>
+        <ServerSwitcher guildId={id} guildName={guildMeta?.name || "서버 대시보드"} icon={guildMeta?.icon ?? null} />
       </div>
       <ServerDashboard
         switcher={<ServerSwitcher variant="sidebar" guildId={id} guildName={guildMeta?.name || "서버 대시보드"} icon={guildMeta?.icon ?? null} />}
