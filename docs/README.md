@@ -13,6 +13,7 @@
 | `api-data-api.md` | data-api HTTP contract: auth, endpoints, cache TTLs, error mapping, schedulers |
 | `api-dashboard.md` | Dashboard API routes: layers, route groups, roles, rate limits, validation |
 | `3rdparty.md` | Third-party contracts: Lavalink plugins, client libraries, external HTTP services, update playbook |
+| `feature-guidelines.md` | Slash command budget (Discord limits, current count per module) and criteria for adding a feature |
 | `pr-message-rule.md` | Pull request title and body rules, including how to record verification |
 
 ## Who owns what

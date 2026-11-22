@@ -97,7 +97,7 @@ export const coreActions = {
 						toggleable.map((m) => ({
 							label: m.label,
 							value: m.id,
-							emoji: { name: m.emoji },
+							emoji: emoji(m.appEmoji, m.emoji),
 							description: m.description,
 							default: !isModuleDisabled(guild.disabledModules, m.id)
 						}))
