@@ -1,6 +1,6 @@
 # data-api HTTP contract
 
-> **As of**: 2026-11-21 · Verified against the route files under `apps/data-api/src/routes/`.
+> **As of**: 2026-11-22 · Verified against the route files under `apps/data-api/src/routes/`.
 
 Shared channels and flows are in `./architecture.md` (5.2 Redis pub/sub channel map, 6.2 Redis request/reply, 6.3 External provider caching). This page lists the HTTP routes as they exist in code. Paths in the tables are relative to `apps/data-api/src/`.
 
@@ -57,7 +57,7 @@ Routes are registered from `routes/index.ts`, one file per domain.
 | Route | Description | Notes | File |
 |---|---|---|---|
 | POST `/v1/image/profile` | Profile card PNG, preset `dashboard` (`dark` is an alias), `light`, `aura` or `ticket` (Takumi; a render failure returns 500) | Dedup key `img:card:` | `routes/render.ts` |
-| POST `/v1/image/member-card` | Greeting card, kind `welcome` or `goodbye`. Rendered with Takumi from the same `greetingCard` node as the dashboard preview (`packages/cards`). Returns `image/png`, or a looping animated `image/webp` (20 fps, at most 5 s, at most 2 renders at once) when any visible layer has an `animation`; callers pick the file extension from the response content type. Colored emoji in the text render natively through the Twemoji font | Dedup key `img:greeting:`; body limit 4 MB | `routes/render.ts`, `renderers/takumi/greetingCard.ts` |
+| POST `/v1/image/member-card` | Greeting card, kind `welcome`, `goodbye` or `birthday`. Rendered with Takumi from the same `greetingCard` node as the dashboard preview (`packages/cards`). Returns `image/png`, or a looping animated `image/webp` (20 fps, at most 5 s, at most 2 renders at once) when any visible layer has an `animation` or the background is an animated GIF; callers pick the file extension from the response content type. Colored emoji in the text render natively through the Twemoji font | Dedup key `img:greeting:`; body limit 4 MB | `routes/render.ts`, `renderers/takumi/greetingCard.ts` |
 | POST `/v1/image/member-card/background` | Normalize an uploaded background to JPEG (longest side 1600 px, at most 900 KB). An animated GIF stays a GIF: kept as is when it is at most 900 KB, 1200 px wide, 100 frames and 5 s, otherwise scaled down, cut to 5 s and re-encoded (size and fps lowered step by step until it fits). A still GIF becomes a JPEG. A GIF background makes the greeting card render as animated WebP | Body limit 8 MB | `routes/render.ts` |
 | POST `/v1/image/member-card/layer-image` | Normalize an uploaded sticker layer to PNG | Body limit 8 MB | `routes/render.ts` |
 | POST `/v1/image/nowplaying` | Now-playing card for the pinned controller (artwork-tinted backdrop, queue preview, variable height). Rendered with Takumi | Dedup key `img:nowplaying:` plus a hash of the payload without the position | `routes/render.ts`, `renderers/takumi/nowPlayingCard.tsx` |
