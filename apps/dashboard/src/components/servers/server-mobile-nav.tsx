@@ -49,7 +49,7 @@ export function ServerMobileNav({
   const current = items.find((item) => item.key === active) ?? items[0];
 
   return (
-    <div className="mb-3 flex items-center gap-2 lg:hidden">
+    <div className={"mb-3 flex items-center gap-2 lg:hidden"}>
       <Sheet open={open} onOpenChange={setOpen}>
         {showTrigger && (
           <SheetTrigger
@@ -136,7 +136,12 @@ export function ServerMobileNav({
           </nav>
         </SheetContent>
       </Sheet>
-      {trailing}
+      {showTrigger ? (
+        trailing
+      ) : (
+        // 기능 버튼이 없을 땐 서버 선택기가 줄 전체를 써요 — 혼자 좁게 붙어 있지 않게요.
+        <div className="min-w-0 flex-1 [&>div]:w-full [&>div]:max-w-full">{trailing}</div>
+      )}
     </div>
   );
 }

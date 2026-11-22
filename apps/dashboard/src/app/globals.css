@@ -641,3 +641,11 @@ html {
 .dark .hero-grain {
 	opacity: 0.08;
 }
+
+/* 모바일 하단 탭바가 차지하는 높이 — 숨기는 화면(서버 설정)에서는 0으로 둬서 여백·떠 있는 버튼이 같이 내려가요 */
+:root {
+  --tabbar-h: 5.25rem;
+}
+:root[data-tabbar-off] {
+  --tabbar-h: 0px;
+}
