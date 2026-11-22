@@ -37,7 +37,7 @@ export interface GiveawayCardData {
 
 export type GiveawayCardResult = 'ok' | 'gone' | 'failed';
 
-/** 기브어웨이가 Discord와 주고받는 포트 — 실제 구현은 features/giveaway/discord/giveawayDiscord.ts예요 */
+/** 나눔이 Discord와 주고받는 포트 — 실제 구현은 features/giveaway/discord/giveawayDiscord.ts예요 */
 export interface GiveawayDiscordPort {
 	/** 채널에 카드를 올릴 수 있는지. 문제가 있으면 안내 문구, 없으면 null */
 	checkChannel(guildId: string, channelId: string): Promise<string | null>;
@@ -115,12 +115,12 @@ const toCard = (
 const giveawayPayload = (id: string): Prisma.JsonFilter<'ScheduledJob'> => ({ path: ['giveawayId'], equals: id });
 
 export class GiveawayService implements Stoppable {
-	public readonly name = '기브어웨이 카드 갱신';
+	public readonly name = '나눔 카드 갱신';
 
-	private readonly timers = new KeyedTimers('기브어웨이 카드 갱신 디바운스');
+	private readonly timers = new KeyedTimers('나눔 카드 갱신 디바운스');
 	/** 카드를 마지막으로 고친 시각 — 10초에 한 번만 고치려고 써요 (캐시라 비어도 괜찮아요) */
 	private readonly lastCardUpdate = new Map<string, number>();
-	/** 마감 처리 중인 기브어웨이 — 같은 프로세스에서 두 번 발표하지 않게 해요 */
+	/** 마감 처리 중인 나눔 — 같은 프로세스에서 두 번 발표하지 않게 해요 */
 	private readonly finalizing = new Set<string>();
 	private readonly inflight = new Set<Promise<void>>();
 	private stopped = false;
@@ -157,7 +157,7 @@ export class GiveawayService implements Stoppable {
 			await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${GIVEAWAY_KIND}:${input.guildId}`}))`;
 			const running = await tx.giveaway.count({ where: { guildId: input.guildId, status: 'running' } });
 			if (running >= GIVEAWAY_MAX_RUNNING) {
-				throw new AppError('conflict', `진행 중인 기브어웨이는 서버당 최대 ${GIVEAWAY_MAX_RUNNING}개예요.`, { ephemeral: true });
+				throw new AppError('conflict', `진행 중인 나눔은 서버당 최대 ${GIVEAWAY_MAX_RUNNING}개예요.`, { ephemeral: true });
 			}
 			const row = await tx.giveaway.create({
 				data: {
@@ -202,7 +202,7 @@ export class GiveawayService implements Stoppable {
 			);
 			await this.deps.db.giveaway.update({ where: { id }, data: { messageId } });
 		} catch (error) {
-			// 카드를 못 올렸으면 참여할 곳이 없으니 기브어웨이와 마감 작업을 되돌려요
+			// 카드를 못 올렸으면 참여할 곳이 없으니 나눔과 마감 작업을 되돌려요
 			await this.deps.db.scheduledJob
 				.deleteMany({ where: { kind: GIVEAWAY_KIND, status: 'pending', payload: giveawayPayload(id) } })
 				.catch(() => undefined);
@@ -296,7 +296,7 @@ export class GiveawayService implements Stoppable {
 		await this.finalize(payload.giveawayId, true);
 	}
 
-	/** 지금 마감 (/기브어웨이 종료) */
+	/** 지금 마감 (/나눔 종료) */
 	public async endNow(guildId: string, giveawayId: string): Promise<'ended' | 'not-found' | 'not-running'> {
 		const row = await this.deps.db.giveaway.findUnique({ where: { id: giveawayId } });
 		if (!row || row.guildId !== guildId) return 'not-found';
@@ -406,14 +406,14 @@ export class GiveawayService implements Stoppable {
 		return 'cancelled';
 	}
 
-	/** 끝난 기브어웨이에서 새 당첨자를 더 뽑아요 — 이미 뽑힌 사람은 빼고, 조건은 지금 다시 확인해요 */
+	/** 끝난 나눔에서 새 당첨자를 더 뽑아요 — 이미 뽑힌 사람은 빼고, 조건은 지금 다시 확인해요 */
 	public async reroll(guildId: string, giveawayId: string, count: number): Promise<{ winnerIds: string[] }> {
 		const winners = giveawayWinnerCountSchema.safeParse(count);
 		if (!winners.success)
 			throw new AppError('invalid_input', winners.error.issues[0]?.message ?? '당첨자 수가 올바르지 않아요.', { ephemeral: true });
 		const row = await this.deps.db.giveaway.findUnique({ where: { id: giveawayId } });
-		if (!row || row.guildId !== guildId) throw new AppError('not_found', '그 기브어웨이를 찾을 수 없어요.', { ephemeral: true });
-		if (row.status !== 'ended') throw new AppError('conflict', '끝난 기브어웨이에서만 다시 뽑을 수 있어요.', { ephemeral: true });
+		if (!row || row.guildId !== guildId) throw new AppError('not_found', '그 나눔을 찾을 수 없어요.', { ephemeral: true });
+		if (row.status !== 'ended') throw new AppError('conflict', '끝난 나눔에서만 다시 뽑을 수 있어요.', { ephemeral: true });
 
 		const requirements = parseGiveawayRequirements(row.requirements);
 		const entries = await this.deps.db.giveawayEntry.findMany({ where: { giveawayId }, select: { userId: true } });
@@ -434,7 +434,7 @@ export class GiveawayService implements Stoppable {
 		return { winnerIds: drawn };
 	}
 
-	/** 자동완성용 — 최근 순으로 상태에 맞는 기브어웨이 */
+	/** 자동완성용 — 최근 순으로 상태에 맞는 나눔 */
 	public async listForAutocomplete(guildId: string, statuses: readonly GiveawayStatus[], limit = 25): Promise<GiveawaySummary[]> {
 		const rows = await this.deps.db.giveaway.findMany({
 			where: { guildId, status: { in: [...statuses] } },
@@ -444,7 +444,7 @@ export class GiveawayService implements Stoppable {
 		return rows.map((r) => ({ id: r.id, prize: r.prize, status: r.status, endsAt: r.endsAt }));
 	}
 
-	/** 서버를 나가면 진행 중이던 기브어웨이와 마감 작업을 지워요 (Giveaway는 Guild 삭제로 함께 지워져요) */
+	/** 서버를 나가면 진행 중이던 나눔과 마감 작업을 지워요 (Giveaway는 Guild 삭제로 함께 지워져요) */
 	public async purgeGuild(guildId: string): Promise<void> {
 		await this.deps.db.scheduledJob.deleteMany({ where: { guildId, kind: GIVEAWAY_KIND, status: 'pending' } });
 		await this.deps.db.giveaway.updateMany({ where: { guildId, status: 'running' }, data: { status: 'cancelled', endedAt: this.now() } });

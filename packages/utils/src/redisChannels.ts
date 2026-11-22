@@ -175,6 +175,16 @@ export const PANEL_POST_REQUEST_CHANNEL = 'sirubot:panel-post:request';
 export const PANEL_POST_RESPONSE_CHANNEL = 'sirubot:panel-post:response';
 
 /**
+ * 나눔 관리(시작·종료·취소·다시 뽑기) request/reply — 대시보드가 나눔을 직접 관리할 때.
+ * data-api giveawayHub가 REQUEST 채널로 퍼블리시하면 해당 길드를 보유한 봇이 GiveawayService로 처리하고
+ * RESPONSE 채널로 결과를 응답해요.
+ *
+ * 페이로드: giveawayManageRequestSchema / giveawayManageResponseSchema (giveawayManage.ts)
+ */
+export const GIVEAWAY_MANAGE_REQUEST_CHANNEL = 'sirubot:giveaway-manage:request';
+export const GIVEAWAY_MANAGE_RESPONSE_CHANNEL = 'sirubot:giveaway-manage:response';
+
+/**
  * 역할 패널 부여 가능 여부 검증 request/reply 브로드캐스트 — 대시보드가 패널 저장 전에 roleIds를
  * 봇에 보내 부여 가능한 역할인지(관리형·위계 초과·@everyone 제외) 확인해요. rolePanelResponder가
  * REQUEST 채널로 받아 RESPONSE 채널로 invalidRoleIds를 응답해요.

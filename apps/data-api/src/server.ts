@@ -19,6 +19,7 @@ import { startGuildDataHub, stopGuildDataHub } from './services/guildDataHub.ts'
 import { startPlayerWebHub, stopPlayerWebHub } from './services/playerWebHub.ts';
 import { startJtcSetupHub, stopJtcSetupHub } from './services/jtcSetupHub.ts';
 import { startBotAdminHub, stopBotAdminHub } from './services/botAdminHub.ts';
+import { startGiveawayHub, stopGiveawayHub } from './services/giveawayHub.ts';
 import { startPanelHub, stopPanelHub } from './services/panelHub.ts';
 
 /** Redis 허브 — start와 stop 모두 이 배열 순서대로 불러요 (기존 server.ts의 start·stop 순서와 같아요) */
@@ -30,7 +31,8 @@ const HUBS: { start: (redisUrl: string | undefined) => Promise<void>; stop: () =
 	{ start: startPlayerWebHub, stop: stopPlayerWebHub },
 	{ start: startJtcSetupHub, stop: stopJtcSetupHub },
 	{ start: startBotAdminHub, stop: stopBotAdminHub },
-	{ start: startPanelHub, stop: stopPanelHub }
+	{ start: startPanelHub, stop: stopPanelHub },
+	{ start: startGiveawayHub, stop: stopGiveawayHub }
 ];
 
 export async function buildServer(env: Env) {

@@ -70,7 +70,7 @@ import { createJtcSetupResponder, createTempVoiceService, tempVoiceMessages } fr
 import { BotProfileService, createBotProfileListeners } from '../features/bot-profile/index.ts';
 import { createStarboardService, createStarboardDiscord } from '../features/starboard/index.ts';
 import { createScheduledMessageService, createScheduledMessageDiscord } from '../features/scheduled-messages/index.ts';
-import { createGiveawayService, createGiveawayDiscord } from '../features/giveaway/index.ts';
+import { createGiveawayService, createGiveawayDiscord, createGiveawayManageResponder } from '../features/giveaway/index.ts';
 import { createMemberGreetingService, greetingMessages, createMemberGreetingSendListener } from '../features/greeting/index.ts';
 import { createBirthdayService, createBirthdayDiscord } from '../features/birthday/index.ts';
 import {
@@ -484,6 +484,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			createBotAdminResponder(),
 			// 대시보드 패널 메시지(티켓·역할 패널) 직접 게시 → data-api → Redis → 봇 게시.
 			createPanelPostResponder(),
+			// 대시보드 나눔 시작·종료·취소·다시 뽑기 → data-api → Redis → 봇 GiveawayService 수행.
+			createGiveawayManageResponder(() => container.giveaways),
 			// 대시보드 역할 부여 가능 여부 검증 → data-api → Redis → 봇 검증.
 			createRoleValidationResponder()
 		];

@@ -239,7 +239,7 @@ enum ScheduledJobStatus {
   failed
 }
 
-/// 서버별 예약 작업 큐 (예약 메시지·기브어웨이 종료·생일 발송 등의 공통 기반).
+/// 서버별 예약 작업 큐 (예약 메시지·나눔 종료·생일 발송 등의 공통 기반).
 /// 봇의 guildJobScheduler가 15초마다 자기가 가진 서버의 만기 작업을 FOR UPDATE SKIP LOCKED로 가져가요.
 /// 반복 작업은 핸들러가 끝날 때 다음 행을 새로 넣어요. 서버가 지워져도 기록을 남기려고 외래 키는 두지 않아요.
 model ScheduledJob {
@@ -644,7 +644,7 @@ enum GiveawayStatus {
   cancelled
 }
 
-// 기브어웨이 — 참여 카드(messageId)와 조건(requirements)을 저장해요. 계약은 packages/utils/src/giveaway.ts.
+// 나눔 — 참여 카드(messageId)와 조건(requirements)을 저장해요. 계약은 packages/utils/src/giveaway.ts.
 // 마감은 ScheduledJob(kind 'giveaway_end', payload { giveawayId })이 맡아요.
 model Giveaway {
   id            String          @id @default(uuid())
@@ -675,7 +675,7 @@ model Giveaway {
   @@index([guildId, status])
 }
 
-// 기브어웨이 참여 — 기본 키 (giveawayId, userId)라 중복 참여가 DB에서 막혀요.
+// 나눔 참여 — 기본 키 (giveawayId, userId)라 중복 참여가 DB에서 막혀요.
 model GiveawayEntry {
   giveawayId String
   giveaway   Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)

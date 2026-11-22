@@ -14,7 +14,7 @@ const SUBCOMMANDS: SubcommandModule[] = [start, reroll, end, cancel];
 export const GIVEAWAY_SUBCOMMANDS = subcommandSummaries(SUBCOMMANDS);
 
 /**
- * /기브어웨이 — 시작·다시뽑기·종료·취소 (서버 관리 권한; 서버가 연동 설정에서 다른 역할에 열어 줄 수 있어요).
+ * /나눔 — 시작·다시뽑기·종료·취소 (서버 관리 권한; 서버가 연동 설정에서 다른 역할에 열어 줄 수 있어요).
  * 참여는 카드의 버튼으로 하고, 마감은 예약 작업(giveaway_end)이 처리해요.
  */
 @ApplyOptions<Command.Options>({
@@ -30,9 +30,9 @@ export class GiveawayCommand extends Command {
 				.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
 				.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
 				.setName('giveaway')
-				.setNameLocalizations({ ko: '기브어웨이' })
+				.setNameLocalizations({ ko: '나눔' })
 				.setDescription(this.description)
-				.setDescriptionLocalizations({ ko: '참여 조건을 직접 정하는 기브어웨이를 열어요.' });
+				.setDescriptionLocalizations({ ko: '참여 조건을 직접 정하는 나눔을 열어요.' });
 
 			for (const subcommand of SUBCOMMANDS) {
 				builder.addSubcommand((sub) => subcommand.build(sub));

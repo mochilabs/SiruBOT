@@ -212,7 +212,7 @@ describe('GiveawayService.enter', () => {
 		expect(t.entries.get(id)?.size ?? 0).toBe(0);
 	});
 
-	it('끝났거나 다른 서버의 기브어웨이면 closed예요', async () => {
+	it('끝났거나 다른 서버의 나눔이면 closed예요', async () => {
 		const t = setup();
 		const { id } = await t.service.start(startInput());
 		expect(await t.service.enter(id, '999999999999999999', user(1), facts())).toEqual({ kind: 'closed' });
@@ -315,7 +315,7 @@ describe('마감과 추첨', () => {
 		expect(t.discord.announce).toHaveBeenCalledTimes(2);
 	});
 
-	it('취소된 기브어웨이는 마감 작업이 와도 아무것도 하지 않아요', async () => {
+	it('취소된 나눔은 마감 작업이 와도 아무것도 하지 않아요', async () => {
 		const t = setup();
 		const { id } = await t.service.start(startInput());
 		expect(await t.service.cancel(GUILD, id)).toBe('cancelled');
@@ -334,7 +334,7 @@ describe('마감과 추첨', () => {
 		expect(t.giveaways.get(id)!.winnerIds).toEqual([]);
 	});
 
-	it('/종료는 바로 추첨하고 다른 서버의 기브어웨이는 찾지 못해요', async () => {
+	it('/종료는 바로 추첨하고 다른 서버의 나눔은 찾지 못해요', async () => {
 		const t = setup();
 		const { id } = await t.service.start(startInput());
 		await enterAll(t, id, 3);
@@ -358,7 +358,7 @@ describe('마감과 추첨', () => {
 		expect(t.discord.announce).toHaveBeenLastCalledWith(CHANNEL, 'msg-1', expect.anything(), 'reroll', winnerIds);
 	});
 
-	it('다시 뽑기는 끝난 기브어웨이에서만, 뽑을 사람이 남아 있을 때만 돼요', async () => {
+	it('다시 뽑기는 끝난 나눔에서만, 뽑을 사람이 남아 있을 때만 돼요', async () => {
 		const t = setup();
 		const { id } = await t.service.start(startInput({ winnerCount: 5 }));
 		await enterAll(t, id, 2);

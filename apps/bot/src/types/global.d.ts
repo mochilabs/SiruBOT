@@ -59,7 +59,7 @@ declare module '@sapphire/pieces' {
 		scheduledMessages: import('../features/scheduled-messages/index.ts').ScheduledMessageService;
 		/** 생일 축하 동의 저장과 birthday_daily 핸들러 (features/birthday/application/birthdayService.ts) */
 		birthday: import('../features/birthday/index.ts').BirthdayService;
-		/** 기브어웨이 시작·참여·마감 추첨과 giveaway_end 핸들러, 카드 갱신 스로틀 (features/giveaway/application/giveawayService.ts) */
+		/** 나눔 시작·참여·마감 추첨과 giveaway_end 핸들러, 카드 갱신 스로틀 (features/giveaway/application/giveawayService.ts) */
 		giveaways: import('../features/giveaway/index.ts').GiveawayService;
 		starboardService: import('../features/starboard/index.ts').StarboardService;
 		/** 재생 이벤트 data-api 리포트 소유자 — 진행 중인 요청을 종료 때 기다려요 */

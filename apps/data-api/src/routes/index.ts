@@ -22,6 +22,7 @@ import { registerGuildDataRoutes } from './guild-data.ts';
 import { registerStorageProxyRoutes } from './storage.ts';
 import { registerTtsRoutes } from './tts.ts';
 import { registerBotAdminRoutes } from './bot-admin.ts';
+import { registerGiveawayRoutes } from './giveaway.ts';
 import { registerPanelRoutes } from './panel.ts';
 import { registerIncidentNoticeRoutes } from './incident-notice.ts';
 
@@ -88,6 +89,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	registerBotAdminRoutes(fastify);
 	registerIncidentNoticeRoutes(fastify);
 	registerPanelRoutes(fastify);
+	registerGiveawayRoutes(fastify);
 
 	// 소셜 알림 프록시 — 구독 도메인은 notifier가 단일 소유해요.
 	await registerSocialRoutes(fastify, deps);

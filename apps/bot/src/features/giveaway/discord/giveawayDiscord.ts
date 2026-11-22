@@ -16,7 +16,7 @@ const MEMBER_FETCH_CHUNK = 100;
 const isUnknown = (error: unknown) =>
 	typeof error === 'object' && error !== null && 'code' in error && (error.code === 10003 || error.code === 10008);
 
-/** 기브어웨이 서비스의 Discord 어댑터 — 카드 게시·수정, 발표, 멤버 조회를 맡아요 */
+/** 나눔 서비스의 Discord 어댑터 — 카드 게시·수정, 발표, 멤버 조회를 맡아요 */
 export function createGiveawayDiscord(deps: GiveawayDiscordDeps): GiveawayDiscordPort {
 	const getChannel = async (channelId: string) => {
 		const client = deps.getClient();

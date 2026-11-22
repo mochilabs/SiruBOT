@@ -7,7 +7,7 @@ import { giveawayAutocomplete, giveawayIdOption } from './giveawayAutocomplete.t
 
 export const name = 'cancel';
 export const ko = '취소';
-export const description = '진행 중인 기브어웨이를 추첨 없이 취소해요.';
+export const description = '진행 중인 나눔을 추첨 없이 취소해요.';
 export const descriptionEn = 'Cancel a running giveaway without drawing.';
 export const preconditions: string[] = ['ManageGuild'];
 
@@ -17,7 +17,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 		.setNameLocalizations({ ko })
 		.setDescription(descriptionEn)
 		.setDescriptionLocalizations({ ko: description })
-		.addStringOption((o) => giveawayIdOption(o, 'Giveaway to cancel.', '취소할 기브어웨이'));
+		.addStringOption((o) => giveawayIdOption(o, 'Giveaway to cancel.', '취소할 나눔'));
 }
 
 export const autocomplete = giveawayAutocomplete(['running']);
@@ -25,6 +25,6 @@ export const autocomplete = giveawayAutocomplete(['running']);
 export async function run(interaction: ChatInputCommandInteraction<'cached'>) {
 	await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 	const result = await container.giveaways.cancel(interaction.guildId, interaction.options.getString('giveaway', true));
-	if (result !== 'cancelled') throw new AppError('not_found', '진행 중인 그 기브어웨이를 찾지 못했어요.', { ephemeral: true });
-	await interaction.editReply(giveawayNoticeView(`${emoji('success')} 기브어웨이를 취소했어요.`));
+	if (result !== 'cancelled') throw new AppError('not_found', '진행 중인 그 나눔을 찾지 못했어요.', { ephemeral: true });
+	await interaction.editReply(giveawayNoticeView(`${emoji('success')} 나눔을 취소했어요.`));
 }
