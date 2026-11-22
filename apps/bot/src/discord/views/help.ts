@@ -1,5 +1,5 @@
 import { addSeparator, createContainer, emoji } from '@sirubot/utils';
-import { BOT_LANGUAGE_NOTE, BOT_TAGLINE } from '@sirubot/utils/brand';
+import { BOT_TAGLINE } from '@sirubot/utils/brand';
 import { getBotModule, type BotModuleId } from '@sirubot/utils/modules';
 import { ActionRowBuilder, ContainerBuilder, StringSelectMenuBuilder } from 'discord.js';
 import { commandMention } from '../../lib/commandMention.ts';
@@ -36,11 +36,10 @@ function homeText(ctx: HelpContext): string {
 	return [
 		`### 안녕하세요, 시루예요! ${emoji('music_note')}`,
 		BOT_TAGLINE,
-		`-# ${BOT_LANGUAGE_NOTE}`,
 		'',
 		'**처음이라면**',
 		`1. 음성 채널에 들어가서 ${commandMention('play', ctx.index)}로 노래를 틀어 보세요.`,
-		'2. 채팅에서 저를 멘션하면 AI로 대답해요. 질문, 요약, 번역 모두 돼요.',
+		'2. 채팅에서 저를 멘션해서 질문하거나 명령할 수 있어요.',
 		`3. 관리자라면 ${commandMention('settings', ctx.index)}이나 웹 대시보드에서 서버에 맞게 설정해요.`
 	].join('\n');
 }

@@ -43,7 +43,7 @@ function bodyText(options: WelcomeViewOptions): string {
 		'',
 		'**바로 해 보기**',
 		`- 음성 채널에 들어가서 ${commandMention('play', options.index)}에 곡 이름을 넣어 보세요.`,
-		'- 채팅에서 저를 멘션하면 AI로 대답해요.',
+		'- 채팅에서 저를 멘션해서 질문하거나 명령할 수 있어요.',
 		`- ${commandMention('help', options.index)}로 할 수 있는 일을 카테고리별로 볼 수 있어요.`
 	];
 	if (options.supportServerUrl) lines.push('', `-# 문의는 [지원 서버](${options.supportServerUrl})로 남겨 주세요.`);
