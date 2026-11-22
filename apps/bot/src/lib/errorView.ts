@@ -1,5 +1,5 @@
 import { UserError } from '@sapphire/framework';
-import { createContainer } from '@sirubot/utils';
+import { createContainer, emoji } from '@sirubot/utils';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, TextDisplayBuilder } from 'discord.js';
 
 export interface ErrorViewOptions {
@@ -27,7 +27,7 @@ export function errorView(message: string, options: ErrorViewOptions = {}) {
 
 /** "지원 서버" 링크 버튼 — 오류 화면과 `/정보 봇`이 같은 모양을 써요 */
 export function supportButton(url: string): ButtonBuilder {
-	return new ButtonBuilder().setURL(url).setLabel('지원 서버').setEmoji('💬').setStyle(ButtonStyle.Link);
+	return new ButtonBuilder().setURL(url).setLabel('지원 서버').setEmoji(emoji('speech')).setStyle(ButtonStyle.Link);
 }
 
 /**

@@ -20,14 +20,16 @@ export interface WelcomeViewOptions {
 
 function buttons(options: WelcomeViewOptions): ActionRowBuilder<ButtonBuilder> {
 	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		new ButtonBuilder().setCustomId(onboardingSettingsCustomId).setLabel('서버 설정 시작').setEmoji('⚙️').setStyle(ButtonStyle.Primary)
+		new ButtonBuilder().setCustomId(onboardingSettingsCustomId).setLabel('서버 설정 시작').setEmoji(emoji('tools')).setStyle(ButtonStyle.Primary)
 	);
 	if (options.kind === 'rejoin') return row;
 	if (options.dashboardUrl) {
-		row.addComponents(new ButtonBuilder().setURL(options.dashboardUrl).setLabel('대시보드 열기').setEmoji('🌐').setStyle(ButtonStyle.Link));
+		row.addComponents(
+			new ButtonBuilder().setURL(options.dashboardUrl).setLabel('대시보드 열기').setEmoji(emoji('globe')).setStyle(ButtonStyle.Link)
+		);
 	}
 	row.addComponents(
-		new ButtonBuilder().setCustomId(onboardingTourCustomId).setLabel('기능 둘러보기').setEmoji('🧭').setStyle(ButtonStyle.Secondary)
+		new ButtonBuilder().setCustomId(onboardingTourCustomId).setLabel('기능 둘러보기').setEmoji(emoji('mag')).setStyle(ButtonStyle.Secondary)
 	);
 	return row;
 }

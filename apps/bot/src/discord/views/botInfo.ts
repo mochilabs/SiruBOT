@@ -26,7 +26,7 @@ function linkRow(links: BotInfoLinks): ActionRowBuilder<ButtonBuilder> | null {
 	const row = new ActionRowBuilder<ButtonBuilder>();
 	if (links.dashboardUrl) {
 		row.addComponents(
-			new ButtonBuilder().setURL(`${links.dashboardUrl}/shards`).setLabel('상태 페이지').setEmoji('📊').setStyle(ButtonStyle.Link)
+			new ButtonBuilder().setURL(`${links.dashboardUrl}/shards`).setLabel('상태 페이지').setEmoji(emoji('chart')).setStyle(ButtonStyle.Link)
 		);
 	}
 	if (links.supportServerUrl) row.addComponents(supportButton(links.supportServerUrl));

@@ -20,11 +20,11 @@ function categorySelect(page: HelpPage, ctx: HelpContext): ActionRowBuilder<Stri
 		.setMinValues(1)
 		.setMaxValues(1)
 		.addOptions(
-			{ label: '처음 화면', value: HELP_HOME, emoji: { name: '🏠' }, default: page === HELP_HOME },
+			{ label: '처음 화면', value: HELP_HOME, emoji: emoji('house'), default: page === HELP_HOME },
 			...visibleHelpModules(ctx).map((m) => ({
 				label: m.label,
 				value: m.id,
-				emoji: { name: m.emoji },
+				emoji: emoji(m.appEmoji, m.emoji),
 				description: m.description,
 				default: page === m.id
 			}))
@@ -55,7 +55,7 @@ export function helpView(page: HelpPage, ctx: HelpContext, selectable = true): C
 	} else {
 		const module = getBotModule(page);
 		const body = helpCategoryLines(page, ctx);
-		container.addTextDisplayComponents((t) => t.setContent([`### ${module.emoji} ${module.label}`, ...body].join('\n')));
+		container.addTextDisplayComponents((t) => t.setContent([`### ${emoji(module.appEmoji, module.emoji)} ${module.label}`, ...body].join('\n')));
 	}
 	if (selectable) {
 		addSeparator(container);
