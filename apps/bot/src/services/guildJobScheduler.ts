@@ -6,7 +6,7 @@
  * - 종류(kind)별 핸들러는 각 기능이 `register(kind, handler)`로 등록해요. 모르는 kind는 failed로 닫고 로그를 남겨요.
  * - 실패하면 attempts+1, 30초·2분·10분 백오프로 runAt을 미뤄요. 3회째 실패하면 failed + warn 로그.
  * - running인 채로 5분이 넘은 작업(프로세스가 죽은 경우)은 같은 tick에서 pending으로 되돌려요.
- * - 반복 작업은 핸들러가 끝날 때 `nextRunAt()`(jobRecurrence.ts)로 다음 행을 `schedule()`해요.
+ * - 반복 작업은 핸들러가 끝날 때 `nextRunAt()`(packages/utils/src/jobRecurrence.ts)로 다음 행을 `schedule()`해요.
  * - 시각 비교는 DB 시계(UTC)를 써서 프로세스 간 시계 차이에 흔들리지 않아요. 백오프·stale 기준은 주입한 `now()`예요.
  */
 import type { Prisma, PrismaClient, ScheduledJob } from '@sirubot/prisma';
