@@ -62,13 +62,11 @@ export default async function ServerDashboardPage({
 
   return (
     <Container>
-      {/* 모바일은 제목 자리에, PC(lg+)는 사이드바 맨 위에 서버 선택기를 둬요 */}
-      <div className="mb-2 lg:hidden">
-        <h1 className="sr-only">{guildMeta?.name || "서버 대시보드"}</h1>
-        <ServerSwitcher guildId={id} guildName={guildMeta?.name || "서버 대시보드"} icon={guildMeta?.icon ?? null} />
-      </div>
+      {/* 서버 선택기: PC(lg+)는 사이드바 맨 위, 모바일은 기능 선택 버튼 오른쪽 같은 줄 */}
+      <h1 className="sr-only">{guildMeta?.name || "서버 대시보드"}</h1>
       <ServerDashboard
         switcher={<ServerSwitcher variant="sidebar" guildId={id} guildName={guildMeta?.name || "서버 대시보드"} icon={guildMeta?.icon ?? null} />}
+        mobileSwitcher={<ServerSwitcher variant="compact" guildId={id} guildName={guildMeta?.name || "서버 대시보드"} icon={guildMeta?.icon ?? null} />}
         key={id}
         guildId={id}
         manageable={manageableResolved}

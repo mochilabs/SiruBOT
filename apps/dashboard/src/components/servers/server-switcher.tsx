@@ -28,11 +28,13 @@ function GuildIcon({ id, name, icon }: { id: string; name: string; icon: string 
 }
 
 /**
- * variant="header"는 페이지 제목 자리(큰 글씨), "sidebar"는 PC 기능 사이드바 맨 위의 꽉 찬 폭 트리거예요.
+ * variant="header"는 페이지 제목 자리(큰 글씨), "sidebar"는 PC 기능 사이드바 맨 위의 꽉 찬 폭 트리거,
+ * "compact"는 모바일 기능 선택 버튼 오른쪽에 붙는 작은 트리거(아이콘 + 줄임 이름)예요.
  * 사이드바 변형은 lg+에서만 보이므로 모바일 바텀시트는 만들지 않아요.
  */
-export function ServerSwitcher({ guildId, guildName, icon, variant = "header" }: { guildId: string; guildName: string; icon: string | null; variant?: "header" | "sidebar" }) {
+export function ServerSwitcher({ guildId, guildName, icon, variant = "header" }: { guildId: string; guildName: string; icon: string | null; variant?: "header" | "sidebar" | "compact" }) {
   const sidebar = variant === "sidebar";
+  const compact = variant === "compact";
   const router = useRouter();
   const searchParams = useSearchParams();
   // 세션 게이트는 useAuthedSWR이 담당해요 — servers/page.tsx와 같은 URL·계약
@@ -94,12 +96,12 @@ export function ServerSwitcher({ guildId, guildName, icon, variant = "header" }:
   // 트리거는 표면 채움으로 배경과 구분되고, 열림·누름에서 chevron 회전과
   // 눌림(scale)으로 "작동하는 느낌"을 줘요
   const triggerClass = (open: boolean) =>
-    (sidebar ? `h-auto min-h-12 w-full max-w-full min-w-0 justify-start gap-3 px-3 py-1 text-base font-bold tracking-normal ` : `h-auto min-h-10 max-w-full min-w-0 justify-start gap-2.5 px-2 py-0.5 text-lg font-bold tracking-normal sm:min-h-12 sm:gap-3 sm:py-1 sm:text-2xl `) +
+    (compact ? `h-11 min-h-11 w-full min-w-0 justify-start gap-2 rounded-menu px-2.5 text-sm font-bold tracking-normal ` : sidebar ? `h-auto min-h-12 w-full max-w-full min-w-0 justify-start gap-3 px-3 py-1 text-base font-bold tracking-normal ` : `h-auto min-h-10 max-w-full min-w-0 justify-start gap-2.5 px-2 py-0.5 text-lg font-bold tracking-normal sm:min-h-12 sm:gap-3 sm:py-1 sm:text-2xl `) +
     `bg-surface-1 transition-[background-color,transform] duration-fast hover:bg-surface-2 active:scale-[0.98] ` +
     (open ? "bg-surface-2" : "");
 
   return (
-    <div className={sidebar ? "min-w-0 w-full" : "min-w-0 max-w-full"}>
+    <div className={sidebar ? "min-w-0 w-full" : compact ? "min-w-0 max-w-[46%] shrink-0" : "min-w-0 max-w-full"}>
       <Popover.Root open={desktopOpen} onOpenChange={setDesktopOpen}>
         <Popover.Trigger render={<Button ref={desktopTriggerRef} variant="ghost" aria-label={`${guildName} 서버 선택`} className={`hidden sm:inline-flex ${triggerClass(desktopOpen)}`}>{triggerContent(desktopOpen)}</Button>} />
         <Popover.Portal>

@@ -121,12 +121,15 @@ export function ServerDashboard({
   manageable,
   guildName,
   switcher,
+  mobileSwitcher,
 }: {
   guildId: string;
   manageable: boolean;
   guildName: string | null;
   /** PC 사이드바 맨 위에 붙는 서버 선택기 */
   switcher?: React.ReactNode;
+  /** 모바일 기능 선택 버튼과 같은 줄에 붙는 서버 선택기 */
+  mobileSwitcher?: React.ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -230,7 +233,7 @@ export function ServerDashboard({
             aria-label="서버 설정 패널"
           >
             {/* 모바일 기능 네비게이션 — 현재 기능 한 줄 버튼, 누르면 그룹별 전체 목록이 바텀시트로 열려요 */}
-            <ServerMobileNav items={navItems} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} />
+            <ServerMobileNav items={navItems} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} trailing={mobileSwitcher} />
             {activeDisabledModule && (
               <div
                 role="status"

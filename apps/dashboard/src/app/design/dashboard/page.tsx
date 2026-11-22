@@ -18,10 +18,7 @@ export default function DashboardLayoutPreview() {
   return (
     <Container>
       <StubGate>
-        <div className="mb-2 lg:hidden">
-					<h1 className="sr-only">데모 서버</h1>
-					<ServerSwitcher guildId={STUB_GUILD_ID} guildName="데모 서버" icon={null} />
-				</div>
+        <h1 className="sr-only">데모 서버</h1>
         <ServerDashboard
           guildId={STUB_GUILD_ID}
           manageable
@@ -29,6 +26,14 @@ export default function DashboardLayoutPreview() {
           switcher={
             <ServerSwitcher
               variant="sidebar"
+              guildId={STUB_GUILD_ID}
+              guildName="데모 서버"
+              icon={null}
+            />
+          }
+          mobileSwitcher={
+            <ServerSwitcher
+              variant="compact"
               guildId={STUB_GUILD_ID}
               guildName="데모 서버"
               icon={null}

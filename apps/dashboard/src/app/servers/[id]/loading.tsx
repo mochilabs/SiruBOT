@@ -18,13 +18,7 @@ export default function ServerDashboardLoading() {
   return (
     <Container>
       <section aria-busy="true" aria-label="서버 대시보드">
-        {/* 모바일 ServerSwitcher 트리거 모양 (PC는 사이드바 안에 있어요) */}
-        <div className="mb-2 inline-flex min-h-10 items-center gap-2.5 px-2 py-0.5 lg:hidden">
-          <Skeleton className="size-8 shrink-0 rounded-control" />
-          <Skeleton.Line width="9rem" height="h-6" />
-          <Skeleton className="size-4 shrink-0 rounded-sm" />
-        </div>
-
+        
         <span role="status" className="sr-only">
           대시보드를 불러오는 중…
         </span>
@@ -57,7 +51,10 @@ export default function ServerDashboardLoading() {
 
           <div className="w-full min-w-0 flex-1">
             {/* 모바일 기능 네비게이션 — ServerMobileNav의 한 줄 버튼과 같은 크기 */}
-            <Skeleton aria-hidden className="mb-3 min-h-11 w-full rounded-menu lg:hidden" />
+            <div aria-hidden className="mb-3 flex gap-2 lg:hidden">
+              <Skeleton className="min-h-11 flex-1 rounded-menu" />
+              <Skeleton className="min-h-11 w-28 rounded-menu" />
+            </div>
 
             {/* 활성 패널 — 설정 패널 카드(padding="lg")와 같은 모양 */}
             <PanelLoading label="" decorative />
