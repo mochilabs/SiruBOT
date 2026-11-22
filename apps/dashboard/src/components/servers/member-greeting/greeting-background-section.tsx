@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { PresetSwatch } from "./preset-swatch";
-import { ACCEPTED_IMAGE_TYPES } from "./use-greeting-upload";
+import { ACCEPTED_BACKGROUND_TYPES } from "./use-greeting-upload";
 
 interface GreetingBackgroundSectionProps {
   background: GreetingImage["background"];
@@ -72,7 +72,7 @@ export function GreetingBackgroundSection({
         <input
           ref={backgroundFileInputRef}
           type="file"
-          accept={ACCEPTED_IMAGE_TYPES}
+          accept={ACCEPTED_BACKGROUND_TYPES}
           className="sr-only"
           onChange={(event) => {
             void onUpload(event.target.files?.[0] ?? null);
@@ -101,7 +101,7 @@ export function GreetingBackgroundSection({
         )}
       </div>
       <p className="px-3 text-sm text-muted-foreground">
-        3MB 이하 PNG·JPEG·WebP는 JPEG(긴 변 1600px)로 줄여 저장돼요.
+        3MB 이하 PNG·JPEG·WebP는 JPEG(긴 변 1600px)로 줄여 저장돼요. GIF는 움직이는 배경으로 쓸 수 있어요 — 최대 5초까지, 너무 크면 크기와 프레임을 줄여 저장해요.
       </p>
     </>
   );

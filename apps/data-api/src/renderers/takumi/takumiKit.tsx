@@ -105,6 +105,27 @@ export async function renderSvgRaster(svg: string, width: number, height: number
 	return Buffer.from(await renderer.render(node, { width, height, format }));
 }
 
+/**
+ * 움직이는 GIF data URI를 width×height로 줄여서 다시 GIF로 인코딩해요 — fps로 샘플링하고 durationMs(≤ 한 바퀴)까지만 잘라요.
+ * 업로드한 GIF 배경이 저장 상한(900KB)·프레임·크기 상한을 넘을 때 쓰는 정규화예요. 읽을 수 없는 GIF면 throw해요.
+ */
+export async function reencodeAnimatedGif(
+	dataUri: string,
+	options: { width: number; height: number; fps: number; durationMs: number }
+): Promise<Buffer> {
+	const { renderer } = await getCardRenderer();
+	const { node } = await fromJsx(<img src={dataUri} style={{ width: options.width, height: options.height }} />);
+	return Buffer.from(
+		await renderer.renderAnimation({
+			scenes: [{ node, durationMs: options.durationMs }],
+			width: options.width,
+			height: options.height,
+			fps: options.fps,
+			format: 'gif'
+		})
+	);
+}
+
 /** 이미지 data URI를 width×height로 다시 그려 JPEG/PNG 버퍼로 돌려줘요 — 업로드 이미지 축소·재인코딩용이에요. 읽을 수 없는 이미지면 throw해요. */
 export async function reencodeImage(
 	dataUri: string,

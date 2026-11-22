@@ -9,7 +9,9 @@ import {
 	type GreetingImage
 } from '@sirubot/utils';
 import type { GreetingCardContext } from '../memberGreetingCard.ts';
+import { fromJsx } from '@takumi-rs/helpers/jsx';
 import { renderGreetingCard } from './greetingCard.ts';
+import { getCardRenderer } from './takumiKit.tsx';
 
 const warn = vi.hoisted(() => vi.fn());
 vi.mock('../../utils/logger.ts', () => ({ getLogger: () => ({ warn, error: vi.fn(), info: vi.fn(), debug: vi.fn() }) }));
@@ -92,4 +94,35 @@ describe('renderGreetingCard — 움직임', () => {
 		hidden.layers[hidden.layers.length - 1]!.hidden = true;
 		expect((await renderGreetingCard(hidden, context)).contentType).toBe('image/png');
 	});
+});
+
+describe('renderGreetingCard — GIF 배경', () => {
+	it('움직이는 GIF 배경이면 레이어 움직임이 없어도 애니메이션 WebP로 그려요 (GIF 한 바퀴 × 반복)', async () => {
+		const { renderer } = await getCardRenderer();
+		const box = { type: 'div', props: { style: { width: 60, height: 60, background: '#ffffff', animation: 'slide 1s linear infinite' } } };
+		const { node } = await fromJsx({
+			type: 'div',
+			props: { style: { display: 'flex', width: 320, height: 180, background: '#3355ff' }, children: box }
+		} as never);
+		const gif = await renderer.renderAnimation({
+			scenes: [{ node, durationMs: 1000 }],
+			width: 320,
+			height: 180,
+			fps: 10,
+			format: 'gif',
+			css: [
+				'@keyframes slide { 0% { transform: translateX(0px); } 50% { transform: translateX(120px); } 100% { transform: translateX(0px); } }'
+			]
+		});
+		const image: GreetingImage = {
+			background: { presetId: null, dataUri: `data:image/gif;base64,${Buffer.from(gif).toString('base64')}` },
+			layers: base.layers
+		};
+		const card = await renderGreetingCard(image, context);
+		expect(card.contentType).toBe('image/webp');
+		// GIF 한 바퀴(1초, 10프레임)가 카드 한 바퀴예요. 인코더가 같은 모양이 이어지는 프레임을 합쳐서 GIF 프레임 수만큼 나와요
+		const info = webpInfo(card.buffer);
+		expect(info).toMatchObject({ width: OUT_W, height: OUT_H, loop: 0 });
+		expect(info.frames).toBeGreaterThan(1);
+	}, 30_000);
 });

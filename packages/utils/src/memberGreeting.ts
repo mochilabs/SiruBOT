@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { type GifTiming, parseGifDataUriTiming } from './gifTiming.js';
+
 /**
  * 멤버 인사(환영/작별) 공용 계약 v2 — bot 리스너, data-api 렌더러, dashboard 에디터가 함께 쓴다.
  * Prisma Guild.welcome / goodbye 컬럼(Json?)에 이 구조 그대로 저장한다.
@@ -28,6 +30,8 @@ const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const SNOWFLAKE = /^\d{17,20}$/;
 // jpeg 표기 허용 (image/jpeg). base64 본문은 URL-safe가 아닌 표준 알파벳만 허용.
 const DATA_URI = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+/** 배경은 움직이는 GIF도 받아요 (이미지 레이어는 GIF를 받지 않아요) */
+const BACKGROUND_DATA_URI = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/;
 const DATA_URI_MAX_LENGTH = 1_500_000; // prefix 포함 문자 길이 ≈ 1.1MB 바이너리 상한
 
 /** 텍스트 레이어 — 템플릿 변수를 포함할 수 있는 문자열 1개 */
@@ -155,22 +159,36 @@ export type GreetingImage = {
 	layers: GreetingLayer[];
 };
 
-/** 숨기지 않은 레이어 중 움직임이 있는 것이 하나라도 있는지 — true면 카드를 애니메이션 WebP로 그려요 */
+/** 배경이 움직이는 GIF(프레임 2개 이상)면 그 타이밍을 돌려줘요. 아니면 null이에요. */
+function backgroundGifTiming(image: GreetingImage): GifTiming | null {
+	const timing = parseGifDataUriTiming(image.background.dataUri);
+	return timing && timing.frames > 1 ? timing : null;
+}
+
+/** 숨기지 않은 레이어 중 움직임이 있거나, 배경이 움직이는 GIF면 true — true면 카드를 애니메이션 WebP로 그려요 */
 export function hasGreetingAnimation(image: GreetingImage): boolean {
-	return image.layers.some((layer) => !layer.hidden && layer.animation !== undefined);
+	return backgroundGifTiming(image) !== null || image.layers.some((layer) => !layer.hidden && layer.animation !== undefined);
 }
 
 /**
- * 애니메이션 카드 한 바퀴 길이(ms) — 움직이는 레이어 주기(durationMs) 중 가장 긴 값이에요 (상한 5초).
- * WebP가 끊김 없이 반복되도록 렌더러가 다른 레이어의 주기를 이 값의 약수(L / n)로 맞춰요. 애니메이션이 없으면 0이에요.
+ * 애니메이션 카드 한 바퀴 길이(ms) — WebP가 끊김 없이 반복되도록 렌더러가 레이어 주기를 이 값의 약수(L / n)로 맞춰요.
+ * - 레이어 움직임만 있으면: 가장 긴 주기(durationMs), 상한 5초.
+ * - 배경이 GIF면: GIF 한 바퀴의 정수배예요. 가장 긴 레이어 주기에 가장 가까운 배수로 잡되 5초를 넘기지 않아요.
+ *   GIF 한 바퀴가 5초 이상이면 5초에서 잘라요 (반복 지점에서 GIF가 한 번 튀어요).
+ * - 둘 다 없으면 0이에요.
  */
 export function greetingAnimationDurationMs(image: GreetingImage): number {
-	let longest = 0;
+	let layersMs = 0;
 	for (const layer of image.layers) {
 		if (layer.hidden || !layer.animation) continue;
-		longest = Math.max(longest, layer.animation.durationMs);
+		layersMs = Math.max(layersMs, layer.animation.durationMs);
 	}
-	return Math.min(longest, GREETING_ANIMATION_MAX_MS);
+	const gif = backgroundGifTiming(image);
+	if (!gif) return Math.min(layersMs, GREETING_ANIMATION_MAX_MS);
+	if (gif.durationMs >= GREETING_ANIMATION_MAX_MS) return GREETING_ANIMATION_MAX_MS;
+	const maxLoops = Math.floor(GREETING_ANIMATION_MAX_MS / gif.durationMs);
+	const loops = Math.max(1, Math.min(maxLoops, Math.round(layersMs / gif.durationMs)));
+	return gif.durationMs * loops;
 }
 
 /**
@@ -270,7 +288,7 @@ const greetingImageSchema = z.object({
 			.string()
 			.refine((presetId) => PRESET_BACKGROUND_IDS.includes(presetId), { error: '알 수 없는 배경 프리셋' })
 			.nullable(),
-		dataUri: z.string().regex(DATA_URI).max(DATA_URI_MAX_LENGTH).nullable()
+		dataUri: z.string().regex(BACKGROUND_DATA_URI).max(DATA_URI_MAX_LENGTH).nullable()
 	}),
 	layers: z.array(greetingLayerSchema).max(80)
 });

@@ -75,6 +75,7 @@ export {
 	roleValidationRpc,
 	socialWebhookCreateRpc
 } from './redisContract.js';
+export { type GifTiming, parseGifDataUriTiming, parseGifTiming } from './gifTiming.js';
 export { getLoggerSettings } from './logger.js';
 export { type AppEmojiFallbackKey, emoji, ensureAppEmojisLoaded, setAppEmojiIdMap } from './appEmoji.js';
 export {

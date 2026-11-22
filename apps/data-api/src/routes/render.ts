@@ -168,7 +168,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 	const greetingBackgroundSchema = z.object({
 		dataUri: z
 			.string()
-			.regex(/^data:image\/(png|jpeg|webp);base64,/, '지원 형식은 PNG·JPEG·WEBP예요.')
+			.regex(/^data:image\/(png|jpeg|webp|gif);base64,/, '지원 형식은 PNG·JPEG·WEBP·GIF예요.')
 			.max(12_000_000)
 	});
 	const registerGreetingImageNormalizeRoute = (path: string, metric: string, normalize: (dataUri: string) => Promise<string>) => {

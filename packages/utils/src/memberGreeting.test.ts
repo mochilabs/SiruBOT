@@ -221,3 +221,61 @@ describe('레이어 움직임(animation)', () => {
 		expect(greetingAnimationDurationMs(asImage([{ ...base, animation: { ...animation, durationMs: 5000 } }]))).toBe(5000);
 	});
 });
+
+describe('GIF 배경', () => {
+	/** 2프레임 GIF(각 100ms) 최소 바이트 */
+	const gif = (frames: number, delayCs = 10) => {
+		const out: number[] = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 4, 0, 4, 0, 0, 0, 0];
+		for (let i = 0; i < frames; i += 1) {
+			out.push(0x21, 0xf9, 0x04, 0, delayCs, 0, 0, 0, 0x2c, 0, 0, 0, 0, 4, 0, 4, 0, 0, 0x02, 0x02, 0x44, 0x01, 0x00);
+		}
+		out.push(0x3b);
+		return `data:image/gif;base64,${Buffer.from(out).toString('base64')}`;
+	};
+	const withBackground = (dataUri: string | null, layers: unknown[] = []) => ({
+		...DEFAULT_GREETINGS.welcome,
+		image: { background: { presetId: null, dataUri }, layers }
+	});
+	const asImage = (config: ReturnType<typeof withBackground>) => config.image as never;
+	const pulse = (durationMs: number) => ({
+		id: 's',
+		type: 'shape',
+		shape: 'circle',
+		x: 50,
+		y: 50,
+		width: 10,
+		height: 10,
+		color: '#ffffff',
+		opacity: 1,
+		animation: { type: 'pulse', durationMs, delayMs: 0, intensity: 0.5 }
+	});
+
+	it('배경 dataUri는 GIF를 받고 이미지 레이어는 GIF를 받지 않아요', () => {
+		expect(greetingConfigSchema.safeParse(withBackground(gif(2))).success).toBe(true);
+		const imageLayer = { id: 'i', type: 'image', x: 50, y: 50, width: 10, height: 10, dataUri: gif(2), opacity: 1 };
+		expect(greetingConfigSchema.safeParse(withBackground(null, [imageLayer])).success).toBe(false);
+	});
+
+	it('움직이는 GIF 배경이면 레이어 움직임이 없어도 애니메이션이에요', () => {
+		expect(hasGreetingAnimation(asImage(withBackground(gif(2))))).toBe(true);
+		// 프레임이 하나뿐인 GIF는 정지 이미지예요
+		expect(hasGreetingAnimation(asImage(withBackground(gif(1))))).toBe(false);
+		expect(hasGreetingAnimation(asImage(withBackground(null)))).toBe(false);
+	});
+
+	it('한 바퀴 길이는 GIF 한 바퀴의 정수배예요', () => {
+		// GIF 1초(10프레임 × 100ms)
+		const oneSecond = gif(10);
+		expect(greetingAnimationDurationMs(asImage(withBackground(oneSecond)))).toBe(1000);
+		// 레이어 주기 4초에 가장 가까운 배수(4바퀴)
+		expect(greetingAnimationDurationMs(asImage(withBackground(oneSecond, [pulse(4000)])))).toBe(4000);
+		// 상한 5초 안에서만 반복해요
+		expect(greetingAnimationDurationMs(asImage(withBackground(oneSecond, [pulse(5000)])))).toBe(5000);
+		// 레이어 주기가 GIF보다 짧으면 GIF 한 바퀴
+		expect(greetingAnimationDurationMs(asImage(withBackground(oneSecond, [pulse(500)])))).toBe(1000);
+	});
+
+	it('GIF가 5초 이상이면 5초에서 잘라요', () => {
+		expect(greetingAnimationDurationMs(asImage(withBackground(gif(80))))).toBe(5000);
+	});
+});

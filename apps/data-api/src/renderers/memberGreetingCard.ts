@@ -3,7 +3,8 @@
  * 카드 PNG 렌더링은 `takumi/greetingCard.ts`가 맡고, 이 파일은 대시보드에서 올라온 배경/스티커 이미지를 저장 규격에 맞게 축소·재인코딩해요.
  */
 import { imageSizeOf } from '@sirubot/cards';
-import { reencodeImage } from './takumi/takumiKit.tsx';
+import { GREETING_ANIMATION_MAX_MS, parseGifTiming } from '@sirubot/utils';
+import { reencodeAnimatedGif, reencodeImage } from './takumi/takumiKit.tsx';
 
 /** 인사 배경 정규화/디코딩 실패 — 라우트가 400으로 매핑해요 (WeatherError/DeliveryError와 같은 패턴) */
 export class GreetingBackgroundError extends Error {
@@ -98,17 +99,71 @@ async function normalizeUploadedImage(
 	}
 }
 
+// 움직이는 GIF 배경: 카드 출력이 800px 폭이라 레이아웃 폭(1200px)보다 큰 건 낭비예요. 프레임이 많을수록 렌더(디코딩)가 느려서 길이·프레임에도 상한을 둬요.
+const GIF_MAX_SIDE = 1200;
+const GIF_MIN_SIDE = 240;
+const GIF_MAX_FRAMES = 100;
+const GIF_FPS_START = 15;
+const GIF_FPS_MIN = 8;
+
+/**
+ * 움직이는 GIF 배경 정규화. 상한 안이면 원본을 그대로 돌려줘요(화질 손실 없음).
+ * 넘으면 크기를 줄이고(최대 1200px) 5초까지만 잘라서 GIF로 다시 인코딩해요 — 900KB 이하가 될 때까지 크기·fps를 단계적으로 낮춰요.
+ * 정지 GIF(프레임 1개)는 일반 이미지처럼 JPEG로 정규화해요.
+ */
+async function normalizeBackgroundGif(dataUri: string, raw: Buffer): Promise<string> {
+	const timing = parseGifTiming(raw);
+	if (!timing) throw new GreetingBackgroundError('invalid_image', INVALID_IMAGE_MESSAGE);
+	if (timing.frames <= 1) {
+		return normalizeUploadedImage(dataUri, { maxSide: BG_MAX_SIDE, minSide: BG_MIN_SIDE }, { format: 'jpeg', quality: BG_QUALITY });
+	}
+	const longest = Math.max(timing.width, timing.height);
+	if (
+		raw.length <= IMAGE_MAX_BYTES &&
+		longest <= GIF_MAX_SIDE &&
+		timing.frames <= GIF_MAX_FRAMES &&
+		timing.durationMs <= GREETING_ANIMATION_MAX_MS
+	) {
+		return dataUri;
+	}
+
+	const durationMs = Math.min(timing.durationMs, GREETING_ANIMATION_MAX_MS);
+	let scale = Math.min(1, GIF_MAX_SIDE / longest);
+	let fps = GIF_FPS_START;
+	for (;;) {
+		const width = Math.max(1, Math.round(timing.width * scale));
+		const height = Math.max(1, Math.round(timing.height * scale));
+		let encoded: Buffer;
+		try {
+			encoded = await reencodeAnimatedGif(dataUri, { width, height, fps, durationMs });
+		} catch {
+			throw new GreetingBackgroundError('invalid_image', INVALID_IMAGE_MESSAGE);
+		}
+		if (encoded.length <= IMAGE_MAX_BYTES) return `data:image/gif;base64,${encoded.toString('base64')}`;
+		if (Math.max(width, height) * 0.8 < GIF_MIN_SIDE) throw new GreetingBackgroundError('image_too_large', IMAGE_TOO_LARGE_MESSAGE);
+		scale *= 0.8;
+		fps = Math.max(GIF_FPS_MIN, fps - 2);
+	}
+}
+
 /**
  * 업로드 배경 축소·재인코딩: 가장 긴 변 BG_MAX_SIDE, JPEG 품질 BG_QUALITY를 써요.
  * IMAGE_MAX_BYTES를 넘으면 IMAGE_STEP_PX씩 더 줄여요. 리턴은 data:image/jpeg;base64,…
+ * 움직이는 GIF는 애니메이션을 지켜야 해서 GIF로 정규화해요(`normalizeBackgroundGif`) — 리턴은 data:image/gif;base64,…
  */
 export async function normalizeGreetingBackground(dataUri: string): Promise<string> {
+	if (dataUri.startsWith('data:image/gif;')) {
+		const raw = decodeDataUri(dataUri);
+		if (!raw) throw new GreetingBackgroundError('invalid_image', INVALID_IMAGE_MESSAGE);
+		return normalizeBackgroundGif(dataUri, raw);
+	}
 	return normalizeUploadedImage(dataUri, { maxSide: BG_MAX_SIDE, minSide: BG_MIN_SIDE }, { format: 'jpeg', quality: BG_QUALITY });
 }
 
 /**
  * 업로드 이미지 레이어 축소·재인코딩: 투명도를 보존하기 위해 PNG로 저장해요.
  * 가장 긴 변 LAYER_MAX_SIDE, IMAGE_MAX_BYTES를 넘으면 IMAGE_STEP_PX씩 더 줄여요. 리턴은 data:image/png;base64,…
+ * 레이어는 움직이는 GIF를 쓰지 않아요 — GIF가 들어오면 첫 프레임만 PNG로 만들어요.
  */
 export async function normalizeGreetingLayerImage(dataUri: string): Promise<string> {
 	return normalizeUploadedImage(dataUri, { maxSide: LAYER_MAX_SIDE, minSide: LAYER_MIN_SIDE }, { format: 'png' });
