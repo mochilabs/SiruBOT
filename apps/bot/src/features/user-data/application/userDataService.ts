@@ -24,7 +24,7 @@ export interface UserDataSummary {
 	gameRecords: number;
 	/** 생일 축하를 켜 둔 서버 수 */
 	birthdayOptIns: number;
-	/** 진행 중이거나 지난 기브어웨이에 참여한 기록 수 */
+	/** 진행 중이거나 지난 나눔에 참여한 기록 수 */
 	giveawayEntries: number;
 }
 

@@ -79,6 +79,7 @@ Routes are registered from `routes/index.ts`, one file per domain.
 | GET `/v1/greeting/state/:guildId` | Poll the greeting test result | | `routes/guild-data.ts` |
 | POST `/v1/internal/guild-settings/invalidate` | Broadcast a guild settings cache invalidation | 503 without Redis | `routes/guild-data.ts` |
 | POST `/v1/internal/jtc/setup` | Create the join-to-create marker channel | Request/reply | `routes/guild-data.ts` |
+| POST `/v1/internal/giveaway/manage` | Ask the bot to start, end, cancel or reroll a giveaway. Body: `guildId`, `userId`, `action` (`start`, `end`, `cancel`, `reroll`) and the action's fields (`channelId`, `prize`, `winnerCount`, `endsAt`, `conditions` / `giveawayId` / `count`). The bot's rejection reason comes back as a 400 with a Korean message | Request/reply | `routes/giveaway.ts` |
 | POST `/v1/internal/panel/post` | Ask the bot to post a ticket or role panel. Body: `guildId`, `type` (`ticket` or `rolePanel`), optional `panelId`, `channelId`, `refresh` | Request/reply | `routes/panel.ts` |
 | POST `/v1/internal/role-panel/validate-roles` | Check before saving that the bot can grant the roles. Body: `guildId`, `roleIds`; returns `invalidRoleIds` | Request/reply | `routes/panel.ts` |
 | POST `/v1/internal/bot-admin` | Operator controls: `nodes-status`, `node-reconnect`, `node-disconnect`, `emojis-list`, `emojis-sync`, `reload-stores` | Request/reply | `routes/bot-admin.ts` |

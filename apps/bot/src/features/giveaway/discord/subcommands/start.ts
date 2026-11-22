@@ -14,7 +14,7 @@ import { giveawayNoticeView } from '../views/giveawayViews.ts';
 
 export const name = 'start';
 export const ko = '시작';
-export const description = '기브어웨이를 열어요. 참여 조건은 직접 정할 수 있어요.';
+export const description = '나눔을 열어요. 참여 조건은 직접 정할 수 있어요.';
 export const descriptionEn = 'Start a giveaway with custom entry conditions.';
 export const preconditions: string[] = ['ManageGuild'];
 
@@ -142,5 +142,5 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>) {
 		endsAt,
 		conditions
 	});
-	await interaction.editReply(giveawayNoticeView(`${emoji('success')} 기브어웨이를 열었어요. <#${channelId}>에서 확인하세요.`));
+	await interaction.editReply(giveawayNoticeView(`${emoji('success')} 나눔을 열었어요. <#${channelId}>에서 확인하세요.`));
 }

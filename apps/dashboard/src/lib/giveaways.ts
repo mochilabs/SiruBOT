@@ -1,15 +1,46 @@
 import {
+  checkGiveawayEnd,
   describeGiveawayCondition,
+  GIVEAWAY_CONDITIONS_MAX,
+  giveawayConditionSchema,
+  giveawayPrizeSchema,
   type GiveawayStatus,
+  giveawayWinnerCountSchema,
   parseGiveawayRequirements,
 } from "@sirubot/utils/giveaway";
+import { parseKstDateTime } from "@sirubot/utils/scheduledMessage";
+import { z } from "zod";
 
 import { db } from "@/lib/db";
 
-/** 목록에 보여줄 지난 기브어웨이 수 */
+/**
+ * 나눔 시작 입력 — 마감은 화면이 보내는 한국 시간 "YYYY-MM-DD HH:mm"이고, 검증 후 Date로 바뀌어요.
+ * 상품·당첨자 수·조건·마감 범위는 봇 명령과 같은 규칙(@sirubot/utils/giveaway)이에요.
+ */
+export const startGiveawaySchema = z
+  .object({
+    channelId: z.string().regex(/^\d{17,20}$/, "올바른 ID 형식이 아니에요."),
+    prize: giveawayPrizeSchema,
+    winnerCount: giveawayWinnerCountSchema,
+    endsAt: z.string().transform((text, ctx) => {
+      const parsed = parseKstDateTime(text);
+      if (!parsed) {
+        ctx.addIssue({ code: "custom", message: '마감은 "2026-12-25 21:00"처럼 적어 주세요. (한국 시간)' });
+        return z.NEVER;
+      }
+      return parsed;
+    }),
+    conditions: z.array(giveawayConditionSchema).max(GIVEAWAY_CONDITIONS_MAX),
+  })
+  .superRefine((value, ctx) => {
+    const problem = checkGiveawayEnd(new Date(), value.endsAt);
+    if (problem) ctx.addIssue({ code: "custom", path: ["endsAt"], message: problem });
+  });
+
+/** 목록에 보여줄 지난 나눔 수 */
 const PAST_LIMIT = 50;
 
-/** 대시보드에 내려주는 기브어웨이 한 건 — 시각은 ISO 문자열이에요 */
+/** 대시보드에 내려주는 나눔 한 건 — 시각은 ISO 문자열이에요 */
 export interface GiveawayItem {
   id: string;
   channelId: string;
@@ -32,7 +63,7 @@ export interface GiveawayList {
   past: GiveawayItem[];
 }
 
-/** 진행 중 전부와 최근 지난 기브어웨이를 내려줘요 (읽기 전용 — 시작·종료는 Discord에서 해요) */
+/** 진행 중 전부와 최근 지난 나눔을 내려줘요 */
 export async function listGiveaways(guildId: string): Promise<GiveawayList> {
   const [running, past] = await Promise.all([
     db.giveaway.findMany({

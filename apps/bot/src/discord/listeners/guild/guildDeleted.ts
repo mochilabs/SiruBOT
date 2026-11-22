@@ -32,11 +32,11 @@ export class GuildDeleteListener extends Listener {
 				.catch((error: unknown) => this.container.logger.warn(`[birthday] 나간 서버의 작업 정리 실패 (guild ${guild.id}): ${error}`));
 		}
 
-		// 진행 중이던 기브어웨이도 마감 작업과 함께 정리해요
+		// 진행 중이던 나눔도 마감 작업과 함께 정리해요
 		if (guild.available !== false) {
 			await this.container.giveaways
 				?.purgeGuild(guild.id)
-				.catch((error: unknown) => this.container.logger.warn(`[giveaway] 나간 서버의 기브어웨이 정리 실패 (guild ${guild.id}): ${error}`));
+				.catch((error: unknown) => this.container.logger.warn(`[giveaway] 나간 서버의 나눔 정리 실패 (guild ${guild.id}): ${error}`));
 		}
 
 		if (this.container.audio) {

@@ -16,7 +16,7 @@ export function giveawayCard(card: GiveawayCardData): ContainerBuilder {
 	const running = card.status === 'running';
 	const container = createContainer(running ? ACCENT : ENDED_ACCENT);
 
-	const title = card.status === 'cancelled' ? `${emoji('error')} 취소된 기브어웨이` : `${emoji('party')} 기브어웨이${running ? '' : ' 종료'}`;
+	const title = card.status === 'cancelled' ? `${emoji('error')} 취소된 나눔` : `${emoji('party')} 나눔${running ? '' : ' 종료'}`;
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ${title}\n### ${card.prize}`));
 
 	const lines: string[] = [];
@@ -62,8 +62,8 @@ export function giveawayCardMessage(card: GiveawayCardData) {
 
 /** 결과·다시 뽑기 발표 문구 — 당첨자에게만 알림이 가요 */
 export function giveawayAnnouncement(card: GiveawayCardData, kind: 'end' | 'reroll', winnerIds: readonly string[]): string {
-	if (winnerIds.length === 0) return `${emoji('info')} **${card.prize}** 기브어웨이는 조건을 통과한 참여자가 없어서 당첨자가 없어요.`;
-	const head = kind === 'reroll' ? '새 당첨자를 다시 뽑았어요!' : '기브어웨이가 끝났어요!';
+	if (winnerIds.length === 0) return `${emoji('info')} **${card.prize}** 나눔은 조건을 통과한 참여자가 없어서 당첨자가 없어요.`;
+	const head = kind === 'reroll' ? '새 당첨자를 다시 뽑았어요!' : '나눔이 끝났어요!';
 	return `${emoji('party')} ${head}\n${emoji('trophy')} **${card.prize}** 당첨을 축하해요: ${mentions(winnerIds)}`;
 }
 

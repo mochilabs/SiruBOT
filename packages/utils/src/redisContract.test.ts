@@ -33,6 +33,7 @@ import {
 	jtcSetupRpc,
 	memberGreetingSendEvent,
 	memberGreetingStateEvent,
+	giveawayManageRpc,
 	panelPostRpc,
 	pickRpcCorrelation,
 	playerWebRpc,
@@ -52,6 +53,10 @@ describe('Redis 계약의 채널 문자열', () => {
 			'sirubot:social:webhook-create:response'
 		]);
 		expect([botAdminRpc.requestChannel, botAdminRpc.responseChannel]).toEqual(['sirubot:bot-admin:request', 'sirubot:bot-admin:response']);
+		expect([giveawayManageRpc.requestChannel, giveawayManageRpc.responseChannel]).toEqual([
+			'sirubot:giveaway-manage:request',
+			'sirubot:giveaway-manage:response'
+		]);
 		expect([panelPostRpc.requestChannel, panelPostRpc.responseChannel]).toEqual(['sirubot:panel-post:request', 'sirubot:panel-post:response']);
 		expect([roleValidationRpc.requestChannel, roleValidationRpc.responseChannel]).toEqual([
 			'sirubot:role-validation:request',

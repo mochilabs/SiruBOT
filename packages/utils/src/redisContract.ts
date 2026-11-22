@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { botAdminRequestSchema, botAdminResponseSchema } from './botAdmin.js';
 import { guildDataRequestSchema, guildDataResponseSchema } from './guildData.js';
 import { jtcSetupRequestSchema, jtcSetupResponseSchema } from './jtcSetup.js';
+import { giveawayManageRequestSchema, giveawayManageResponseSchema } from './giveawayManage.js';
 import { panelPostRequestSchema, panelPostResponseSchema } from './panelPost.js';
 import { playerWebRequestBaseSchema, playerWebResponseSchema } from './playerWeb.js';
 import {
@@ -26,6 +27,8 @@ import {
 	JTC_SETUP_RESPONSE_CHANNEL,
 	MEMBER_GREETING_SEND_CHANNEL,
 	MEMBER_GREETING_STATE_CHANNEL_PREFIX,
+	GIVEAWAY_MANAGE_REQUEST_CHANNEL,
+	GIVEAWAY_MANAGE_RESPONSE_CHANNEL,
 	PANEL_POST_REQUEST_CHANNEL,
 	PANEL_POST_RESPONSE_CHANNEL,
 	PLAYER_WEB_REQUEST_CHANNEL,
@@ -239,6 +242,14 @@ export const panelPostRpc = defineRedisRpc({
 	responseChannel: PANEL_POST_RESPONSE_CHANNEL,
 	requestSchema: panelPostRequestSchema,
 	responseSchema: panelPostResponseSchema
+});
+
+export const giveawayManageRpc = defineRedisRpc({
+	name: '나눔 관리',
+	requestChannel: GIVEAWAY_MANAGE_REQUEST_CHANNEL,
+	responseChannel: GIVEAWAY_MANAGE_RESPONSE_CHANNEL,
+	requestSchema: giveawayManageRequestSchema,
+	responseSchema: giveawayManageResponseSchema
 });
 
 export const roleValidationRpc = defineRedisRpc({

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * 기브어웨이 계약 — 참여 조건, 추첨, 입력 검증을 봇과 대시보드가 함께 써요.
+ * 나눔 계약 — 참여 조건, 추첨, 입력 검증을 봇과 대시보드가 함께 써요.
  * 저장은 `Giveaway`/`GiveawayEntry`이고, 마감은 `ScheduledJob`(kind `giveaway_end`, payload `{ giveawayId }`)이 맡아요.
  * 이 파일은 순수 함수만 둬요(난수는 호출하는 쪽이 `randomInt`로 넘겨요).
  */
@@ -10,7 +10,7 @@ export const GIVEAWAY_KIND = 'giveaway_end';
 
 export const GIVEAWAY_PRIZE_MAX = 200;
 export const GIVEAWAY_WINNERS_MAX = 20;
-/** 서버당 동시에 진행할 수 있는 기브어웨이 수 */
+/** 서버당 동시에 진행할 수 있는 나눔 수 */
 export const GIVEAWAY_MAX_RUNNING = 10;
 export const GIVEAWAY_MIN_DURATION_MS = 60_000;
 export const GIVEAWAY_MAX_DURATION_MS = 30 * 24 * 60 * 60_000;

@@ -7,7 +7,7 @@ import { giveawayAutocomplete, giveawayIdOption } from './giveawayAutocomplete.t
 
 export const name = 'reroll';
 export const ko = '다시뽑기';
-export const description = '끝난 기브어웨이에서 새 당첨자를 더 뽑아요.';
+export const description = '끝난 나눔에서 새 당첨자를 더 뽑아요.';
 export const descriptionEn = 'Draw new winners for an ended giveaway.';
 export const preconditions: string[] = ['ManageGuild'];
 
@@ -17,7 +17,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 		.setNameLocalizations({ ko })
 		.setDescription(descriptionEn)
 		.setDescriptionLocalizations({ ko: description })
-		.addStringOption((o) => giveawayIdOption(o, 'Giveaway to reroll.', '다시 뽑을 기브어웨이'))
+		.addStringOption((o) => giveawayIdOption(o, 'Giveaway to reroll.', '다시 뽑을 나눔'))
 		.addIntegerOption((o) =>
 			o
 				.setName('winners')

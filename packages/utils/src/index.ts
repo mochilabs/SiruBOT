@@ -63,6 +63,7 @@ export {
 	memberGreetingSendEvent,
 	memberGreetingStateEvent,
 	memberGreetingTestStateSchema,
+	giveawayManageRpc,
 	panelPostRpc,
 	pickRpcCorrelation,
 	playerWebRpc,
@@ -143,6 +144,12 @@ export {
 	roleValidationRequestSchema,
 	roleValidationResponseSchema
 } from './rolePanel.js';
+export {
+	type GiveawayManageRequest,
+	giveawayManageRequestSchema,
+	type GiveawayManageResponse,
+	giveawayManageResponseSchema
+} from './giveawayManage.js';
 export { type PanelPostResponse, panelPostRequestSchema, panelPostResponseSchema, type PanelPostType, panelPostTypeSchema } from './panelPost.js';
 export {
 	PLAYER_WEB_CODE_SEARCH_EMPTY,

@@ -8,7 +8,7 @@ import { giveawayNoticeView } from '../views/giveawayViews.ts';
 type GiveawayAction = NonNullable<ReturnType<typeof giveawayId.decode>>;
 
 /**
- * 기브어웨이 카드 버튼 — `giveaway:v1:enter:{id}`는 참여, 이미 참여한 사람이 다시 누르면 취소 확인(`leave`)을 보여줘요.
+ * 나눔 카드 버튼 — `giveaway:v1:enter:{id}`는 참여, 이미 참여한 사람이 다시 누르면 취소 확인(`leave`)을 보여줘요.
  * 참여는 DB insert 한 번이고, 카드 숫자는 서비스가 10초에 한 번만 고쳐요.
  */
 export default class GiveawayButtonHandler extends InteractionHandler {
@@ -46,7 +46,7 @@ export default class GiveawayButtonHandler extends InteractionHandler {
 				await interaction.editReply(giveawayNoticeView(`${emoji('party')} 참여했어요! 결과는 마감 후 발표돼요.`));
 				return;
 			case 'closed':
-				await interaction.editReply(giveawayNoticeView(`${emoji('info')} 이미 끝났거나 취소된 기브어웨이예요.`));
+				await interaction.editReply(giveawayNoticeView(`${emoji('info')} 이미 끝났거나 취소된 나눔이에요.`));
 				return;
 			case 'ineligible':
 				await interaction.editReply(
