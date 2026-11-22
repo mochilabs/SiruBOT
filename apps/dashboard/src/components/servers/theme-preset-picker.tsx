@@ -16,27 +16,24 @@ interface ThemePresetPickerProps {
 	onChange: (preset: ThemePreset) => void;
 }
 
-/** 봇 메시지 미리보기 — 디스코드 어두운/밝은 테마 배경 위에 강조선·진행바·아이콘이 어떻게 보이는지 보여줘요. */
-function Preview({ color, tone }: { color: string; tone: "dark" | "light" }) {
+/** 봇 메시지 미리보기 — 어두운/밝은 디스코드 배경 위의 강조선·아이콘·진행바를 테두리 없이 한 줄로 보여줘요. */
+function PreviewCell({ color, tone }: { color: string; tone: "dark" | "light" }) {
 	const dark = tone === "dark";
 	return (
-		<div className="rounded-control p-1.5" style={{ background: dark ? "#313338" : "#ffffff" }}>
-			<div
-				className="space-y-1.5 px-2.5 py-2"
-				style={{
-					background: dark ? "#2b2d31" : "#f2f3f5",
-					borderLeft: `4px solid ${color}`,
-					color: dark ? "#f2f3f5" : "#060607",
-				}}
-			>
-				<div className="flex items-center gap-1.5 text-xs">
-					<Play className="h-3.5 w-3.5" style={{ color }} aria-hidden />
-					재생 중
-					<Volume2 className="ml-auto h-3.5 w-3.5" style={{ color }} aria-hidden />
-				</div>
-				<div className="h-2 overflow-hidden rounded-full" style={{ background: dark ? "#4e5058" : "#d4d7dc" }}>
-					<div className="h-full w-3/5 rounded-full" style={{ background: color }} />
-				</div>
+		<div
+			className="space-y-1.5 px-2.5 py-2"
+			style={{
+				background: dark ? "#2b2d31" : "#f2f3f5",
+				borderLeft: `4px solid ${color}`,
+				color: dark ? "#f2f3f5" : "#060607",
+			}}
+		>
+			<div className="flex items-center gap-1.5 text-xs">
+				<Play className="h-3.5 w-3.5" style={{ color }} aria-hidden />
+				<Volume2 className="ml-auto h-3.5 w-3.5" style={{ color }} aria-hidden />
+			</div>
+			<div className="h-2 overflow-hidden rounded-full" style={{ background: dark ? "#4e5058" : "#d4d7dc" }}>
+				<div className="h-full w-3/5 rounded-full" style={{ background: color }} />
 			</div>
 		</div>
 	);
@@ -64,7 +61,7 @@ export function ThemePresetPicker({ value, disabled = false, onChange }: ThemePr
 						disabled={disabled}
 						onClick={() => onChange(preset)}
 						className={cn(
-							"space-y-2 rounded-control border p-2.5 text-left transition-colors disabled:opacity-60",
+							"space-y-2 rounded-control border p-3 text-left transition-colors disabled:opacity-60",
 							selected ? "border-2 border-foreground" : "border-border hover:border-border-strong",
 						)}
 					>
@@ -73,8 +70,10 @@ export function ThemePresetPicker({ value, disabled = false, onChange }: ThemePr
 							{THEME_PRESET_LABELS[preset]}
 							{selected && <Check className="ml-auto h-4 w-4" aria-hidden />}
 						</div>
-						<Preview color={color} tone="dark" />
-						<Preview color={color} tone="light" />
+						<div className="grid grid-cols-2 overflow-hidden rounded-md">
+							<PreviewCell color={color} tone="dark" />
+							<PreviewCell color={color} tone="light" />
+						</div>
 					</button>
 				);
 			})}

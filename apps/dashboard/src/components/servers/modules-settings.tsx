@@ -47,7 +47,7 @@ function ModulesSettingsPanel({ guildId }: { guildId: string }) {
 		>
 			{(form) => (
 				<>
-				<div className="mb-6 space-y-2 rounded-control border border-border p-4">
+				<div className="mb-6 space-y-3 border-b border-border pb-6">
 					<p className="text-sm font-semibold text-foreground">봇 테마</p>
 					<p className="text-xs text-muted-foreground sm:text-sm">
 						봇 메시지의 강조선, 진행바·아이콘 이모지, 프로필 카드 색이 함께 바뀌어요. 역할 패널처럼 색을 직접 정한 기능은 그 색을 그대로 써요.
