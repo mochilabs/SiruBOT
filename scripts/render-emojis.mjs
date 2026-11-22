@@ -2,7 +2,7 @@
 /**
  * resources/emoji_replacement 이모지 PNG를 생성하는 재사용 가능한 스크립트.
  *
- * - 정사각 이모지: lucide-react의 SVG 노드 데이터(__iconData.node)를 skia-canvas로 그려요.
+ * - 정사각 이모지: lucide-react의 SVG 노드 데이터(__iconData.node)를 SVG로 만들어 Takumi(@takumi-rs/core)로 그려요.
  *   chapter.png에서 역설계한 렌더 파라미터(ink box 정규화, accent, stroke)로 전체 시각 크기를 통일해요.
  * - 프로그레스바(pb) 셀: filled/empty 색·캡 라운드를 직접 그려요 (pb_mid_end 포함 — mid에서 끝날 때 라운드).
  *
@@ -16,10 +16,11 @@
  *   node scripts/render-emojis.mjs --list | --dry-run
  *
  * 파라미터 (모두 CLI로 재정의 가능): PARAMS 정의 참조 — ink/accent/stroke/pbHeight/pbWidth/pbCapRadius/pbEmptyColor.
- * 의존성: skia-canvas, lucide-react (repo node_modules에서 탐색).
+ * 의존성: @takumi-rs/core, @takumi-rs/helpers, lucide-react (repo node_modules에서 탐색).
  * 새 이모지 추가 시: EMOJI_LUCIDE_MAP에 `이름: 'lucide-아이콘'` 한 줄. pb 셀은 kind/state 조합으로 자동 생성.
  */
-import { Canvas, Path2D } from "skia-canvas";
+import { Renderer } from "@takumi-rs/core";
+import { container, image } from "@takumi-rs/helpers";
 import { readdir, writeFile, mkdir, readFile } from "node:fs/promises";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,7 +30,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "..");
 const require = createRequire(import.meta.url);
 
-// node_modules 탐색 — root에 없으면 실패. lucide-react/skia-canvas가 어디에 hoist돼든 동작.
+// node_modules 탐색 — root에 없으면 실패. lucide-react가 어디에 hoist돼든 동작.
 function resolveModuleDir(name) {
   return dirname(require.resolve(name + "/package.json"));
 }
@@ -212,68 +213,16 @@ async function loadIconNodes(icon, depth = 0) {
   throw new Error(`no node data for ${icon}`);
 }
 
-// lucide SVG 노드를 Path2D로 변환해요. lucide가 쓰는 7종 태그(path/circle/rect/line/ellipse/polyline/polygon) 전부를 지원해요.
-// frame처럼 line만 쓰는 아이콘도 빠짐없이 그려져요. 알 수 없는 태그는 건너뛰고 경고를 돌려줘요.
-// 반환: { path, fillRule } — fillRule은 path 태그의 fill-rule 속성(evenodd 등)을 반영해요.
-function nodeToPath(tag, attrs) {
-  const p = new Path2D();
-  const n = (v, d = 0) => (v === undefined || v === null || v === "" ? d : +v);
-  switch (tag) {
-    case "path":
-      if (!attrs.d) return null;
-      return {
-        path: new Path2D(attrs.d),
-        fillRule: attrs["fill-rule"] === "evenodd" ? "evenodd" : "nonzero",
-      };
-    case "rect": {
-      const x = n(attrs.x),
-        y = n(attrs.y),
-        w = n(attrs.width),
-        h = n(attrs.height);
-      const r = n(attrs.rx, n(attrs.ry));
-      if (r > 0 && p.roundRect) p.roundRect(x, y, w, h, r);
-      else p.rect(x, y, w, h);
-      return { path: p, fillRule: "nonzero" };
-    }
-    case "circle": {
-      const cx = n(attrs.cx),
-        cy = n(attrs.cy),
-        r = n(attrs.r);
-      p.moveTo(cx + r, cy);
-      p.arc(cx, cy, r, 0, Math.PI * 2);
-      return { path: p, fillRule: "nonzero" };
-    }
-    case "ellipse": {
-      const cx = n(attrs.cx),
-        cy = n(attrs.cy),
-        rx = n(attrs.rx),
-        ry = n(attrs.ry ?? attrs.rx);
-      p.moveTo(cx + rx, cy);
-      p.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-      return { path: p, fillRule: "nonzero" };
-    }
-    case "line": {
-      p.moveTo(n(attrs.x1), n(attrs.y1));
-      p.lineTo(n(attrs.x2), n(attrs.y2));
-      return { path: p, fillRule: "nonzero" };
-    }
-    case "polyline":
-    case "polygon": {
-      // points="x,y x,y ..." 또는 "x y x y" — 콤마/공백 구분 모두 처리
-      const nums = String(attrs.points ?? "")
-        .trim()
-        .split(/[\s,]+/)
-        .map(Number);
-      if (nums.length < 2) return null;
-      p.moveTo(nums[0], nums[1] ?? 0);
-      for (let i = 2; i + 1 < nums.length; i += 2)
-        p.lineTo(nums[i], nums[i + 1]);
-      if (tag === "polygon") p.closePath();
-      return { path: p, fillRule: "nonzero" };
-    }
-    default:
-      return { skipped: tag };
-  }
+// lucide SVG 노드를 SVG 요소 문자열로 바꿔요. lucide가 쓰는 7종 태그(path/circle/rect/line/ellipse/polyline/polygon)를 지원해요.
+// 알 수 없는 태그는 건너뛰고 { skipped }를 돌려줘요. 속성은 SVG 그대로 넘기므로 fill-rule(evenodd 등)도 유지돼요.
+const SVG_TAGS = new Set(["path", "circle", "rect", "line", "ellipse", "polyline", "polygon"]);
+function nodeToSvg(tag, attrs) {
+  if (!SVG_TAGS.has(tag)) return { skipped: tag };
+  const attrText = Object.entries(attrs)
+    .filter(([k]) => k !== "key")
+    .map(([k, v]) => `${k}="${String(v).replace(/"/g, "&quot;")}"`)
+    .join(" ");
+  return { svg: `<${tag} ${attrText}/>` };
 }
 
 // 이모지 이름으로 lucide 아이콘을 찾아요. `<이름>_l`(가로 좌측 정렬 변형)은 원본 `<이름>` 매핑도 함께 봐요.
@@ -284,67 +233,70 @@ function resolveLucideIcon(name) {
   );
 }
 
-// SVG 노드를 스트로크 또는 fill로 그리고, ink box를 params.ink에 맞춰 캔버스에 배치한 결과를 반환해요.
+// Takumi 렌더러 하나를 재사용해요 (폰트가 필요 없는 도형·SVG만 그려요).
+const renderer = new Renderer();
+
+const svgDataUri = (svg) => `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+
+// 24×24 viewBox 기준 lucide 아이콘 SVG — filled면 면만, 아니면 스트로크만 그려요.
+function iconSvg(shapes, filled, params, px) {
+  const paint = filled
+    ? `fill="${params.accent}" stroke="none"`
+    : `fill="none" stroke="${params.accent}" stroke-width="${params.stroke}" stroke-linecap="round" stroke-linejoin="round"`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${px}" height="${px}" ${paint}>${shapes.join("")}</svg>`;
+}
+
+// SVG 노드를 그리고, ink box를 params.ink에 맞춰 SIZE 캔버스에 배치한 PNG를 반환해요.
+// 먼저 1024px로 그려 ink(알파 > 16) 범위를 재고, 같은 벡터를 ink 비율로 다시 그려 선명하게 배치해요.
 // anchorLeft=true(`_l` 접미사)면 가로는 왼쪽 정렬(ink 좌측 = 캔버스 좌측, padLeft=0), 세로는 가운데 정렬.
-function renderIconCanvas(nodes, filled, params, anchorLeft = false) {
+async function renderIconPng(nodes, filled, params, anchorLeft = false) {
   const T = 1024; // ink 측정용 임시 캔버스
-  const tc = new Canvas(T, T);
-  const ctx = tc.getContext("2d");
-  ctx.strokeStyle = params.accent;
-  ctx.fillStyle = params.accent;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.translate(T / 2 - 12 * (T / 24), T / 2 - 12 * (T / 24));
-  ctx.scale(T / 24, T / 24);
-  ctx.lineWidth = params.stroke;
+  const shapes = [];
   let skipped = null;
   for (const [tag, attrs] of nodes) {
-    const r = nodeToPath(tag, attrs);
-    if (!r || r.skipped) {
-      skipped = (skipped || []).concat(r?.skipped ?? tag);
-      continue;
-    }
-    if (filled) ctx.fill(r.path, r.fillRule);
-    else ctx.stroke(r.path);
+    const r = nodeToSvg(tag, attrs);
+    if (r.skipped) skipped = (skipped || []).concat(r.skipped);
+    else shapes.push(r.svg);
   }
-  // ink box 측정
-  const d = ctx.getImageData(0, 0, T, T).data;
+  const probe = Buffer.from(
+    await renderer.render(image({ src: svgDataUri(iconSvg(shapes, filled, params, T)), style: { width: T, height: T } }), {
+      width: T,
+      height: T,
+      format: "raw",
+    }),
+  );
   let minX = T,
     maxX = 0,
     minY = T,
     maxY = 0;
   for (let y = 0; y < T; y++)
     for (let x = 0; x < T; x++)
-      if (d[(y * T + x) * 4 + 3] > 16) {
+      if (probe[(y * T + x) * 4 + 3] > 16) {
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
         if (y < minY) minY = y;
         if (y > maxY) maxY = y;
       }
-  if (maxX <= minX)
-    return { canvas: new Canvas(SIZE, SIZE), skipped, empty: true }; // 빈 아이콘
-  // ink box max dim을 params.ink로 스케일해 배치 — 기본은 중앙, anchorLeft면 가로 왼쪽 정렬
+  if (maxX <= minX) return { png: null, skipped, empty: true }; // 빈 아이콘
   const iw = maxX - minX + 1,
     ih = maxY - minY + 1;
   const s = params.ink / Math.max(iw, ih);
-  const out = new Canvas(SIZE, SIZE);
-  const octx = out.getContext("2d");
-  octx.imageSmoothingEnabled = true;
-  octx.imageSmoothingQuality = "high";
   const dw = iw * s,
     dh = ih * s;
-  octx.drawImage(
-    tc,
-    minX,
-    minY,
-    iw,
-    ih,
-    anchorLeft ? 0 : (SIZE - dw) / 2,
-    (SIZE - dh) / 2,
-    dw,
-    dh,
-  );
-  return { canvas: out, skipped, empty: false };
+  const destX = anchorLeft ? 0 : (SIZE - dw) / 2;
+  const destY = (SIZE - dh) / 2;
+  const full = Math.round(T * s); // 1024 캔버스를 s배 한 크기 — ink 좌상단이 dest에 오도록 평행이동해요
+  const node = container({
+    style: { width: SIZE, height: SIZE, position: "relative" },
+    children: [
+      image({
+        src: svgDataUri(iconSvg(shapes, filled, params, full)),
+        style: { position: "absolute", left: destX - minX * s, top: destY - minY * s, width: full, height: full },
+      }),
+    ],
+  });
+  const png = Buffer.from(await renderer.render(node, { width: SIZE, height: SIZE, format: "png" }));
+  return { png, skipped, empty: false };
 }
 
 /*
@@ -355,85 +307,46 @@ function renderIconCanvas(nodes, filled, params, anchorLeft = false) {
  * 셀 도형은 왼쪽에 붙이고 여백은 오른쪽에만 남겨 셀들이 왼쪽 기준으로 이어져요.
  * kind: 'start' | 'mid' | 'end' | 'mid_end', state: 'filled' | 'half' | 'empty'
  */
-function renderProgressBarCell(kind, state, params) {
+async function renderProgressBarCell(kind, state, params) {
   const W = params.pbWidth;
   const H = params.pbHeight;
   // 기존 110px pb 캡 라우드 비율(≈48/110) 유지. pbCapRadius=0이면 자동.
   const r =
     params.pbCapRadius > 0 ? params.pbCapRadius : Math.round(H * 0.43636);
-  const fill = params.accent;
-  const emptyColor = params.pbEmptyColor;
   const leftCap = kind === "start"; // start만 왼쪽 라우드
   const rightCap = kind === "end" || kind === "mid_end"; // end·mid_end는 오른쪽 라우드
 
   // 셀 여백 — 도형은 왼쪽에 붙이고 여백은 오른쪽에만 남겨 셀들이 왼쪽 기준으로 이어져요.
   // 기본 pbPad=0이면 전 셀이 full-bleed라 바 좌우에 빈 공간이 없어요.
-  const pad = Math.max(0, params.pbPad);
-  const padR = pad;
-  const innerW = W - padR;
+  const innerW = W - Math.max(0, params.pbPad);
 
-  // 1) 빈 배경 레이어: 사각으로 채우고, start/end가 열리는 쪽 모서리만 투명(destination-out)으로 자른 캡을 만들어요.
-  //    mid/mid_end는 사각 그대로. empty/half에서 accent 위에 보이는 빈 배경은 여기서 만들어져요.
-  const bgLayer = new Canvas(W, H);
-  const b = bgLayer.getContext("2d");
-  b.fillStyle = emptyColor;
-  b.fillRect(0, 0, innerW, H);
-  if (leftCap || (rightCap && kind === "end")) {
-    // 라운드 캡 "안" 영역만 남기기: destination-in에 라운드 마스크
-    const cap = new Canvas(W, H);
-    const m = cap.getContext("2d");
-    m.fillStyle = "#fff";
-    if (leftCap)
-      roundRect(m, 0, 0, innerW, H, r, true, kind === "end" && rightCap);
-    else roundRect(m, 0, 0, innerW, H, r, false, true);
-    b.globalCompositeOperation = "destination-in";
-    b.drawImage(cap, 0, 0);
-  }
+  // 한쪽 모서리만(또는 양쪽) 라운드된 사각형 — 왼쪽=왼쪽 두 모서리, 오른쪽=오른쪽 두 모서리.
+  const box = (left, width, color, roundLeft, roundRight) => {
+    const rr = Math.min(r, H / 2, width / 2);
+    return container({
+      style: {
+        position: "absolute",
+        left,
+        top: 0,
+        width,
+        height: H,
+        backgroundColor: color,
+        borderTopLeftRadius: roundLeft ? rr : 0,
+        borderBottomLeftRadius: roundLeft ? rr : 0,
+        borderTopRightRadius: roundRight ? rr : 0,
+        borderBottomRightRadius: roundRight ? rr : 0,
+      },
+    });
+  };
 
-  // 2) 채워진(accent) 레이어: filled/half 면적을 라운드 마스크로 자른 뒤 배경 위에 덮어요.
-  if (state !== "empty") {
-    const layer = new Canvas(W, H);
-    const f = layer.getContext("2d");
-    f.fillStyle = fill;
-    if (state === "filled") roundRect(f, 0, 0, innerW, H, r, leftCap, rightCap);
-    else roundRect(f, 0, 0, Math.round(innerW / 2), H, r, leftCap, true);
-    b.globalCompositeOperation = "source-over";
-    bgLayer.getContext("2d").drawImage(layer, 0, 0);
-    // bgLayer 위에 accent를 올린 뒤 한 번에 캔버스로 옮겨 캡 마스크를 한 번만 적용한다.
-    const out = new Canvas(W, H);
-    const octx = out.getContext("2d");
-    octx.drawImage(bgLayer, 0, 0);
-    return out;
-  }
-  return bgLayer;
-}
+  // 1) 빈 배경: start는 왼쪽, end는 오른쪽만 둥글게 — mid·mid_end는 사각 그대로예요.
+  const layers = [box(0, innerW, params.pbEmptyColor, leftCap, kind === "end")];
+  // 2) 채워진(accent) 면: filled는 전체 폭, half는 절반(오른쪽 끝은 항상 둥글게)을 배경 위에 덮어요.
+  if (state === "filled") layers.push(box(0, innerW, params.accent, leftCap, rightCap));
+  else if (state === "half") layers.push(box(0, Math.round(innerW / 2), params.accent, leftCap, true));
 
-// 한쪽 모서리만(또는 양쪽) 라운드된 사각형을 그려요. 왼쪽=상·하 모서리만, 오른쪽=상·하 모서리만.
-function roundRect(ctx, x, y, w, h, r, roundLeft, roundRight) {
-  const rr = Math.min(r, h / 2, w / 2);
-  ctx.beginPath();
-  if (roundLeft && roundRight) {
-    ctx.roundRect(x, y, w, h, rr);
-  } else if (roundLeft) {
-    ctx.moveTo(x + w, y);
-    ctx.lineTo(x + rr, y);
-    ctx.arc(x + rr, y + rr, rr, -Math.PI / 2, Math.PI, true);
-    ctx.lineTo(x, y + h - rr);
-    ctx.arc(x + rr, y + h - rr, rr, Math.PI, Math.PI / 2, true);
-    ctx.lineTo(x + w, y + h);
-    ctx.closePath();
-  } else if (roundRight) {
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + w - rr, y);
-    ctx.arc(x + w - rr, y + rr, rr, -Math.PI / 2, 0, false);
-    ctx.lineTo(x + w, y + h - rr);
-    ctx.arc(x + w - rr, y + h - rr, rr, 0, Math.PI / 2, false);
-    ctx.lineTo(x, y + h);
-    ctx.closePath();
-  } else {
-    ctx.rect(x, y, w, h);
-  }
-  ctx.fill();
+  const node = container({ style: { width: W, height: H, position: "relative" }, children: layers });
+  return Buffer.from(await renderer.render(node, { width: W, height: H, format: "png" }));
 }
 
 async function main() {
@@ -473,7 +386,7 @@ async function main() {
       for (const [k, s] of cells) {
         await writeFile(
           join(outDir, `pb_${k}_${s}.png`),
-          await renderProgressBarCell(k, s, params).toBuffer("png"),
+          await renderProgressBarCell(k, s, params),
         );
         cnt++;
       }
@@ -523,7 +436,7 @@ async function main() {
       const isFilled = FILLED.has(name) || FILLED.has(baseName);
       if (isFilled) filled++;
       const nodes = await loadIconNodes(iconName);
-      const { canvas, skipped, empty } = renderIconCanvas(
+      const { png, skipped, empty } = await renderIconPng(
         nodes,
         isFilled,
         params,
@@ -531,10 +444,7 @@ async function main() {
       );
       if (empty)
         throw new Error(`빈 아이콘(ink 없음) — 미지원 태그만 있거나 노드 없음`);
-      await writeFile(
-        join(outDir, name + ".png"),
-        await canvas.toBuffer("png"),
-      );
+      await writeFile(join(outDir, name + ".png"), png);
       if (skipped?.length)
         console.warn(`경고 ${name}: 미지원 태그 ${skipped.join(",")} 건너뜀`);
       ok++;
