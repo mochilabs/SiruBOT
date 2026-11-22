@@ -36,6 +36,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useGuildSettings } from "@/hooks/use-guild-settings";
 import { notifyApiError, notifySaved } from "@/lib/notify";
 
+import { ModuleIcon } from "./module-icon";
 import { toggleModuleDisabled } from "./modules-settings";
 import { ServerFeatureSidebar } from "./server-feature-sidebar";
 import { ServerMobileNav } from "./server-mobile-nav";
@@ -241,9 +242,7 @@ export function ServerDashboard({
               >
                 <p className="min-w-0 text-muted-foreground">
                   <span className="font-bold text-foreground">
-                    <span aria-hidden className="mr-1">
-                      {activeDisabledModule.emoji}
-                    </span>
+                    <ModuleIcon id={activeDisabledModule.id} className="mr-1" />
                     {activeDisabledModule.label}
                   </span>{" "}
                   모듈이 꺼져 있어요.

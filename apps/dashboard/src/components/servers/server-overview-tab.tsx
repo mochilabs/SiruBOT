@@ -14,6 +14,7 @@ import { useGuildSettings } from "@/hooks/use-guild-settings";
 import { notifyApiError, notifySaved } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
+import { ModuleIcon } from "./module-icon";
 import { toggleModuleDisabled } from "./modules-settings";
 import type { ServerTabKey } from "./server-tabs";
 import { PanelError, PanelHeader, PanelLoading } from "./settings-shared";
@@ -145,9 +146,7 @@ export function ServerOverviewTab({ guildId, onSelectTab }: ServerOverviewTabPro
 								<div className="min-w-0 space-y-1.5">
 									<div className="flex flex-wrap items-center gap-1.5">
 										<p id={titleId} className="text-sm font-bold text-foreground">
-											<span aria-hidden className="mr-1.5">
-												{module.emoji}
-											</span>
+											<ModuleIcon id={module.id} className="mr-1.5" />
 											{module.label}
 										</p>
 										{!module.toggleable && (

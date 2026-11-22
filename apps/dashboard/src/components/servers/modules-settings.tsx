@@ -7,6 +7,7 @@ import { LayoutGrid } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { GuildSettings } from "@/types/settings";
 
+import { ModuleIcon } from "./module-icon";
 import { SettingsPanel, useSettingsPanel } from "./settings-panel";
 import { InfoBox } from "./settings-shared";
 import { ThemePresetPicker } from "./theme-preset-picker";
@@ -62,9 +63,7 @@ function ModulesSettingsPanel({ guildId }: { guildId: string }) {
 							<li key={module.id} className="flex items-start justify-between gap-4 rounded-control border border-border p-4">
 								<div className="min-w-0 space-y-1">
 									<p id={titleId} className="text-sm font-semibold text-foreground">
-										<span aria-hidden className="mr-1.5">
-											{module.emoji}
-										</span>
+										<ModuleIcon id={module.id} className="mr-1.5" />
 										{module.label}
 										{!module.toggleable && <span className="ml-2 text-xs font-medium text-muted-foreground">항상 켜져 있어요</span>}
 									</p>

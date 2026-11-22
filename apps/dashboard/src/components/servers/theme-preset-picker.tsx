@@ -16,23 +16,22 @@ interface ThemePresetPickerProps {
 	onChange: (preset: ThemePreset) => void;
 }
 
-/** 봇 메시지 미리보기 — 어두운/밝은 디스코드 배경 위의 강조선·아이콘·진행바를 테두리 없이 한 줄로 보여줘요. */
-function PreviewCell({ color, tone }: { color: string; tone: "dark" | "light" }) {
-	const dark = tone === "dark";
+/**
+ * 봇 메시지 미리보기 — 디스코드 임베드 모양의 목업이에요. 배경·글자는 `--discord-*` 토큰이라 대시보드의 밝은/어두운
+ * 테마를 따라가고, 프리셋 색(사용자가 고르는 강조색)만 값으로 칠해요.
+ */
+function Preview({ color }: { color: string }) {
 	return (
 		<div
-			className="space-y-1.5 px-2.5 py-2"
-			style={{
-				background: dark ? "#2b2d31" : "#f2f3f5",
-				borderLeft: `4px solid ${color}`,
-				color: dark ? "#f2f3f5" : "#060607",
-			}}
+			className="space-y-2 rounded-control bg-discord-embed px-3 py-2.5 text-discord-text"
+			style={{ borderLeft: `4px solid ${color}` }}
 		>
-			<div className="flex items-center gap-1.5 text-xs">
+			<div className="flex items-center gap-2 text-2xs font-medium">
 				<Play className="h-3.5 w-3.5" style={{ color }} aria-hidden />
+				재생 중
 				<Volume2 className="ml-auto h-3.5 w-3.5" style={{ color }} aria-hidden />
 			</div>
-			<div className="h-2 overflow-hidden rounded-full" style={{ background: dark ? "#4e5058" : "#d4d7dc" }}>
+			<div className="h-2 overflow-hidden rounded-full bg-discord-btn-active">
 				<div className="h-full w-3/5 rounded-full" style={{ background: color }} />
 			</div>
 		</div>
@@ -61,19 +60,17 @@ export function ThemePresetPicker({ value, disabled = false, onChange }: ThemePr
 						disabled={disabled}
 						onClick={() => onChange(preset)}
 						className={cn(
-							"space-y-2 rounded-control border p-3 text-left transition-colors disabled:opacity-60",
-							selected ? "border-2 border-foreground" : "border-border hover:border-border-strong",
+							"space-y-2.5 rounded-card bg-surface-2 p-3 text-left shadow-control-boundary transition-control",
+							"hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
+							selected && "ring-2 ring-ring",
 						)}
 					>
 						<div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-							<span className="h-4 w-4 shrink-0 rounded-full" style={{ background: color }} aria-hidden />
+							<span className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ background: color }} aria-hidden />
 							{THEME_PRESET_LABELS[preset]}
-							{selected && <Check className="ml-auto h-4 w-4" aria-hidden />}
+							{selected && <Check className="ml-auto h-4 w-4 text-primary-text" aria-hidden />}
 						</div>
-						<div className="grid grid-cols-2 overflow-hidden rounded-md">
-							<PreviewCell color={color} tone="dark" />
-							<PreviewCell color={color} tone="light" />
-						</div>
+						<Preview color={color} />
 					</button>
 				);
 			})}
