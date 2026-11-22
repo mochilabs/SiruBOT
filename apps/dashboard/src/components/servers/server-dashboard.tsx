@@ -120,10 +120,13 @@ export function ServerDashboard({
   guildId,
   manageable,
   guildName,
+  switcher,
 }: {
   guildId: string;
   manageable: boolean;
   guildName: string | null;
+  /** PC 사이드바 맨 위에 붙는 서버 선택기 */
+  switcher?: React.ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -217,7 +220,7 @@ export function ServerDashboard({
     <div className="animate-page-in">
       <UnsavedNavigationGuard />
       <div className="flex flex-col items-start gap-4 lg:flex-row lg:gap-8">
-        <ServerFeatureSidebar items={navItems} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} />
+        <ServerFeatureSidebar items={navItems} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} header={switcher} collapsibleGroups={["community"]} />
 
         <div className="w-full min-w-0 flex-1">
           <Tabs
