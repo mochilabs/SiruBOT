@@ -1,6 +1,6 @@
 # Dashboard API route contract
 
-> **As of**: 2026-11-21 · Verified against `apps/dashboard/src/app/api/**/route.ts` (65 route files).
+> **As of**: 2026-11-22 · Verified against `apps/dashboard/src/app/api/**/route.ts` (75 route files).
 
 Higher-level flows are in `./architecture.md` (4.3 apps/dashboard, 6.2 Redis request/reply). Paths below are relative to `apps/dashboard/src/` unless they start with `apps/` or `packages/`.
 
@@ -51,6 +51,7 @@ All paths are under `/api`. `[id]` is the guild id.
 | Starboard (1) | `servers/[id]/starboard` | manage | GET/PUT settings in the database (`StarboardSettings`); a save broadcasts the guild-settings invalidate so the bot drops its cache |
 | Birthday (3) | `servers/[id]/birthday` (GET, PUT, manage), `servers/[id]/birthday/optin` (PUT, member), `profile/birthday-guilds` (GET, user) | manage / member / user | Database. `PUT servers/[id]/birthday` validates the card with the greeting schema, stores `BirthdaySettings`, sets `activeFrom` to tomorrow (KST) when the feature is turned on, and inserts or moves the `birthday_daily` job directly (the bot reads the database; no broadcast). `optin` writes the caller's own `BirthdayOptIn` row for a guild the bot is in; `birthday-guilds` lists the caller's opted-in guilds |
 | Giveaways (1) | `servers/[id]/giveaways` | manage | GET only, from the database (`Giveaway` with entry counts): all running giveaways and the 50 most recently ended or cancelled. Starting, ending, cancelling and rerolling happen through the bot's `/기브어웨이` command |
+| Scheduled messages (3) | `servers/[id]/scheduled-messages`, `scheduled-messages/[seriesId]`, `scheduled-messages/settings` | manage | Database (`ScheduledJob` with kind `scheduled-message` and `ScheduledMessageSettings`); validates body, caps and channel cooldowns with `@sirubot/utils/scheduledMessage` |
 | Tickets (4) | `servers/[id]/ticket`, `ticket/post`, `ticket/tickets`, `ticket/[ticketId]/transcript` | manage | Settings in the database; posting goes data-api → bot; transcripts through the data-api storage proxy |
 | Role panels (3) | `servers/[id]/role-panels`, `role-panels/[panelId]`, `role-panels/[panelId]/post` | manage | Database for list, create, update and delete (create and update ask the bot to validate the roles; update refreshes the posted message); posting goes data-api → bot. Every read, write and post checks that the panel belongs to guild `[id]` |
 | Operator (11) | `admin/overview`, `admin/usage`, `admin/incident-notice`, `admin/guilds`, `admin/guilds/[id]`, `admin/users`, `admin/users/[id]`, `admin/social`, `admin/social/[subId]`, `admin/bot-control`, `data-api` | admin | `bot-control` delegates to data-api `bot-admin`; `data-api` proxies data-api status; `incident-notice` (GET, POST, DELETE) reads, sets and clears the outage notice through data-api `/v1/internal/incident-notice` (body: `message` up to 200 characters on one line, `expiresInMinutes` required, 1 to 10080; the bot appends it to unexpected-error screens and playback failure alerts); `usage` reads `FeatureDailyUse` and `GuildLifecycle` (summary math in `src/lib/usage-summary.ts`) |

@@ -1,6 +1,6 @@
 # SiruBOT Architecture
 
-> **As of**: 2026-11-21 · Verified by reading the source files cited in each section.
+> **As of**: 2026-11-22 · Verified by reading the source files cited in each section.
 > Code wins. Citations give file paths only, never line numbers (they drift as soon as code changes).
 > Each app is an independent process; they talk only through the "shared contracts" below (Redis channels, HTTP auth, WS protocol).
 
@@ -23,7 +23,7 @@
 
 ## 1. Overview
 
-SiruBOT is an all-in-one Discord bot for Korean communities (music, AI chat, server management): one monorepo with 6 independent process apps and 5 shared packages. Workspaces are `apps/*` and `packages/*` (`package.json`), orchestrated by Turborepo (`turbo.json`), on Node ≥ 22 and Yarn 4 (Corepack).
+SiruBOT is an all-in-one Discord bot for Korean communities (music, AI chat, server management): one monorepo with 6 independent process apps and 6 shared packages. Workspaces are `apps/*` and `packages/*` (`package.json`), orchestrated by Turborepo (`turbo.json`), on Node ≥ 22 and Yarn 4 (Corepack).
 
 | Kind | Target | One-line definition | Runtime |
 |---|---|---|---|
@@ -33,8 +33,8 @@ SiruBOT is an all-in-one Discord bot for Korean communities (music, AI chat, ser
 | App | `apps/shardmanager` | Shard assignment and health aggregation WS server for bot processes | Fastify 5 + @fastify/websocket (port 3001) |
 | App | `apps/storage` | Object storage — authenticated upload, public GET (Discord embed assets), private bucket (ticket transcripts) | Fastify 5 (port 3003) |
 | App | `apps/notifier` | Social alerts — YouTube (WebSub + RSS), Twitch (EventSub), Chzzk (polling) → Discord webhooks | Fastify 5 (port 3004) |
-| Package | `packages/prisma` | PostgreSQL schema + Prisma client (25 models) | Prisma 7 + PrismaPg |
-| Package | `packages/cards` | Runtime-independent Takumi card nodes (tokens, artwork helpers, `greetingCard`) shared by data-api (PNG) and the dashboard (SVG preview). Root export has no node-only imports | Takumi nodes |
+| Package | `packages/prisma` | PostgreSQL schema + Prisma client (33 models) | Prisma 7 + PrismaPg |
+| Package | `packages/cards` | Runtime-independent Takumi card nodes (tokens, artwork helpers, `greetingCard`) shared by data-api (PNG / animated WebP) and the dashboard (PNG preview via `@takumi-rs/wasm`). Root export has no node-only imports | Takumi nodes |
 | Package | `packages/isrc` | ISRC lookup for a track (Deezer, MusicBrainz). Pure module: no env reads, `fetch` injected; data-api owns scheduling | fetch |
 | Package | `packages/shardclient` | WS client for shardmanager (retry and backoff built in) | ws |
 | Package | `packages/utils` | Redis channel constants, signed envelopes, zod contracts, shared utilities | zod |
@@ -172,7 +172,7 @@ Source: `@sirubot/*` dependencies in each app's `package.json`. shardmanager dep
 
 **Assembly order** (`core/bootstrap.ts`): `setupStore()` for each root in `PIECE_ROOTS` (`core/pieceRoots.ts`: `features/music/discord`, `discord` (src/discord), then the `features/*/discord` roots) → `setupDatabase()` (PrismaPg) → `setupServices()` → `setupRedis()` (on failure **keeps booting memory-only**; queue and sessions become volatile) → `startRedisSubscribers()` over `container.redisSubscribers`, which holds one shared Redis subscription for all responders and event listeners (start never throws; it reconnects with backoff) → Discord login → `setupLavalink()` (`parseLavalinkHosts` → `setupAudio()` → register `LavalinkHandler` + connect nodes) → health server.
 
-**Code layout**: `discord/` (the bot-wide shell, formerly `modules/general`) holds the shared Sapphire pieces. Feature folders `features/<name>/` (`ai-chat`, `tts`, `emoji-maker`, `tickets`, `role-panels`, `temp-voice`, `games`, `custom-commands`, `greeting`, `dashboard-bridge`, `bot-profile`, `counting`, `embed-fix`, `user-data`, plus `music` with the application layer, the Lavalink layer and the web player responder) each have `index.ts` (public surface), `application/` (use cases, no Sapphire/views/config; collaborators arrive through a `deps` object and rendering goes through ports implemented in `discord/`), `discord/{commands,listeners,interaction-handlers,views}` and, where needed, `inbound/` (Redis responders and event listeners). Other code imports a feature only through its `index.ts`. Import rules and the Sapphire piece inventory are guarded by `src/architecture.test.ts` and `core/pieceInventory.test.ts` (allowlists may only shrink). The import rules in `src/architecture.test.ts` are: no runtime cycles beyond `ALLOWED_CYCLES`; `services/` and `lib/` reach `src/discord/` only through their allowlists; `src/discord/` reaches `core/` only through `ALLOWED_DISCORD_TO_CORE`; a feature's `application/` imports no Sapphire, views or Sapphire pieces (`APPLICATION_LAYER_DEBT`), and no `src/discord/` at all (`ALLOWED_APPLICATION_TO_DISCORD`, empty); other `features/` files import `src/discord/` only for the edges in `ALLOWED_FEATURE_TO_DISCORD`; a feature's `application/` imports `services/guildSettings/` only for the edges in `ALLOWED_APPLICATION_TO_GUILD_SETTINGS` (the settings should reach it through ports); and cross-feature imports go through `index.ts`. Each allowlist fails on new edges and on entries whose edge no longer exists.
+**Code layout**: `discord/` (the bot-wide shell, formerly `modules/general`) holds the shared Sapphire pieces. Feature folders `features/<name>/` (`ai-chat`, `birthday`, `bot-profile`, `counting`, `custom-commands`, `dashboard-bridge`, `embed-fix`, `emoji-maker`, `games`, `giveaway`, `greeting`, `role-panels`, `scheduled-messages`, `starboard`, `temp-voice`, `tickets`, `tts`, `usage-metrics`, `user-data`, plus `music` with the application layer, the Lavalink layer and the web player responder) each have `index.ts` (public surface), `application/` (use cases, no Sapphire/views/config; collaborators arrive through a `deps` object and rendering goes through ports implemented in `discord/`), `discord/{commands,listeners,interaction-handlers,views}` and, where needed, `inbound/` (Redis responders and event listeners). Other code imports a feature only through its `index.ts`. Import rules and the Sapphire piece inventory are guarded by `src/architecture.test.ts` and `core/pieceInventory.test.ts` (allowlists may only shrink). The import rules in `src/architecture.test.ts` are: no runtime cycles beyond `ALLOWED_CYCLES`; `services/` and `lib/` reach `src/discord/` only through their allowlists; `src/discord/` reaches `core/` only through `ALLOWED_DISCORD_TO_CORE`; a feature's `application/` imports no Sapphire, views or Sapphire pieces (`APPLICATION_LAYER_DEBT`), and no `src/discord/` at all (`ALLOWED_APPLICATION_TO_DISCORD`, empty); other `features/` files import `src/discord/` only for the edges in `ALLOWED_FEATURE_TO_DISCORD`; a feature's `application/` imports `services/guildSettings/` only for the edges in `ALLOWED_APPLICATION_TO_GUILD_SETTINGS` (the settings should reach it through ports); and cross-feature imports go through `index.ts`. Each allowlist fails on new edges and on entries whose edge no longer exists.
 
 Discord objects in services and application code are passed as narrow port types rather than whole discord.js objects. Shared ones live in `lib/discordPorts.ts` (`MemberPermissionPort`, built from a real member by `memberPermissionPort()`). Others are interfaces next to their service, such as `ActorMemberSource` in `features/music/application/actor.ts`, `TranscriptChannelPort` in `features/tickets/application/ticketTranscript.ts` and `CustomCommandGuildSource` in `features/custom-commands/application/context.ts`. Discord objects still structurally satisfy these, and the adapter (a piece, responder or `botApplication.ts`) passes them in. Services that drive Discord (creating channels, sending messages, setting presence) keep the discord.js types, because the port would only restate the client.
 
@@ -203,7 +203,7 @@ Services are built by `BotApplication.setupServices` with explicit `deps` (db, `
 **Assembly order** (`src/server.ts`):
 
 1. Connect the shared-cache Redis + **start 8 hubs** from one array in `server.ts`: `playerHub`, `botProfileHub`, `memberGreetingHub`, `guildDataHub`, `playerWebHub`, `jtcSetupHub`, `botAdminHub`, `panelHub`
-2. Preload the Korean canvas font
+2. Preload the Takumi card renderer and fonts (`getCardRenderer()` in `renderers/takumi/takumiKit.tsx`)
 3. Two OpenAI-compatible providers — translation (`TRANSLATION_MODEL`; without it, raw horoscopes are served) and custom-command drafts (`CUSTOM_COMMAND_DRAFT_MODEL ?? TRANSLATION_MODEL`)
 4. Shared error handler (`app-kit`) → auth hook → route registration (Lavalink REST, notifier, and storage addresses/keys injected)
 5. Start the horoscope scheduler
@@ -216,10 +216,10 @@ Shutdown: stop the three schedulers → stop 8 hubs → cache Redis → DB → F
 
 ```mermaid
 graph TB
-    R1["routes/<br/>index · cache-providers · ohaasa · embed-fix · render · ai · tts<br/>player · guild-data · panel · social · storage · bot-admin · dashboard"] --> P["providers/<br/>weather · lyrics · ohaasa · chapters · delivery · sponsorblock<br/>youtubeSuggestions · lavalinkSearch · embedFix · translate"]
+    R1["routes/<br/>index · cache-providers · ohaasa · embed-fix · render · ai · tts<br/>player · guild-data · panel · social · storage · bot-admin · incident-notice · dashboard"] --> P["providers/<br/>weather · lyrics · ohaasa · chapters · delivery · sponsorblock<br/>youtubeSuggestions · lavalinkSearch · embedFix · translate"]
     R1 --> S["services/<br/>8 hubs · ohaasaScheduler · memoryTidy · isrcEnricher · recordingMerge<br/>playbackStore · wrapped · db"]
     R1 --> RD["renderers/takumi/ (TSX)<br/>profileCard · profileCardTicket · nowPlayingCard · wrappedCard · ohaasaCard · weatherCard · greetingCard"]
-    P --> U["utils/<br/>cache · dedup · breaker · metrics · hubSubscriber · hubCorrelate · requestReplyHub"]
+    P --> U["utils/<br/>cache · dedup · breaker · metrics · semaphore · hubSubscriber · hubCorrelate · requestReplyHub"]
     S --> U
 ```
 
@@ -247,12 +247,12 @@ graph TB
 | `GET /v1/tts/voices` | siru_tts voice catalog proxy | 5 min, in memory |
 | `GET /v1/sponsorblock/segments` | SponsorBlock skip segments | 24 h, empty result 1 h, positive stale copy 7 days |
 | `POST /v1/embed-fix/metadata` | Social link embed-fix metadata (+ auto translation) | constants in `routes/embed-fix.ts` |
-| `POST /v1/image/{profile,member-card,nowplaying,ohaasa,ohaasa/top,weather,wrapped}` · `POST /v1/image/member-card/{background,layer-image}` | PNG rendering (all cards render with Takumi; no fallback renderer) · greeting upload normalization | — |
+| `POST /v1/image/{profile,member-card,nowplaying,ohaasa,ohaasa/top,weather,wrapped}` · `POST /v1/image/member-card/{background,layer-image}` | Card rendering (all cards render with Takumi; PNG, or animated WebP for `member-card` when layers are animated or background is an animated GIF; no fallback renderer) · greeting upload normalization | — |
 | `POST /v1/ai/custom-command-{draft,refine}` | Custom command draft/refine (503 without a key) | — |
 | `POST /v1/playback/events` | Collect shard playback events (`services/playbackStore.ts`) | — |
 | `GET /v1/player/:guildId` (+ `/stream` SSE, `/voice-context`) · `POST /v1/internal/player/{search,play,control}` | Web player | — |
 | `GET /v1/guilds/:guildId/{channels,roles,members}` | Guild data from the bot's cache | — |
-| `POST /v1/internal/{guild-settings/invalidate,jtc/setup,bot-profile/set,greeting/send,bot-admin,panel/post,role-panel/validate-roles}` · `GET /v1/bot-profile/:guildId` · `GET /v1/greeting/state/:guildId` | Dashboard → bot relays and broadcasts | — |
+| `POST /v1/internal/{guild-settings/invalidate,jtc/setup,bot-profile/set,greeting/send,bot-admin,panel/post,role-panel/validate-roles}` · `GET /v1/bot-profile/:guildId` · `GET /v1/greeting/state/:guildId` · `GET`/`POST`/`DELETE /v1/internal/incident-notice` | Dashboard → bot relays, broadcasts, and outage notice | — |
 | `/v1/guilds/:guildId/social/subscriptions` (CRUD) · `/v1/social/{youtube,twitch}/resolve` · `/v1/social/chzzk/{search,profile}` | notifier proxy | — |
 | `PUT`/`GET /v1/storage/transcripts/*` | storage private-bucket proxy (ticket transcripts) | — |
 
@@ -272,10 +272,10 @@ graph LR
     route --> oauth["Discord<br/>OAuth · users/@me/guilds"]
 ```
 
-- **API routes** (`src/app/api/**/route.ts`, 64; grouped with roles in `./api-dashboard.md`):
-  - General: `auth/[...nextauth]` · `playlists` (+ `[id]`, `reorder`, `tracks`, `search`) · `favorites` · `tracks` · `servers` · `shards` (**public**; anonymous requests share one rate-limit bucket) · `voice-servers` (+ `history`) · `profile/{birthday,tts,tts-voices}` · `data-api` (operator-only generic proxy)
-  - Guild (`servers/[id]/`): `settings` `channels` `roles` `stats` `player` (+ `play`/`command`/`search`/`voice-context`) `live` (+ `stream` SSE) `greeting` (+ `test`/`status`/`background`/`layer-image`) `jtc/setup` `bot-profile` `ai` (+ `history`) `assets` (+ `[assetId]`) `custom-commands` (+ `[cmdId]`, `draft`, `refine`) `social/*` `ticket` (+ `post`, `tickets`, `[ticketId]/transcript`) `role-panels` (+ `[panelId]`, `[panelId]/post`) `tts`
-  - Operator (`admin/*`, `DASHBOARD_ADMIN_IDS`, fail-closed): `overview` `guilds` `users` `social` `bot-control`
+- **API routes** (`src/app/api/**/route.ts`, 75; grouped with roles in `./api-dashboard.md`):
+  - General: `auth/[...nextauth]` · `playlists` (+ `[id]`, `reorder`, `tracks`, `search`) · `favorites` · `tracks` · `servers` · `shards` (**public**; anonymous requests share one rate-limit bucket) · `voice-servers` (+ `history`) · `profile/{birthday,birthday-guilds,tts,tts-voices}` · `data-api` (operator-only generic proxy)
+  - Guild (`servers/[id]/`): `settings` `channels` `roles` `stats` `player` (+ `play`/`command`/`search`/`voice-context`) `live` (+ `stream` SSE) `lyrics` `greeting` (+ `test`/`status`/`background`/`layer-image`) `jtc/setup` `bot-profile` `ai` (+ `history`) `assets` (+ `[assetId]`) `custom-commands` (+ `[cmdId]`, `draft`, `refine`) `social/*` `starboard` `birthday` (+ `optin`) `giveaways` `scheduled-messages` (+ `settings`, `[seriesId]`) `ticket` (+ `post`, `tickets`, `[ticketId]/transcript`) `role-panels` (+ `[panelId]`, `[panelId]/post`) `tts`
+  - Operator (`admin/*`, `DASHBOARD_ADMIN_IDS`, fail-closed): `overview` `usage` `incident-notice` `guilds` (+ `[id]`) `users` (+ `[id]`) `social` (+ `[subId]`) `bot-control`
 - **Pages**: home, `servers` (+ `[id]`), `player/[id]`, `playlists`, `profile`, `shards` (public), `admin`, `track` (public chart by `Recording`, periods `today`/`week`/`month`/`all`, `src/lib/track-chart.ts`), `invite`, `contributors`, `licenses`, `privacy`, `terms`, `design` (+ `dashboard`, `player`), `embeds/[name]` (link-preview embeds), `login`, `error`.
 - **Client contracts**: data-api (`src/lib/data-api/` — `client.ts`, `player-web.ts`, `jtc.ts`, `guild-members.ts`), shardmanager (`src/lib/shard-api.ts`, `SHARD_MANAGER_AUTH_KEY` with no fallback), storage (`src/lib/storage.ts`, `STORAGE_AUTH_KEY ?? AUTH_KEY`, 15 s timeout). All three send the raw key in `Authorization` (no Bearer). `openDataApiStream` sets no `AbortSignal.timeout` because it's a long-lived SSE connection.
 - Library layer (`src/lib/`): `api-handler.ts` (`createGuildApiHandler`, `role: "manage"` permission) · `api-guards.ts` · `rate-limit.ts` · `guild-permissions.ts` · `token-store.ts` (`UserToken` AES-256-GCM, `TOKEN_ENCRYPTION_KEY` → session secret fallback) · `discord-token.ts` · `admin-ids.ts` · `schemas.ts`, and more.
@@ -499,7 +499,7 @@ During rolling updates the new process retries identify until a shard slot frees
 
 **PostgreSQL + Prisma 7 (PrismaPg adapter)** — `packages/prisma/src/schema.prisma`. Clients are created in bot `core/botApplication.ts`, data-api `services/db.ts`, notifier `services/db.ts`, dashboard `src/lib/db.ts`. The `mysql2` resolution in the root `package.json` is a leftover (the real provider is postgresql).
 
-**25 models**:
+**33 models**:
 
 | Area | Model | Role · main writer |
 |---|---|---|
@@ -508,6 +508,8 @@ During rolling updates the new process retries identify until a shard slot frees
 | | `GuildAsset` | Metadata for guild images uploaded to storage — dashboard |
 | | `RolePanel` / `RolePanelButton` | Role self-assignment panels (button or reaction mode) and their buttons — bot, dashboard |
 | | `TicketConfig` / `Ticket` | Ticket system config (one per guild) / individual ticket state and history — bot, dashboard |
+| | `StarboardSettings` · `StarboardEntry` | Starboard config per guild and posted-entry map (contract `packages/utils/src/starboard.ts`) — bot, dashboard |
+| | `ScheduledMessageSettings` | Per-guild scheduled-message limits and cooldowns (contract `packages/utils/src/scheduledMessage.ts`) — bot, dashboard |
 | Music | `Track` · `GuildTrackHistory` | Track metadata · per-guild play history — bot |
 | | `Recording` · `RecordingDailyPlay` | One row per song across uploads and sources (linked by ISRC, else by recording key and length ±3 s; rules in `@sirubot/utils/trackIdentity`) · daily plays per guild for the period charts. Linked on play by the bot (`features/music/application/recordingLink.ts`); ISRCs added and duplicates merged by data-api (`services/isrcEnricher.ts`, `services/recordingMerge.ts`, one-off `scripts/backfillRecordings.ts`); read by the dashboard chart (`src/lib/track-chart.ts`) |
 | | `Playlist` / `PlaylistTrack` | Custom playlists — bot, dashboard |
@@ -519,7 +521,7 @@ During rolling updates the new process retries identify until a shard slot frees
 | Social | `SocialSubscription` · `SocialEventLog` | Alert subscriptions (contract `packages/utils/src/social.ts`) · dedupe log — notifier |
 | Metrics | `GuildLifecycle` | Bot join/leave, onboarding message and first-use times per guild (kept after the bot leaves, no foreign key) — bot |
 | | `FeatureDailyUse` | Anonymous daily feature use totals (KST day × feature key from `@sirubot/utils/modules`: count only, no guild or user IDs in DB or Redis) — bot; read by dashboard `/admin` |
-| Scheduling | `ScheduledJob` | Per-guild job queue (`pending`/`running`/`done`/`failed`, index `(status, runAt)`; no foreign key). The bot's `services/guildJobScheduler.ts` (`Stoppable`, `container.guildJobScheduler`) claims due jobs of the guilds it owns every 15 s with `FOR UPDATE SKIP LOCKED`, so two processes never run one job twice; handlers are registered per `kind`, failures retry at 30 s / 2 min and stop as `failed` on the third, jobs stuck in `running` for 5 min return to `pending`. Recurring jobs: the handler inserts the next row (`nextRunAt()` in `services/jobRecurrence.ts`, Asia/Seoul) — bot; dashboard may insert rows directly |
+| Scheduling | `ScheduledJob` | Per-guild job queue (`pending`/`running`/`done`/`failed`, index `(status, runAt)`; no foreign key). The bot's `services/guildJobScheduler.ts` (`Stoppable`, `container.guildJobScheduler`) claims due jobs of the guilds it owns every 15 s with `FOR UPDATE SKIP LOCKED`, so two processes never run one job twice; handlers are registered per `kind`, failures retry at 30 s / 2 min and stop as `failed` on the third, jobs stuck in `running` for 5 min return to `pending`. Recurring jobs: the handler inserts the next row (`nextRunAt()` in `packages/utils/src/jobRecurrence.ts`, Asia/Seoul) — bot; dashboard may insert rows directly |
 | | `BirthdaySettings` · `BirthdayOptIn` · `BirthdayRoleGrant` | Birthday celebration (contract `packages/utils/src/birthdayCelebration.ts`). `BirthdaySettings.config` is a greeting-card `GreetingConfig` (template, channel, image layers with the `birthday` preset background, layout, accent colour), next to `sendTime` (KST, default 09:00), `roleId`, `activeFrom` (first day to celebrate, set to tomorrow when turned on) and `lastCelebratedOn`. `BirthdayOptIn(guildId, userId)` is the per-guild consent (D-17); the birthday itself stays in `User.birthMonth/birthDay` and no age is stored. `BirthdayRoleGrant` records who got the birthday role so the next day's run revokes exactly that. Job kind `birthday_daily`, one pending row per guild: the handler revokes old roles, inserts the next day's row first, then celebrates everyone who opted in today (Feb 29 on Feb 28 in non-leap years), skipping members who left, in one message and one card — bot (`features/birthday/`; the opt-in is written by `/프로필 생일축하`); dashboard reads and writes settings and opt-in |
 | | `Giveaway` · `GiveawayEntry` | Giveaways (contract `packages/utils/src/giveaway.ts`): the entry card message, extensible `requirements` JSON (`{ version: 1, conditions: [...] }`: required roles, blocked roles, minimum join days, minimum account age; re-checked at end time), status `running`/`ended`/`cancelled`, drawn `winnerIds`, `announcedAt` (empty means the end handler still has to announce). `GiveawayEntry` has the composite primary key `(giveawayId, userId)`, so a double entry is rejected by the database. The end is a `ScheduledJob` of kind `giveaway_end` with payload `{ giveawayId }`; the handler is idempotent (the `running` → `ended` update succeeds once) and draws with `crypto.randomInt` — bot (`features/giveaway/`); dashboard reads |
 

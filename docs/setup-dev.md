@@ -1,6 +1,6 @@
 # Development setup
 
-> **As of**: 2026-11-21
+> **As of**: 2026-11-22
 
 Structure and contracts are in `./architecture.md`. This page is the shortest path to a running local environment.
 
@@ -63,6 +63,6 @@ When no guild id is given, the script falls back to `GUILD_ID` or `DEV_GUILD_IDS
 
 Notes:
 
-- Tests use the root `vitest.config.ts`, which aliases `@sirubot/utils` and `@sirubot/app-kit` to source, so no dist build is needed. The dashboard has its own `apps/dashboard/vitest.config.ts`.
+- Tests use the root `vitest.config.ts`, which aliases `@sirubot/utils`, `@sirubot/app-kit`, `@sirubot/isrc` and `@sirubot/cards` to source, so no dist build is needed. The dashboard has its own `apps/dashboard/vitest.config.ts`.
 - The pre-push hook (`.husky/pre-push`) runs `lint:fix` and `typecheck`.
 - The dashboard's `dev` script uses `--webpack` and its `build` script uses `--turbopack` (`apps/dashboard/package.json`).

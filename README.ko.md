@@ -40,7 +40,7 @@
 
 ## 아키텍처
 
-독립 프로세스 6개와 공용 패키지 5개로 이루어져 있습니다. 앱끼리는 서로 import하지 않고, Redis pub/sub, 인증된 HTTP, 샤드 매니저의 WebSocket 프로토콜로만 통신합니다.
+독립 프로세스 6개와 공용 패키지 6개로 이루어져 있습니다. 앱끼리는 서로 import하지 않고, Redis pub/sub, 인증된 HTTP, 샤드 매니저의 WebSocket 프로토콜로만 통신합니다.
 
 ```mermaid
 graph LR
