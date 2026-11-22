@@ -5,6 +5,7 @@ import {
 	AUTOMIX_MAX_TEMPO_CHANGE_RANGE,
 	AUTOMIX_MIN_CONFIDENCE_RANGE,
 	CROSSFADE_MS_RANGE,
+	GUILD_ACCENT_COLOR_PATTERN,
 	JTC_TEMPLATE_MAX_LENGTH,
 	JTC_USER_LIMIT_RANGE,
 	MUSIC_VOLUME_RANGE,
@@ -111,6 +112,8 @@ export const guildSettingsSchema = z.object({
 	embedFixTranslateLang: z.enum(EMBED_FIX_TRANSLATE_LANGS, "임베드 번역 언어가 잘못됐어요.").optional(),
 	countingEnabled: z.boolean().optional(),
 	countingChannelId: nullableSnowflake.optional(),
+	// 서버 강조색 '#RRGGBB' (null이면 봇 기본색) — 봇 메시지 컨테이너의 강조선에만 쓰여요
+	accentColor: z.string().regex(GUILD_ACCENT_COLOR_PATTERN, "강조색은 #RRGGBB 형식이어야 해요.").nullable().optional(),
 	// 꺼진 기능 모듈 id (P-06). 모르는 id와 끌 수 없는 모듈(관리)은 라우트가 sanitizeDisabledModules로 버려요.
 	disabledModules: z.array(z.string().max(32, "모듈 ID가 잘못됐어요."), "모듈 목록이 잘못됐어요.").max(BOT_MODULES.length, "모듈 목록이 잘못됐어요.").optional(),
 });
@@ -167,6 +170,7 @@ export const GUILD_SETTINGS_DEFAULTS = {
 	embedFixTranslateLang: "off",
 	countingEnabled: false,
 	countingChannelId: null,
+	accentColor: null,
 	disabledModules: [],
 } satisfies GuildSettings;
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Guild as PrismaGuild } from "@sirubot/prisma";
 import { normalizeChatToolMode, normalizeEmbedFixSites, normalizeEmbedFixTranslateLang } from "@sirubot/utils/chatTools";
 import {
+  normalizeGuildAccentColor,
   normalizePinnedChannelMode,
   normalizeRepeatMode,
   normalizeSponsorBlockSegments,
@@ -65,6 +66,7 @@ function toSettings(guild: PrismaGuild | null): GuildSettings {
     embedFixTranslateLang: normalizeEmbedFixTranslateLang(guild.embedFixTranslateLang),
     countingEnabled: guild.countingEnabled,
     countingChannelId: guild.countingChannelId,
+    accentColor: normalizeGuildAccentColor(guild.accentColor),
     disabledModules: sanitizeDisabledModules(guild.disabledModules),
   };
 }

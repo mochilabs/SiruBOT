@@ -52,3 +52,20 @@ describe('createThumbnail', () => {
 		expect(createThumbnail('https://example.com/a.png').toJSON().media.url).toBe('https://example.com/a.png');
 	});
 });
+
+describe('서버 강조색 맥락 훅', () => {
+	it('명시 색 → 맥락 색 → 기본색 순으로 써요', async () => {
+		const { setContextAccentResolver } = await import('./embed.ts');
+		try {
+			setContextAccentResolver(() => '#abcdef');
+			expect(createContainer().toJSON().accent_color).toBe(0xabcdef);
+			expect(createContainer('#123456').toJSON().accent_color).toBe(0x123456);
+			setContextAccentResolver(() => 'broken');
+			expect(createContainer().toJSON().accent_color).toBe(DEFAULT_COLOR);
+			setContextAccentResolver(() => null);
+			expect(createContainer().toJSON().accent_color).toBe(DEFAULT_COLOR);
+		} finally {
+			setContextAccentResolver(null);
+		}
+	});
+});

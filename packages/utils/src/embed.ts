@@ -21,10 +21,25 @@ export function addSeparator(container: ContainerBuilder): void {
 	container.addSeparatorComponents(createSeparator());
 }
 
+/** 현재 실행 맥락(서버)의 강조색 '#RRGGBB'를 돌려주는 훅. 봇이 시작할 때 한 번 등록해요 (utils는 node 전용 API를 쓰지 않아요). */
+let contextAccentResolver: (() => string | null | undefined) | null = null;
+
+export function setContextAccentResolver(resolver: (() => string | null | undefined) | null): void {
+	contextAccentResolver = resolver;
+}
+
+/** 컨테이너에 쓸 강조색 숫자 — 명시 값 → 서버 맥락 색 → 봇 기본색 순이에요. */
+export function resolveAccentColor(accentColor?: string | null): number {
+	const explicit = accentColor ? hexColorToInt(accentColor) : undefined;
+	if (explicit !== undefined) return explicit;
+	const contextual = contextAccentResolver?.();
+	return (contextual ? hexColorToInt(contextual) : undefined) ?? DEFAULT_COLOR;
+}
+
 export function createContainer(accentColor?: string | null): ContainerBuilder {
 	const container = new ContainerBuilder();
-	// 커스텀 강조색(#RRGGBB)이 있으면 그 색을, 없거나 형식이 틀리면 봇 기본색을 써요.
-	container.setAccentColor((accentColor ? hexColorToInt(accentColor) : undefined) ?? DEFAULT_COLOR);
+	// 명시 강조색(#RRGGBB) → 서버 강조색(맥락) → 봇 기본색. 형식이 틀린 값은 건너뛰어요.
+	container.setAccentColor(resolveAccentColor(accentColor));
 	return container;
 }
 

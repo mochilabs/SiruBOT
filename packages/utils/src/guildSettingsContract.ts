@@ -7,6 +7,16 @@
  */
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from './playerLimits.js';
 
+/* ── 서버 강조색 ─────────────────────────────────────────── */
+
+/** 서버 강조색 표기 — '#RRGGBB'. 저장값이 없으면(null) 봇 기본색을 써요. */
+export const GUILD_ACCENT_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
+
+/** DB에 깨진 값이 있으면 null(기본색)로 되돌려요 */
+export function normalizeGuildAccentColor(value: string | null | undefined): string | null {
+	return value && GUILD_ACCENT_COLOR_PATTERN.test(value) ? value.toLowerCase() : null;
+}
+
 /* ── AI 채팅 모드 ─────────────────────────────────────────── */
 
 /** AI 채팅 모드 — all: 모든 채널 / channels: 특정 채널만 / off: 끄기 */

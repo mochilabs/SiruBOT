@@ -40,12 +40,16 @@ vi.mock('@sapphire/framework', () => ({
 		}
 	}
 }));
-vi.mock('@sirubot/utils', () => ({
-	emoji: () => '',
-	emojiProgressBar: () => 'PB',
-	volumeToEmoji: () => '',
-	DEFAULT_COLOR: 0
-}));
+vi.mock('@sirubot/utils', async () => {
+	const { ContainerBuilder } = await import('discord.js');
+	return {
+		emoji: () => '',
+		emojiProgressBar: () => 'PB',
+		volumeToEmoji: () => '',
+		DEFAULT_COLOR: 0,
+		createContainer: () => new ContainerBuilder()
+	};
+});
 
 function interaction(target: string | null, volume: number | null) {
 	return {

@@ -32,6 +32,8 @@ model Guild {
   jtcMarkerChannelId String?
   jtcTemplate        String  @default("{user}의 방")
   jtcUserLimit       Int     @default(0)
+  // 서버 강조색 '#RRGGBB'. null이면 봇 기본색. 메시지 컨테이너 강조선에만 쓰여요 (카드 이미지·앱 이모지는 브랜드색 고정).
+  accentColor   String?
   gaplessEnabled Boolean @default(true)
   crossfadeEnabled Boolean @default(true)
   crossfadeMs   Int      @default(5000)
