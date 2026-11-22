@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 
 import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
-import { ServerSwitcher } from "@/components/servers/server-switcher";
 import { ServerDashboard } from "@/components/servers/server-dashboard";
+import { ServerSwitcher } from "@/components/servers/server-switcher";
 import { STUB_GUILD_ID } from "@/lib/stub/guild-stub";
 
 import { StubGate } from "./stub-gate";
