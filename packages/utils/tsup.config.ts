@@ -27,6 +27,7 @@ export default createConfig({
 		'src/starboard.ts',
 		'src/scheduledMessage.ts',
 		'src/birthdayCelebration.ts',
+		'src/giveaway.ts',
 		'src/rolePanel.ts',
 		'src/botAdmin.ts',
 		'src/memoryFile.ts',
@@ -36,7 +37,7 @@ export default createConfig({
 		'src/modules.ts',
 		'src/brand.ts',
 		'src/lrc.ts',
-		'src/incidentNotice.ts',
+		'src/incidentNotice.ts'
 	],
 	format: ['esm', 'cjs'],
 	dts: true,

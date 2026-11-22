@@ -23,9 +23,10 @@ function layerTypeIcon(layer: GreetingLayer): React.ReactNode {
 
 interface LayerPanelProps {
 	layers: GreetingLayer[];
-	selectedId: string | null;
+	selectedIds: readonly string[];
 	saving: boolean;
-	onSelect: (id: string) => void;
+	/** additive가 true면 Shift/Ctrl/Cmd 클릭 — 선택을 토글해요 */
+	onSelect: (id: string, additive: boolean) => void;
 	onToggleHidden: (id: string) => void;
 	onRemove: (id: string) => void;
 	onDuplicate: (id: string) => void;
@@ -33,7 +34,7 @@ interface LayerPanelProps {
 }
 
 /** 레이어 목록 — 위=앞(가장 나중에 그려지는 레이어). 순서/보임/삭제/복제를 다뤄요. */
-export function LayerPanel({ layers, selectedId, saving, onSelect, onToggleHidden, onRemove, onDuplicate, onMove }: LayerPanelProps) {
+export function LayerPanel({ layers, selectedIds, saving, onSelect, onToggleHidden, onRemove, onDuplicate, onMove }: LayerPanelProps) {
 	if (layers.length === 0) {
 		return <p className="text-sm text-muted-foreground">레이어가 없어요. 요소 추가에서 텍스트·아바타·이미지·도형을 추가해 보세요.</p>;
 	}
@@ -43,7 +44,7 @@ export function LayerPanel({ layers, selectedId, saving, onSelect, onToggleHidde
 	return (
 		<ul className="space-y-1.5" role="list">
 			{display.map(({ layer, arrayIndex }) => {
-				const selected = layer.id === selectedId;
+				const selected = selectedIds.includes(layer.id);
 				const hidden = layer.hidden === true;
 				return (
 					<li
@@ -55,7 +56,8 @@ export function LayerPanel({ layers, selectedId, saving, onSelect, onToggleHidde
 					>
 						<button
 							type="button"
-							onClick={() => onSelect(layer.id)}
+							onClick={(event) => onSelect(layer.id, event.shiftKey || event.ctrlKey || event.metaKey)}
+							aria-pressed={selected}
 							className="flex min-w-0 flex-1 items-center gap-2 rounded-control px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 						>
 							<span className={cn("text-muted-foreground", hidden && "opacity-40")} aria-hidden>

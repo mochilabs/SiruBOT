@@ -9,6 +9,8 @@ import {
 	type GreetingTextLayer
 } from "@sirubot/utils/memberGreeting";
 
+import { type Box, type SnapGuide, unionBox } from "./greeting-snap";
+
 /**
  * 인사 카드 편집기 공용 헬퍼 — 레이어 바운딩 박스·히트테스트·생성, 선택 오버레이(`drawGreetingSelection`).
  * 카드 미리보기 자체는 `greeting-svg.ts`(@sirubot/cards + satori)가 그려요.
@@ -48,19 +50,68 @@ export function loadImage(src: string): Promise<HTMLImageElement | null> {
 	});
 }
 
-/** 선택한 레이어의 테두리·핸들만 그려요 — satori SVG 위에 겹친 투명 canvas에서 써요. */
-export function drawGreetingSelection(ctx: CanvasRenderingContext2D, image: GreetingImage, selectedId: string | null): void {
+/** 편집 중에만 보이는 오버레이 — 스냅 가이드선과 마퀴(드래그 선택) 사각형이에요 */
+export interface GreetingOverlay {
+	guides?: readonly SnapGuide[];
+	marquee?: Box | null;
+}
+
+/** 선택한 레이어의 테두리·핸들(단일 선택일 때만)과 가이드·마퀴만 그려요 — 카드 SVG 위에 겹친 투명 canvas에서 써요. */
+export function drawGreetingSelection(ctx: CanvasRenderingContext2D, image: GreetingImage, selectedIds: readonly string[], overlay: GreetingOverlay = {}): void {
 	ctx.clearRect(0, 0, CARD_W, CARD_H);
-	if (!selectedId) return;
-	const layer = image.layers.find((item) => item.id === selectedId);
-	if (layer && !layer.hidden) drawSelection(ctx, layer);
+	const selected = image.layers.filter((item) => selectedIds.includes(item.id) && !item.hidden);
+	for (const layer of selected) drawSelection(ctx, layer, selected.length === 1);
+	if (selected.length > 1) {
+		const union = unionBox(selected.map((layer) => layerBounds(ctx, layer)));
+		if (union) {
+			ctx.save();
+			ctx.strokeStyle = "#ffffff";
+			ctx.lineWidth = 1;
+			ctx.setLineDash([2, 3]);
+			ctx.strokeRect(union.x, union.y, union.w, union.h);
+			ctx.restore();
+		}
+	}
+	if (overlay.guides?.length) {
+		ctx.save();
+		ctx.strokeStyle = "#ff3b8b";
+		ctx.lineWidth = 1.5;
+		for (const guide of overlay.guides) {
+			ctx.beginPath();
+			if (guide.axis === "x") {
+				ctx.moveTo(guide.pos, guide.from);
+				ctx.lineTo(guide.pos, guide.to);
+			} else {
+				ctx.moveTo(guide.from, guide.pos);
+				ctx.lineTo(guide.to, guide.pos);
+			}
+			ctx.stroke();
+		}
+		ctx.restore();
+	}
+	if (overlay.marquee) {
+		const m = overlay.marquee;
+		ctx.save();
+		ctx.fillStyle = "rgba(255,255,255,0.15)";
+		ctx.strokeStyle = "#ffffff";
+		ctx.lineWidth = 1.5;
+		ctx.setLineDash([6, 4]);
+		ctx.fillRect(m.x, m.y, m.w, m.h);
+		ctx.strokeRect(m.x, m.y, m.w, m.h);
+		ctx.restore();
+	}
+}
+
+/** 렌더러(@sirubot/cards)와 같은 규칙의 글자 굵기 — weight가 있으면 그 값, 없으면 bold ? 900 : 600 */
+export function textWeight(layer: GreetingTextLayer): number {
+	return layer.weight ?? (layer.bold ? 900 : 600);
 }
 
 function textFont(layer: GreetingTextLayer): string {
-	return `${layer.bold ? 700 : 500} ${layer.size}px ${FONT_FAMILY}`;
+	return `${textWeight(layer)} ${layer.size}px ${FONT_FAMILY}`;
 }
 
-function drawSelection(ctx: CanvasRenderingContext2D, layer: GreetingLayer): void {
+function drawSelection(ctx: CanvasRenderingContext2D, layer: GreetingLayer, handles: boolean): void {
 	const bounds = layerBounds(ctx, layer);
 	ctx.save();
 	ctx.strokeStyle = "#ffffff";
@@ -68,15 +119,17 @@ function drawSelection(ctx: CanvasRenderingContext2D, layer: GreetingLayer): voi
 	ctx.setLineDash([6, 4]);
 	ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
 	ctx.setLineDash([]);
-	const handle = 8;
-	ctx.fillStyle = "#ffffff";
-	for (const [hx, hy] of [
-		[bounds.x, bounds.y],
-		[bounds.x + bounds.w, bounds.y],
-		[bounds.x, bounds.y + bounds.h],
-		[bounds.x + bounds.w, bounds.y + bounds.h]
-	]) {
-		ctx.fillRect(hx - handle / 2, hy - handle / 2, handle, handle);
+	if (handles) {
+		const handle = 8;
+		ctx.fillStyle = "#ffffff";
+		for (const [hx, hy] of [
+			[bounds.x, bounds.y],
+			[bounds.x + bounds.w, bounds.y],
+			[bounds.x, bounds.y + bounds.h],
+			[bounds.x + bounds.w, bounds.y + bounds.h]
+		]) {
+			ctx.fillRect(hx - handle / 2, hy - handle / 2, handle, handle);
+		}
 	}
 	ctx.restore();
 }
@@ -84,23 +137,36 @@ function drawSelection(ctx: CanvasRenderingContext2D, layer: GreetingLayer): voi
 function measureLayerTextWidth(ctx: CanvasRenderingContext2D, layer: GreetingTextLayer): number {
 	ctx.save();
 	ctx.font = textFont(layer);
-	const width = ctx.measureText(sampleGreetingText(layer.text, "")).width;
+	const text = sampleGreetingText(layer.text, "");
+	const width = ctx.measureText(text).width + (layer.letterSpacing ?? 0) * [...text].length;
 	ctx.restore();
 	return width;
 }
 
+/** 텍스트 레이어의 카드 px 박스 — 렌더러(`textBox`)와 같은 폭 규칙이에요. 줄 수는 폭으로 어림해요. */
+function textBounds(ctx: CanvasRenderingContext2D, layer: GreetingTextLayer, cx: number, cy: number): Box {
+	const measured = measureLayerTextWidth(ctx, layer);
+	const lineHeight = layer.size * (layer.lineHeight ?? 1.25);
+	const edgeWidth = Math.max(120, 2 * Math.min(cx, CARD_W - cx) - 64);
+	const limit = layer.maxWidth ?? edgeWidth;
+	const wrap = layer.maxWidth !== undefined && (layer.overflow ?? "wrap") === "wrap";
+	const lines = wrap ? Math.min(layer.maxLines ?? Infinity, Math.max(1, Math.ceil(measured / limit))) : 1;
+	const w = Math.min(measured, limit) + 16;
+	const h = (wrap ? lines * lineHeight : layer.size) + 16;
+	// 렌더러는 align 기준으로 x에서 시작(left)·가운데(center)·끝(right)해요
+	const left = layer.align === "left" ? cx - 8 : layer.align === "center" ? cx - w / 2 : cx - w + 8;
+	return { x: left, y: cy - h / 2, w, h };
+}
+
 /** 레이어의 카드 px 바운딩 박스(왼쪽 위 기준) — 선택 테두리·히트테스트 공용이에요 */
-export function layerBounds(ctx: CanvasRenderingContext2D, layer: GreetingLayer): { x: number; y: number; w: number; h: number } {
+export function layerBounds(ctx: CanvasRenderingContext2D, layer: GreetingLayer): Box {
 	const cx = (layer.x / 100) * CARD_W;
 	const cy = (layer.y / 100) * CARD_H;
 	switch (layer.type) {
-		case "text": {
-			const w = measureLayerTextWidth(ctx, layer) + 16;
-			const h = layer.size + 16;
-			return { x: cx - w / 2, y: cy - h / 2, w, h };
-		}
+		case "text":
+			return textBounds(ctx, layer, cx, cy);
 		case "avatar": {
-			const d = layer.size + 12;
+			const d = layer.size + (layer.ringWidth ?? 6) * 2;
 			return { x: cx - d / 2, y: cy - d / 2, w: d, h: d };
 		}
 		case "image":
@@ -111,7 +177,7 @@ export function layerBounds(ctx: CanvasRenderingContext2D, layer: GreetingLayer)
 }
 
 /** 위(뒤쪽)에서부터 겹친 레이어를 찾아요 — 반환 순서는 레이어 배열 역순(가장 앞부터)이에요 */
-export function hitTestLayer(ctx: CanvasRenderingContext2D, layers: GreetingLayer[], px: number, py: number): GreetingLayer | null {
+export function hitTestLayer(ctx: CanvasRenderingContext2D, layers: readonly GreetingLayer[], px: number, py: number): GreetingLayer | null {
 	for (let i = layers.length - 1; i >= 0; i--) {
 		const layer = layers[i];
 		const b = layerBounds(ctx, layer);

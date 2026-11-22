@@ -47,11 +47,52 @@ export type GreetingTextLayer = {
 	text: string;
 	/** 회전(도, 시계 방향) — 텍스트 기준점(x, y) 중심. 기본 0 */
 	rotation?: number;
-	/** 숨김 레이어 — 렌더러가 건너뛴다 (에디터 보임/숨김 토글이 저장돼요) */
+	/** 글자 굵기 단계 — 있으면 `bold`보다 우선해요. 없으면 bold ? 900 : 600 (예전 저장값과 같은 모양) */
+	weight?: GreetingTextWeight;
+	/** 글자 간격 px (음수면 좁혀요). 기본 0 */
+	letterSpacing?: number;
+	/** 줄 간격 배수 (글자 크기 대비). 기본 1.25 */
+	lineHeight?: number;
+	/** 최대 폭 px — 넘치는 글은 `overflow` 방식으로 처리해요. 없으면 카드 가장자리까지의 폭 안에서 한 줄 말줄임(예전 동작) */
+	maxWidth?: number;
+	/** maxWidth를 넘을 때: 'wrap' 자동 줄바꿈, 'ellipsis' 한 줄 말줄임. maxWidth가 있으면 기본 'wrap' */
+	overflow?: GreetingTextOverflow;
+	/** 'wrap'일 때 최대 줄 수 — 넘치면 마지막 줄을 말줄임표로 잘라요. 없으면 제한 없음 */
+	maxLines?: number;
+	/** 그림자 — 생략하면 예전 기본 그림자, null이면 그림자 없음 */
+	shadow?: GreetingShadow | null;
+	/** 외곽선 — 생략하거나 null이면 없음 */
+	stroke?: GreetingTextStroke | null;
+	/** 그라디언트 글자 — 있으면 `color` → `gradient.to`로 칠해요 (단색은 생략 또는 null) */
+	gradient?: GreetingTextGradient | null;
 	/** 움직임 — 생략하면 정지. 하나라도 있으면 카드가 애니메이션 WebP로 나가요 */
 	animation?: GreetingAnimation;
+	/** 숨김 레이어 — 렌더러가 건너뛴다 (에디터 보임/숨김 토글이 저장돼요) */
 	hidden?: boolean;
 };
+
+/** 글자 굵기 단계 — 대시보드 미리보기와 서버 렌더가 같은 정적 폰트를 쓰는 값만 허용해요 */
+export const GREETING_TEXT_WEIGHTS = [400, 600, 700, 900] as const;
+export type GreetingTextWeight = (typeof GREETING_TEXT_WEIGHTS)[number];
+
+export const GREETING_TEXT_OVERFLOWS = ['wrap', 'ellipsis'] as const;
+export type GreetingTextOverflow = (typeof GREETING_TEXT_OVERFLOWS)[number];
+
+/** 그림자·글로우 — 색은 #RRGGBB, 투명도는 따로 둬요 */
+export type GreetingShadow = {
+	color: string;
+	/** 0~1 */
+	opacity: number;
+	/** 흐림 반경 px */
+	blur: number;
+	offsetX: number;
+	offsetY: number;
+};
+
+export type GreetingTextStroke = { color: string; width: number };
+
+/** 그라디언트 글자 끝색과 방향 (0° = 왼→오른쪽, 90° = 위→아래, 시계 방향. 기본 0) */
+export type GreetingTextGradient = { to: string; angle?: number };
 
 /** 아바타 레이어 — 멤버 아바타(원형 + 링) */
 export type GreetingAvatarLayer = {
@@ -61,10 +102,26 @@ export type GreetingAvatarLayer = {
 	y: number;
 	size: number; // 지름 px
 	ringColor: string;
+	/** 모양 — 기본 'circle'. 'rounded'는 둥근 사각형(`cornerRadius`), 'square'는 각진 사각형 */
+	shape?: GreetingAvatarShape;
+	/** 'rounded'일 때 모서리 반경 px (기본 size의 22%) */
+	cornerRadius?: number;
+	/** 링 두께 px — 0이면 링 없음. 기본 6 */
+	ringWidth?: number;
+	/** 그림자 — 생략하면 없음 */
+	shadow?: GreetingShadow | null;
+	/** 글로우(빛 번짐) — 링 바깥으로 번지는 빛이에요. 생략하면 없음 */
+	glow?: GreetingGlow | null;
 	/** 움직임 — 생략하면 정지. 하나라도 있으면 카드가 애니메이션 WebP로 나가요 */
 	animation?: GreetingAnimation;
 	hidden?: boolean;
 };
+
+export const GREETING_AVATAR_SHAPES = ['circle', 'rounded', 'square'] as const;
+export type GreetingAvatarShape = (typeof GREETING_AVATAR_SHAPES)[number];
+
+/** 글로우 — 오프셋 없는 번짐. spread로 번지는 범위를 키워요 */
+export type GreetingGlow = { color: string; opacity: number; blur: number; spread: number };
 
 /** 이미지 레이어 — 사용자 업로드 스티커/로고 (dataURI) */
 export type GreetingImageLayer = {
@@ -221,6 +278,21 @@ export type GreetingKind = 'welcome' | 'goodbye';
 // zod 스키마
 const position = { x: z.number().min(0).max(100), y: z.number().min(0).max(100) };
 
+const shadowSchema = z.object({
+	color: z.string().regex(HEX_COLOR),
+	opacity: z.number().min(0).max(1),
+	blur: z.number().min(0).max(40),
+	offsetX: z.number().min(-40).max(40),
+	offsetY: z.number().min(-40).max(40)
+});
+
+const glowSchema = z.object({
+	color: z.string().regex(HEX_COLOR),
+	opacity: z.number().min(0).max(1),
+	blur: z.number().min(0).max(80),
+	spread: z.number().min(0).max(40)
+});
+
 const textLayerSchema = z.object({
 	id: z.string().min(1).max(64),
 	type: z.literal('text'),
@@ -231,6 +303,21 @@ const textLayerSchema = z.object({
 	align: z.enum(['left', 'center', 'right']),
 	text: z.string().max(500),
 	rotation: z.number().min(-180).max(180).optional(),
+	weight: z.union([z.literal(400), z.literal(600), z.literal(700), z.literal(900)]).optional(),
+	letterSpacing: z.number().min(-10).max(60).optional(),
+	lineHeight: z.number().min(0.8).max(3).optional(),
+	maxWidth: z.number().min(40).max(1200).optional(),
+	overflow: z.enum(GREETING_TEXT_OVERFLOWS).optional(),
+	maxLines: z.number().int().min(1).max(10).optional(),
+	shadow: shadowSchema.nullable().optional(),
+	stroke: z
+		.object({ color: z.string().regex(HEX_COLOR), width: z.number().min(0).max(16) })
+		.nullable()
+		.optional(),
+	gradient: z
+		.object({ to: z.string().regex(HEX_COLOR), angle: z.number().min(0).max(360).optional() })
+		.nullable()
+		.optional(),
 	animation: greetingAnimationSchema.optional(),
 	hidden: z.boolean().optional()
 });
@@ -241,6 +328,11 @@ const avatarLayerSchema = z.object({
 	...position,
 	size: z.number().min(40).max(600),
 	ringColor: z.string().regex(HEX_COLOR),
+	shape: z.enum(GREETING_AVATAR_SHAPES).optional(),
+	cornerRadius: z.number().min(0).max(300).optional(),
+	ringWidth: z.number().min(0).max(40).optional(),
+	shadow: shadowSchema.nullable().optional(),
+	glow: glowSchema.nullable().optional(),
 	animation: greetingAnimationSchema.optional(),
 	hidden: z.boolean().optional()
 });

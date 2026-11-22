@@ -24,6 +24,8 @@ export interface UserDataSummary {
 	gameRecords: number;
 	/** 생일 축하를 켜 둔 서버 수 */
 	birthdayOptIns: number;
+	/** 진행 중이거나 지난 기브어웨이에 참여한 기록 수 */
+	giveawayEntries: number;
 }
 
 export interface PurgeResult {
@@ -33,16 +35,18 @@ export interface PurgeResult {
 	ttsRows: number;
 	gameRecords: number;
 	birthdayOptIns: number;
+	giveawayEntries: number;
 }
 
 /** 열람 — 저장된 것들을 종류별 개수로만 보여줘요(내용 자체는 노출하지 않아요) */
 export async function summarizeUserData(db: PrismaClient, userId: string): Promise<UserDataSummary> {
-	const [memory, profile, ttsSettings, gameRecords, birthdayOptIns] = await Promise.all([
+	const [memory, profile, ttsSettings, gameRecords, birthdayOptIns, giveawayEntries] = await Promise.all([
 		db.userMemory.findUnique({ where: { userId }, select: { longTerm: true, shortTerm: true, shortTermSummary: true } }),
 		db.user.findUnique({ where: { id: userId }, select: { birthMonth: true, birthDay: true, intro: true } }),
 		db.ttsUserSetting.count({ where: { userId } }),
 		db.gameRecord.count({ where: { userId } }),
-		db.birthdayOptIn.count({ where: { userId } })
+		db.birthdayOptIn.count({ where: { userId } }),
+		db.giveawayEntry.count({ where: { userId } })
 	]);
 
 	const sections = parseMemoryMarkdown(typeof memory?.longTerm === 'string' ? memory.longTerm : '', { strictSections: false });
@@ -57,7 +61,8 @@ export async function summarizeUserData(db: PrismaClient, userId: string): Promi
 		hasIntro: Boolean(profile?.intro),
 		ttsSettings,
 		gameRecords,
-		birthdayOptIns
+		birthdayOptIns,
+		giveawayEntries
 	};
 }
 
@@ -84,6 +89,7 @@ export async function purgeUserData(db: PrismaClient, userId: string): Promise<P
 	const games = await db.gameRecord.deleteMany({ where: { userId } });
 	// 생일을 지웠으니 서버별 축하 동의도 함께 지워요 (생일 역할 기록은 다음 날 회수하면서 사라져요)
 	const birthdayOptIns = await db.birthdayOptIn.deleteMany({ where: { userId } });
+	const giveaways = await db.giveawayEntry.deleteMany({ where: { userId } });
 
 	return {
 		memoryRows,
@@ -91,6 +97,7 @@ export async function purgeUserData(db: PrismaClient, userId: string): Promise<P
 		profileRows: profileUpdate.count,
 		ttsRows: tts.count,
 		gameRecords: games.count,
-		birthdayOptIns: birthdayOptIns.count
+		birthdayOptIns: birthdayOptIns.count,
+		giveawayEntries: giveaways.count
 	};
 }

@@ -8,6 +8,7 @@ function makeMockDb(overrides: {
 	ttsCount?: number;
 	gameCount?: number;
 	optInCount?: number;
+	giveawayCount?: number;
 }) {
 	const userMemoryUpdate = vi.fn().mockResolvedValue({});
 	const userUpdateMany = vi.fn().mockResolvedValue({ count: overrides.profile ? 1 : 0 });
@@ -34,6 +35,10 @@ function makeMockDb(overrides: {
 		birthdayOptIn: {
 			count: vi.fn().mockResolvedValue(overrides.optInCount ?? 0),
 			deleteMany: vi.fn().mockResolvedValue({ count: overrides.optInCount ?? 0 })
+		},
+		giveawayEntry: {
+			count: vi.fn().mockResolvedValue(overrides.giveawayCount ?? 0),
+			deleteMany: vi.fn().mockResolvedValue({ count: overrides.giveawayCount ?? 0 })
 		}
 	} as unknown as PrismaClient;
 
@@ -51,7 +56,8 @@ describe('userDataService', () => {
 			profile: { birthMonth: 5, birthDay: 10, intro: '반가워요' },
 			ttsCount: 2,
 			gameCount: 7,
-			optInCount: 3
+			optInCount: 3,
+			giveawayCount: 4
 		});
 
 		const summary = await summarizeUserData(db, 'user-1');
@@ -63,7 +69,8 @@ describe('userDataService', () => {
 			hasIntro: true,
 			ttsSettings: 2,
 			gameRecords: 7,
-			birthdayOptIns: 3
+			birthdayOptIns: 3,
+			giveawayEntries: 4
 		});
 	});
 
@@ -77,7 +84,8 @@ describe('userDataService', () => {
 			profile: { birthMonth: 1, birthDay: 1, intro: 'hi' },
 			ttsCount: 1,
 			gameCount: 3,
-			optInCount: 1
+			optInCount: 1,
+			giveawayCount: 2
 		});
 
 		const result = await purgeUserData(db, 'user-1');
@@ -91,7 +99,8 @@ describe('userDataService', () => {
 			profileRows: 1,
 			ttsRows: 1,
 			gameRecords: 3,
-			birthdayOptIns: 1
+			birthdayOptIns: 1,
+			giveawayEntries: 2
 		});
 	});
 });

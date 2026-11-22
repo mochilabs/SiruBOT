@@ -9,10 +9,16 @@ import { getConfig } from '../../../../lib/config.ts';
 import { normalizeAiMode, isChannelToggleEnabled } from '../../../../services/guildSettings/types.ts';
 import { normalizeAnnounceMode } from '../../../../services/guildSettings/playback.ts';
 import { SETTINGS_ACTIONS } from '../settings/index.ts';
-import { buildBackButton } from '../settings/core.ts';
+import { buildBackButton, buildMusicSubNav } from '../settings/core.ts';
 import { chatToolEnabledIn, CHAT_TOOL_LABELS } from '../settings/chatTools.ts';
 import { AI_MODE_LABELS, ANNOUNCE_MODE_LABELS, SPONSORBLOCK_SEGMENTS, repeatLabels, sponsorBlockSegmentEmoji } from '../settings/labels.ts';
-import type { SettingsComponentAction, SettingsControlBuilder, SettingsScreen, SettingsViewContext } from '../settings/types.ts';
+import {
+	isMusicSubpage,
+	type SettingsComponentAction,
+	type SettingsControlBuilder,
+	type SettingsScreen,
+	type SettingsViewContext
+} from '../settings/types.ts';
 
 export type SettingsMode = SettingsScreen;
 export { SPONSORBLOCK_SEGMENTS };
@@ -24,18 +30,21 @@ type Part =
 	/** 표에서 `control.screen`이 이 화면이고 `control.row`가 같은 컨트롤을 표의 순서대로 한 줄에 놓아요. back이면 뒤로가기를 맨 앞에 붙여요. */
 	| { row: string; back?: boolean }
 	/** 뒤로가기만 있는 줄 */
-	| { back: true };
+	| { back: true }
+	/** 음악 하위 페이지 이동 셀렉트 — 현재 화면이 선택돼 있어요 */
+	| { musicNav: true };
 
 const TEXT = (text: (guild: Guild, ctx: SettingsViewContext) => string): Part => ({ text });
 const SEPARATOR: Part = { separator: true };
+const MUSIC_NAV: Part = { musicNav: true };
 
 const onOff = (value: boolean) => (value ? '켜짐' : '꺼짐');
 
 const SCREEN_PARTS: Record<SettingsScreen, Part[]> = {
 	main: [TEXT(mainText), SEPARATOR, { row: 'nav' }, { row: 'modules' }],
-	music: [TEXT(musicText), SEPARATOR, { row: 'toggles' }, { back: true }],
-	sponsorblock: [TEXT(sponsorBlockText), SEPARATOR, { row: 'segments' }, { row: 'actions', back: true }],
-	dj: [TEXT(djText), SEPARATOR, { row: 'pick' }, { row: 'actions', back: true }],
+	music: [TEXT(musicText), SEPARATOR, MUSIC_NAV, { row: 'toggles' }, { back: true }],
+	sponsorblock: [TEXT(sponsorBlockText), SEPARATOR, MUSIC_NAV, { row: 'segments' }, { row: 'actions', back: true }],
+	dj: [TEXT(djText), SEPARATOR, MUSIC_NAV, { row: 'pick' }, { row: 'actions', back: true }],
 	channel: [
 		TEXT(channelText),
 		SEPARATOR,
@@ -63,7 +72,8 @@ const SCREEN_PARTS: Record<SettingsScreen, Part[]> = {
 		{ row: 'limit' },
 		{ back: true }
 	],
-	audio: [TEXT(audioText), SEPARATOR, { row: 'transition' }, { row: 'toggles' }, { row: 'tuning' }, { row: 'announce' }, { back: true }],
+	// 하위 이동 줄이 늘어 행 5개 한도를 넘으므로 갭리스·정규화·고급 설정 버튼은 한 줄에 놓아요
+	audio: [TEXT(audioText), SEPARATOR, MUSIC_NAV, { row: 'transition' }, { row: 'toggles' }, { row: 'announce' }, { back: true }],
 	ai: [TEXT(aiText), SEPARATOR, { row: 'mode' }, { row: 'actions', back: true }],
 	chatTools: [TEXT(chatToolsText), SEPARATOR, { row: 'tools' }, { row: 'counting' }, { row: 'actions', back: true }]
 };
@@ -78,6 +88,12 @@ export function settingsView(guild: Guild, mode: SettingsMode = 'main', ctx: Set
 			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(part.text(guild, ctx)));
 		} else if ('separator' in part) {
 			container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+		} else if ('musicNav' in part) {
+			if (isMusicSubpage(screen)) {
+				container.addActionRowComponents(
+					new ActionRowBuilder<SettingsControlBuilder>().addComponents(buildMusicSubNav(screen).setCustomId(settingsId.encode('navigate')))
+				);
+			}
 		} else if ('row' in part) {
 			const controls: SettingsControlBuilder[] = [];
 			if (part.back) controls.push(buildBackButton().setCustomId(settingsId.encode('back')));
@@ -125,7 +141,7 @@ function moduleSummary(guild: Guild): string {
 
 function musicText(guild: Guild): string {
 	return [
-		`### ${emoji('music_note')} 음악 설정`,
+		`### ${emoji('music_note')} 음악 · 재생`,
 		``,
 		`${emoji('spectrum')} **컨트롤러**: ${onOff(guild.enableController)}`,
 		`${emoji('sparkle')} **추천 곡 자동재생**: ${onOff(guild.related)}`,

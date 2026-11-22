@@ -5,6 +5,8 @@ import {
 	DEFAULT_GREETINGS,
 	DEFAULT_WELCOME_GREETING,
 	GREETING_ANIMATIONS,
+	GREETING_AVATAR_SHAPES,
+	GREETING_TEXT_WEIGHTS,
 	GREETING_SHAPES,
 	greetingAnimationDurationMs,
 	hasGreetingAnimation,
@@ -277,5 +279,76 @@ describe('GIF 배경', () => {
 
 	it('GIF가 5초 이상이면 5초에서 잘라요', () => {
 		expect(greetingAnimationDurationMs(asImage(withBackground(gif(80))))).toBe(5000);
+	});
+});
+
+describe('텍스트 효과·아바타 옵션 (P-17)', () => {
+	const withLayers = (layers: unknown[]) => ({ ...DEFAULT_GREETINGS.welcome, image: { background: { presetId: 'rose', dataUri: null }, layers } });
+	const text = { id: 't', type: 'text', x: 50, y: 50, size: 30, color: '#ffffff', bold: false, align: 'center', text: 'a' };
+	const avatar = { id: 'a', type: 'avatar', x: 50, y: 50, size: 180, ringColor: '#ffffff' };
+	const ok = (layer: unknown) => greetingConfigSchema.safeParse(withLayers([layer])).success;
+	const shadow = { color: '#000000', opacity: 0.5, blur: 8, offsetX: 0, offsetY: 2 };
+
+	it('새 필드가 없는 예전 텍스트·아바타 레이어도 그대로 통과하고 값이 늘어나지 않아요', () => {
+		const parsed = greetingConfigSchema.parse(withLayers([text, avatar]));
+		expect(parsed.image?.layers[0]).toEqual(text);
+		expect(parsed.image?.layers[1]).toEqual(avatar);
+	});
+
+	it('텍스트 효과 필드를 모두 받아요', () => {
+		const full = {
+			...text,
+			weight: 700,
+			letterSpacing: -2,
+			lineHeight: 1.6,
+			maxWidth: 600,
+			overflow: 'wrap',
+			maxLines: 3,
+			shadow,
+			stroke: { color: '#112233', width: 4 },
+			gradient: { to: '#ff00ff', angle: 90 }
+		};
+		expect(ok(full)).toBe(true);
+		// null은 "끄기"예요 (shadow: null은 기본 그림자도 없애요)
+		expect(ok({ ...text, shadow: null, stroke: null, gradient: null })).toBe(true);
+	});
+
+	it('굵기는 400/600/700/900 단계만 받아요', () => {
+		for (const weight of GREETING_TEXT_WEIGHTS) expect(ok({ ...text, weight }), String(weight)).toBe(true);
+		for (const weight of [100, 500, 800, '700']) expect(ok({ ...text, weight }), String(weight)).toBe(false);
+	});
+
+	it('텍스트 효과의 범위를 벗어난 값은 거부해요', () => {
+		expect(ok({ ...text, letterSpacing: 100 })).toBe(false);
+		expect(ok({ ...text, lineHeight: 0.2 })).toBe(false);
+		expect(ok({ ...text, maxWidth: 10 })).toBe(false);
+		expect(ok({ ...text, maxWidth: 5000 })).toBe(false);
+		expect(ok({ ...text, overflow: 'clip' })).toBe(false);
+		expect(ok({ ...text, maxLines: 0 })).toBe(false);
+		expect(ok({ ...text, maxLines: 2.5 })).toBe(false);
+		expect(ok({ ...text, shadow: { ...shadow, blur: 90 } })).toBe(false);
+		expect(ok({ ...text, shadow: { ...shadow, opacity: 2 } })).toBe(false);
+		expect(ok({ ...text, shadow: { ...shadow, color: 'black' } })).toBe(false);
+		expect(ok({ ...text, stroke: { color: '#000000', width: 50 } })).toBe(false);
+		expect(ok({ ...text, gradient: { to: 'pink' } })).toBe(false);
+		expect(ok({ ...text, gradient: { to: '#ffffff', angle: 400 } })).toBe(false);
+	});
+
+	it('아바타 모양·링·그림자·글로우를 받아요', () => {
+		for (const shape of GREETING_AVATAR_SHAPES) {
+			expect(
+				ok({ ...avatar, shape, cornerRadius: 40, ringWidth: 12, shadow, glow: { color: '#ffffff', opacity: 0.8, blur: 30, spread: 6 } }),
+				shape
+			).toBe(true);
+		}
+		expect(ok({ ...avatar, ringWidth: 0, shadow: null, glow: null })).toBe(true);
+	});
+
+	it('아바타의 범위를 벗어난 값은 거부해요', () => {
+		expect(ok({ ...avatar, shape: 'hexagon' })).toBe(false);
+		expect(ok({ ...avatar, ringWidth: 100 })).toBe(false);
+		expect(ok({ ...avatar, ringWidth: -1 })).toBe(false);
+		expect(ok({ ...avatar, cornerRadius: 999 })).toBe(false);
+		expect(ok({ ...avatar, glow: { color: '#ffffff', opacity: 1, blur: 500, spread: 0 } })).toBe(false);
 	});
 });
