@@ -5,6 +5,9 @@ import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 import * as guildJtc from '../../../../services/guildSettings/jtc.ts';
 import * as guildPlayback from '../../../../services/guildSettings/playback.ts';
 import * as guildModules from '../../../../services/guildSettings/modules.ts';
+import * as guildMixer from '../../../../services/guildSettings/mixer.ts';
+import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
+import { confirmAction } from '../../../../lib/confirmation.ts';
 import { queueRelatedUpfront } from '../../lavalink/autoPlayRelated.ts';
 import { checkManageGuild } from '../utils/permissionCheck.ts';
 import { settingsView } from '../views/settings.ts';
@@ -21,6 +24,9 @@ vi.mock('../../../../services/guildSettings/channels.ts');
 vi.mock('../../../../services/guildSettings/jtc.ts');
 vi.mock('../../../../services/guildSettings/playback.ts');
 vi.mock('../../../../services/guildSettings/modules.ts');
+vi.mock('../../../../services/guildSettings/mixer.ts');
+vi.mock('../../../../services/guildSettings/chatPolicy.ts');
+vi.mock('../../../../lib/confirmation.ts', () => ({ confirmAction: vi.fn() }));
 vi.mock('../../lavalink/autoPlayRelated.ts', () => ({ queueRelatedUpfront: vi.fn() }));
 vi.mock('../utils/permissionCheck.ts', () => ({ checkManageGuild: vi.fn(() => true) }));
 vi.mock('../views/settings.ts', async (importOriginal) => ({ ...(await importOriginal<object>()), settingsView: vi.fn(() => 'VIEW') }));
@@ -32,6 +38,9 @@ function makeInteraction(kind: Kind, values: string[] = []) {
 		guildId: 'g1',
 		member: {},
 		values,
+		channelId: undefined as string | undefined,
+		guild: { channels: { cache: { filter: () => ({ map: () => [] as string[] }) } } },
+		isButton: () => kind === 'button',
 		isStringSelectMenu: () => kind === 'string',
 		isRoleSelectMenu: () => kind === 'role',
 		isChannelSelectMenu: () => kind === 'channel',
@@ -49,9 +58,18 @@ function setup(guild: Record<string, unknown> = GUILD) {
 	const player = { playing: true, queue: { current: { info: {} }, tracks: [] as unknown[] }, setRepeatMode: vi.fn() };
 	const services = {
 		guildService: { getGuild: vi.fn().mockResolvedValue(guild) },
-		lavalink: { playerNotifier: { syncPinnedPanel: vi.fn().mockResolvedValue(undefined) } },
+		lavalink: { marker: 'lavalink', playerNotifier: { syncPinnedPanel: vi.fn().mockResolvedValue(undefined) } },
 		audio: { getPlayer: vi.fn(() => player), players: { get: vi.fn(() => player) } },
-		mixerService: { clearNext: vi.fn().mockResolvedValue(undefined) },
+		mixerService: {
+			clearNext: vi.fn().mockResolvedValue(undefined),
+			setAutomix: vi.fn().mockResolvedValue(undefined),
+			setSilence: vi.fn().mockResolvedValue(undefined),
+			preloadUpcoming: vi.fn().mockResolvedValue(undefined),
+			setNormalization: vi.fn().mockResolvedValue(undefined)
+		},
+		aiChat: { acquireChannelTurn: vi.fn(() => true), releaseChannelTurn: vi.fn() },
+		aiChatHistory: { clearChannelHistory: vi.fn().mockResolvedValue(undefined) },
+		countingState: { reset: vi.fn().mockResolvedValue(undefined) },
 		sponsorBlockService: { refreshSettings: vi.fn() },
 		tempVoiceService: { setupMarkerChannel: vi.fn().mockResolvedValue(undefined) },
 		redisStore: { publish: vi.fn() },
@@ -81,7 +99,7 @@ describe('settings 액션 표', () => {
 
 	it('표의 모든 항목이 settingsId 액션과 일치해요 (모달 ID 제외)', () => {
 		const actions = Object.keys(SETTINGS_ACTIONS).sort();
-		expect(actions).toHaveLength(22);
+		expect(actions).toHaveLength(35);
 		for (const action of actions) expect(settingsId.decode(settingsId.encode(action as 'back'))?.action).toBe(action);
 	});
 
@@ -106,6 +124,10 @@ describe('settings 액션 표', () => {
 	it('navigate는 고른 화면으로, 알 수 없는 값이나 다른 컴포넌트면 메인으로 그려요', async () => {
 		await run('navigate', makeInteraction('string', ['dj']));
 		expect(lastMode()).toBe('dj');
+		for (const page of ['audio', 'ai', 'chatTools']) {
+			await run('navigate', makeInteraction('string', [page]));
+			expect(lastMode()).toBe(page);
+		}
 		await run('navigate', makeInteraction('string', ['nope']));
 		expect(lastMode()).toBe('main');
 		await run('navigate', makeInteraction('button'));
@@ -123,7 +145,7 @@ describe('settings 액션 표', () => {
 			flags: [expect.anything()],
 			allowedMentions: { roles: [], users: [] }
 		});
-		expect(settingsView).toHaveBeenCalledWith(GUILD, 'music');
+		expect(settingsView).toHaveBeenCalledWith(GUILD, 'music', { channelId: undefined });
 	});
 
 	it('selectModules는 선택하지 않은 끌 수 있는 모듈을 꺼짐으로 저장하고 무효화를 알려요 (관리 모듈은 보내지 않아요)', async () => {
@@ -281,5 +303,143 @@ describe('settings 액션 표', () => {
 			expect(services.tempVoiceService.setupMarkerChannel, action).not.toHaveBeenCalled();
 			expect(interaction.editReply, action).toHaveBeenCalledTimes(1);
 		}
+	});
+});
+
+describe('설정 액션 표: 믹서·AI·채팅 유틸 페이지 (구 /믹서 /채팅설정 /채팅유틸)', () => {
+	const MIXER = { gaplessEnabled: true, normalizationEnabled: false, automixEnabled: false, crossfadeEnabled: false };
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(checkManageGuild).mockReturnValue(true);
+		vi.mocked(guildMixer.getMixerSettings).mockResolvedValue(MIXER as never);
+		vi.mocked(guildMixer.setTransitionMode).mockResolvedValue({ ...MIXER, automixEnabled: true } as never);
+	});
+
+	it('selectTransition은 저장 뒤 재생 중 플레이어에 적용하고 audio를 다시 그려요', async () => {
+		const { services, player } = await run('selectTransition', makeInteraction('string', ['automix']));
+		expect(guildMixer.setTransitionMode).toHaveBeenCalledWith(services.guildService, 'g1', 'automix');
+		expect(services.mixerService.setAutomix).toHaveBeenCalledWith(player, expect.objectContaining({ automixEnabled: true }));
+		expect(lastMode()).toBe('audio');
+	});
+
+	it('selectTransition은 모르는 값을 저장하지 않아요', async () => {
+		await run('selectTransition', makeInteraction('string', ['nope']));
+		expect(guildMixer.setTransitionMode).not.toHaveBeenCalled();
+	});
+
+	it('플레이어 적용에 실패하면 저장은 유지하고 경고 안내를 따로 보내요', async () => {
+		const interaction = makeInteraction('string', ['automix']);
+		const ctx = setup();
+		ctx.services.mixerService.setAutomix.mockRejectedValue(new Error('unsupported'));
+		await ctx.handler.run(interaction, { action: 'selectTransition' });
+		expect(guildMixer.setTransitionMode).toHaveBeenCalled();
+		expect(interaction.editReply).toHaveBeenCalledTimes(1);
+		expect(JSON.stringify(interaction.followUp.mock.calls)).toContain('설정은 저장했지만');
+	});
+
+	it('플레이어가 없으면 적용 없이 안내도 없어요', async () => {
+		const interaction = makeInteraction('string', ['crossfade']);
+		const ctx = setup();
+		ctx.services.audio.getPlayer.mockReturnValue(undefined as never);
+		await ctx.handler.run(interaction, { action: 'selectTransition' });
+		expect(ctx.services.mixerService.setAutomix).not.toHaveBeenCalled();
+		expect(interaction.followUp).not.toHaveBeenCalled();
+	});
+
+	it('toggleGapless는 값을 뒤집고 플레이어의 무음·예열을 맞춰요', async () => {
+		const { services, player } = await run('toggleGapless', makeInteraction('button'));
+		expect(guildMixer.setGapless).toHaveBeenCalledWith(services.guildService, 'g1', false);
+		expect(services.mixerService.setSilence).toHaveBeenCalledWith(player, false);
+		expect(services.mixerService.clearNext).toHaveBeenCalledWith(player, { force: true });
+		vi.clearAllMocks();
+		vi.mocked(guildMixer.getMixerSettings).mockResolvedValue({ ...MIXER, gaplessEnabled: false } as never);
+		const on = await run('toggleGapless', makeInteraction('button'));
+		expect(guildMixer.setGapless).toHaveBeenCalledWith(on.services.guildService, 'g1', true);
+		expect(on.services.mixerService.preloadUpcoming).toHaveBeenCalledWith(on.player, { force: true });
+	});
+
+	it('toggleNormalization은 값을 뒤집고 플레이어에 적용해요', async () => {
+		const { services, player } = await run('toggleNormalization', makeInteraction('button'));
+		expect(guildMixer.setNormalization).toHaveBeenCalledWith(services.guildService, 'g1', true);
+		expect(services.mixerService.setNormalization).toHaveBeenCalledWith(player, true);
+	});
+
+	it('selectAnnounceMode는 알 수 없는 값을 기본 방식으로 정규화해 저장해요', async () => {
+		vi.mocked(guildPlayback.normalizeAnnounceMode).mockImplementation(((v: string) => (v === 'parallel' ? 'parallel' : 'sequential')) as never);
+		await run('selectAnnounceMode', makeInteraction('string', ['parallel']));
+		expect(guildPlayback.setTtsAnnounceMode).toHaveBeenLastCalledWith(expect.anything(), 'g1', 'parallel');
+	});
+
+	it('editCrossfade와 editAutomix는 deferUpdate 없이 모달만 열어요', async () => {
+		vi.mocked(guildMixer.getMixerSettings).mockResolvedValue({
+			crossfadeMs: 5000,
+			automixMaxTempoChange: 0.06,
+			automixMinConfidence: 0.3
+		} as never);
+		for (const action of ['editCrossfade', 'editAutomix']) {
+			const interaction = makeInteraction('button');
+			await run(action, interaction);
+			expect(interaction.showModal, action).toHaveBeenCalledTimes(1);
+			expect(interaction.deferUpdate, action).not.toHaveBeenCalled();
+		}
+	});
+
+	it('selectAiMode는 서버 모드를 저장하고 컴포넌트 종류가 다르면 무시해요', async () => {
+		const { services } = await run('selectAiMode', makeInteraction('string', ['off']));
+		expect(guildChatPolicy.setAiMode).toHaveBeenCalledWith(services.guildService, 'g1', 'off');
+		expect(lastMode()).toBe('ai');
+		vi.clearAllMocks();
+		await run('selectAiMode', makeInteraction('button'));
+		expect(guildChatPolicy.setAiMode).not.toHaveBeenCalled();
+	});
+
+	it('resetAiHistory는 확인을 받은 뒤 패널 채널의 기록을 지워요', async () => {
+		vi.mocked(confirmAction).mockResolvedValue(true);
+		const interaction = makeInteraction('button');
+		interaction.channelId = 'c1';
+		const { services } = await run('resetAiHistory', interaction);
+		expect(services.aiChat.acquireChannelTurn).toHaveBeenCalledWith('c1');
+		expect(services.aiChatHistory.clearChannelHistory).toHaveBeenCalledWith('c1');
+		expect(services.aiChat.releaseChannelTurn).toHaveBeenCalledWith('c1');
+		expect(interaction.followUp).toHaveBeenCalledTimes(1);
+	});
+
+	it('resetAiHistory는 취소하면 지우지 않고, 답변 중이면 안내만 해요', async () => {
+		vi.mocked(confirmAction).mockResolvedValue(false);
+		const cancel = await run('resetAiHistory', makeInteraction('button'));
+		expect(cancel.services.aiChatHistory.clearChannelHistory).not.toHaveBeenCalled();
+		vi.mocked(confirmAction).mockResolvedValue(true);
+		const interaction = makeInteraction('button');
+		const ctx = setup();
+		ctx.services.aiChat.acquireChannelTurn.mockReturnValue(false);
+		await ctx.handler.run(interaction, { action: 'resetAiHistory' });
+		expect(ctx.services.aiChatHistory.clearChannelHistory).not.toHaveBeenCalled();
+		expect(JSON.stringify(interaction.followUp.mock.calls)).toContain('답변 중');
+	});
+
+	it('채팅 유틸 토글은 패널 채널 기준으로 켜짐 상태를 뒤집어요', async () => {
+		vi.mocked(guildChatPolicy.getChatToolSettings).mockResolvedValue({
+			emojiEnlarge: { mode: 'off', channelIds: [] },
+			quote: { mode: 'all', channelIds: [] },
+			embedFix: { mode: 'channels', channelIds: ['c1'] }
+		} as never);
+		const expected = { toggleEmojiEnlarge: ['emojiEnlarge', true], toggleQuote: ['quote', false], toggleEmbedFix: ['embedFix', false] } as const;
+		for (const [action, [tool, enable]] of Object.entries(expected)) {
+			const interaction = makeInteraction('button');
+			interaction.channelId = 'c1';
+			const { services } = await run(action, interaction);
+			expect(guildChatPolicy.setChannelChatToolEnabled, action).toHaveBeenLastCalledWith(services.guildService, 'g1', tool, 'c1', enable, []);
+			expect(lastMode()).toBe('chatTools');
+		}
+	});
+
+	it('카운팅 채널 지정과 끄기는 기록을 새로 시작해요', async () => {
+		const set = await run('selectCountingChannel', makeInteraction('channel', ['ch9']));
+		expect(guildChatPolicy.setCountingChannel).toHaveBeenCalledWith(set.services.guildService, 'g1', 'ch9');
+		expect(set.services.countingState.reset).toHaveBeenCalledWith('g1');
+		const off = await run('disableCounting', makeInteraction('button'));
+		expect(guildChatPolicy.setCountingEnabled).toHaveBeenCalledWith(off.services.guildService, 'g1', false);
+		expect(off.services.countingState.reset).toHaveBeenCalledWith('g1');
 	});
 });

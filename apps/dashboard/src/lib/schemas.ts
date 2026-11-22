@@ -94,7 +94,7 @@ export const guildSettingsSchema = z.object({
 		.max(CROSSFADE_MS_RANGE.max, "크로스페이드는 15초 이하여야 해요.")
 		.optional(),
 	normalizationEnabled: z.boolean().optional(),
-	// TTS 안내 방식 3택 — 봇의 /믹서 안내방식·/설정 audio와 같은 값이에요
+	// TTS 안내 방식 3택 — 봇의 /설정 오디오 페이지와 같은 값이에요
 	ttsAnnounceMode: z.enum(TTS_ANNOUNCE_MODES).optional().default(TTS_ANNOUNCE_MODE_DEFAULT),
 	// 채팅 유틸 — 봇 계약: packages/utils/src/chatTools.ts, 채널 토글: 봇 guildService의 ChatToolSettings
 	emojiEnlargeMode: z.enum(CHAT_TOOL_MODES, "이모지 확대 모드가 잘못됐어요.").optional(),
