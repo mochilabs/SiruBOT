@@ -1,5 +1,5 @@
 import { addSeparator, createContainer, emoji } from '@sirubot/utils';
-import { BOT_LANGUAGE_NOTE, BOT_TAGLINE } from '@sirubot/utils/brand';
+import { BOT_TAGLINE } from '@sirubot/utils/brand';
 import { getBotModule, type BotModuleId } from '@sirubot/utils/modules';
 import { ActionRowBuilder, ContainerBuilder, StringSelectMenuBuilder } from 'discord.js';
 import { commandMention } from '../../lib/commandMention.ts';
@@ -20,11 +20,11 @@ function categorySelect(page: HelpPage, ctx: HelpContext): ActionRowBuilder<Stri
 		.setMinValues(1)
 		.setMaxValues(1)
 		.addOptions(
-			{ label: '처음 화면', value: HELP_HOME, emoji: { name: '🏠' }, default: page === HELP_HOME },
+			{ label: '처음 화면', value: HELP_HOME, emoji: emoji('house'), default: page === HELP_HOME },
 			...visibleHelpModules(ctx).map((m) => ({
 				label: m.label,
 				value: m.id,
-				emoji: { name: m.emoji },
+				emoji: emoji(m.appEmoji, m.emoji),
 				description: m.description,
 				default: page === m.id
 			}))
@@ -36,14 +36,11 @@ function homeText(ctx: HelpContext): string {
 	return [
 		`### 안녕하세요, 시루예요! ${emoji('music_note')}`,
 		BOT_TAGLINE,
-		`-# ${BOT_LANGUAGE_NOTE}`,
 		'',
 		'**처음이라면**',
 		`1. 음성 채널에 들어가서 ${commandMention('play', ctx.index)}로 노래를 틀어 보세요.`,
-		'2. 채팅에서 저를 멘션하면 AI로 대답해요. 질문, 요약, 번역 모두 돼요.',
-		`3. 관리자라면 ${commandMention('settings', ctx.index)}이나 웹 대시보드에서 서버에 맞게 설정해요.`,
-		'',
-		'아래에서 카테고리를 고르면 명령어를 보여줘요.'
+		'2. 채팅에서 저를 멘션해서 질문하거나 명령할 수 있어요.',
+		`3. 관리자라면 ${commandMention('settings', ctx.index)}이나 웹 대시보드에서 서버에 맞게 설정해요.`
 	].join('\n');
 }
 
@@ -58,7 +55,7 @@ export function helpView(page: HelpPage, ctx: HelpContext, selectable = true): C
 	} else {
 		const module = getBotModule(page);
 		const body = helpCategoryLines(page, ctx);
-		container.addTextDisplayComponents((t) => t.setContent([`### ${module.emoji} ${module.label}`, ...body].join('\n')));
+		container.addTextDisplayComponents((t) => t.setContent([`### ${emoji(module.appEmoji, module.emoji)} ${module.label}`, ...body].join('\n')));
 	}
 	if (selectable) {
 		addSeparator(container);

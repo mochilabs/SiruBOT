@@ -19,6 +19,8 @@ export interface BotModule {
 	readonly id: BotModuleId;
 	readonly label: string;
 	readonly emoji: string;
+	/** 디스코드 안에서 보여줄 앱 이모지 이름 (`emoji(name, fallback)`). 대시보드는 `emoji`(유니코드)를 써요. */
+	readonly appEmoji: string;
 	/** 도움말 셀렉트 설명 (100자 이하) */
 	readonly description: string;
 	readonly commands: readonly string[];
@@ -33,6 +35,7 @@ export const BOT_MODULES: readonly BotModule[] = [
 		id: 'music',
 		label: '음악',
 		emoji: '🎵',
+		appEmoji: 'music_note',
 		description: '음성 채널에서 노래 재생, 대기열, 플레이리스트',
 		commands: ['music', 'play', 'skip', 'stop', 'nowplaying', 'queue', 'playlist', 'favorites'],
 		componentNamespaces: ['controller', 'filter', 'search', 'library', 'playlist-add', 'skip-vote', 'queue'],
@@ -43,8 +46,9 @@ export const BOT_MODULES: readonly BotModule[] = [
 		id: 'community',
 		label: '커뮤니티',
 		emoji: '🏡',
+		appEmoji: 'people',
 		description: '역할 패널, 티켓, 프로필, 출석, 인사 메시지',
-		commands: ['rolepanel', 'ticket', 'profile', 'checkin'],
+		commands: ['rolepanel', 'ticket', 'profile', 'checkin', 'announce'],
 		componentNamespaces: ['role-panel', 'ticket'],
 		messageFeatures: [
 			{ id: 'greeting', summary: '새 멤버가 오고 갈 때 인사 메시지와 카드를 보내요' },
@@ -59,6 +63,7 @@ export const BOT_MODULES: readonly BotModule[] = [
 		id: 'ai',
 		label: 'AI·TTS',
 		emoji: '🤖',
+		appEmoji: 'robot',
 		description: 'AI 대화, 채팅 읽어주기, 이모지 만들기',
 		commands: ['tts', 'emojimaker'],
 		componentNamespaces: ['chat-cancel', 'tts', 'moji'],
@@ -72,6 +77,7 @@ export const BOT_MODULES: readonly BotModule[] = [
 		id: 'fun',
 		label: '놀이',
 		emoji: '🎲',
+		appEmoji: 'gamepad',
 		description: '주사위, 가위바위보, 숫자 맞히기, 오늘의 운세',
 		commands: ['dice', 'guess', 'rps', 'ohaasa'],
 		componentNamespaces: ['game'],
@@ -82,6 +88,7 @@ export const BOT_MODULES: readonly BotModule[] = [
 		id: 'utility',
 		label: '유틸',
 		emoji: '🧰',
+		appEmoji: 'tools',
 		description: '날씨, 택배 조회, 아바타, 봇·서버 정보',
 		commands: ['avatar', 'delivery', 'info', 'invite', 'ping', 'weather', 'privacy', 'help'],
 		componentNamespaces: ['help', 'onboarding'],
@@ -96,8 +103,9 @@ export const BOT_MODULES: readonly BotModule[] = [
 		id: 'admin',
 		label: '관리',
 		emoji: '🛠️',
-		description: '서버 설정, 메시지 청소, 믹서와 AI 채팅 설정',
-		commands: ['settings', 'purge', 'mixer', 'chat-settings', 'chattools'],
+		appEmoji: 'shield',
+		description: '서버 설정(믹서·AI 채팅·채팅 유틸 포함), 메시지 청소',
+		commands: ['settings', 'purge'],
 		componentNamespaces: ['settings', 'confirm'],
 		messageFeatures: [],
 		toggleable: false

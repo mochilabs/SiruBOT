@@ -5,7 +5,7 @@ import { SOCIAL_PLATFORM_LABELS } from "@sirubot/utils/social";
 import { Bell, Pause, PencilLine, Play, Plus, Trash2 } from "lucide-react";
 
 import { EmptyState } from "@/components/primitives/empty-state";
-import { InfoBox, PanelError, PanelHeader, PanelLoading, WarningBox } from "@/components/servers/settings-shared";
+import { PanelError, PanelHeader, PanelLoading, WarningBox } from "@/components/servers/settings-shared";
 import { AddSubscriptionForm } from "@/components/servers/social/add-subscription-form";
 import { SAMPLE_URLS, TemplateEditor, type TemplateSample } from "@/components/servers/social/template-editor";
 import { WebhookProfileSection } from "@/components/servers/social/webhook-profile-section";
@@ -266,12 +266,6 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 					)}
 				</DialogContent>
 			</Dialog>
-
-			<InfoBox>
-				<p>
-					알림은 봇이 채널에 웹훅을 만든 뒤에는 대시보드를 닫아도 계속 전송돼요. 알림을 없애려면 목록에서 삭제해 주세요.
-				</p>
-			</InfoBox>
 		</Card>
 	);
 }

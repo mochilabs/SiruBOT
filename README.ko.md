@@ -207,6 +207,7 @@ docker build --target bot -t sirubot-bot .
 | [docs/api-data-api.md](docs/api-data-api.md) | data-api 엔드포인트, 인증, 캐시 TTL, 스케줄러 |
 | [docs/api-dashboard.md](docs/api-dashboard.md) | 대시보드 API 라우트, 권한, rate limit |
 | [docs/3rdparty.md](docs/3rdparty.md) | Lavalink 플러그인과 외부 서비스 |
+| [docs/feature-guidelines.md](docs/feature-guidelines.md) | 슬래시 명령 한도 관리와 새 기능 도입 기준 |
 | [docs/README.md](docs/README.md) | 문서 목록과 작성 규칙 |
 | [AGENTS.md](AGENTS.md) | 코딩 에이전트와 기여자를 위한 규칙 |
 

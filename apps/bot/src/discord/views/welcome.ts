@@ -1,5 +1,5 @@
 import { addSeparator, createContainer, emoji } from '@sirubot/utils';
-import { BOT_LANGUAGE_NOTE, BOT_TAGLINE } from '@sirubot/utils/brand';
+import { BOT_TAGLINE } from '@sirubot/utils/brand';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type ApplicationCommand, type ContainerBuilder } from 'discord.js';
 import { commandMention } from '../../lib/commandMention.ts';
 import { onboardingId } from '../customIds.ts';
@@ -20,36 +20,34 @@ export interface WelcomeViewOptions {
 
 function buttons(options: WelcomeViewOptions): ActionRowBuilder<ButtonBuilder> {
 	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		new ButtonBuilder().setCustomId(onboardingSettingsCustomId).setLabel('서버 설정 시작').setEmoji('⚙️').setStyle(ButtonStyle.Primary)
+		new ButtonBuilder().setCustomId(onboardingSettingsCustomId).setLabel('서버 설정 시작').setEmoji(emoji('tools')).setStyle(ButtonStyle.Primary)
 	);
 	if (options.kind === 'rejoin') return row;
 	if (options.dashboardUrl) {
-		row.addComponents(new ButtonBuilder().setURL(options.dashboardUrl).setLabel('대시보드 열기').setEmoji('🌐').setStyle(ButtonStyle.Link));
+		row.addComponents(
+			new ButtonBuilder().setURL(options.dashboardUrl).setLabel('대시보드 열기').setEmoji(emoji('globe')).setStyle(ButtonStyle.Link)
+		);
 	}
 	row.addComponents(
-		new ButtonBuilder().setCustomId(onboardingTourCustomId).setLabel('기능 둘러보기').setEmoji('🧭').setStyle(ButtonStyle.Secondary)
+		new ButtonBuilder().setCustomId(onboardingTourCustomId).setLabel('기능 둘러보기').setEmoji(emoji('mag')).setStyle(ButtonStyle.Secondary)
 	);
 	return row;
 }
 
 function bodyText(options: WelcomeViewOptions): string {
 	if (options.kind === 'rejoin') {
-		return [`### 다시 와 주셔서 고마워요! ${emoji('music_note')}`, '예전 설정은 그대로 남아 있어요. 아래 버튼으로 바로 확인할 수 있어요.'].join(
-			'\n'
-		);
+		return [`### 다시 와 주셔서 고마워요! ${emoji('music_note')}`, '기존 설정은 그대로 남아 있어요.'].join('\n');
 	}
 	const lines = [
 		`### 시루를 초대해 주셔서 고마워요! ${emoji('music_note')}`,
 		BOT_TAGLINE,
-		`-# ${BOT_LANGUAGE_NOTE}`,
 		'',
 		'**바로 해 보기**',
 		`- 음성 채널에 들어가서 ${commandMention('play', options.index)}에 곡 이름을 넣어 보세요.`,
-		'- 채팅에서 저를 멘션하면 AI로 대답해요.',
+		'- 채팅에서 저를 멘션해서 질문하거나 명령할 수 있어요.',
 		`- ${commandMention('help', options.index)}로 할 수 있는 일을 카테고리별로 볼 수 있어요.`
 	];
-	if (options.supportServerUrl) lines.push('', `-# 궁금한 점이나 문제는 [지원 서버](${options.supportServerUrl})에 알려 주세요.`);
-	lines.push('-# 서버 설정은 서버 관리 권한이 있는 분만 열 수 있어요.');
+	if (options.supportServerUrl) lines.push('', `-# 문의는 [지원 서버](${options.supportServerUrl})로 남겨 주세요.`);
 	return lines.join('\n');
 }
 

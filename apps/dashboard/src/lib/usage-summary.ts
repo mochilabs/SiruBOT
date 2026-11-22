@@ -1,7 +1,7 @@
-import { BOT_MODULES, type BotModuleId,featureModule } from "@sirubot/utils/modules";
+import { BOT_MODULES, type BotModuleId, featureModule } from "@sirubot/utils/modules";
 
 /**
- * /admin "사용 지표" 탭 집계 — 봇이 쌓는 FeatureDailyUse·GuildLifecycle을 표 3개로 묶어요.
+ * /admin "사용 지표" 탭 집계 — 봇이 익명으로 쌓는 FeatureDailyUse와 GuildLifecycle을 표 3개로 묶어요.
  * DB 조회는 API 라우트가 하고, 여기는 순수 계산만 해요 (테스트하기 쉽게).
  */
 
@@ -13,9 +13,8 @@ export interface LifecycleRow {
 	leftAt: Date | null;
 }
 
-/** featureDailyUse.groupBy({ by: ["guildId", "feature"], _sum: { count } }) 결과 한 줄 */
+/** featureDailyUse.groupBy({ by: ["feature"], _sum: { count } }) 결과 한 줄 */
 export interface UsageGroupRow {
-	guildId: string;
 	feature: string;
 	count: number;
 }
@@ -35,7 +34,6 @@ export interface ModuleUsage {
 	id: BotModuleId;
 	label: string;
 	emoji: string;
-	activeGuilds: number;
 	uses: number;
 }
 
@@ -63,24 +61,20 @@ export function summarizeActivation(rows: readonly LifecycleRow[]): ActivationSu
 	};
 }
 
-/** 모듈별 활성 서버 수(그 모듈 기능을 한 번이라도 쓴 서버)와 사용 횟수. 표 순서는 BOT_MODULES 순서예요. */
+/** 익명 모듈별 전체 사용 횟수. 표 순서는 BOT_MODULES 순서예요. */
 export function summarizeModules(rows: readonly UsageGroupRow[]): ModuleUsage[] {
-	const guilds = new Map<BotModuleId, Set<string>>();
 	const uses = new Map<BotModuleId, number>();
 	for (const row of rows) {
 		// 재생 실패·온보딩 발송은 사람이 쓴 게 아니라서 모듈 사용에서 빼요
 		if (row.feature.startsWith("playback:") || row.feature === "onboarding:sent") continue;
 		const moduleId = featureModule(row.feature);
 		if (!moduleId) continue;
-		if (!guilds.has(moduleId)) guilds.set(moduleId, new Set());
-		guilds.get(moduleId)!.add(row.guildId);
 		uses.set(moduleId, (uses.get(moduleId) ?? 0) + row.count);
 	}
 	return BOT_MODULES.map((m) => ({
 		id: m.id,
 		label: m.label,
 		emoji: m.emoji,
-		activeGuilds: guilds.get(m.id)?.size ?? 0,
 		uses: uses.get(m.id) ?? 0,
 	}));
 }

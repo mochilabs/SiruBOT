@@ -26,12 +26,12 @@ export const GET = createGuildApiHandler({
 					select: { joinedAt: true, firstUseAt: true, leftAt: true },
 				}),
 				db.featureDailyUse.groupBy({
-					by: ["guildId", "feature"],
+					by: ["feature"],
 					where: { day: { gte: usageFrom } },
 					_sum: { count: true },
 				}),
 			]);
-			const rows = grouped.map((g) => ({ guildId: g.guildId, feature: g.feature, count: g._sum.count ?? 0 }));
+			const rows = grouped.map((g) => ({ feature: g.feature, count: g._sum.count ?? 0 }));
 
 			const body: AdminUsageResponse = {
 				activation: summarizeActivation(lifecycles),

@@ -13,6 +13,8 @@ export interface ServerFeatureItem {
 	icon?: React.ReactNode;
 	/** group이 바뀌는 지점에는 헤더 없이 얇은 구분선만 그려요 */
 	group?: string;
+	/** 소속 모듈이 꺼져 있으면 흐리게 표시해요 (클릭은 유지해서 설정 확인·켜기 가능) */
+	dimmed?: boolean;
 }
 
 interface ServerFeatureSidebarProps {
@@ -69,12 +71,14 @@ export function ServerFeatureSidebar({ items, active, onSelect, groupLabels }: S
 									className={cn(
 										"relative z-10 flex w-full items-center gap-3 rounded-menu border-0 px-3.5 py-2 text-left text-sm transition-colors duration-fast focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
 										isActive ? "font-extrabold text-primary-text" : "font-medium text-foreground/70 hover:bg-accent/15 hover:text-foreground",
+										item.dimmed && !isActive && "opacity-55 hover:opacity-80",
 									)}
 								>
 									<span aria-hidden className={cn("shrink-0 transition-colors duration-fast", isActive ? "text-primary-text" : "text-muted-foreground")}>
 										{item.icon}
 									</span>
-									<span className="truncate">{item.label}</span>
+									<span className="min-w-0 flex-1 truncate">{item.label}</span>
+									{item.dimmed && <span className="shrink-0 text-2xs font-semibold text-muted-foreground">꺼짐</span>}
 								</button>
 							</Fragment>
 						);

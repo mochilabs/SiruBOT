@@ -18,6 +18,7 @@ export const HELP_COMMAND_SUMMARIES: Readonly<Record<string, string>> = {
 	favorites: '즐겨찾기를 관리해요.',
 	// 커뮤니티
 	rolepanel: '역할 패널을 관리해요.',
+	announce: '정해진 시각에 채널로 메시지를 예약해요. 만들기·목록·삭제는 서버 관리 권한이 필요해요.',
 	ticket: '고객지원 및 문의 티켓 시스템을 관리해요.',
 	profile: '프로필(생일·별자리·음악 기록)을 확인하고 관리해요.',
 	checkin: '매일 출석 체크를 해요. 연속 출석하면 스트릭이 쌓여요.',
@@ -39,11 +40,8 @@ export const HELP_COMMAND_SUMMARIES: Readonly<Record<string, string>> = {
 	privacy: '내 데이터를 확인하거나 지워요. (AI 기억·프로필·게임 전적)',
 	help: '사용 가능한 명령어 목록을 보여줘요.',
 	// 관리
-	settings: '봇의 서버 설정을 관리해요.',
-	purge: '최근 14일 이내의 메시지를 확인 후 삭제해요.',
-	mixer: '믹서 설정과 상태를 보여줘요.',
-	'chat-settings': 'AI 사용 범위와 현재 채널 상태를 확인해요.',
-	chattools: '이 채널에서 채팅 유틸 기능을 켜거나 꺼요.'
+	settings: '음악·믹서·채널·AI 채팅 등 봇의 서버 설정을 관리해요.',
+	purge: '최근 14일 이내의 메시지를 확인 후 삭제해요.'
 };
 
 /** 서브커맨드나 승격 명령으로 따로 그리는 명령 */

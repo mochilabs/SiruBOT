@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextRunAt, parseTimeOfDay } from './jobRecurrence.ts';
+import { nextRunAt, parseTimeOfDay } from './jobRecurrence.js';
 
 /** KST 시각 문자열 → Date (테스트 가독성용) */
 const kst = (text: string) => new Date(`${text}+09:00`);

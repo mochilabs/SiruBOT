@@ -16,6 +16,15 @@ export class GuildDeleteListener extends Listener {
 				.catch((error: unknown) => this.container.logger.warn(`[onboarding] 나간 기록 실패 (guild ${guild.id}): ${error}`));
 		}
 
+		// 나간 서버의 대기 중 예약 메시지는 지워요 — 다시 들어왔을 때 오래된 공지가 갑자기 나가지 않게요
+		if (guild.available !== false) {
+			await this.container.scheduledMessages
+				?.purgeGuild(guild.id)
+				.catch((error: unknown) =>
+					this.container.logger.warn(`[scheduled-message] 나간 서버의 예약 정리 실패 (guild ${guild.id}): ${error}`)
+				);
+		}
+
 		if (this.container.audio) {
 			const player = this.container.audio.getPlayer(guild.id);
 			if (player) {

@@ -31,7 +31,7 @@ export const filterId = defineCustomId({
 });
 
 /**
- * 서버 설정 패널과 방 이름 템플릿 모달 — `views/settings.ts` ↔ `settings.ts` · `settingsModal.ts`
+ * 서버 설정 패널과 모달 — `views/settings.ts`(`settings/` 표에서 생성) ↔ `interaction-handlers/settings.ts` · `settingsModal.ts`
  * 액션 이름은 `{동작}{대상}` 형태이고, 어느 화면(mode)으로 다시 그릴지는 핸들러의 표가 정해요.
  */
 export const settingsId = defineCustomId({
@@ -61,9 +61,30 @@ export const settingsId = defineCustomId({
 		jtcTemplate: {},
 		selectJtcCategory: {},
 		selectJtcLimit: {},
-		/** 방 이름 템플릿 모달과 그 안의 입력칸 — 컴포넌트 핸들러가 아니라 `settingsModal.ts`가 받아요. */
+		/** 오디오 페이지: 곡 전환·갭리스·정규화·안내 방식 (구 `/믹서`) */
+		selectTransition: {},
+		toggleGapless: {},
+		toggleNormalization: {},
+		editCrossfade: {},
+		editAutomix: {},
+		selectAnnounceMode: {},
+		/** AI 채팅 페이지 (구 `/채팅설정`) */
+		selectAiMode: {},
+		resetAiHistory: {},
+		/** 채팅 유틸 페이지 (구 `/채팅유틸`) */
+		toggleEmojiEnlarge: {},
+		toggleQuote: {},
+		toggleEmbedFix: {},
+		selectCountingChannel: {},
+		disableCounting: {},
+		/** 모달과 그 안의 입력칸 — 컴포넌트 핸들러가 아니라 `settingsModal.ts`가 받아요. */
 		jtcTemplateModal: {},
-		jtcTemplateInput: {}
+		jtcTemplateInput: {},
+		crossfadeModal: {},
+		crossfadeInput: {},
+		automixModal: {},
+		automixTempoInput: {},
+		automixConfidenceInput: {}
 	}
 });
 

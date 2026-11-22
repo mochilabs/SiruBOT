@@ -86,6 +86,7 @@ model Guild {
   rolePanels    RolePanel[]
   starboardSettings StarboardSettings?
   starboardEntries  StarboardEntry[]
+  scheduledMessageSettings ScheduledMessageSettings?
 }
 
 // 커스텀 명령어 — 대시보드(관리자)가 만드는 접두사 메시지 명령어. 봇의 접두사 리스너가 spec(JSON 스텝 체인)을 순차 실행해요.
@@ -216,15 +217,13 @@ model GuildLifecycle {
 }
 
 /// 서버별 일별 기능 사용 집계 (KST 날짜). feature 키 규칙은 @sirubot/utils/modules. 사용자 ID는 남기지 않고 고유 사용자 수만 둬요.
+/// 익명 일별 기능 사용 횟수 — 서버·사용자 식별자 없이 KST 날짜×기능 합계만 기록해요
 model FeatureDailyUse {
-  guildId String
   day     DateTime @db.Date
   feature String
   count   Int      @default(0)
-  /// 그날 쓴 고유 사용자 수 (Redis Set 크기로 덮어써요)
-  users   Int      @default(0)
 
-  @@id([guildId, day, feature])
+  @@id([day, feature])
   @@index([day])
 }
 
@@ -540,6 +539,19 @@ model RolePanelButton {
   panel    RolePanel @relation(fields: [panelId], references: [id], onDelete: Cascade)
 
   @@index([panelId])
+}
+
+// 예약 메시지 서버별 상한·간격 — 길드당 1:1이고 행이 없으면 기본값(25개, 10분)이에요. 계약은 packages/utils/src/scheduledMessage.ts.
+// 예약 자체는 ScheduledJob(kind 'scheduled-message')에 저장해요.
+model ScheduledMessageSettings {
+  guildId            String   @id
+  guild              Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  /// 서버당 활성 예약 상한 (1~100)
+  maxActive          Int      @default(25)
+  /// 같은 채널 예약 사이 최소 간격(분, 1~1440)
+  minIntervalMinutes Int      @default(10)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 // 스타보드 설정 — 길드당 1:1. channelId가 null이면 꺼진 상태예요. 계약은 packages/utils/src/starboard.ts.

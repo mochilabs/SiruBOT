@@ -207,6 +207,7 @@ Prebuilt images are published to GitHub Container Registry as `ghcr.io/mochilabs
 | [docs/api-data-api.md](docs/api-data-api.md) | data-api endpoints, auth, cache TTLs, schedulers |
 | [docs/api-dashboard.md](docs/api-dashboard.md) | Dashboard API routes, permissions, rate limits |
 | [docs/3rdparty.md](docs/3rdparty.md) | Lavalink plugins and external services |
+| [docs/feature-guidelines.md](docs/feature-guidelines.md) | Slash command budget and criteria for adding a feature |
 | [docs/README.md](docs/README.md) | Documentation index and writing rules |
 | [AGENTS.md](AGENTS.md) | Conventions for coding agents and contributors |
 
