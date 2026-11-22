@@ -151,11 +151,11 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 				memberCount: body.context.memberCount,
 				avatarUrl: body.context.avatarUrl
 			};
-			const buffer = await deduped(`img:greeting:${body.guildId}:${body.kind}:${body.context.userId}:${payloadHash(body)}`, () =>
+			const card = await deduped(`img:greeting:${body.guildId}:${body.kind}:${body.context.userId}:${payloadHash(body)}`, () =>
 				renderGreetingCard(image, context)
 			);
 			metrics.request(`image-member-card-${body.kind}`);
-			return reply.type('image/png').send(buffer);
+			return reply.type(card.contentType).send(card.buffer);
 		} catch (error) {
 			return sendError(reply, error);
 		}

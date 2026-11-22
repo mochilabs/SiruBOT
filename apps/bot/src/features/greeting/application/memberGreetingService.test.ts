@@ -45,7 +45,7 @@ const member = {
 	avatarUrl: null
 };
 
-function makeService() {
+function makeService(renderMemberCard: (...args: never[]) => Promise<{ buffer: Buffer; contentType: string } | null> = async () => null) {
 	return createMemberGreetingService({
 		logger,
 		signingKey: '',
@@ -53,7 +53,7 @@ function makeService() {
 		getPendingStore: () => undefined,
 		getGuild,
 		getGuildSettings: vi.fn(),
-		renderMemberCard: vi.fn(async () => null),
+		renderMemberCard: vi.fn(renderMemberCard) as never,
 		messages: { components: components as never }
 	});
 }
@@ -103,5 +103,30 @@ describe('MemberGreetingService.send — 렌더링 포트 호출', () => {
 		const payload = channelSend.mock.calls[0]![0] as { components: unknown; files: unknown[] };
 		expect(payload.components).toEqual([{ fake: true }]);
 		expect(payload.files).toEqual([]);
+	});
+});
+
+describe('MemberGreetingService.send — 카드 첨부 파일 이름', () => {
+	const imageConfig = () => config({ useImage: true, image: { background: { presetId: 'rose', dataUri: null }, layers: [] } });
+	const files = () => (channelSend.mock.calls[0]![0] as { files: Array<{ name: string }> }).files;
+
+	async function sendWithCard(contentType: string) {
+		getGuild.mockReturnValue(fakeGuild());
+		channelSend.mockClear();
+		components.mockClear();
+		const service = makeService(async () => ({ buffer: Buffer.from([1, 2, 3]), contentType }));
+		return service.send('guild-1', 'welcome', member, 42, imageConfig(), { isTest: false });
+	}
+
+	it('PNG 카드는 greeting-welcome.png로 첨부해요', async () => {
+		expect((await sendWithCard('image/png')).ok).toBe(true);
+		expect(files().map((file) => file.name)).toEqual(['greeting-welcome.png']);
+		expect(components).toHaveBeenCalledWith(expect.objectContaining({ imageFilename: 'greeting-welcome.png' }));
+	});
+
+	it('움직이는 카드는 애니메이션 WebP라 greeting-welcome.webp로 첨부하고 같은 이름을 컴포넌트에 넘겨요', async () => {
+		expect((await sendWithCard('image/webp')).ok).toBe(true);
+		expect(files().map((file) => file.name)).toEqual(['greeting-welcome.webp']);
+		expect(components).toHaveBeenCalledWith(expect.objectContaining({ imageFilename: 'greeting-welcome.webp' }));
 	});
 });

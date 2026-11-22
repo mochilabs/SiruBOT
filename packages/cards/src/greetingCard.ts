@@ -8,6 +8,7 @@
  */
 import { greetingPresetBackgroundPlan } from '@sirubot/utils/greetingCardDesign';
 import {
+	greetingAnimationDurationMs,
 	GREETING_CARD_H,
 	GREETING_CARD_W,
 	renderGreetingTemplate,
@@ -18,6 +19,7 @@ import {
 	type GreetingShapeLayer,
 	type GreetingTextLayer
 } from '@sirubot/utils/memberGreeting';
+import { animationDeclaration } from './greetingAnimations.js';
 import { shapeSvg } from './greetingShapes.js';
 import { CARD_FONT, h, img, type CardChild, type CardElement } from './kit.js';
 import { W } from './tokens.js';
@@ -40,9 +42,11 @@ const fill = { position: 'absolute', left: 0, top: 0, width: '100%', height: '10
 /** 인사 카드 노드 — 1200×675 루트 하나예요. Takumi에 `{ width: 1200, height: 675 }`로 넘겨요. */
 export function greetingCard(config: GreetingImage, vars: GreetingCardVars): CardElement {
 	const children: CardChild[] = [...backgroundNodes(config.background)];
+	// 움직이는 레이어가 있으면 카드 한 바퀴 길이를 정해서 모든 레이어 주기를 그 약수로 맞춰요 (WebP 반복이 끊기지 않게)
+	const loopMs = greetingAnimationDurationMs(config);
 	for (const layer of config.layers) {
 		if (layer.hidden) continue; // 숨김 레이어는 렌더에서 건너뛰어요
-		children.push(layerNode(layer, vars));
+		children.push(withAnimation(layerNode(layer, vars), layer, loopMs));
 	}
 	return h('div', { position: 'relative', width: GREETING_CARD_W, height: GREETING_CARD_H, overflow: 'hidden', fontFamily: CARD_FONT }, children);
 }
@@ -81,6 +85,31 @@ function layerNode(layer: GreetingLayer, vars: GreetingCardVars): CardElement {
 	}
 }
 
+/**
+ * 움직임이 있는 레이어는 같은 박스(left/top/width/height)를 가진 바깥 div로 감싸서 거기에 `animation`을 입혀요.
+ * 안쪽 레이어의 회전·투명도·흐림은 그대로라 움직임과 곱해져요(대체하지 않아요). 움직임이 없으면 노드를 그대로 돌려줘요.
+ * 텍스트는 안쪽 회전과 같은 기준점(x, y)을 변환 원점으로 써서 left/right 정렬에서도 제자리에서 움직여요.
+ */
+function withAnimation(node: CardElement, layer: GreetingLayer, loopMs: number): CardElement {
+	if (!layer.animation) return node;
+	const style = (node.props.style ?? {}) as Record<string, string | number>;
+	const { left, top, width, height } = style;
+	const inner = { ...node, props: { ...node.props, style: { ...style, left: 0, top: 0 } } } as CardElement;
+	return h(
+		'div',
+		{
+			position: 'absolute',
+			left: left ?? 0,
+			top: top ?? 0,
+			width: width ?? 0,
+			height: height ?? 0,
+			...(layer.type === 'text' ? { transformOrigin: textAnchorOrigin(layer) } : {}),
+			animation: animationDeclaration(layer.animation, loopMs)
+		},
+		inner
+	);
+}
+
 /** 카드 %좌표 → 카드 px 중심 */
 function center(layer: { x: number; y: number }): { cx: number; cy: number } {
 	return { cx: round((GREETING_CARD_W * layer.x) / 100), cy: round((GREETING_CARD_H * layer.y) / 100) };
@@ -88,6 +117,15 @@ function center(layer: { x: number; y: number }): { cx: number; cy: number } {
 
 function round(value: number): number {
 	return Math.round(value * 100) / 100;
+}
+
+/** 텍스트 박스 안에서 기준점(x, y)의 위치 — 회전·움직임의 변환 원점이에요 (box 좌표 px). */
+function textAnchorOrigin(layer: GreetingTextLayer): string {
+	const { cx } = center(layer);
+	const maxW = Math.max(120, 2 * Math.min(cx, GREETING_CARD_W - cx) - TEXT_MARGIN);
+	const boxH = Math.ceil(layer.size * 1.5);
+	const left = layer.align === 'left' ? cx : layer.align === 'center' ? cx - maxW / 2 : cx - maxW;
+	return `${round(cx - left)}px ${round(boxH / 2)}px`;
 }
 
 /**
@@ -118,7 +156,7 @@ function textNode(layer: GreetingTextLayer, vars: GreetingCardVars): CardElement
 			alignItems: 'center',
 			justifyContent: justify,
 			// 회전은 텍스트 기준점(x, y)을 중심으로 해요 — left/right 정렬에서도 기준점이 그대로여야 해서 원점을 직접 줘요
-			...(layer.rotation ? { transform: `rotate(${layer.rotation}deg)`, transformOrigin: `${round(cx - left)}px ${round(boxH / 2)}px` } : {})
+			...(layer.rotation ? { transform: `rotate(${layer.rotation}deg)`, transformOrigin: textAnchorOrigin(layer) } : {})
 		},
 		text
 			? h(

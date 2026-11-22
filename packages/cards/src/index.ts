@@ -13,3 +13,4 @@ export {
 	type PreparedArtwork
 } from './artwork.js';
 export { greetingCard, type GreetingCardVars } from './greetingCard.js';
+export { animationDeclaration, animationName, animationPeriodMs, greetingAnimationCss } from './greetingAnimations.js';

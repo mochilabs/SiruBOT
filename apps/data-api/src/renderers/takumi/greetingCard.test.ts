@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_GREETINGS, GREETING_CARD_H, GREETING_CARD_W, GREETING_RENDER_SCALE, GREETING_TEMPLATES, type GreetingImage } from '@sirubot/utils';
+import {
+	DEFAULT_GREETINGS,
+	GREETING_CARD_H,
+	GREETING_CARD_W,
+	GREETING_RENDER_SCALE,
+	GREETING_TEMPLATES,
+	type GreetingAnimation,
+	type GreetingImage
+} from '@sirubot/utils';
 import type { GreetingCardContext } from '../memberGreetingCard.ts';
 import { renderGreetingCard } from './greetingCard.ts';
 
@@ -16,10 +24,34 @@ function expectPngSize(buffer: Buffer, width: number, height: number): void {
 	expect(buffer.readUInt32BE(20)).toBe(height);
 }
 
+/** 애니메이션 WebP 헤더 — 캔버스 크기(VP8X), 프레임 수(ANMF), 반복 횟수(ANIM, 0 = 무한)를 읽어요 */
+function webpInfo(buffer: Buffer): { width: number; height: number; frames: number; loop: number } {
+	expect(buffer.subarray(0, 4).toString()).toBe('RIFF');
+	expect(buffer.subarray(8, 12).toString()).toBe('WEBP');
+	let frames = 0;
+	for (let i = buffer.indexOf('ANMF'); i >= 0; i = buffer.indexOf('ANMF', i + 4)) frames += 1;
+	const anim = buffer.indexOf('ANIM');
+	return {
+		width: 1 + buffer.readUIntLE(24, 3),
+		height: 1 + buffer.readUIntLE(27, 3),
+		frames,
+		loop: anim >= 0 ? buffer.readUInt16LE(anim + 12) : -1
+	};
+}
+
+const base = DEFAULT_GREETINGS.welcome.image!;
+const withAnimation = (animation: GreetingAnimation): GreetingImage => ({
+	...base,
+	layers: [...base.layers, { id: 'a', type: 'shape', shape: 'star', x: 20, y: 20, width: 80, height: 80, color: '#ffffff', opacity: 1, animation }]
+});
+
 describe('renderGreetingCard', () => {
 	it('모든 템플릿을 출력 크기(1200×675 × 축소 배율)의 PNG로 그려요', async () => {
 		for (const template of GREETING_TEMPLATES) {
-			expectPngSize(await renderGreetingCard(template.image, context), OUT_W, OUT_H);
+			const card = await renderGreetingCard(template.image, context);
+			expect(card.contentType, template.id).toBe(template.image.layers.some((layer) => layer.animation) ? 'image/webp' : 'image/png');
+			if (card.contentType === 'image/png') expectPngSize(card.buffer, OUT_W, OUT_H);
+			else expect(webpInfo(card.buffer)).toMatchObject({ width: OUT_W, height: OUT_H });
 		}
 	});
 
@@ -33,7 +65,31 @@ describe('renderGreetingCard', () => {
 				{ id: 'i', type: 'image', x: 50, y: 50, width: 100, height: 100, dataUri: 'data:image/png;base64,AAAA', opacity: 1 }
 			]
 		};
-		expectPngSize(await renderGreetingCard(broken, context), OUT_W, OUT_H);
+		expectPngSize((await renderGreetingCard(broken, context)).buffer, OUT_W, OUT_H);
 		expect(warn).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('renderGreetingCard — 움직임', () => {
+	it('움직임이 없으면 PNG로 그려요', async () => {
+		const card = await renderGreetingCard(base, context);
+		expect(card.contentType).toBe('image/png');
+	});
+
+	it('움직임이 있으면 무한 반복 애니메이션 WebP로 그려요 (3초 × 20fps = 60프레임)', async () => {
+		const card = await renderGreetingCard(withAnimation({ type: 'float', durationMs: 3000, delayMs: 0, intensity: 0.5 }), context);
+		expect(card.contentType).toBe('image/webp');
+		expect(webpInfo(card.buffer)).toEqual({ width: OUT_W, height: OUT_H, frames: 60, loop: 0 });
+	}, 30_000);
+
+	it('회전 단독 애니메이션도 프레임이 여러 개예요 (0→360 두 키프레임은 정지가 되는 회귀)', async () => {
+		const card = await renderGreetingCard(withAnimation({ type: 'spin', durationMs: 2000, delayMs: 0, intensity: 0.5 }), context);
+		expect(webpInfo(card.buffer).frames).toBe(40);
+	}, 30_000);
+
+	it('숨긴 움직임 레이어만 있으면 PNG예요', async () => {
+		const hidden = withAnimation({ type: 'pulse', durationMs: 2000, delayMs: 0, intensity: 0.5 });
+		hidden.layers[hidden.layers.length - 1]!.hidden = true;
+		expect((await renderGreetingCard(hidden, context)).contentType).toBe('image/png');
 	});
 });

@@ -116,6 +116,32 @@ export async function reencodeImage(
 	return Buffer.from(await renderer.render(node, { ...size, ...encode }));
 }
 
+/** 레이아웃 크기(width×height)의 노드를 outputWidth 폭으로 균일 축소/확대하는 래퍼 — outputWidth가 같거나 없으면 그대로 돌려줘요. */
+function scaledTarget(
+	node: ReactNode,
+	size: { width: number; height?: number; outputWidth?: number }
+): { target: ReactNode; renderWidth: number; renderHeight: number | undefined } {
+	if (!size.outputWidth || size.outputWidth === size.width) return { target: node, renderWidth: size.width, renderHeight: size.height };
+	const scale = size.outputWidth / size.width;
+	const renderWidth = size.outputWidth;
+	const renderHeight = size.height ? Math.round(size.height * scale) : undefined;
+	const target = (
+		<Box style={{ width: renderWidth, ...(renderHeight ? { height: renderHeight } : {}), overflow: 'hidden' }}>
+			<Box
+				style={{
+					width: size.width,
+					...(size.height ? { height: size.height } : {}),
+					transform: `scale(${scale})`,
+					transformOrigin: 'top left'
+				}}
+			>
+				{node}
+			</Box>
+		</Box>
+	);
+	return { target, renderWidth, renderHeight };
+}
+
 /**
  * Takumi로 카드 노드를 PNG 버퍼로 그려요. 폰트를 못 찾으면 throw해서 라우트가 500으로 알려요.
  * height를 생략하면 레이아웃이 정한 높이로 그려요 (대기열 길이처럼 내용에 따라 달라지는 카드용).
@@ -125,36 +151,39 @@ export async function renderCardPng(node: ReactNode, size: { width: number; heig
 	const { renderer, hasFont } = await getCardRenderer();
 	if (!hasFont) throw new Error('card font unavailable');
 
-	let target = node;
-	let renderWidth = size.width;
-	let renderHeight = size.height;
-
-	if (size.outputWidth && size.outputWidth !== size.width) {
-		const scale = size.outputWidth / size.width;
-		renderWidth = size.outputWidth;
-		renderHeight = size.height ? Math.round(size.height * scale) : undefined;
-		target = (
-			<Box style={{ width: renderWidth, ...(renderHeight ? { height: renderHeight } : {}), overflow: 'hidden' }}>
-				<Box
-					style={{
-						width: size.width,
-						...(size.height ? { height: size.height } : {}),
-						transform: `scale(${scale})`,
-						transformOrigin: 'top left'
-					}}
-				>
-					{node}
-				</Box>
-			</Box>
-		);
-	}
-
+	const { target, renderWidth, renderHeight } = scaledTarget(node, size);
 	const { node: takumiNode } = await fromJsx(target);
 	return Buffer.from(
 		await renderer.render(takumiNode, {
 			width: renderWidth,
 			...(renderHeight ? { height: renderHeight } : {}),
 			format: 'png'
+		})
+	);
+}
+
+/**
+ * 카드 노드를 애니메이션 WebP로 그려요 (무한 반복). `css`에 `@keyframes`를, 노드 스타일에 `animation`을 넣어 두면
+ * durationMs 길이를 fps로 샘플링해요. 높이는 필수예요(프레임 크기를 고정해야 해요). 크기 조절은 `renderCardPng`와 같아요.
+ */
+export async function renderCardAnimation(
+	node: ReactNode,
+	options: { width: number; height: number; outputWidth?: number; css: string; durationMs: number; fps: number; quality?: number }
+): Promise<Buffer> {
+	const { renderer, hasFont } = await getCardRenderer();
+	if (!hasFont) throw new Error('card font unavailable');
+
+	const { target, renderWidth, renderHeight } = scaledTarget(node, options);
+	const { node: takumiNode } = await fromJsx(target);
+	return Buffer.from(
+		await renderer.renderAnimation({
+			scenes: [{ node: takumiNode, durationMs: options.durationMs }],
+			width: renderWidth,
+			height: renderHeight ?? options.height,
+			fps: options.fps,
+			format: 'webp',
+			quality: options.quality ?? 80,
+			css: [options.css]
 		})
 	);
 }

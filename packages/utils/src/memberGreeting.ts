@@ -44,6 +44,8 @@ export type GreetingTextLayer = {
 	/** 회전(도, 시계 방향) — 텍스트 기준점(x, y) 중심. 기본 0 */
 	rotation?: number;
 	/** 숨김 레이어 — 렌더러가 건너뛴다 (에디터 보임/숨김 토글이 저장돼요) */
+	/** 움직임 — 생략하면 정지. 하나라도 있으면 카드가 애니메이션 WebP로 나가요 */
+	animation?: GreetingAnimation;
 	hidden?: boolean;
 };
 
@@ -55,6 +57,8 @@ export type GreetingAvatarLayer = {
 	y: number;
 	size: number; // 지름 px
 	ringColor: string;
+	/** 움직임 — 생략하면 정지. 하나라도 있으면 카드가 애니메이션 WebP로 나가요 */
+	animation?: GreetingAnimation;
 	hidden?: boolean;
 };
 
@@ -70,8 +74,39 @@ export type GreetingImageLayer = {
 	opacity: number; // 0~1
 	/** 회전(도, 시계 방향) — 이미지 중심 기준. 기본 0 */
 	rotation?: number;
+	/** 움직임 — 생략하면 정지. 하나라도 있으면 카드가 애니메이션 WebP로 나가요 */
+	animation?: GreetingAnimation;
 	hidden?: boolean;
 };
+
+/**
+ * 레이어 움직임 프리셋 — 렌더러가 CSS 키프레임으로 바꿔요 (사용자 CSS 입력은 받지 않아요).
+ * float 위아래 둥실 · drift 대각선 이동 · sway 좌우 흔들림(회전) · spin 한 바퀴 회전 · pulse 커졌다 작아짐 · twinkle 깜빡임
+ */
+export const GREETING_ANIMATIONS = ['float', 'drift', 'sway', 'spin', 'pulse', 'twinkle'] as const;
+export type GreetingAnimationKind = (typeof GREETING_ANIMATIONS)[number];
+
+export type GreetingAnimation = {
+	type: GreetingAnimationKind;
+	/** 한 바퀴(반복 주기) 길이 ms */
+	durationMs: number;
+	/** 시작 위상 어긋남 ms — 여러 레이어가 같이 움직이지 않게 서로 엇갈리게 해요 (반복 주기 안에서 순환) */
+	delayMs: number;
+	/** 움직임 세기 0~1 — 이동 거리·각도·배율에 곱해요 */
+	intensity: number;
+};
+
+/** 애니메이션 카드 길이 상한(ms) — 렌더 시간·WebP 용량 상한 */
+export const GREETING_ANIMATION_MAX_MS = 5000;
+/** 애니메이션 WebP 프레임 속도 */
+export const GREETING_ANIMATION_FPS = 20;
+
+const greetingAnimationSchema = z.object({
+	type: z.enum(GREETING_ANIMATIONS),
+	durationMs: z.number().min(500).max(GREETING_ANIMATION_MAX_MS),
+	delayMs: z.number().min(0).max(GREETING_ANIMATION_MAX_MS),
+	intensity: z.number().min(0).max(1)
+});
 
 /** 도형 종류 — 렌더러가 SVG로 그려요 */
 export const GREETING_SHAPES = ['rect', 'circle', 'triangle', 'diamond', 'hexagon', 'star', 'heart'] as const;
@@ -107,6 +142,8 @@ export type GreetingShapeLayer = {
 	filled?: boolean;
 	/** 흐림 반경 px — 글로우·빛 번짐 장식용. 기본 0 */
 	blur?: number;
+	/** 움직임 — 생략하면 정지. 하나라도 있으면 카드가 애니메이션 WebP로 나가요 */
+	animation?: GreetingAnimation;
 	hidden?: boolean;
 };
 
@@ -117,6 +154,24 @@ export type GreetingImage = {
 	background: { presetId: string | null; dataUri: string | null };
 	layers: GreetingLayer[];
 };
+
+/** 숨기지 않은 레이어 중 움직임이 있는 것이 하나라도 있는지 — true면 카드를 애니메이션 WebP로 그려요 */
+export function hasGreetingAnimation(image: GreetingImage): boolean {
+	return image.layers.some((layer) => !layer.hidden && layer.animation !== undefined);
+}
+
+/**
+ * 애니메이션 카드 한 바퀴 길이(ms) — 움직이는 레이어 주기(durationMs) 중 가장 긴 값이에요 (상한 5초).
+ * WebP가 끊김 없이 반복되도록 렌더러가 다른 레이어의 주기를 이 값의 약수(L / n)로 맞춰요. 애니메이션이 없으면 0이에요.
+ */
+export function greetingAnimationDurationMs(image: GreetingImage): number {
+	let longest = 0;
+	for (const layer of image.layers) {
+		if (layer.hidden || !layer.animation) continue;
+		longest = Math.max(longest, layer.animation.durationMs);
+	}
+	return Math.min(longest, GREETING_ANIMATION_MAX_MS);
+}
 
 /**
  * 메시지 레이아웃 — Discord에 보내는 최상위 구조를 선택해요.
@@ -158,6 +213,7 @@ const textLayerSchema = z.object({
 	align: z.enum(['left', 'center', 'right']),
 	text: z.string().max(500),
 	rotation: z.number().min(-180).max(180).optional(),
+	animation: greetingAnimationSchema.optional(),
 	hidden: z.boolean().optional()
 });
 
@@ -167,6 +223,7 @@ const avatarLayerSchema = z.object({
 	...position,
 	size: z.number().min(40).max(600),
 	ringColor: z.string().regex(HEX_COLOR),
+	animation: greetingAnimationSchema.optional(),
 	hidden: z.boolean().optional()
 });
 
@@ -179,6 +236,7 @@ const imageLayerSchema = z.object({
 	dataUri: z.string().regex(DATA_URI).max(DATA_URI_MAX_LENGTH),
 	opacity: z.number().min(0).max(1),
 	rotation: z.number().min(-180).max(180).optional(),
+	animation: greetingAnimationSchema.optional(),
 	hidden: z.boolean().optional()
 });
 
@@ -199,6 +257,7 @@ const shapeLayerSchema = z.object({
 	strokeWidth: z.number().min(0).max(40).optional(),
 	filled: z.boolean().optional(),
 	blur: z.number().min(0).max(120).optional(),
+	animation: greetingAnimationSchema.optional(),
 	hidden: z.boolean().optional()
 });
 

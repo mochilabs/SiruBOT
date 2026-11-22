@@ -35,9 +35,22 @@ export interface YouTubeChapter {
 const GATEWAY_TIMEOUT_MS = 15_000;
 /** 이미지 렌더 POST 타임아웃: 카드 3종(지금 재생/프로필/인사)이 공유해요 */
 const IMAGE_RENDER_TIMEOUT_MS = 20_000;
+/** 멤버 인사 카드는 애니메이션 WebP를 그릴 수 있어서(data-api가 동시 2개로 제한) 대기 시간까지 넉넉히 둬요 */
+const MEMBER_CARD_RENDER_TIMEOUT_MS = 30_000;
+
+/** 렌더된 카드 이미지와 content-type — 첨부 파일 확장자를 정할 때 써요 */
+export interface RenderedImage {
+	buffer: Buffer;
+	contentType: string;
+}
 
 /** 이미지 렌더 POST 공용: URL 가드·타임아웃·content-type 검증·실패 시 로그 후 null 반환까지 한곳에서 처리해요 */
 async function renderImage(logger: AppLogger, path: string, body: unknown): Promise<Buffer | null> {
+	return (await renderImageTyped(logger, path, body, IMAGE_RENDER_TIMEOUT_MS))?.buffer ?? null;
+}
+
+/** renderImage와 같지만 content-type도 같이 돌려줘요 (인사 카드: PNG 또는 애니메이션 WebP) */
+async function renderImageTyped(logger: AppLogger, path: string, body: unknown, timeoutMs: number): Promise<RenderedImage | null> {
 	const base = gatewayBaseUrl();
 	if (!base) return null;
 	try {
@@ -45,12 +58,12 @@ async function renderImage(logger: AppLogger, path: string, body: unknown): Prom
 			method: 'POST',
 			headers: { 'content-type': 'application/json', ...dataApiAuthHeaders() },
 			body: JSON.stringify(body),
-			signal: AbortSignal.timeout(IMAGE_RENDER_TIMEOUT_MS)
+			signal: AbortSignal.timeout(timeoutMs)
 		});
 		if (!res.ok) throw new Error(`data-api ${res.status}`);
-		const type = res.headers.get('content-type') ?? '';
+		const type = (res.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase();
 		if (!type.startsWith('image/')) throw new Error(`unexpected content-type: ${type}`);
-		return Buffer.from(await res.arrayBuffer());
+		return { buffer: Buffer.from(await res.arrayBuffer()), contentType: type };
 	} catch (error) {
 		logger.warn(`[data-api] ${path} failed: ${error instanceof Error ? error.message : String(error)}`);
 		return null;
@@ -328,7 +341,7 @@ export interface MemberCardRenderContext {
 }
 
 /**
- * 멤버 인사(환영/작별) 카드 PNG 렌더. 실패/미설정 시 null (호출자가 텍스트 메시지로 폴백해요).
+ * 멤버 인사(환영/작별) 카드 렌더 — 움직임이 없으면 PNG, 있으면 애니메이션 WebP예요. 실패/미설정 시 null (호출자가 텍스트 메시지로 폴백해요).
  */
 async function renderMemberCard(
 	logger: AppLogger,
@@ -336,8 +349,8 @@ async function renderMemberCard(
 	kind: GreetingKind,
 	config: GreetingConfig,
 	context: MemberCardRenderContext
-): Promise<Buffer | null> {
-	return renderImage(logger, '/v1/image/member-card', { guildId, kind, config, context });
+): Promise<RenderedImage | null> {
+	return renderImageTyped(logger, '/v1/image/member-card', { guildId, kind, config, context }, MEMBER_CARD_RENDER_TIMEOUT_MS);
 }
 
 /** Wrapped 카드 입력 — data-api POST /v1/image/wrapped 바디와 같은 형식이에요. 집계는 data-api가 DB에서 직접 해요. */
