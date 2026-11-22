@@ -221,6 +221,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 								lineHeight: 1.18,
 								color: T.foreground,
 								marginTop: 14,
+								display: 'block',
 								lineClamp: 2
 							}}
 						>

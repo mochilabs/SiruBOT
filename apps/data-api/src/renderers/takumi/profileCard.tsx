@@ -289,7 +289,17 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 							</Box>
 						</Box>
 						{intro.trim() ? (
-							<Box style={{ fontSize: 26, color: theme.foreground, marginTop: 14, lineHeight: 1.35, lineClamp: 2, maxWidth: '100%' }}>
+							<Box
+								style={{
+									fontSize: 26,
+									color: theme.foreground,
+									marginTop: 14,
+									lineHeight: 1.35,
+									display: 'block',
+									lineClamp: 2,
+									maxWidth: '100%'
+								}}
+							>
 								{intro}
 							</Box>
 						) : null}
