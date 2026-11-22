@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
+import { ServerSwitcher } from "@/components/servers/server-switcher";
 import { ServerDashboard } from "@/components/servers/server-dashboard";
 import { STUB_GUILD_ID } from "@/lib/stub/guild-stub";
 
@@ -13,14 +14,37 @@ import { StubGate } from "./stub-gate";
  * ?tab= 으로 탭을 바꿀 수 있어요.
  */
 export default function DashboardLayoutPreview() {
-	if (process.env.NODE_ENV === "production") notFound();
+  if (process.env.NODE_ENV === "production") notFound();
 
-	return (
-		<Container>
-			<PageHeader className="mb-2 pb-0 sm:mb-4 sm:pb-2" title="데모 서버" />
-			<StubGate>
-				<ServerDashboard guildId={STUB_GUILD_ID} manageable guildName="데모 서버" />
-			</StubGate>
-		</Container>
-	);
+  return (
+    <Container>
+      <StubGate>
+        <div className="lg:hidden">
+          <PageHeader
+            className="mb-2 pb-0 sm:mb-4 sm:pb-2"
+            title={
+              <ServerSwitcher
+                guildId={STUB_GUILD_ID}
+                guildName="데모 서버"
+                icon={null}
+              />
+            }
+          />
+        </div>
+        <ServerDashboard
+          guildId={STUB_GUILD_ID}
+          manageable
+          guildName="데모 서버"
+          switcher={
+            <ServerSwitcher
+              variant="sidebar"
+              guildId={STUB_GUILD_ID}
+              guildName="데모 서버"
+              icon={null}
+            />
+          }
+        />
+      </StubGate>
+    </Container>
+  );
 }

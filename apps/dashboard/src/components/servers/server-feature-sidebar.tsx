@@ -83,11 +83,16 @@ export function ServerFeatureSidebar({
       className="hidden w-full lg:block lg:w-72 shrink-0 lg:sticky lg:top-20 lg:z-10"
       aria-label="서버 설정 기능"
     >
-      <Card padding="none" className="overflow-hidden">
+      <Card
+        padding="none"
+        className="flex max-h-[calc(100svh-6.5rem)] flex-col overflow-hidden"
+      >
         {header && (
-          <div className="border-b border-border-subtle p-2">{header}</div>
+          <div className="shrink-0 border-b border-border-subtle p-2">
+            {header}
+          </div>
         )}
-        <div className="relative flex max-h-[calc(100svh-9.5rem)] flex-col gap-0.5 overflow-y-auto p-2">
+        <div className="relative flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2">
           <SidebarIndicatorOverlay indicator={indicator} />
 
           {items.map((item, idx) => {
