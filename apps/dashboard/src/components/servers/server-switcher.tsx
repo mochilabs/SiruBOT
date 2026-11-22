@@ -27,7 +27,14 @@ function GuildIcon({ id, name, icon }: { id: string; name: string; icon: string 
   );
 }
 
-export function ServerSwitcher({ guildId, guildName, icon }: { guildId: string; guildName: string; icon: string | null }) {
+/**
+ * variant="header"는 페이지 제목 자리(큰 글씨), "sidebar"는 PC 기능 사이드바 맨 위의 꽉 찬 폭 트리거,
+ * "compact"는 모바일 기능 선택 버튼 오른쪽에 붙는 작은 트리거(아이콘 + 줄임 이름)예요.
+ * 사이드바 변형은 lg+에서만 보이므로 모바일 바텀시트는 만들지 않아요.
+ */
+export function ServerSwitcher({ guildId, guildName, icon, variant = "header" }: { guildId: string; guildName: string; icon: string | null; variant?: "header" | "sidebar" | "compact" }) {
+  const sidebar = variant === "sidebar";
+  const compact = variant === "compact";
   const router = useRouter();
   const searchParams = useSearchParams();
   // 세션 게이트는 useAuthedSWR이 담당해요 — servers/page.tsx와 같은 URL·계약
@@ -89,12 +96,12 @@ export function ServerSwitcher({ guildId, guildName, icon }: { guildId: string; 
   // 트리거는 표면 채움으로 배경과 구분되고, 열림·누름에서 chevron 회전과
   // 눌림(scale)으로 "작동하는 느낌"을 줘요
   const triggerClass = (open: boolean) =>
-    `h-auto min-h-12 max-w-full min-w-0 justify-start gap-3 px-2 py-1 text-xl font-bold tracking-normal sm:text-2xl ` +
+    (compact ? `h-11 min-h-11 w-full min-w-0 justify-start gap-2 rounded-menu px-2.5 text-sm font-bold tracking-normal ` : sidebar ? `h-auto min-h-12 w-full max-w-full min-w-0 justify-start gap-3 px-3 py-1 text-base font-bold tracking-normal ` : `h-auto min-h-10 max-w-full min-w-0 justify-start gap-2.5 px-2 py-0.5 text-lg font-bold tracking-normal sm:min-h-12 sm:gap-3 sm:py-1 sm:text-2xl `) +
     `bg-surface-1 transition-[background-color,transform] duration-fast hover:bg-surface-2 active:scale-[0.98] ` +
     (open ? "bg-surface-2" : "");
 
   return (
-    <div className="min-w-0 max-w-full">
+    <div className={sidebar ? "min-w-0 w-full" : compact ? "min-w-0 max-w-[46%] shrink-0" : "min-w-0 max-w-full"}>
       <Popover.Root open={desktopOpen} onOpenChange={setDesktopOpen}>
         <Popover.Trigger render={<Button ref={desktopTriggerRef} variant="ghost" aria-label={`${guildName} 서버 선택`} className={`hidden sm:inline-flex ${triggerClass(desktopOpen)}`}>{triggerContent(desktopOpen)}</Button>} />
         <Popover.Portal>
@@ -106,13 +113,13 @@ export function ServerSwitcher({ guildId, guildName, icon }: { guildId: string; 
           </Popover.Positioner>
         </Popover.Portal>
       </Popover.Root>
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+      {!sidebar && <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetTrigger render={<Button ref={mobileTriggerRef} variant="ghost" aria-label={`${guildName} 서버 선택`} className={`sm:hidden ${triggerClass(mobileOpen)}`}>{triggerContent(mobileOpen)}</Button>} />
         <SheetContent side="bottom" className="max-h-[85dvh] overflow-hidden rounded-t-dialog pb-[env(safe-area-inset-bottom)]">
           <SheetHeader className="px-4 pt-5"><SheetTitle>서버 선택</SheetTitle><SheetDescription>관리할 서버를 고르거나 봇을 초대해요.</SheetDescription></SheetHeader>
           {searchBox}{list}
         </SheetContent>
-      </Sheet>
+      </Sheet>}
       <Dialog open={pendingGuild !== null} onOpenChange={(open) => { if (!open) setPendingGuild(null); }}>
         <DialogContent initialFocus={cancelRef} finalFocus={() => window.matchMedia("(min-width: 640px)").matches ? desktopTriggerRef.current : mobileTriggerRef.current} showCloseButton={false}>
           <DialogHeader><DialogTitle>저장하지 않고 서버를 바꿀까요?</DialogTitle><DialogDescription>저장하지 않은 변경 사항이 있어요. {pendingGuild?.name} 서버로 이동하면 현재 서버에서 편집한 내용은 사라져요.</DialogDescription></DialogHeader>

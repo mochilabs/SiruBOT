@@ -226,7 +226,7 @@ export function Navbar() {
                       aria-haspopup="menu"
                       className="h-auto gap-2 px-2 py-1.5 hover:bg-primary-control/5"
                     >
-                      {session.user?.image && (
+                      {session.user?.image ? (
                         <Image
                           width={32}
                           height={32}
@@ -234,6 +234,14 @@ export function Navbar() {
                           alt={session.user.name || "User"}
                           className="w-8 h-8 rounded-full"
                         />
+                      ) : (
+                        // 이미지가 없으면 이니셜 원으로 자리를 채워 버튼이 빈 칸으로 보이지 않게 해요
+                        <span
+                          aria-hidden
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-sm font-semibold text-muted-foreground"
+                        >
+                          {(session.user?.name || "U").slice(0, 1)}
+                        </span>
                       )}
                       <span className="hidden lg:block text-sm font-bold text-foreground/80 pl-1">
                         {session.user?.name}
