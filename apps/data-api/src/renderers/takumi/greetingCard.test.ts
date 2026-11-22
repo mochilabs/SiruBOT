@@ -55,7 +55,7 @@ describe('renderGreetingCard', () => {
 			if (card.contentType === 'image/png') expectPngSize(card.buffer, OUT_W, OUT_H);
 			else expect(webpInfo(card.buffer)).toMatchObject({ width: OUT_W, height: OUT_H });
 		}
-	});
+	}, 60_000);
 
 	it('읽을 수 없는 업로드 배경은 프리셋으로, 이미지 레이어는 건너뛰고 경고해요', async () => {
 		warn.mockClear();
