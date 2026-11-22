@@ -10,16 +10,49 @@ import {
  * WASM 바이너리와 폰트(한글 서브셋 600·900 + TwemojiMozilla)는 처음 미리보기를 열 때 한 번만 받아요.
  */
 
+/** 기본으로 받는 폰트 — 굵기 400·700은 텍스트 레이어가 쓸 때만 따로 받아요 (각 약 2.6MB) */
 const FONT_FILES = [
   { path: "/fonts/PretendardJP-SemiBold.subset.ttf", name: CARD_FONT, weight: 600 },
   { path: "/fonts/PretendardJP-Black.subset.ttf", name: CARD_FONT, weight: 900 },
   { path: "/fonts/TwemojiMozilla.ttf", name: "Twemoji", generic: "emoji" as const },
 ] as const;
 
+const EXTRA_WEIGHT_FILES = {
+  400: "/fonts/PretendardJP-Regular.subset.ttf",
+  700: "/fonts/PretendardJP-Bold.subset.ttf",
+} as const;
+
 type TakumiRenderer = import("@takumi-rs/wasm").Renderer;
 type FromJsxFn = typeof import("@takumi-rs/helpers/jsx").fromJsx;
 
 let runtimePromise: Promise<{ renderer: TakumiRenderer; fromJsx: FromJsxFn }> | null = null;
+/** 이미 등록했거나 받는 중인 추가 굵기 */
+const extraWeights = new Map<number, Promise<void>>();
+
+/** 이미지의 텍스트 레이어가 400/700을 쓰면 해당 정적 폰트를 한 번만 받아 등록해요 (서버는 가변 폰트라 모든 굵기를 그려요) */
+export function ensureTextWeights(image: GreetingImage, renderer: TakumiRenderer): Promise<unknown> {
+  const needed = new Set<400 | 700>();
+  for (const layer of image.layers) {
+    if (layer.type === "text" && (layer.weight === 400 || layer.weight === 700)) needed.add(layer.weight);
+  }
+  return Promise.all(
+    [...needed].map((weight) => {
+      let pending = extraWeights.get(weight);
+      if (!pending) {
+        pending = (async () => {
+          const res = await fetch(EXTRA_WEIGHT_FILES[weight]);
+          if (!res.ok) throw new Error(`font ${EXTRA_WEIGHT_FILES[weight]} ${res.status}`);
+          await renderer.registerFont({ name: CARD_FONT, data: await res.arrayBuffer(), weight });
+        })().catch((error: unknown) => {
+          extraWeights.delete(weight);
+          throw error;
+        });
+        extraWeights.set(weight, pending);
+      }
+      return pending;
+    }),
+  );
+}
 
 /** Takumi WASM + 폰트를 처음 한 번만 초기화해요. 실패하면 다음 호출에서 다시 시도하도록 캐시를 비워요. */
 function loadRuntime() {
@@ -102,6 +135,7 @@ export async function renderGreetingPreviewUrl(
     loadRuntime(),
     loadAvatarDataUri(options.avatarSrc),
   ]);
+  await ensureTextWeights(image, renderer);
   const element = greetingCard(image, {
     ...SAMPLE,
     guildName: options.guildName,

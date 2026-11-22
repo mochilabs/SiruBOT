@@ -226,3 +226,127 @@ describe('greetingCard — 모든 템플릿', () => {
 		}
 	});
 });
+
+describe('greetingCard — 텍스트 효과 (P-17)', () => {
+	const text = (extra: Partial<Extract<GreetingLayer, { type: 'text' }>> = {}): GreetingLayer => ({
+		id: 't',
+		type: 'text',
+		x: 50,
+		y: 50,
+		size: 40,
+		color: '#ffffff',
+		bold: false,
+		align: 'center',
+		text: '안녕',
+		...extra
+	});
+	const inner = (layer: GreetingLayer): Record<string, string | number> => style(children(layerNodes(greetingCard(image([layer]), vars))[0]!)[0]!);
+	const outer = (layer: GreetingLayer): Record<string, string | number> => style(layerNodes(greetingCard(image([layer]), vars))[0]!);
+
+	it('효과 필드가 없으면 예전 스타일 그대로예요 (600/900, 줄 간격 1.25, 기본 그림자, 한 줄 말줄임)', () => {
+		expect(inner(text())).toEqual({
+			display: 'flex',
+			maxWidth: 1200 - 64,
+			fontSize: 40,
+			fontWeight: 600,
+			lineHeight: 1.25,
+			color: '#ffffff',
+			overflow: 'hidden',
+			textOverflow: 'ellipsis',
+			whiteSpace: 'nowrap',
+			textShadow: '0 2px 10px rgba(0,0,0,0.45)'
+		});
+		expect(inner(text({ bold: true })).fontWeight).toBe(900);
+		expect(outer(text())).toMatchObject({ width: 1200 - 64, height: 60 });
+	});
+
+	it('weight가 bold보다 우선해요', () => {
+		for (const weight of [400, 600, 700, 900] as const) expect(inner(text({ bold: true, weight })).fontWeight).toBe(weight);
+	});
+
+	it('글자 간격·줄 간격을 반영해요', () => {
+		expect(inner(text({ letterSpacing: 6, lineHeight: 1.6 }))).toMatchObject({ letterSpacing: '6px', lineHeight: 1.6 });
+		expect(inner(text({ letterSpacing: 0 }))).not.toHaveProperty('letterSpacing');
+	});
+
+	it('그림자: 지정하면 교체, null이면 제거해요', () => {
+		const shadow = { color: '#ff0000', opacity: 0.5, blur: 4, offsetX: 3, offsetY: -2 };
+		expect(inner(text({ shadow })).textShadow).toBe('3px -2px 4px rgba(255, 0, 0, 0.5)');
+		expect(inner(text({ shadow: null }))).not.toHaveProperty('textShadow');
+	});
+
+	it('외곽선은 -webkit-text-stroke이고 두께 0이면 그리지 않아요', () => {
+		expect(inner(text({ stroke: { color: '#000000', width: 4 } })).WebkitTextStroke).toBe('4px #000000');
+		expect(inner(text({ stroke: { color: '#000000', width: 0 } }))).not.toHaveProperty('WebkitTextStroke');
+	});
+
+	it('그라디언트 글자는 background-clip: text와 투명 글자색이에요 (0° = 왼→오른쪽)', () => {
+		const style0 = inner(text({ color: '#ff0000', gradient: { to: '#0000ff' } }));
+		expect(style0).toMatchObject({ backgroundClip: 'text', color: 'transparent', backgroundImage: 'linear-gradient(90deg, #ff0000, #0000ff)' });
+		expect(inner(text({ gradient: { to: '#0000ff', angle: 90 } })).backgroundImage).toContain('180deg');
+	});
+
+	it('maxWidth + wrap은 줄바꿈 박스이고 maxLines는 높이를 잘라요', () => {
+		const wrapped = text({ maxWidth: 300, size: 30, lineHeight: 1.2, maxLines: 2 });
+		expect(outer(wrapped)).toMatchObject({ width: 300, left: 450, height: Math.ceil(30 * 1.2 * 2) });
+		expect(inner(wrapped)).toMatchObject({ maxWidth: 300, textAlign: 'center', maxHeight: 72, overflow: 'hidden', textOverflow: 'ellipsis' });
+		expect(inner(wrapped)).not.toHaveProperty('whiteSpace');
+		// 줄 수 제한이 없으면 높이를 자르지 않아요
+		expect(inner(text({ maxWidth: 300 }))).not.toHaveProperty('maxHeight');
+	});
+
+	it("overflow 'ellipsis'면 maxWidth 폭의 한 줄 말줄임이에요", () => {
+		const layer = text({ maxWidth: 200, overflow: 'ellipsis', align: 'left', x: 10 });
+		expect(outer(layer)).toMatchObject({ width: 200, left: 120, height: 60 });
+		expect(inner(layer)).toMatchObject({ whiteSpace: 'nowrap', overflow: 'hidden', maxWidth: 200 });
+	});
+
+	it('회전의 변환 원점은 기준점이에요 (정렬별)', () => {
+		expect(outer(text({ rotation: 10, maxWidth: 300, align: 'left' })).transformOrigin).toMatch(/^0px /);
+		expect(outer(text({ rotation: 10, maxWidth: 300, align: 'right' })).transformOrigin).toMatch(/^300px /);
+	});
+});
+
+describe('greetingCard — 아바타 옵션 (P-17)', () => {
+	const avatar = (extra: Partial<Extract<GreetingLayer, { type: 'avatar' }>> = {}): GreetingLayer => ({
+		id: 'a',
+		type: 'avatar',
+		x: 50,
+		y: 50,
+		size: 200,
+		ringColor: '#ffffff',
+		...extra
+	});
+	const ring = (layer: GreetingLayer, avatarSrc: string | null = null) =>
+		layerNodes(greetingCard(image([layer]), { ...vars, avatar: avatarSrc }))[0]!;
+	const content = (layer: GreetingLayer, avatarSrc: string | null = null) => children(ring(layer, avatarSrc))[0] as CardElement;
+
+	it('옵션이 없으면 예전 원형 링(+6px)이에요', () => {
+		expect(style(ring(avatar()))).toMatchObject({ width: 212, height: 212, borderRadius: 9999 });
+		expect(style(ring(avatar()))).not.toHaveProperty('boxShadow');
+		expect(style(content(avatar())).borderRadius).toBe(9999);
+	});
+
+	it('ringWidth는 링 지름을 바꾸고 0이면 이미지 크기와 같아요', () => {
+		expect(style(ring(avatar({ ringWidth: 14 })))).toMatchObject({ width: 228, left: 600 - 114 });
+		expect(style(ring(avatar({ ringWidth: 0 })))).toMatchObject({ width: 200, height: 200 });
+	});
+
+	it('모양: rounded는 cornerRadius(기본 22%)와 링 두께만큼 바깥 반경, square는 0이에요', () => {
+		expect(style(ring(avatar({ shape: 'rounded' })))).toMatchObject({ borderRadius: 44 + 6 });
+		expect(style(content(avatar({ shape: 'rounded' }))).borderRadius).toBe(44);
+		expect(style(ring(avatar({ shape: 'rounded', cornerRadius: 30, ringWidth: 10 })))).toMatchObject({ borderRadius: 40 });
+		expect(style(ring(avatar({ shape: 'square' }))).borderRadius).toBe(0);
+		// 이미지가 있어도 같은 반경으로 잘라요
+		expect(style(content(avatar({ shape: 'rounded', cornerRadius: 30 }), 'data:image/png;base64,AAAA')).borderRadius).toBe(30);
+	});
+
+	it('그림자와 글로우는 box-shadow 한 줄로 합쳐져요', () => {
+		const shadow = { color: '#000000', opacity: 0.6, blur: 20, offsetX: 4, offsetY: 8 };
+		const glow = { color: '#ff0000', opacity: 0.9, blur: 30, spread: 6 };
+		expect(style(ring(avatar({ shadow }))).boxShadow).toBe('4px 8px 20px rgba(0, 0, 0, 0.6)');
+		expect(style(ring(avatar({ glow }))).boxShadow).toBe('0 0 30px 6px rgba(255, 0, 0, 0.9)');
+		expect(style(ring(avatar({ shadow, glow }))).boxShadow).toBe('4px 8px 20px rgba(0, 0, 0, 0.6), 0 0 30px 6px rgba(255, 0, 0, 0.9)');
+		expect(style(ring(avatar({ shadow: null, glow: null })))).not.toHaveProperty('boxShadow');
+	});
+});

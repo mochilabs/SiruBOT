@@ -1,7 +1,6 @@
 "use client";
 
 import { GREETING_ANIMATION_MAX_MS, type GreetingAnimation, type GreetingAnimationKind, type GreetingLayer, type GreetingShapeKind } from "@sirubot/utils/memberGreeting";
-import { Bold } from "lucide-react";
 
 import { Field } from "@/components/primitives/field";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { cn, radioArrowKeyDown } from "@/lib/utils";
 
 import { clampRatio } from "./greeting-draw";
+import { AvatarEffectFields, TextEffectFields } from "./layer-effects";
 
 const ALIGN_OPTIONS = [
 	{ value: "left", label: "왼쪽" },
@@ -41,6 +41,8 @@ const DEFAULT_ANIMATION: Omit<GreetingAnimation, "type"> = { durationMs: 2000, d
 
 interface LayerPropertiesProps {
 	layer: GreetingLayer | null;
+	/** 선택된 레이어 수 — 2 이상이면 속성 대신 안내만 보여요 */
+	selectedCount?: number;
 	saving: boolean;
 	onPatchLayer: (id: string, partial: Partial<GreetingLayer>) => void;
 	/** 편집 확정(되돌리기 한 단계) — 슬라이더는 값 확정, 입력 필드는 blur, 버튼은 클릭마다 호출해요 */
@@ -48,7 +50,10 @@ interface LayerPropertiesProps {
 }
 
 /** 선택된 레이어의 속성 편집 — 타입별 필드 + 공통 x/y */
-export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: LayerPropertiesProps) {
+export function LayerProperties({ layer, selectedCount = layer ? 1 : 0, saving, onPatchLayer, onCommit }: LayerPropertiesProps) {
+	if (selectedCount > 1) {
+		return <p className="text-sm text-muted-foreground">레이어 {selectedCount}개를 선택했어요. 드래그로 함께 옮기고, Ctrl+C/V·Ctrl+D·Delete로 복사·붙여넣기·복제·삭제할 수 있어요. 속성을 고치려면 레이어 하나만 선택하세요.</p>;
+	}
 	if (!layer) {
 		return <p className="text-sm text-muted-foreground">편집할 레이어를 선택하세요. 미리보기에서 레이어를 클릭하거나 위 목록에서 고를 수 있어요.</p>;
 	}
@@ -175,9 +180,6 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 						<ColorPicker value={layer.color} disabled={saving} label="글자" onChange={(color) => patch({ color })} onCommit={onCommit} />
 					</Field>
 					<div className="flex flex-wrap items-center gap-4">
-						<Button variant="state-toggle" active={layer.bold} icon={<Bold size={14} />} onClick={() => patchAndCommit({ bold: !layer.bold })} disabled={saving}>
-							굵게
-						</Button>
 						<div role="radiogroup" aria-label="정렬" className="inline-flex rounded-control bg-input p-0.5">
 							{ALIGN_OPTIONS.map((option) => (
 								<button
@@ -197,6 +199,7 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 							))}
 						</div>
 					</div>
+					<TextEffectFields layer={layer} saving={saving} patch={(partial) => patch(partial)} patchAndCommit={(partial) => patchAndCommit(partial)} onCommit={onCommit} />
 					{animationFields}
 				</div>
 			);
@@ -210,6 +213,7 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 					<Field label="링 색">
 						<ColorPicker value={layer.ringColor} disabled={saving} label="링" onChange={(color) => patch({ ringColor: color })} onCommit={onCommit} />
 					</Field>
+					<AvatarEffectFields layer={layer} saving={saving} patch={(partial) => patch(partial)} patchAndCommit={(partial) => patchAndCommit(partial)} onCommit={onCommit} />
 					{animationFields}
 				</div>
 			);
