@@ -6,7 +6,7 @@
 import { CARD_FONT, hexToRgba, RADIUS, stripEmoji, T, W } from '@sirubot/cards';
 import { BOT_NAME } from '@sirubot/utils';
 import { ellipsis, LIGHT, loadImage, Pill, STATUS_COLOR, Thumb, type ProfileCardInput } from './profileCard.tsx';
-import { Box, Icon, renderCardPng } from './takumiKit.tsx';
+import { Box, Icon, renderCardPng } from '../shared/takumiKit.tsx';
 
 export type ProfileTicketInput = Omit<ProfileCardInput, 'variant' | 'bannerUrl'>;
 

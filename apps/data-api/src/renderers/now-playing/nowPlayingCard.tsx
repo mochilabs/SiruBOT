@@ -8,10 +8,10 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { CARD_FONT, createAsyncLru, hexToRgba, mixHex, RADIUS, stripEmoji, T, W } from '@sirubot/cards';
 import { BOT_NAME } from '@sirubot/utils';
-import { formatClock } from './format.ts';
-import { prepareArtwork, type PreparedArtwork } from './artwork.ts';
-import type { IconName } from './icons.ts';
-import { Box, fetchImageDataUri, Icon, renderCardPng } from './takumiKit.tsx';
+import { formatClock } from '../shared/format.ts';
+import { prepareArtwork, type PreparedArtwork } from '../shared/artwork.ts';
+import type { IconName } from '../shared/icons.ts';
+import { Box, fetchImageDataUri, Icon, renderCardPng } from '../shared/takumiKit.tsx';
 
 export interface NowPlayingCardInput {
 	/** 캐시/dedup 키 — lavalink track.info.identifier */

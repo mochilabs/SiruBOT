@@ -139,7 +139,7 @@ All callers live in `mixerService.ts`. The plugin's `api/openapi.yaml` is the fu
 | `@redis/client` | `^5.12.1` (bot/data-api/utils), `^6.3.0` (dashboard only) | All apps | **Version mismatch:** dashboard may use a different Redis client API. Take care when porting shared code to dashboard. |
 | `fastify` | `^5.12.7` | data-api/shardmanager | `@fastify/websocket ^11.3.4`, `@fastify/autoload ^6.5.1` |
 | `next` / `react` | `16.4.3` / `19.3.1` | dashboard | Dev uses `--webpack`; build uses `--turbopack` (`AGENTS.md`). |
-| `@takumi-rs/core` / `@takumi-rs/wasm` / `@takumi-rs/helpers` / `react` | `^2.22.1` / `^2.22.1` / `^2.22.1` / `19.3.1` | data-api (`core`), dashboard (`wasm`) | Every card renderer (`apps/data-api/src/renderers/takumi/`, written as TSX) and browser greeting preview (`@takumi-rs/wasm`). `react` on data-api is only the JSX runtime and types; `fromJsx` runs without react-dom |
+| `@takumi-rs/core` / `@takumi-rs/wasm` / `@takumi-rs/helpers` / `react` | `^2.22.1` / `^2.22.1` / `^2.22.1` / `19.3.1` | data-api (`core`), dashboard (`wasm`) | Every card renderer (`apps/data-api/src/renderers/`, written as TSX) and browser greeting preview (`@takumi-rs/wasm`). `react` on data-api is only the JSX runtime and types; `fromJsx` runs without react-dom |
 | `youtubei.js` | `18.3.0` (exact pin) | data-api | See 3RD-08e |
 | `zod` | `^4.6.7` | All apps | Contract schema language |
 | `ws` | `^8.22.0` | shardmanager/shardclient | Shard WebSocket protocol |

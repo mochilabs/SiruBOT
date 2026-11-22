@@ -8,7 +8,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { CARD_FONT, RADIUS, stripEmoji, T, W } from '@sirubot/cards';
 import type { WrappedRanking, WrappedStats } from '../../services/wrapped.ts';
-import { Box, fetchImageDataUri, renderCardPng } from './takumiKit.tsx';
+import { Box, fetchImageDataUri, renderCardPng } from '../shared/takumiKit.tsx';
 
 export const WRAPPED_CARD_SIZE = { width: 900, height: 1700 } as const;
 /** 기록이 없을 때는 안내 카드 하나뿐이라 짧게 그려요. */

@@ -11,8 +11,8 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { CARD_FONT } from '@sirubot/cards';
 import { ZODIAC_MAP } from '../../providers/types.ts';
-import type { IconName } from './icons.ts';
-import { Box, Icon, renderCardPng } from './takumiKit.tsx';
+import type { IconName } from '../shared/icons.ts';
+import { Box, Icon, renderCardPng } from '../shared/takumiKit.tsx';
 
 interface ZodiacTheme {
 	primary: string;

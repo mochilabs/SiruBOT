@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderSvgRaster } from './takumiKit.tsx';
+import { renderSvgRaster } from '../shared/takumiKit.tsx';
 import { brandText, NOW_PLAYING_CARD_WIDTH, renderNowPlayingCard, type NowPlayingCardInput } from './nowPlayingCard.tsx';
 
 function input(patch: Partial<NowPlayingCardInput> = {}): NowPlayingCardInput {

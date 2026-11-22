@@ -8,10 +8,10 @@ import {
 	type GreetingAnimation,
 	type GreetingImage
 } from '@sirubot/utils';
-import type { GreetingCardContext } from '../memberGreetingCard.ts';
+import type { GreetingCardContext } from './memberGreetingCard.ts';
 import { fromJsx } from '@takumi-rs/helpers/jsx';
 import { renderGreetingCard } from './greetingCard.ts';
-import { getCardRenderer } from './takumiKit.tsx';
+import { getCardRenderer } from '../shared/takumiKit.tsx';
 
 const warn = vi.hoisted(() => vi.fn());
 vi.mock('../../utils/logger.ts', () => ({ getLogger: () => ({ warn, error: vi.fn(), info: vi.fn(), debug: vi.fn() }) }));

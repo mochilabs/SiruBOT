@@ -5,7 +5,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { CARD_FONT } from '@sirubot/cards';
 import type { WeatherCardInput } from '../../routes/weatherCardSchema.ts';
-import { Box, renderCardPng } from './takumiKit.tsx';
+import { Box, renderCardPng } from '../shared/takumiKit.tsx';
 
 type DailyDay = WeatherCardInput['daily'][number];
 

@@ -1,10 +1,10 @@
 /**
  * 멤버 인사 카드 공용 타입·업로드 이미지 정규화.
- * 카드 PNG 렌더링은 `takumi/greetingCard.ts`가 맡고, 이 파일은 대시보드에서 올라온 배경/스티커 이미지를 저장 규격에 맞게 축소·재인코딩해요.
+ * 카드 PNG 렌더링은 `greetingCard.ts`가 맡고, 이 파일은 대시보드에서 올라온 배경/스티커 이미지를 저장 규격에 맞게 축소·재인코딩해요.
  */
 import { imageSizeOf } from '@sirubot/cards';
 import { GREETING_ANIMATION_MAX_MS, parseGifTiming } from '@sirubot/utils';
-import { reencodeAnimatedGif, reencodeImage } from './takumi/takumiKit.tsx';
+import { reencodeAnimatedGif, reencodeImage } from '../shared/takumiKit.tsx';
 
 /** 인사 배경 정규화/디코딩 실패 — 라우트가 400으로 매핑해요 (WeatherError/DeliveryError와 같은 패턴) */
 export class GreetingBackgroundError extends Error {
