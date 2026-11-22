@@ -6,7 +6,8 @@
  * 높이는 내용(역할 칩·최근 곡 수)에 따라 달라요. 그림자는 비싸서 쓰지 않고, 경계선과 서피스 단차로 층을 나눠요.
  */
 import type { CSSProperties, ReactNode } from 'react';
-import { CARD_FONT, createAsyncLru, hexToRgba, mixHex, RADIUS, stripEmoji, T, W } from '@sirubot/cards';
+import { CARD_FONT, type CardTokens, createAsyncLru, hexToRgba, mixHex, RADIUS, stripEmoji, T, themedTokens, W } from '@sirubot/cards';
+import { THEME_PRESET_DEFAULT, THEME_PRESET_HEX, normalizeThemePreset } from '@sirubot/utils/guildSettingsContract';
 import { BOT_NAME } from '@sirubot/utils';
 import { prepareArtwork, type PreparedArtwork } from '../shared/artwork.ts';
 import type { IconName } from '../shared/icons.ts';
@@ -16,6 +17,8 @@ export type ProfileCardVariant = 'dashboard' | 'light' | 'aura';
 
 export interface ProfileCardInput {
 	variant: ProfileCardVariant;
+	/** 서버 테마 프리셋 — 다크 계열 카드의 색을 정해요. 비우면 기본(분홍). */
+	themePreset?: string;
 	displayName: string;
 	username: string;
 	avatarUrl: string | null;
@@ -65,19 +68,24 @@ export interface Theme {
 	chipText: string;
 }
 
-export const DARK: Theme = {
-	background: T.background,
-	panel: T.surface1,
-	panelInner: T.surface2,
-	border: 'rgba(163, 125, 137, 0.35)',
-	foreground: T.foreground,
-	muted: T.mutedForeground,
-	strong: T.primaryText,
-	accent: T.brand,
-	onAccent: T.brandForeground,
-	chipBg: hexToRgba(T.brand, 0.18),
-	chipText: T.primaryText
-};
+/** 다크 테마 — 토큰은 서버 테마에서 유도해요 (분홍=기본이면 대시보드 다크 토큰 그대로). */
+export function darkTheme(t: CardTokens): Theme {
+	return {
+		background: t.background,
+		panel: t.surface1,
+		panelInner: t.surface2,
+		border: hexToRgba(t.borderStrong, 0.35),
+		foreground: t.foreground,
+		muted: t.mutedForeground,
+		strong: t.primaryText,
+		accent: t.brand,
+		onAccent: t.brandForeground,
+		chipBg: hexToRgba(t.brand, 0.18),
+		chipText: t.primaryText
+	};
+}
+
+export const DARK: Theme = { ...darkTheme(T), border: 'rgba(163, 125, 137, 0.35)' };
 
 /** 대시보드 라이트 토큰(globals.css :root)을 옮긴 값 */
 export const LIGHT: Theme = {
@@ -160,7 +168,14 @@ export function Thumb({ uri, size, accent }: { uri: string | null; size: number;
 }
 
 export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer> {
-	const base = input.variant === 'light' ? LIGHT : DARK;
+	// 다크 계열(dashboard/aura)만 서버 테마를 따라가요. 분홍(기본)은 기존 DARK 그대로예요.
+	const themeAccent = THEME_PRESET_HEX[normalizeThemePreset(input.themePreset)];
+	const base =
+		input.variant === 'light'
+			? LIGHT
+			: themeAccent === THEME_PRESET_HEX[THEME_PRESET_DEFAULT]
+				? DARK
+				: darkTheme(themedTokens(themeAccent, THEME_PRESET_HEX[THEME_PRESET_DEFAULT]));
 	const tracks = input.topTracks.slice(0, 3);
 
 	// 이미지는 한 번에 받아요. 실패한 것은 null이라 자리표시자로 그려요.

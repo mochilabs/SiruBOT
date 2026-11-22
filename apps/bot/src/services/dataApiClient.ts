@@ -184,6 +184,8 @@ export async function fetchWeather(location: string, scope: WeatherScope = 'now'
  */
 export interface ProfileCardRequest {
 	preset?: 'dark' | 'ticket' | 'dashboard' | 'light' | 'aura';
+	/** 서버 테마 프리셋 — 다크 계열 카드의 색 */
+	themePreset?: string;
 	userId: string;
 	displayName: string;
 	username: string;
