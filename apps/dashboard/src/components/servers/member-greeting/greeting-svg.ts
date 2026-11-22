@@ -1,4 +1,4 @@
-import { CARD_FONT, greetingCard } from "@sirubot/cards";
+import { CARD_FONT, greetingAnimationCss, greetingCard } from "@sirubot/cards";
 import {
   GREETING_CARD_H,
   GREETING_CARD_W,
@@ -84,12 +84,16 @@ export function loadAvatarDataUri(url: string | null): Promise<string | null> {
 export interface GreetingSvgOptions {
   avatarSrc: string | null;
   guildName: string;
+  /** 애니메이션 타임라인 시각(ms) — 그 시점의 정지 프레임을 그려요. 움직임이 없는 카드에는 영향이 없어요 */
+  timeMs?: number;
+  /** 출력 배율(0~1, 기본 1) — 재생 중에는 0.5로 줄여서 프레임당 렌더 시간을 거의 반으로 줄여요 */
+  scale?: number;
 }
 
 /** 미리보기 샘플 값 ({유저이름}은 "유저", {멤버수}는 1) */
 const SAMPLE = { displayName: "유저", memberCount: 1 } as const;
 
-/** 인사 카드를 PNG data URL로 그려요 (1200×675). */
+/** 인사 카드를 PNG data URL로 그려요 (1200×675). 움직임이 있으면 `timeMs` 시점의 프레임이에요. */
 export async function renderGreetingPreviewUrl(
   image: GreetingImage,
   options: GreetingSvgOptions,
@@ -103,10 +107,39 @@ export async function renderGreetingPreviewUrl(
     guildName: options.guildName,
     avatar,
   });
-  const { node } = await fromJsx(element as unknown as Parameters<typeof fromJsx>[0]);
+  const scale = options.scale && options.scale < 1 ? options.scale : 1;
+  const width = Math.round(GREETING_CARD_W * scale);
+  const height = Math.round(GREETING_CARD_H * scale);
+  // 배율이 1보다 작으면 서버(renderCardPng)와 같은 방식으로 감싸서 줄여 그려요
+  const tree =
+    scale === 1
+      ? element
+      : {
+          type: "div",
+          props: {
+            style: { display: "flex", width, height, overflow: "hidden" },
+            children: {
+              type: "div",
+              props: {
+                style: {
+                  display: "flex",
+                  width: GREETING_CARD_W,
+                  height: GREETING_CARD_H,
+                  transform: `scale(${scale})`,
+                  transformOrigin: "top left",
+                },
+                children: element,
+              },
+            },
+          },
+        };
+  const { node } = await fromJsx(tree as unknown as Parameters<typeof fromJsx>[0]);
   return renderer.renderAsDataUrl(node, {
-    width: GREETING_CARD_W,
-    height: GREETING_CARD_H,
+    width,
+    height,
     format: "png",
+    // 움직임 키프레임은 서버와 같은 함수(@sirubot/cards)로 만들어서 미리보기가 WebP와 같은 모양이에요
+    css: [greetingAnimationCss(image)],
+    timeMs: options.timeMs ?? 0,
   });
 }

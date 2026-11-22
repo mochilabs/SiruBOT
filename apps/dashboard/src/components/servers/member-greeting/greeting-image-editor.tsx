@@ -107,8 +107,9 @@ export function GreetingImageEditor({
     commit,
   });
 
-  // 카드 본체: 서버와 같은 greetingCard를 satori로 그린 SVG — 드래그 중엔 멈추고 놓을 때·입력 150ms 뒤에 다시 그려요
-  const { src: previewSrc, error: previewError } = useGreetingSvg({
+  // 카드 본체: 서버와 같은 greetingCard를 Takumi WASM으로 그려요 — 드래그 중엔 멈추고 놓을 때·입력 150ms 뒤에 다시 그려요.
+  // 움직임이 있으면 재생·타임라인 조작도 이 훅이 맡아요 (서버는 같은 키프레임으로 애니메이션 WebP를 만들어요)
+  const preview = useGreetingSvg({
     active,
     image,
     avatarSrc,
@@ -243,8 +244,15 @@ export function GreetingImageEditor({
         {/* 미리보기 — 모바일은 맨 위, 데스크톱은 좌상단 */}
         <GreetingPreviewSection
           canvasRef={canvasRef}
-          previewSrc={previewSrc}
-          previewError={previewError}
+          previewSrc={preview.src}
+          previewError={preview.error}
+          animated={preview.animated}
+          playing={preview.playing}
+          autoPaused={preview.autoPaused}
+          timeMs={preview.timeMs}
+          durationMs={preview.durationMs}
+          onTogglePlay={() => preview.setPlaying(!preview.playing)}
+          onSeek={preview.seek}
           saving={saving}
           canUndo={canUndo}
           canRedo={canRedo}

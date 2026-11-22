@@ -1,6 +1,6 @@
 "use client";
 
-import type { GreetingLayer, GreetingShapeKind } from "@sirubot/utils/memberGreeting";
+import { GREETING_ANIMATION_MAX_MS, type GreetingAnimation, type GreetingAnimationKind, type GreetingLayer, type GreetingShapeKind } from "@sirubot/utils/memberGreeting";
 import { Bold } from "lucide-react";
 
 import { Field } from "@/components/primitives/field";
@@ -27,6 +27,17 @@ const SHAPE_OPTIONS = [
 	{ value: "star", label: "별" },
 	{ value: "heart", label: "하트" }
 ] as const;
+
+const ANIMATION_OPTIONS: readonly { value: GreetingAnimationKind | "none"; label: string }[] = [
+	{ value: "none", label: "없음" },
+	{ value: "float", label: "둥실" },
+	{ value: "drift", label: "이동" },
+	{ value: "sway", label: "흔들림" },
+	{ value: "spin", label: "회전" },
+	{ value: "pulse", label: "커졌다 작아짐" },
+	{ value: "twinkle", label: "깜빡임" }
+];
+const DEFAULT_ANIMATION: Omit<GreetingAnimation, "type"> = { durationMs: 2000, delayMs: 0, intensity: 0.5 };
 
 interface LayerPropertiesProps {
 	layer: GreetingLayer | null;
@@ -101,6 +112,52 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 		</Field>
 	);
 
+	const animation = layer.animation;
+	const animationFields = (
+		<div className="space-y-4">
+			<Field label="움직임" description="움직이는 레이어가 하나라도 있으면 카드가 애니메이션 WebP로 전송돼요.">
+				<div role="radiogroup" aria-label="움직임 종류" className="inline-flex flex-wrap rounded-control bg-input p-0.5">
+					{ANIMATION_OPTIONS.map((option) => {
+						const selected = (animation?.type ?? "none") === option.value;
+						return (
+							<button
+								key={option.value}
+								type="button"
+								role="radio"
+								aria-checked={selected}
+								onKeyDown={radioArrowKeyDown(ANIMATION_OPTIONS.map((item) => item.value), animation?.type ?? "none", (key) =>
+									patchAndCommit({ animation: key === "none" ? undefined : { ...DEFAULT_ANIMATION, ...animation, type: key as GreetingAnimationKind } })
+								)}
+								onClick={() => patchAndCommit({ animation: option.value === "none" ? undefined : { ...DEFAULT_ANIMATION, ...animation, type: option.value } })}
+								className={cn(
+									"cursor-pointer rounded-control px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+									selected ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+								)}
+							>
+								{option.label}
+							</button>
+						);
+					})}
+				</div>
+			</Field>
+			{animation ? (
+				<>
+					<Field label="한 번 움직이는 시간" description="레이어마다 달라도 돼요. 가장 긴 값이 카드 한 바퀴 길이고 다른 레이어는 그 길이에 맞춰져요.">
+						<Slider value={animation.durationMs} min={500} max={GREETING_ANIMATION_MAX_MS} step={100} label="움직임 시간" showValue formatValue={(value) => `${(value / 1000).toFixed(1)}초`} disabled={saving} onChange={(durationMs) => patch({ animation: { ...animation, durationMs } })} onCommit={onCommit} />
+					</Field>
+					<Field label="시작 어긋남" description="레이어끼리 같이 움직이지 않게 엇갈리게 해요.">
+						<Slider value={animation.delayMs} min={0} max={GREETING_ANIMATION_MAX_MS} step={100} label="시작 어긋남" showValue formatValue={(value) => `${(value / 1000).toFixed(1)}초`} disabled={saving} onChange={(delayMs) => patch({ animation: { ...animation, delayMs } })} onCommit={onCommit} />
+					</Field>
+					{animation.type !== "spin" ? (
+						<Field label="세기">
+							<Slider value={animation.intensity} min={0} max={1} step={0.05} label="움직임 세기" showValue formatValue={(value) => `${Math.round(value * 100)}%`} disabled={saving} onChange={(intensity) => patch({ animation: { ...animation, intensity } })} onCommit={onCommit} />
+						</Field>
+					) : null}
+				</>
+			) : null}
+		</div>
+	);
+
 	switch (layer.type) {
 		case "text":
 			return (
@@ -140,6 +197,7 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 							))}
 						</div>
 					</div>
+					{animationFields}
 				</div>
 			);
 		case "avatar":
@@ -152,6 +210,7 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 					<Field label="링 색">
 						<ColorPicker value={layer.ringColor} disabled={saving} label="링" onChange={(color) => patch({ ringColor: color })} onCommit={onCommit} />
 					</Field>
+					{animationFields}
 				</div>
 			);
 		case "image":
@@ -174,6 +233,7 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 					<Field label="투명도">
 						<Slider value={layer.opacity} min={0} max={1} step={0.05} label="이미지 투명도" showValue formatValue={(value) => `${Math.round(value * 100)}%`} disabled={saving} onChange={(opacity) => patch({ opacity })} onCommit={onCommit} />
 					</Field>
+					{animationFields}
 				</div>
 			);
 		case "shape": {
@@ -271,6 +331,7 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 					<Field label="흐림 (글로우)" description="도형을 번지게 해서 빛 번짐처럼 써요.">
 						<Slider value={layer.blur ?? 0} min={0} max={120} step={1} label="흐림" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(blur) => patch({ blur })} onCommit={onCommit} />
 					</Field>
+					{animationFields}
 				</div>
 			);
 		}

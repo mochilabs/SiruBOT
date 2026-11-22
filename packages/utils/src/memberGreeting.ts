@@ -427,7 +427,7 @@ const STARS: readonly [number, number, number, number, number][] = [
 	[6, 88, 14, 0.6, 0]
 ];
 
-export const GREETING_TEMPLATES: readonly GreetingTemplate[] = [
+const STATIC_TEMPLATES: readonly GreetingTemplate[] = [
 	{
 		id: 'classic-center',
 		name: '클래식 중앙',
@@ -759,6 +759,61 @@ export const GREETING_TEMPLATES: readonly GreetingTemplate[] = [
 		}
 	}
 ];
+
+/**
+ * 템플릿 기본 움직임 — 레이어 id 접두사별로 (같은 접두사 안에서 몇 번째인지)를 받아 움직임을 돌려줘요.
+ * 주기는 전부 카드 한 바퀴 길이(4초)의 약수(4000·2000)라 WebP가 끊김 없이 반복돼요. 시작 어긋남은 레이어끼리 엇갈리게 해요.
+ */
+type AnimationRule = (index: number) => GreetingAnimation;
+const anim = (type: GreetingAnimationKind, durationMs: number, delayMs = 0, intensity = 0.5): GreetingAnimation => ({
+	type,
+	durationMs,
+	delayMs,
+	intensity
+});
+
+const TEMPLATE_ANIMATIONS: Record<string, Record<string, AnimationRule>> = {
+	'aurora-glass': {
+		'glow-violet': () => anim('drift', 4000, 0, 0.7),
+		'glow-pink': () => anim('drift', 4000, 2000, 0.8),
+		'glow-mint': () => anim('float', 4000, 1000, 0.6),
+		'avatar-halo': () => anim('pulse', 2000, 0, 0.4)
+	},
+	'confetti-party': {
+		burst: () => anim('pulse', 4000, 0, 0.5),
+		confetti: (i) => (i % 2 === 0 ? anim('spin', 4000, (i * 250) % 4000) : anim('sway', 2000, (i * 300) % 2000, 0.8)),
+		ring: () => anim('pulse', 2000, 0, 0.3)
+	},
+	'starry-night': {
+		nebula: () => anim('drift', 4000, 0, 0.4),
+		'star-': (i) => anim('twinkle', i % 3 === 0 ? 4000 : 2000, (i * 370) % 2000, 0.6),
+		'moon-glow': () => anim('pulse', 4000, 0, 0.5)
+	},
+	'heart-bloom': {
+		'heart-back': () => anim('pulse', 2000, 0, 0.4),
+		'heart-l': () => anim('float', 4000, 0, 0.6),
+		'heart-r': () => anim('float', 4000, 1500, 0.7),
+		'heart-s': (i) => anim('float', 2000, i * 450, 0.8),
+		'spark-': (i) => anim('twinkle', 2000, i * 700, 0.7)
+	}
+};
+
+/** 기본 움직임을 입힌 템플릿 — 움직임이 정의된 템플릿만 레이어에 animation이 들어가요 */
+function withTemplateAnimations(template: GreetingTemplate): GreetingTemplate {
+	const rules = TEMPLATE_ANIMATIONS[template.id];
+	if (!rules) return template;
+	const counters = new Map<string, number>();
+	const layers = template.image.layers.map((layer) => {
+		const prefix = Object.keys(rules).find((key) => layer.id.startsWith(key));
+		if (!prefix) return layer;
+		const index = counters.get(prefix) ?? 0;
+		counters.set(prefix, index + 1);
+		return { ...layer, animation: rules[prefix]!(index) } as GreetingLayer;
+	});
+	return { ...template, image: { ...template.image, layers } };
+}
+
+export const GREETING_TEMPLATES: readonly GreetingTemplate[] = STATIC_TEMPLATES.map(withTemplateAnimations);
 
 /** 템플릿 변수 메타데이터 — dashboard 에디터의 변수 삽입 칩과 bot 치환기가 함께 참조 */
 export type GreetingTemplateVariable = { token: string; description: string; usableInImage: boolean };
