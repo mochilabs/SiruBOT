@@ -1,5 +1,5 @@
 import { addSeparator, createContainer, emoji } from '@sirubot/utils';
-import { BOT_LANGUAGE_NOTE, BOT_TAGLINE } from '@sirubot/utils/brand';
+import { BOT_TAGLINE } from '@sirubot/utils/brand';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type ApplicationCommand, type ContainerBuilder } from 'discord.js';
 import { commandMention } from '../../lib/commandMention.ts';
 import { onboardingId } from '../customIds.ts';
@@ -39,7 +39,6 @@ function bodyText(options: WelcomeViewOptions): string {
 	const lines = [
 		`### 시루를 초대해 주셔서 고마워요! ${emoji('music_note')}`,
 		BOT_TAGLINE,
-		`-# ${BOT_LANGUAGE_NOTE}`,
 		'',
 		'**바로 해 보기**',
 		`- 음성 채널에 들어가서 ${commandMention('play', options.index)}에 곡 이름을 넣어 보세요.`,
