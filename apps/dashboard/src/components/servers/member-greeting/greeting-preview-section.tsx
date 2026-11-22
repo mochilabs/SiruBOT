@@ -9,9 +9,9 @@ import { Slider } from "@/components/ui/slider";
 import { CARD_H, CARD_W } from "./greeting-draw";
 
 interface GreetingPreviewSectionProps {
-  /** 선택 테두리·핸들과 포인터 조작을 받는 투명 canvas — 카드 본체는 아래 SVG 이미지예요 */
+  /** 선택 테두리·핸들과 포인터 조작을 받는 투명 canvas — 카드 본체는 아래 미리보기 이미지예요 */
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
-  /** satori로 그린 카드 SVG(data URI) — 첫 렌더 전에는 null */
+  /** Takumi로 그린 카드 이미지(data URI) — 첫 렌더 전에는 null */
   previewSrc: string | null;
   previewError: boolean;
   /** 움직이는 레이어가 있을 때만 재생 컨트롤을 보여줘요 */
@@ -101,7 +101,7 @@ export function GreetingPreviewSection({
         style={{ aspectRatio: "1200 / 675" }}
       >
         {previewSrc && (
-          // satori가 만든 SVG data URI라 next/image 최적화 대상이 아니에요
+          // Takumi가 만든 data URI라 next/image 최적화 대상이 아니에요
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={previewSrc}

@@ -52,7 +52,7 @@ export function getCardRenderer(): Promise<{ renderer: Renderer; hasFont: boolea
 	return rendererPromise;
 }
 
-/** `display: flex` div — Takumi의 div는 기본이 block이라 flex 레이아웃은 이 컴포넌트로 만들어요 (구 satori `h()`와 같은 기본값). */
+/** `display: flex` div — Takumi의 div는 기본이 block이라 flex 레이아웃은 이 컴포넌트로 만들어요. */
 export function Box({ style, children }: { style?: CSSProperties; children?: ReactNode }): ReactNode {
 	return <div style={{ display: 'flex', ...style }}>{children}</div>;
 }

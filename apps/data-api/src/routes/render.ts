@@ -111,7 +111,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 					nowPlaying: body.nowPlaying
 				};
 				if (body.preset === 'ticket') return renderProfileCardTicket(card);
-				// dark는 dashboard와 같은 다크 대시보드 모양이에요 (구 skia 퍼플 프리셋 대체)
+				// dark는 dashboard와 같은 다크 대시보드 모양이에요
 				return renderProfileCard({
 					...card,
 					variant: body.preset === 'dark' ? 'dashboard' : body.preset,

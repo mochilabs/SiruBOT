@@ -12,16 +12,11 @@
 
 - 위 PretendardJPVariable.ttf에서 `wght=600` / `wght=900` 정적 인스턴스를 뽑아 한글(가–힣)·자모·라틴·가나·기본 기호만 남긴 서브셋이에요 (각 약 2.6MB). 일본어 한자는 빠져 있어요.
 - Regular(`wght=400`)와 Bold(`wght=700`)는 인사 카드 텍스트 레이어의 `weight` 단계(400/600/700/900)용이에요. 서버는 가변 폰트로 모든 굵기를 그리고, 대시보드 미리보기는 400·700 레이어가 있을 때만 이 두 파일을 받아요.
-- satori 카드(Wrapped·프로필·now-playing·인사)용이에요. 대시보드 인사 카드 미리보기도 같은 두 파일을 `apps/dashboard/public/fonts/`에 복사해 써요 — 서브셋을 다시 만들면 두 곳을 함께 갱신해요. 이 서브셋엔 한자가 없어서, 없는 글자는 satoriKit의 loadAdditionalAsset이 400 가변 원본으로 그려요. satori는 가변 폰트의 굵기 축을 쓰지 못해서 굵기별 정적 파일이 필요해요. 라이선스는 원본과 같은 SIL OFL 1.1이에요.
+- Takumi 카드(Wrapped·프로필·now-playing·인사)용이에요. 대시보드 인사 카드 미리보기도 같은 두 파일을 `apps/dashboard/public/fonts/`에 복사해 써요 — 서브셋을 다시 만들면 두 곳을 함께 갱신해요. 서버(`@takumi-rs/core`)는 가변 폰트로 모든 굵기를 그리지만, 대시보드 미리보기(`@takumi-rs/wasm`)는 굵기별 정적 파일이 필요해서 이 서브셋을 써요. 이 서브셋엔 일본어 한자가 없어요. 라이선스는 원본과 같은 SIL OFL 1.1이에요.
 - 다시 만들 때: `fonttools varLib.instancer PretendardJPVariable.ttf wght=900 -o black.ttf` → `pyftsubset black.ttf --unicodes=U+0020-007E,U+00A0-00FF,U+2010-205E,U+2190-21FF,U+25A0-26FF,U+3000-30FF,U+1100-11FF,U+3130-318F,U+AC00-D7A3,U+FF01-FF5E --layout-features=kern,liga,locl --no-hinting --desubroutinize`.
 
 ## TwemojiMozilla.ttf (COLR/CPAL)
 
-- twemoji-colr v0.7.0 — 카드 캔버스의 색 이모지 렌더와 대시보드 이모지 폴백에 써요.
+- twemoji-colr v0.7.0 — 카드의 색 이모지 렌더와 대시보드 이모지 폴백에 써요.
 - 폰트 코드: Apache License 2.0 (Copyright 2016-2018 Mozilla Foundation, <https://github.com/mozilla/twemoji-colr>)
 - 이모지 아트: Twemoji by Twitter, Inc and other contributors — **CC-BY 4.0** (<https://github.com/jdecked/twemoji>). CC-BY 4.0 고지 조건은 대시보드 `/licenses` 페이지에서 이행해요.
-
-## Twemoji SVG (`@twemoji/svg` 15.0.0)
-
-- satori 카드는 색 이모지 폰트를 못 그려서, 이모지마다 Twemoji SVG를 이미지로 넣어요 (`packages/cards/src/emoji.ts`). data-api는 `@twemoji/svg` 패키지 파일을, 대시보드 인사 카드 미리보기는 같은 버전을 jsDelivr에서 받아요. 버전을 바꾸면 `TWEMOJI_VERSION`과 data-api 의존성을 함께 바꿔요.
-- 이모지 아트 라이선스는 위 TwemojiMozilla와 같은 CC-BY 4.0이에요 (대시보드 `/licenses`에서 고지).
