@@ -946,7 +946,8 @@ export const PRESET_BACKGROUNDS: readonly PresetBackground[] = [
 	{ id: 'mint', name: '민트' },
 	{ id: 'sunset', name: '선셋' },
 	{ id: 'lavender', name: '라벤더' },
-	{ id: 'midnight', name: '미드나잇' }
+	{ id: 'midnight', name: '미드나잇' },
+	{ id: 'birthday', name: '생일' }
 ];
 
 const PRESET_BACKGROUND_IDS: readonly string[] = PRESET_BACKGROUNDS.map((preset) => preset.id);

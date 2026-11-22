@@ -131,7 +131,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 	});
 	const memberCardSchema = z.object({
 		guildId: redisIdSchema,
-		kind: z.enum(['welcome', 'goodbye']),
+		kind: z.enum(['welcome', 'goodbye', 'birthday']),
 		config: greetingConfigSchema,
 		context: greetingContextSchema
 	});

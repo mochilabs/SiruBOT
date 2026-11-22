@@ -28,7 +28,8 @@ describe('greetingCardDesign — 브랜드 시각 계약', () => {
 			mint: { base: '#10211c', from: '#2f7a62', to: '#7fd6b0', glow: '#e0fff2' },
 			sunset: { base: '#2a1410', from: '#c4533a', to: '#ffb36b', glow: '#fff0d6' },
 			lavender: { base: '#1a1428', from: '#6a4fb0', to: '#b9a3ff', glow: '#efe8ff' },
-			midnight: { base: '#07090f', from: '#101827', to: '#2b3a5c', glow: '#9db4ff' }
+			midnight: { base: '#07090f', from: '#101827', to: '#2b3a5c', glow: '#9db4ff' },
+			birthday: { base: '#2b1a2e', from: '#ff6fa8', to: '#ffd166', glow: '#fff3c4' }
 		});
 		expect(GREETING_PRESET_SCRIM).toBe('rgba(26,14,18,0.32)');
 	});

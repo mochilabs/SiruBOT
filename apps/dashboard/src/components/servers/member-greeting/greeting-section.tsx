@@ -1,10 +1,9 @@
 "use client";
 
+import { DEFAULT_CARD_CONFIGS, type GreetingCardKind } from "@sirubot/utils/birthdayCelebration";
 import {
-  DEFAULT_GREETINGS,
   GREETING_LAYOUTS,
   type GreetingConfig,
-  type GreetingKind,
   type GreetingLayout,
 } from "@sirubot/utils/memberGreeting";
 import { RotateCcw } from "lucide-react";
@@ -44,7 +43,7 @@ const LAYOUT_LABELS: Record<GreetingLayout, string> = {
 };
 
 const SECTION_META: Record<
-  GreetingKind,
+  GreetingCardKind,
   { heading: string; description: string; switchLabel: string }
 > = {
   welcome: {
@@ -57,6 +56,11 @@ const SECTION_META: Record<
     description: "멤버가 이 서버에서 퇴장할 때 보내는 메시지예요.",
     switchLabel: "작별 메시지 보내기",
   },
+  birthday: {
+    heading: "생일 축하",
+    description: "생일 축하를 켠 멤버를 정해진 시각에 카드와 함께 축하해요. 같은 날 생일이 여럿이면 카드 한 장에 모아요.",
+    switchLabel: "생일 축하 보내기",
+  },
 };
 
 interface GreetingSectionProps {
@@ -64,17 +68,18 @@ interface GreetingSectionProps {
   guildId: string;
   visible: boolean;
   guildName: string | null;
-  kind: GreetingKind;
+  kind: GreetingCardKind;
   draft: GreetingConfig;
   saved: GreetingConfig;
   dirty: boolean;
   channels: DiscordChannelSummary[] | null;
   saving: boolean;
-  testPending: boolean;
-  testResult: GreetingTestResult | null;
+  /** 테스트 전송이 없는 종류(생일 축하)는 비워 두면 테스트 패널을 숨겨요 */
+  testPending?: boolean;
+  testResult?: GreetingTestResult | null;
   onPatch: (next: GreetingConfig) => void;
   onReset: () => void;
-  onTest: () => Promise<void>;
+  onTest?: () => Promise<void>;
 }
 
 /** 인사 한 종류(환영/작별)의 설정 섹션 — 탭 콘텐츠로 마운트 유지돼요 */
@@ -109,7 +114,7 @@ export function GreetingSection({
       onPatch({
         ...draft,
         useImage: true,
-        image: DEFAULT_GREETINGS[kind].image,
+        image: DEFAULT_CARD_CONFIGS[kind].image,
       });
       return;
     }
@@ -248,12 +253,14 @@ export function GreetingSection({
           />
         )}
 
-        <GreetingTestPanel
-          ready={testReady}
-          pending={testPending}
-          result={testResult}
-          onTest={onTest}
-        />
+        {onTest && (
+          <GreetingTestPanel
+            ready={testReady}
+            pending={testPending ?? false}
+            result={testResult ?? null}
+            onTest={onTest}
+          />
+        )}
       </section>
     </TabsContent>
   );

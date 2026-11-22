@@ -19,6 +19,7 @@ export const SERVER_TABS = [
 	{ key: "greeting", label: "멤버", group: "community", module: "community" },
 	{ key: "ticket", label: "티켓", group: "community", module: "community" },
 	{ key: "starboard", label: "스타보드", group: "community", module: "community" },
+	{ key: "birthday", label: "생일 축하", group: "community", module: "community" },
 	{ key: "scheduled-messages", label: "예약 메시지", group: "community", module: "community" },
 	{ key: "giveaways", label: "기브어웨이", group: "community", module: "community" },
 	{ key: "role-panels", label: "역할 패널", group: "community", module: "community" },

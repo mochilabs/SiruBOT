@@ -1,4 +1,5 @@
-import type { GreetingConfig, GreetingKind, SponsorBlockSkipSegment } from '@sirubot/utils';
+import type { GreetingConfig, SponsorBlockSkipSegment } from '@sirubot/utils';
+import type { GreetingCardKind } from '@sirubot/utils/birthdayCelebration';
 import type { DeliveryTrackResult } from '@sirubot/utils/delivery';
 import type { DeliveryCarrier } from '@sirubot/utils/delivery';
 import type { AirQualityInfo, WeatherResult, WeatherScope } from '@sirubot/utils/weather';
@@ -346,7 +347,7 @@ export interface MemberCardRenderContext {
 async function renderMemberCard(
 	logger: AppLogger,
 	guildId: string,
-	kind: GreetingKind,
+	kind: GreetingCardKind,
 	config: GreetingConfig,
 	context: MemberCardRenderContext
 ): Promise<RenderedImage | null> {
@@ -386,7 +387,7 @@ export function createDataApiClient(deps: DataApiClientDeps) {
 		renderWeatherCard: (data: WeatherCardRequest) => renderWeatherCard(logger, data),
 		renderProfileCard: (data: ProfileCardRequest) => renderProfileCard(logger, data),
 		renderWrappedCard: (data: WrappedCardRequest) => renderWrappedCard(logger, data),
-		renderMemberCard: (guildId: string, kind: GreetingKind, config: GreetingConfig, context: MemberCardRenderContext) =>
+		renderMemberCard: (guildId: string, kind: GreetingCardKind, config: GreetingConfig, context: MemberCardRenderContext) =>
 			renderMemberCard(logger, guildId, kind, config, context),
 		uploadObject: (bucket: string, key: string, bytes: Uint8Array, contentType: string) => uploadObject(logger, bucket, key, bytes, contentType)
 	};

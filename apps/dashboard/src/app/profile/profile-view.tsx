@@ -21,6 +21,7 @@ import type {
   ProfileMusicStats,
 } from "@/lib/profile-stats";
 
+import { BirthdayAnnounceCard } from "./birthday-announce-card";
 import { BirthdayCard } from "./birthday-card";
 import { TtsVoiceCard } from "./tts-voice-card";
 
@@ -118,6 +119,11 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
               )}
             </CardContent>
           </Card>
+        </RevealItem>
+
+        {/* 서버별 생일 축하 받기 */}
+        <RevealItem className="md:col-span-2">
+          <BirthdayAnnounceCard hasBirthday={hasBirthday} />
         </RevealItem>
 
         {/* 서버별 TTS 음성 — 생일 카드처럼 보기/변경 */}

@@ -12,6 +12,7 @@ vi.mock("@/components/data/stat-card", () => ({ StatCard: () => null }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => undefined }) }));
 vi.mock("./tts-voice-card", () => ({ TtsVoiceCard: () => null }));
+vi.mock("./birthday-announce-card", () => ({ BirthdayAnnounceCard: () => null }));
 
 const props: ProfileViewProps = {
   user: { id: "fixture", name: "검증용 프로필", image: null },

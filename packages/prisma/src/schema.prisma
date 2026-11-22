@@ -87,6 +87,9 @@ model Guild {
   starboardSettings StarboardSettings?
   starboardEntries  StarboardEntry[]
   scheduledMessageSettings ScheduledMessageSettings?
+  birthdaySettings BirthdaySettings?
+  birthdayOptIns   BirthdayOptIn[]
+  birthdayRoleGrants BirthdayRoleGrant[]
   giveaways     Giveaway[]
 }
 
@@ -275,6 +278,7 @@ model User {
   playlists   Playlist[]
   gameRecords GameRecord[]
   userToken   UserToken?
+  birthdayOptIns BirthdayOptIn[]
 }
 
 // 대시보드 Discord OAuth 토큰 — refresh/access 토큰의 서버측 단일 원본 (저장 전 AES-256-GCM 암호화).
@@ -589,6 +593,49 @@ model StarboardEntry {
   updatedAt          DateTime @updatedAt
 
   @@index([guildId])
+}
+
+// 서버별 생일 축하 설정 — 길드당 1:1. 카드·메시지(`config`)는 인사 카드와 같은 GreetingConfig라서 enabled·channelId도 여기에 있어요.
+// 계약은 packages/utils/src/birthdayCelebration.ts. 실행은 ScheduledJob(kind 'birthday_daily')이 하루에 한 번이에요.
+model BirthdaySettings {
+  guildId          String   @id
+  guild            Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  config           Json
+  /// 보내는 시각 "HH:mm" (KST)
+  sendTime         String   @default("09:00")
+  /// 생일 당일에 줄 역할 (다음 날 회수)
+  roleId           String?
+  /// 켠 다음 날부터 축하해요 (KST "YYYY-MM-DD"). 켠 당일에는 보내지 않아요
+  activeFrom       String?
+  /// 마지막으로 축하를 보낸 날 (KST "YYYY-MM-DD") — 같은 날 두 번 보내지 않게 해요
+  lastCelebratedOn String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// 서버별 생일 축하 동의 — 본인이 켠 사람만 그 서버에서 축하해요 (D-17). 생일(월/일)은 User에 있어요.
+model BirthdayOptIn {
+  guildId   String
+  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([guildId, userId])
+  @@index([userId])
+}
+
+// 생일 역할을 준 기록 — 다음 날 정확히 그 사람에게서만 회수하려고 남겨요 (서버당 한 사람 한 행).
+model BirthdayRoleGrant {
+  guildId   String
+  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  userId    String
+  roleId    String
+  /// 역할을 준 날 (KST "YYYY-MM-DD") — 이보다 이후 날짜의 회차가 회수해요
+  grantedOn String
+  createdAt DateTime @default(now())
+
+  @@id([guildId, userId])
 }
 
 enum GiveawayStatus {
