@@ -112,3 +112,16 @@ describe("guildSettingsSchema 크로스페이드 범위", () => {
 		}
 	});
 });
+
+describe("themePreset 부분 저장", () => {
+	it("다른 설정만 저장해도 themePreset이 기본값으로 채워지지 않아요 (덮어쓰기 방지)", () => {
+		const parsed = guildSettingsSchema.parse({ volume: 20 });
+		expect("themePreset" in parsed).toBe(false);
+	});
+
+	it("프리셋 6개만 받고 그 밖의 값은 거절해요", () => {
+		expect(guildSettingsSchema.safeParse({ themePreset: "blue" }).success).toBe(true);
+		expect(guildSettingsSchema.safeParse({ themePreset: "#ff0000" }).success).toBe(false);
+		expect(guildSettingsSchema.safeParse({ themePreset: "red" }).success).toBe(false);
+	});
+});
