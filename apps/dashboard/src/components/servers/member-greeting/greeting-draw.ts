@@ -13,7 +13,7 @@ import { type Box, type SnapGuide, unionBox } from "./greeting-snap";
 
 /**
  * 인사 카드 편집기 공용 헬퍼 — 레이어 바운딩 박스·히트테스트·생성, 선택 오버레이(`drawGreetingSelection`).
- * 카드 미리보기 자체는 `greeting-svg.ts`(@sirubot/cards + satori)가 그려요.
+ * 카드 미리보기 자체는 `greeting-svg.ts`(@sirubot/cards + Takumi WASM)가 그려요.
  * 좌표계: x/y는 카드 %(0~100, 요소 중심 앵커), size/width/height는 카드 실좌표(1200×675) px.
  */
 
