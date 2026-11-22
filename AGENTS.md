@@ -1,6 +1,6 @@
 # SiruBOT Agent Instructions
 
-Discord music bot monorepo (Turborepo + Yarn 4, Node 22+, ESM). Apps: `bot` (Sapphire + lavalink-client), `dashboard` (Next.js, :3000), `shardmanager` (:3001), `data-api` (gateway, Redis hub, LLM jobs, :3002), `storage` (public asset URLs, :3003), `notifier` (stream alerts → webhooks, :3004). Packages: `prisma`, `utils`, `app-kit` (shared Fastify auth/env/logger), `shardclient`, `isrc` (ISRC lookup for the track chart).
+Discord music bot monorepo (Turborepo + Yarn 4, Node 22+, ESM). Apps: `bot` (Sapphire + lavalink-client), `dashboard` (Next.js, :3000), `shardmanager` (:3001), `data-api` (gateway, Redis hub, LLM jobs, :3002), `storage` (public asset URLs, :3003), `notifier` (stream alerts → webhooks, :3004). Packages: `prisma`, `utils`, `app-kit` (shared Fastify auth/env/logger), `shardclient`, `isrc` (ISRC lookup for the track chart), `cards` (satori card nodes shared by data-api and the dashboard).
 
 - Per-package rules: read the package's `AGENTS.md` before working in it (index below). This file holds only what applies across packages.
 - Docs under `docs/` are English; cite file paths, never line numbers. `docs/` holds only documents linked from the root `README.md`; working notes (plans, audits, changelogs) go in `Localdocs/` (gitignored). References: `docs/architecture.md`, `docs/api-{dashboard,data-api}.md`, `docs/setup-dev.md`, `docs/runbook-production.md`.
@@ -22,6 +22,7 @@ Each app's file ends with a **Run and test** section (start, port, health check,
 - `packages/utils`: cross-app contracts, subpath exports, Redis channel contracts.
 - `packages/app-kit`: shared Fastify auth, env, error handler, logger.
 - `packages/isrc`: provider contract, matching rule, MusicBrainz User-Agent.
+- `packages/cards`: runtime-independent Takumi card pieces (tokens, artwork helpers, `greetingCard`); no node-only imports in the root export.
 - `packages/prisma`: schema, migrations, client generation. More conventions in the `repo-infra` skill.
 
 ## Service map

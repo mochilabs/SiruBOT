@@ -14,13 +14,14 @@ export default defineConfig({
       { find: /^@sirubot\/utils\/(.*)$/, replacement: path.join(rootDir, "packages/utils/src/$1.ts") },
       { find: /^@sirubot\/app-kit$/, replacement: path.join(rootDir, "packages/app-kit/src/index.ts") },
       { find: /^@sirubot\/isrc$/, replacement: path.join(rootDir, "packages/isrc/src/index.ts") },
+      { find: /^@sirubot\/cards$/, replacement: path.join(rootDir, "packages/cards/src/index.ts") },
       // dashboard tsconfig paths(@/*) — 워크스페이스 스크립트가 이 루트 config를 공유하므로 함께 등록.
       { find: /^@\//, replacement: path.join(rootDir, "apps/dashboard/src") + "/" },
     ],
   },
   test: {
     environment: "node",
-    include: ["**/*.{test,spec}.ts"],
+    include: ["**/*.{test,spec}.{ts,tsx}"],
     exclude: ["**/node_modules/**", "**/dist/**", "**/.next/**"],
     testTimeout: 10_000,
     // 동시 워커 수를 제한해요 — turbo가 여러 패키지 테스트를 한꺼번에 돌릴 때 시스템 메모리·CPU가 고갈되는 걸 막아요

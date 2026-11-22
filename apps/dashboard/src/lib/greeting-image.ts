@@ -7,9 +7,12 @@ import { guardRateLimit, HEAVY_WRITE_RATE, rateKey } from "@/lib/rate-limit";
 /** 이미지 업로드 원본 상한 3MiB — data-api가 저장 규격으로 정규화해요 */
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+/** 배경은 움직이는 GIF도 받아요 (이미지 레이어는 받지 않아요) */
+const ALLOWED_BACKGROUND_TYPES = new Set([...ALLOWED_IMAGE_TYPES, "image/gif"]);
 /** 인사 이미지(배경·레이어)는 인사 설정(config) 안에 dataURI로 함께 저장돼요 — 공용 계약의 저장 상한이에요 */
 const MAX_SAVED_DATA_URI_LENGTH = 1_500_000;
 const SAVED_DATA_URI_PATTERN = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+const SAVED_BACKGROUND_DATA_URI_PATTERN = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/;
 
 export interface GreetingImageUploadOptions {
 	/** rate-limit 키 조각 — 예: "greeting-background" */
@@ -20,10 +23,12 @@ export interface GreetingImageUploadOptions {
 	label: string;
 	/** 저장 규격 위반 콘솔 로그의 이미지 이름 — 예: "background" */
 	logName: string;
+	/** true면 움직이는 GIF도 받아요 (배경 전용) */
+	allowGif?: boolean;
 }
 
 /**
- * 인사 카드 이미지 업로드 정규화 공통 흐름 — 배경(JPEG 정규화)과 레이어(PNG 정규화)
+ * 인사 카드 이미지 업로드 정규화 공통 흐름 — 배경(JPEG, 움직이는 GIF는 GIF 정규화)과 레이어(PNG 정규화)
  * 라우트가 공유해요. 업로드 검증 → dataURI 변환 → data-api 정규화 → 저장 규격 검증
  * → 정규화된 dataURI를 클라이언트로 돌려줘요 (클라이언트는 PATCH /greeting으로 config에 넣어 저장해요).
  */
@@ -54,8 +59,12 @@ export async function handleGreetingImageUpload(
 			{ status: 400 },
 		);
 	}
-	if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-		return NextResponse.json({ error: "PNG, JPEG, WebP 이미지만 지원해요." }, { status: 400 });
+	const allowedTypes = options.allowGif ? ALLOWED_BACKGROUND_TYPES : ALLOWED_IMAGE_TYPES;
+	if (!allowedTypes.has(file.type)) {
+		return NextResponse.json(
+			{ error: options.allowGif ? "PNG, JPEG, WebP, GIF 이미지만 지원해요." : "PNG, JPEG, WebP 이미지만 지원해요." },
+			{ status: 400 },
+		);
 	}
 
 	const bytes = Buffer.from(await file.arrayBuffer());
@@ -71,7 +80,7 @@ export async function handleGreetingImageUpload(
 	// 저장 규격 검증 — data-api 응답이 공용 계약(저장 가능한 dataURI)을 벗어나면 저장 전에 막아요.
 	const savedCheck = z
 		.string()
-		.regex(SAVED_DATA_URI_PATTERN)
+		.regex(options.allowGif ? SAVED_BACKGROUND_DATA_URI_PATTERN : SAVED_DATA_URI_PATTERN)
 		.max(MAX_SAVED_DATA_URI_LENGTH)
 		.safeParse(result.data?.dataUri);
 	if (!savedCheck.success) {

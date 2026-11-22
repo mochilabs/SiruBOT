@@ -120,8 +120,13 @@ export interface MemberGreetingServiceDeps {
 	getGuild(guildId: string): Guild | undefined;
 	/** 길드 설정 캐시에서 welcome/goodbye 원본을 읽어요 */
 	getGuildSettings(guildId: string): Promise<{ welcome: unknown; goodbye: unknown }>;
-	/** 카드 이미지 렌더(data-api) — 실패·미설정이면 null */
-	renderMemberCard(guildId: string, kind: GreetingKind, config: GreetingConfig, context: GreetingCardContext): Promise<Buffer | null>;
+	/** 카드 이미지 렌더(data-api) — PNG 또는 애니메이션 WebP. 실패·미설정이면 null */
+	renderMemberCard(
+		guildId: string,
+		kind: GreetingKind,
+		config: GreetingConfig,
+		context: GreetingCardContext
+	): Promise<{ buffer: Buffer; contentType: string } | null>;
 	messages: GreetingMessagePort;
 	/** 사용 지표 — 실제 이벤트로 인사를 보내기로 했을 때 불러요 (테스트 전송은 세지 않아요) */
 	recordUsage?: (guildId: string, userId: string) => void;
@@ -282,9 +287,9 @@ export class MemberGreetingService {
 			memberCount
 		});
 
-		let png: Buffer | null = null;
+		let card: { buffer: Buffer; contentType: string } | null = null;
 		if (config.useImage && config.image) {
-			png = await this.deps.renderMemberCard(guildId, kind, config, {
+			card = await this.deps.renderMemberCard(guildId, kind, config, {
 				userId: member.user.id,
 				username: member.user.username,
 				displayName: member.displayName,
@@ -295,22 +300,23 @@ export class MemberGreetingService {
 		}
 
 		const hasContent = content.trim().length > 0;
-		if (config.useImage && config.image && !png && opts.isTest) {
+		if (config.useImage && config.image && !card && opts.isTest) {
 			// 테스트는 폴백 없이 실패를 알려요. 실제 이벤트는 텍스트로 이어가요.
 			return { ok: false, error: '카드 이미지를 만들지 못했어요. 잠시 후 다시 시도해 주세요' };
 		}
-		if (!png && !hasContent) return { ok: false, error: '인사 문구가 비어 있어요. 설정 화면에서 템플릿을 확인해 주세요' };
-		if (config.useImage && config.image && !png) {
+		if (!card && !hasContent) return { ok: false, error: '인사 문구가 비어 있어요. 설정 화면에서 템플릿을 확인해 주세요' };
+		if (config.useImage && config.image && !card) {
 			this.logger.warn(`멤버 인사 카드 렌더 실패, 텍스트로 폴백 (guild ${guildId}, kind ${kind})`);
 		}
 
-		const filename = `greeting-${kind}.png`;
-		const files: AttachmentBuilder[] = png ? [new AttachmentBuilder(png, { name: filename })] : [];
+		// 확장자는 data-api가 돌려준 content-type을 따라가요 — 움직임이 있는 카드는 .webp(애니메이션)예요
+		const filename = `greeting-${kind}.${card?.contentType === 'image/webp' ? 'webp' : 'png'}`;
+		const files: AttachmentBuilder[] = card ? [new AttachmentBuilder(card.buffer, { name: filename })] : [];
 		const components = this.deps.messages.components({
 			kind,
 			isTest: opts.isTest,
 			content,
-			imageFilename: png ? filename : null,
+			imageFilename: card ? filename : null,
 			avatarUrl: member.avatarUrl,
 			layout: config.layout,
 			accentColor: config.accentColor

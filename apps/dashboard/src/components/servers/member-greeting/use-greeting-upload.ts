@@ -12,7 +12,9 @@ import { createImageLayer, loadImage } from "./greeting-draw";
 const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
 /** 업로드·파일 입력이 같이 쓰는 허용 이미지 타입 */
 const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/webp";
-export { ACCEPTED_IMAGE_TYPES };
+/** 배경은 움직이는 GIF도 받아요 */
+const ACCEPTED_BACKGROUND_TYPES = `${ACCEPTED_IMAGE_TYPES},image/gif`;
+export { ACCEPTED_BACKGROUND_TYPES, ACCEPTED_IMAGE_TYPES };
 
 export interface GreetingUpload {
   uploading: boolean;
@@ -52,8 +54,13 @@ export function useGreetingUpload({
         toast.error("이미지가 너무 커요. 최대 3MB까지 올릴 수 있어요.");
         return null;
       }
-      if (!`${ACCEPTED_IMAGE_TYPES},`.includes(`${file.type},`)) {
-        toast.error("PNG, JPEG, WebP 이미지만 지원해요.");
+      const accepted = mode === "background" ? ACCEPTED_BACKGROUND_TYPES : ACCEPTED_IMAGE_TYPES;
+      if (!accepted.split(",").includes(file.type)) {
+        toast.error(
+          mode === "background"
+            ? "PNG, JPEG, WebP, GIF 이미지만 지원해요."
+            : "PNG, JPEG, WebP 이미지만 지원해요.",
+        );
         return null;
       }
       const form = new FormData();
@@ -116,8 +123,12 @@ export function useGreetingUpload({
         patchImage({ ...image, background: { presetId: null, dataUri } });
         commit();
         toast.success(
-          "배경 이미지를 넣었어요.",
-          "인사 설정을 저장하면 모든 카드에 적용돼요.",
+          dataUri.startsWith("data:image/gif;")
+            ? "움직이는 배경을 넣었어요."
+            : "배경 이미지를 넣었어요.",
+          dataUri.startsWith("data:image/gif;")
+            ? "GIF 배경은 카드가 애니메이션 WebP로 전송돼요. 인사 설정을 저장하면 적용돼요."
+            : "인사 설정을 저장하면 모든 카드에 적용돼요.",
         );
       } catch (err) {
         const apiError = toError(err, "배경 이미지를 준비하지 못했어요.");

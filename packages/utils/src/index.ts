@@ -75,14 +75,22 @@ export {
 	roleValidationRpc,
 	socialWebhookCreateRpc
 } from './redisContract.js';
+export { type GifTiming, parseGifDataUriTiming, parseGifTiming } from './gifTiming.js';
 export { getLoggerSettings } from './logger.js';
 export { type AppEmojiFallbackKey, emoji, ensureAppEmojisLoaded, setAppEmojiIdMap } from './appEmoji.js';
 export {
 	DEFAULT_GREETINGS,
+	GREETING_ANIMATION_FPS,
+	GREETING_ANIMATION_MAX_MS,
+	GREETING_ANIMATIONS,
 	GREETING_CARD_H,
 	GREETING_CARD_W,
 	GREETING_RENDER_SCALE,
+	GREETING_SHAPES,
 	GREETING_TEMPLATES,
+	greetingAnimationDurationMs,
+	type GreetingAnimation,
+	type GreetingAnimationKind,
 	type GreetingAvatarLayer,
 	type GreetingConfig,
 	greetingConfigSchema,
@@ -90,8 +98,10 @@ export {
 	type GreetingImageLayer,
 	type GreetingKind,
 	type GreetingLayer,
+	type GreetingShapeKind,
 	type GreetingShapeLayer,
 	type GreetingTextLayer,
+	hasGreetingAnimation,
 	renderGreetingTemplate,
 	validateGreetingConfig
 } from './memberGreeting.js';

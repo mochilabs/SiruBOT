@@ -1,130 +1,19 @@
-import { describe, expect, it, vi } from 'vitest';
-import type { CanvasRenderingContext2D } from 'skia-canvas';
-import { DEFAULT_GREETINGS, GREETING_CARD_H, GREETING_CARD_W, GREETING_RENDER_SCALE, GREETING_TEMPLATES, type GreetingImage } from '@sirubot/utils';
-import { greetingPresetBackgroundPlan } from '@sirubot/utils/greetingCardDesign';
-import {
-	decodeDataUri,
-	drawPresetBackground,
-	GreetingBackgroundError,
-	type GreetingCardContext,
-	normalizeGreetingBackground,
-	normalizeGreetingLayerImage,
-	renderGreetingCard
-} from './memberGreetingCard.ts';
+import { describe, expect, it } from 'vitest';
+import { imageSizeOf } from '@sirubot/cards';
+import { decodeDataUri, GreetingBackgroundError, normalizeGreetingBackground, normalizeGreetingLayerImage } from './memberGreetingCard.ts';
+import { fromJsx } from '@takumi-rs/helpers/jsx';
+import { parseGifTiming } from '@sirubot/utils';
+import { getCardRenderer, renderSvgRaster } from './takumi/takumiKit.tsx';
 
-// 렌더러 로거를 vi.fn으로 대체 — decode 실패 로그(warn) 호출을 검증해요.
-vi.mock('../utils/logger.ts', () => {
-	const warn = vi.fn();
-	return { getLogger: () => ({ warn, error: vi.fn(), info: vi.fn(), debug: vi.fn() }) };
-});
-
-/** 카드 렌더 스모크 — 출력 PNG 시그니처(논리 1200×675 × GREETING_RENDER_SCALE = 800×450)와 배경 경로(프리셋/업로드)를 검증해요. */
-
-/** 기대 출력 크기 — 논리 좌표계(1200×675)에 출력 축소 배율을 곱한 값 */
-const OUT_W = Math.round(GREETING_CARD_W * GREETING_RENDER_SCALE);
-const OUT_H = Math.round(GREETING_CARD_H * GREETING_RENDER_SCALE);
-
-/** 테스트용 단색 이미지를 dataURI로 — 업로드 배경/정규화 입력을 만들어요. */
+/** 테스트용 단색 이미지를 dataURI로 — 업로드 정규화 입력을 만들어요. */
 async function solidImage(width: number, height: number): Promise<string> {
-	const { Canvas } = await import('skia-canvas');
-	const canvas = new Canvas(width, height);
-	const ctx = canvas.getContext('2d');
-	ctx.fillStyle = '#ff85c1';
-	ctx.fillRect(0, 0, width, height);
-	return await canvas.toDataURL('png');
-}
-
-function makeImage(overrides: Partial<GreetingImage> = {}): GreetingImage {
-	return { ...DEFAULT_GREETINGS.welcome.image!, ...overrides };
-}
-
-function makeContext(overrides: Partial<GreetingCardContext> = {}): GreetingCardContext {
-	return { userId: '123', displayName: '시루', guildName: '시루봇', memberCount: 42, avatarUrl: null, ...overrides };
-}
-
-function expectPngSize(buffer: Buffer, width: number, height: number): void {
-	expect([buffer[0], buffer[1], buffer[2], buffer[3]]).toEqual([137, 80, 78, 71]);
-	// IHDR — PNG 헤더의 너비/높이는 각각 16/20 바이트 오프셋 big-endian
-	expect(buffer.readUInt32BE(16)).toBe(width);
-	expect(buffer.readUInt32BE(20)).toBe(height);
-}
-
-describe('renderGreetingCard', () => {
-	it('renders a scaled-down PNG (logical 1200×675 × GREETING_RENDER_SCALE) from a preset background', async () => {
-		const buffer = await renderGreetingCard(makeImage(), makeContext());
-		expectPngSize(buffer, OUT_W, OUT_H);
-		expect(buffer.length).toBeGreaterThan(1_000);
-	});
-
-	it('renders from an uploaded dataUri background', async () => {
-		const dataUri = await solidImage(320, 180);
-		const buffer = await renderGreetingCard(makeImage({ background: { presetId: null, dataUri } }), makeContext());
-		expectPngSize(buffer, OUT_W, OUT_H);
-	});
-
-	it('falls back to a preset when the dataUri is undecodable', async () => {
-		const { getLogger } = await import('../utils/logger.ts');
-		const loggerWarn = vi.mocked(getLogger('memberGreetingCard').warn);
-		loggerWarn.mockClear();
-		const buffer = await renderGreetingCard(makedecodableBrokenImage(), makeContext());
-		expectPngSize(buffer, OUT_W, OUT_H);
-		expect(loggerWarn).toHaveBeenCalled();
-	});
-
-	it('renders avatar + text layers from the default greeting', async () => {
-		// 기본 인사는 avatar·title·subtitle(텍스트 2) 레이어로 이뤄져 있어요.
-		const buffer = await renderGreetingCard(makeImage(), makeContext());
-		expectPngSize(buffer, OUT_W, OUT_H);
-	});
-
-	it('renders a shape layer (rect) via the minimal-band template', async () => {
-		const minimal = GREETING_TEMPLATES.find((template) => template.id === 'minimal-band')!;
-		const buffer = await renderGreetingCard(minimal.image, makeContext());
-		expectPngSize(buffer, OUT_W, OUT_H);
-	});
-
-	it('renders an uploaded image layer (sticker) at its size', async () => {
-		const sticker = await solidImage(64, 64);
-		const buffer = await renderGreetingCard(
-			makeImage({
-				layers: [{ id: 'sticker', type: 'image', x: 20, y: 20, width: 128, height: 128, dataUri: sticker, opacity: 1 }]
-			}),
-			makeContext()
-		);
-		expectPngSize(buffer, OUT_W, OUT_H);
-	});
-
-	it('renders a circle shape layer', async () => {
-		const buffer = await renderGreetingCard(
-			makeImage({
-				layers: [{ id: 'dot', type: 'shape', shape: 'circle', x: 80, y: 30, width: 120, height: 120, color: '#ff85c1', opacity: 0.6 }]
-			}),
-			makeContext()
-		);
-		expectPngSize(buffer, OUT_W, OUT_H);
-	});
-
-	it('skips an undecodable image layer without failing the card', async () => {
-		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-		try {
-			const buffer = await renderGreetingCard(
-				makeImage({
-					layers: [
-						{ id: 'broken', type: 'image', x: 50, y: 50, width: 100, height: 100, dataUri: 'data:image/png;base64,notbase64', opacity: 1 }
-					]
-				}),
-				makeContext()
-			);
-			expectPngSize(buffer, OUT_W, OUT_H);
-		} finally {
-			consoleError.mockRestore();
-		}
-	});
-});
-
-/** base64 본문만 깨진 dataURI — 렌더러의 폴백 경로를 자극해요 */
-function makedecodableBrokenImage(): GreetingImage {
-	return makeImage({ background: { presetId: 'plum', dataUri: 'data:image/png;base64,notbase64' } });
+	const png = await renderSvgRaster(
+		`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ff85c1"/></svg>`,
+		width,
+		height,
+		'png'
+	);
+	return `data:image/png;base64,${png.toString('base64')}`;
 }
 
 describe('normalizeGreetingBackground', () => {
@@ -135,9 +24,8 @@ describe('normalizeGreetingBackground', () => {
 		const decoded = decodeDataUri(normalized);
 		expect(decoded?.length ?? 0).toBeLessThanOrEqual(900_000);
 
-		const { loadImage } = await import('skia-canvas');
-		const img = await loadImage(decoded!);
-		expect(Math.max(img.width, img.height)).toBeLessThanOrEqual(1600);
+		const size = imageSizeOf(decoded!);
+		expect(Math.max(size!.width, size!.height)).toBeLessThanOrEqual(1600);
 	});
 
 	it('rejects undecodable input with a structured error', async () => {
@@ -161,9 +49,8 @@ describe('normalizeGreetingLayerImage', () => {
 		const decoded = decodeDataUri(normalized);
 		expect(decoded?.length ?? 0).toBeLessThanOrEqual(900_000);
 
-		const { loadImage } = await import('skia-canvas');
-		const img = await loadImage(decoded!);
-		expect(Math.max(img.width, img.height)).toBeLessThanOrEqual(1200);
+		const size = imageSizeOf(decoded!);
+		expect(Math.max(size!.width, size!.height)).toBeLessThanOrEqual(1200);
 	});
 
 	it('rejects undecodable input with a structured error', async () => {
@@ -175,86 +62,72 @@ describe('normalizeGreetingLayerImage', () => {
 	});
 });
 
-// ── 프리셋 배경 색상 시퀀스 — 공용 계약(greetingCardDesign)의 시각 동등성 ──
-
-/** 프리셋 3종 전수 기대 시퀀스 — 바닥색 → 대각 그라디언트 2스톱 → 코너 글로우 rgba 2스톱 → 스톱별 채우기.
- * dashboard(greeting-draw.test.ts)가 같은 리터럴을 같은 순서로 비교해요 — 양쪽 렌더 결과의 동등성 오라클. */
-const PRESET_SEQUENCES: Record<string, string[]> = {
-	rose: [
-		'fillRect:#3d2328',
-		'linear:0:#d1608a',
-		'linear:1:#ff85c1',
-		'fillRect:linear',
-		'glow:0:rgba(255,228,240,0.2)',
-		'glow:1:rgba(255,228,240,0)',
-		'fillRect:glow'
-	],
-	plum: [
-		'fillRect:#1a0e12',
-		'linear:0:#231317',
-		'linear:1:#4d2a35',
-		'fillRect:linear',
-		'glow:0:rgba(255,179,217,0.2)',
-		'glow:1:rgba(255,179,217,0)',
-		'fillRect:glow'
-	],
-	gold: [
-		'fillRect:#231a10',
-		'linear:0:#8a6a44',
-		'linear:1:#d4a574',
-		'fillRect:linear',
-		'glow:0:rgba(240,226,207,0.2)',
-		'glow:1:rgba(240,226,207,0)',
-		'fillRect:glow'
-	]
-};
-
-/** 배경 드로잉(canvas 호출)만 기록하는 mock 컨텍스트 — 프리셋 색상·기하 시퀀스 검증용 */
-function recordingContext(): { ctx: CanvasRenderingContext2D; ops: string[]; geometry: { linear: number[] | null; radial: number[] | null } } {
-	const ops: string[] = [];
-	const geometry: { linear: number[] | null; radial: number[] | null } = { linear: null, radial: null };
-	let fillStyle: string | { kind: string } = '';
-	const gradient = (kind: string) => ({ kind, addColorStop: (offset: number, color: string) => ops.push(`${kind}:${offset}:${color}`) });
-	const ctx = {
-		get fillStyle(): string | { kind: string } {
-			return fillStyle;
-		},
-		set fillStyle(value: string | { kind: string }) {
-			fillStyle = value;
-		},
-		fillRect: () => ops.push(`fillRect:${typeof fillStyle === 'string' ? fillStyle : fillStyle.kind}`),
-		createLinearGradient: (x0: number, y0: number, x1: number, y1: number) => {
-			geometry.linear = [x0, y0, x1, y1];
-			return gradient('linear');
-		},
-		createRadialGradient: (x0: number, y0: number, r0: number, x1: number, y1: number, r1: number) => {
-			geometry.radial = [x0, y0, r0, x1, y1, r1];
-			return gradient('glow');
+/** 움직이는 GIF — 흰 사각형이 가로로 움직이는 장면을 Takumi로 인코딩해요 (정지 장면이면 프레임 1개) */
+async function gifDataUri(width: number, height: number, options: { seconds: number; fps: number; animated?: boolean }): Promise<string> {
+	const { renderer } = await getCardRenderer();
+	const box = {
+		type: 'div',
+		props: {
+			style: { width: 40, height: 40, background: '#ffffff', ...(options.animated === false ? {} : { animation: 'slide 1s linear infinite' }) }
 		}
 	};
-	return { ctx: ctx as unknown as CanvasRenderingContext2D, ops, geometry };
+	const { node } = await fromJsx({
+		type: 'div',
+		props: { style: { display: 'flex', width, height, background: '#ff85c1' }, children: box }
+	} as never);
+	const buffer = await renderer.renderAnimation({
+		scenes: [{ node, durationMs: options.seconds * 1000 }],
+		width,
+		height,
+		fps: options.fps,
+		format: 'gif',
+		css: ['@keyframes slide { 0% { transform: translateX(0px); } 50% { transform: translateX(80px); } 100% { transform: translateX(0px); } }']
+	});
+	return `data:image/gif;base64,${Buffer.from(buffer).toString('base64')}`;
 }
 
-describe('drawPresetBackground — 프리셋 배경 색상 시퀀스', () => {
-	it('프리셋 3종 전수에서 계약의 색을 바닥→대각 그라디언트→코너 글로우 순서로 그려요', () => {
-		for (const [presetId, expected] of Object.entries(PRESET_SEQUENCES)) {
-			const { ctx, ops } = recordingContext();
-			drawPresetBackground(ctx, greetingPresetBackgroundPlan(GREETING_CARD_W, GREETING_CARD_H, presetId));
-			expect(ops).toEqual(expected);
-		}
+describe('normalizeGreetingBackground — GIF', () => {
+	it('상한 안의 움직이는 GIF는 원본 그대로 돌려줘요 (화질 손실 없음)', async () => {
+		const gif = await gifDataUri(320, 180, { seconds: 1, fps: 10 });
+		expect(parseGifTiming(decodeDataUri(gif)!)?.frames).toBeGreaterThan(1);
+		expect(await normalizeGreetingBackground(gif)).toBe(gif);
+	}, 30_000);
+
+	it('1200px보다 크면 줄여서 움직이는 GIF로 다시 인코딩해요', async () => {
+		const gif = await gifDataUri(1600, 900, { seconds: 1, fps: 8 });
+		const normalized = await normalizeGreetingBackground(gif);
+		expect(normalized.startsWith('data:image/gif;base64,')).toBe(true);
+		const bytes = decodeDataUri(normalized)!;
+		expect(bytes.length).toBeLessThanOrEqual(900_000);
+		const timing = parseGifTiming(bytes)!;
+		expect(Math.max(timing.width, timing.height)).toBeLessThanOrEqual(1200);
+		expect(timing.frames).toBeGreaterThan(1);
+	}, 60_000);
+
+	it('5초보다 길면 5초까지만 남겨요', async () => {
+		const gif = await gifDataUri(1300, 400, { seconds: 7, fps: 6 });
+		const timing = parseGifTiming(decodeDataUri(await normalizeGreetingBackground(gif))!)!;
+		// GIF 지연은 1/100초 단위로 반올림돼서 5초에서 조금 어긋날 수 있어요
+		expect(timing.durationMs).toBeLessThanOrEqual(5500);
+		expect(timing.durationMs).toBeGreaterThan(4000);
+	}, 60_000);
+
+	it('프레임이 하나뿐인 정지 GIF는 JPEG로 정규화해요', async () => {
+		const gif = await gifDataUri(200, 100, { seconds: 1, fps: 5, animated: false });
+		expect(parseGifTiming(decodeDataUri(gif)!)?.frames).toBe(1);
+		expect((await normalizeGreetingBackground(gif)).startsWith('data:image/jpeg;base64,')).toBe(true);
+	}, 30_000);
+
+	it('깨진 GIF는 invalid_image로 거부해요', async () => {
+		const error = await normalizeGreetingBackground('data:image/gif;base64,R0lGODlhAQABAAAAACw=').catch(
+			(e: unknown) => e as GreetingBackgroundError
+		);
+		expect(error).toBeInstanceOf(GreetingBackgroundError);
+		expect((error as GreetingBackgroundError).identifier).toBe('invalid_image');
 	});
 
-	it('그라데이션 좌표·글로우 기하는 카드 1200×675 기준 계약값(좌하→우상, 우상단 코너)과 같아요', () => {
-		const { ctx, geometry } = recordingContext();
-		drawPresetBackground(ctx, greetingPresetBackgroundPlan(GREETING_CARD_W, GREETING_CARD_H, 'rose'));
-		expect(geometry.linear).toEqual([0, GREETING_CARD_H, GREETING_CARD_W, 0]);
-		expect(geometry.radial).toEqual([
-			GREETING_CARD_W * 0.78,
-			GREETING_CARD_H * 0.22,
-			0,
-			GREETING_CARD_W * 0.78,
-			GREETING_CARD_H * 0.22,
-			GREETING_CARD_W * 0.55
-		]);
-	});
+	it('이미지 레이어에 GIF가 들어오면 첫 프레임만 PNG로 만들어요', async () => {
+		const gif = await gifDataUri(200, 100, { seconds: 1, fps: 5 });
+		expect((await normalizeGreetingLayerImage(gif)).startsWith('data:image/png;base64,')).toBe(true);
+	}, 30_000);
 });

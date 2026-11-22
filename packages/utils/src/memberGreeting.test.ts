@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-	DEFAULT_WELCOME_GREETING,
 	DEFAULT_GOODBYE_GREETING,
+	DEFAULT_GREETINGS,
+	DEFAULT_WELCOME_GREETING,
+	GREETING_ANIMATIONS,
+	GREETING_SHAPES,
+	greetingAnimationDurationMs,
+	hasGreetingAnimation,
 	GREETING_TEMPLATES,
+	greetingConfigSchema,
 	PRESET_BACKGROUNDS,
 	renderGreetingTemplate,
 	validateGreetingConfig
@@ -117,5 +123,159 @@ describe('GREETING_TEMPLATES', () => {
 			const layerIds = template.image.layers.map((layer) => layer.id);
 			expect(new Set(layerIds).size).toBe(layerIds.length);
 		}
+	});
+});
+
+describe('도형 레이어 확장 필드', () => {
+	const shape = { id: 's', type: 'shape', shape: 'star', x: 50, y: 50, width: 100, height: 100, color: '#ffffff', opacity: 1 } as const;
+	const withLayers = (layers: unknown[]) => ({ ...DEFAULT_GREETINGS.welcome, image: { background: { presetId: 'rose', dataUri: null }, layers } });
+
+	it('필수 필드만 있는 예전 도형도 그대로 통과해요', () => {
+		expect(greetingConfigSchema.safeParse(withLayers([{ ...shape, shape: 'rect' }])).success).toBe(true);
+	});
+
+	it('모든 도형 종류와 선택 필드(회전·둥글기·그라디언트·테두리·흐림)를 받아요', () => {
+		for (const kind of GREETING_SHAPES) {
+			const layer = {
+				...shape,
+				shape: kind,
+				rotation: -30,
+				radius: 24,
+				gradientTo: '#000000',
+				gradientAngle: 90,
+				strokeColor: '#ff0000',
+				strokeWidth: 6,
+				filled: false,
+				blur: 20
+			};
+			expect(greetingConfigSchema.safeParse(withLayers([layer])).success, kind).toBe(true);
+		}
+	});
+
+	it('범위를 벗어난 값과 알 수 없는 도형은 거부해요', () => {
+		expect(greetingConfigSchema.safeParse(withLayers([{ ...shape, shape: 'blob' }])).success).toBe(false);
+		expect(greetingConfigSchema.safeParse(withLayers([{ ...shape, rotation: 400 }])).success).toBe(false);
+		expect(greetingConfigSchema.safeParse(withLayers([{ ...shape, strokeWidth: 90 }])).success).toBe(false);
+		expect(greetingConfigSchema.safeParse(withLayers([{ ...shape, gradientTo: 'red' }])).success).toBe(false);
+	});
+
+	it('텍스트·이미지 레이어도 회전을 받아요', () => {
+		const text = { id: 't', type: 'text', x: 50, y: 50, size: 30, color: '#ffffff', bold: false, align: 'center', text: 'a', rotation: 12 };
+		expect(greetingConfigSchema.safeParse(withLayers([text])).success).toBe(true);
+	});
+
+	it('모든 템플릿이 스키마를 통과해요', () => {
+		for (const template of GREETING_TEMPLATES) {
+			expect(greetingConfigSchema.safeParse({ ...DEFAULT_GREETINGS.welcome, image: template.image }).success, template.id).toBe(true);
+		}
+	});
+});
+
+describe('레이어 움직임(animation)', () => {
+	const base = { id: 's', type: 'shape', shape: 'circle', x: 50, y: 50, width: 100, height: 100, color: '#ffffff', opacity: 1 } as const;
+	const animation = { type: 'pulse', durationMs: 2000, delayMs: 0, intensity: 0.5 } as const;
+	const withLayers = (layers: unknown[]) => ({ ...DEFAULT_GREETINGS.welcome, image: { background: { presetId: 'rose', dataUri: null }, layers } });
+	const asImage = (layers: unknown[]) => withLayers(layers).image as never;
+
+	it('모든 레이어 종류가 animation을 받아요', () => {
+		const text = { id: 't', type: 'text', x: 50, y: 50, size: 30, color: '#ffffff', bold: false, align: 'center', text: 'a' };
+		const avatar = { id: 'a', type: 'avatar', x: 50, y: 50, size: 100, ringColor: '#ffffff' };
+		for (const kind of GREETING_ANIMATIONS) {
+			for (const layer of [base, text, avatar]) {
+				expect(
+					greetingConfigSchema.safeParse(withLayers([{ ...layer, animation: { ...animation, type: kind } }])).success,
+					`${layer.type}/${kind}`
+				).toBe(true);
+			}
+		}
+	});
+
+	it('범위를 벗어난 값과 알 수 없는 종류는 거부해요', () => {
+		for (const bad of [
+			{ ...animation, type: 'bounce' },
+			{ ...animation, durationMs: 100 },
+			{ ...animation, durationMs: 6000 },
+			{ ...animation, intensity: 2 },
+			{ ...animation, delayMs: -1 }
+		]) {
+			expect(greetingConfigSchema.safeParse(withLayers([{ ...base, animation: bad }])).success).toBe(false);
+		}
+	});
+
+	it('hasGreetingAnimation은 보이는 움직임이 있을 때만 true예요', () => {
+		expect(hasGreetingAnimation(asImage([base]))).toBe(false);
+		expect(hasGreetingAnimation(asImage([{ ...base, animation }]))).toBe(true);
+		expect(hasGreetingAnimation(asImage([{ ...base, animation, hidden: true }]))).toBe(false);
+	});
+
+	it('greetingAnimationDurationMs는 가장 긴 주기이고 5초를 넘지 않아요', () => {
+		expect(greetingAnimationDurationMs(asImage([base]))).toBe(0);
+		expect(
+			greetingAnimationDurationMs(
+				asImage([
+					{ ...base, animation },
+					{ ...base, id: 'b', animation: { ...animation, durationMs: 3500 } }
+				])
+			)
+		).toBe(3500);
+		expect(greetingAnimationDurationMs(asImage([{ ...base, animation: { ...animation, durationMs: 5000 } }]))).toBe(5000);
+	});
+});
+
+describe('GIF 배경', () => {
+	/** 2프레임 GIF(각 100ms) 최소 바이트 */
+	const gif = (frames: number, delayCs = 10) => {
+		const out: number[] = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 4, 0, 4, 0, 0, 0, 0];
+		for (let i = 0; i < frames; i += 1) {
+			out.push(0x21, 0xf9, 0x04, 0, delayCs, 0, 0, 0, 0x2c, 0, 0, 0, 0, 4, 0, 4, 0, 0, 0x02, 0x02, 0x44, 0x01, 0x00);
+		}
+		out.push(0x3b);
+		return `data:image/gif;base64,${Buffer.from(out).toString('base64')}`;
+	};
+	const withBackground = (dataUri: string | null, layers: unknown[] = []) => ({
+		...DEFAULT_GREETINGS.welcome,
+		image: { background: { presetId: null, dataUri }, layers }
+	});
+	const asImage = (config: ReturnType<typeof withBackground>) => config.image as never;
+	const pulse = (durationMs: number) => ({
+		id: 's',
+		type: 'shape',
+		shape: 'circle',
+		x: 50,
+		y: 50,
+		width: 10,
+		height: 10,
+		color: '#ffffff',
+		opacity: 1,
+		animation: { type: 'pulse', durationMs, delayMs: 0, intensity: 0.5 }
+	});
+
+	it('배경 dataUri는 GIF를 받고 이미지 레이어는 GIF를 받지 않아요', () => {
+		expect(greetingConfigSchema.safeParse(withBackground(gif(2))).success).toBe(true);
+		const imageLayer = { id: 'i', type: 'image', x: 50, y: 50, width: 10, height: 10, dataUri: gif(2), opacity: 1 };
+		expect(greetingConfigSchema.safeParse(withBackground(null, [imageLayer])).success).toBe(false);
+	});
+
+	it('움직이는 GIF 배경이면 레이어 움직임이 없어도 애니메이션이에요', () => {
+		expect(hasGreetingAnimation(asImage(withBackground(gif(2))))).toBe(true);
+		// 프레임이 하나뿐인 GIF는 정지 이미지예요
+		expect(hasGreetingAnimation(asImage(withBackground(gif(1))))).toBe(false);
+		expect(hasGreetingAnimation(asImage(withBackground(null)))).toBe(false);
+	});
+
+	it('한 바퀴 길이는 GIF 한 바퀴의 정수배예요', () => {
+		// GIF 1초(10프레임 × 100ms)
+		const oneSecond = gif(10);
+		expect(greetingAnimationDurationMs(asImage(withBackground(oneSecond)))).toBe(1000);
+		// 레이어 주기 4초에 가장 가까운 배수(4바퀴)
+		expect(greetingAnimationDurationMs(asImage(withBackground(oneSecond, [pulse(4000)])))).toBe(4000);
+		// 상한 5초 안에서만 반복해요
+		expect(greetingAnimationDurationMs(asImage(withBackground(oneSecond, [pulse(5000)])))).toBe(5000);
+		// 레이어 주기가 GIF보다 짧으면 GIF 한 바퀴
+		expect(greetingAnimationDurationMs(asImage(withBackground(oneSecond, [pulse(500)])))).toBe(1000);
+	});
+
+	it('GIF가 5초 이상이면 5초에서 잘라요', () => {
+		expect(greetingAnimationDurationMs(asImage(withBackground(gif(80))))).toBe(5000);
 	});
 });

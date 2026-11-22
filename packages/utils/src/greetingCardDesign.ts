@@ -1,5 +1,5 @@
 /**
- * 인사 카드 배경 디자인 공용 계약 — data-api skia 렌더러와 dashboard 브라우저 미리보기가
+ * 인사 카드 배경 디자인 공용 계약 — data-api Takumi 렌더러와 dashboard 브라우저 미리보기가
  * 같은 브랜드 프리셋 hex·그라데이션 파라미터를 써요. 브랜드 색이 갈라지면 시각적 계약이
  * 깨지므로 프리셋 hex 값과 스크림 색의 단일 출처예요. canvas 호출은 각 런타임이 유지하고
  * 이 모듈은 데이터·순수 함수만 담아요. dashboard는 서브패스(@sirubot/utils/greetingCardDesign)로만 import해요.

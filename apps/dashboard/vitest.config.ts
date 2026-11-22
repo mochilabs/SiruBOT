@@ -13,6 +13,7 @@ export default defineConfig({
 			// 서브경로는 확장자 없이 import하므로 .ts를 붙여 매핑해요.
 			{ find: /^@sirubot\/utils$/, replacement: path.join(rootDir, "../../packages/utils/src/index.ts") },
 			{ find: /^@sirubot\/utils\/(.*)$/, replacement: path.join(rootDir, "../../packages/utils/src/$1.ts") },
+			{ find: /^@sirubot\/cards$/, replacement: path.join(rootDir, "../../packages/cards/src/index.ts") },
 		],
 	},
 	test: {
