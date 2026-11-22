@@ -19,6 +19,7 @@ export const HELP_COMMAND_SUMMARIES: Readonly<Record<string, string>> = {
 	// 커뮤니티
 	rolepanel: '역할 패널을 관리해요.',
 	announce: '정해진 시각에 채널로 메시지를 예약해요. 만들기·목록·삭제는 서버 관리 권한이 필요해요.',
+	giveaway: '참여 조건을 직접 정하는 기브어웨이를 열고 추첨해요. 시작·다시뽑기·종료·취소는 서버 관리 권한이 필요해요.',
 	ticket: '고객지원 및 문의 티켓 시스템을 관리해요.',
 	profile: '프로필(생일·별자리·음악 기록)을 확인하고 관리해요.',
 	checkin: '매일 출석 체크를 해요. 연속 출석하면 스트릭이 쌓여요.',

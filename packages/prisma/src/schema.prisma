@@ -87,6 +87,7 @@ model Guild {
   starboardSettings StarboardSettings?
   starboardEntries  StarboardEntry[]
   scheduledMessageSettings ScheduledMessageSettings?
+  giveaways     Giveaway[]
 }
 
 // 커스텀 명령어 — 대시보드(관리자)가 만드는 접두사 메시지 명령어. 봇의 접두사 리스너가 spec(JSON 스텝 체인)을 순차 실행해요.
@@ -588,4 +589,51 @@ model StarboardEntry {
   updatedAt          DateTime @updatedAt
 
   @@index([guildId])
+}
+
+enum GiveawayStatus {
+  running
+  ended
+  cancelled
+}
+
+// 기브어웨이 — 참여 카드(messageId)와 조건(requirements)을 저장해요. 계약은 packages/utils/src/giveaway.ts.
+// 마감은 ScheduledJob(kind 'giveaway_end', payload { giveawayId })이 맡아요.
+model Giveaway {
+  id            String          @id @default(uuid())
+  guildId       String
+  guild         Guild           @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  channelId     String
+  /// 참여 카드 메시지 — 게시 직후에 채워져요
+  messageId     String?
+  prize         String
+  winnerCount   Int
+  endsAt        DateTime
+  /// 참여 조건 `{ version: 1, conditions: [...] }` — 마감 시점에 다시 확인해요
+  requirements  Json            @default("{\"version\":1,\"conditions\":[]}")
+  status        GiveawayStatus  @default(running)
+  /// 지금까지 뽑힌 당첨자 (다시 뽑기는 뒤에 이어 붙어요)
+  winnerIds     String[]        @default([])
+  /// 마감 때 참여 버튼을 누른 사람 수와 조건을 통과한 사람 수
+  entryCount    Int?
+  eligibleCount Int?
+  endedAt       DateTime?
+  /// 결과 발표를 끝낸 시각 — 비어 있으면 핸들러가 재시도 때 다시 발표해요
+  announcedAt   DateTime?
+  createdBy     String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  entries       GiveawayEntry[]
+
+  @@index([guildId, status])
+}
+
+// 기브어웨이 참여 — 기본 키 (giveawayId, userId)라 중복 참여가 DB에서 막혀요.
+model GiveawayEntry {
+  giveawayId String
+  giveaway   Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+  userId     String
+  enteredAt  DateTime @default(now())
+
+  @@id([giveawayId, userId])
 }

@@ -57,6 +57,8 @@ declare module '@sapphire/pieces' {
 		/** 스타보드 반응 디바운스·게시·갱신 소유자 (features/starboard/application/starboardService.ts) */
 		/** 예약 메시지 생성·목록·삭제와 scheduled-message 핸들러 (features/scheduled-messages/application/scheduledMessageService.ts) */
 		scheduledMessages: import('../features/scheduled-messages/index.ts').ScheduledMessageService;
+		/** 기브어웨이 시작·참여·마감 추첨과 giveaway_end 핸들러, 카드 갱신 스로틀 (features/giveaway/application/giveawayService.ts) */
+		giveaways: import('../features/giveaway/index.ts').GiveawayService;
 		starboardService: import('../features/starboard/index.ts').StarboardService;
 		/** 재생 이벤트 data-api 리포트 소유자 — 진행 중인 요청을 종료 때 기다려요 */
 		playbackReporter: PlaybackReporter;

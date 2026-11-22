@@ -102,6 +102,11 @@
             "import": "./dist/ticket.js",
             "require": "./dist/ticket.cjs"
         },
+        "./giveaway": {
+            "types": "./dist/giveaway.d.ts",
+            "import": "./dist/giveaway.js",
+            "require": "./dist/giveaway.cjs"
+        },
         "./scheduledMessage": {
             "types": "./dist/scheduledMessage.d.ts",
             "import": "./dist/scheduledMessage.js",

@@ -22,6 +22,7 @@ export const PIECE_ROOTS = [
 	'features/greeting/discord',
 	'features/starboard/discord',
 	'features/scheduled-messages/discord',
+	'features/giveaway/discord',
 	'features/ai-chat/discord',
 	'features/tts/discord'
 ] as const;
