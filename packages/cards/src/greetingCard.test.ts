@@ -48,7 +48,7 @@ describe('greetingCard — 좌표 계약', () => {
 		expect(withImage.props.src).toBe('data:image/png;base64,AAAA');
 	});
 
-	it('도형은 중심 기준이고 circle은 둥글게, opacity를 그대로 써요', () => {
+	it('도형은 중심 기준 래퍼 div 안의 svg이고 opacity를 래퍼에 써요', () => {
 		const root = greetingCard(
 			image([
 				{ id: 'r', type: 'shape', shape: 'rect', x: 50, y: 50, width: 1200, height: 220, color: '#231a10', opacity: 0.55 },
@@ -57,9 +57,44 @@ describe('greetingCard — 좌표 계약', () => {
 			vars
 		);
 		const [rect, circle] = layerNodes(root);
-		expect(style(rect!)).toMatchObject({ left: 0, top: 337.5 - 110, width: 1200, height: 220, opacity: 0.55, borderRadius: 0 });
+		expect(style(rect!)).toMatchObject({ left: 0, top: 337.5 - 110, width: 1200, height: 220, opacity: 0.55 });
 		expect(style(circle!)).toMatchObject({ left: 600 - 180, top: 256.5 - 180, width: 360, opacity: 0.25 });
-		expect(Number(style(circle!).borderRadius)).toBeGreaterThan(1000);
+		expect(style(rect!)).not.toHaveProperty('transform');
+		const svg = children(circle!)[0] as CardElement;
+		expect(svg.type).toBe('svg');
+		expect((svg.props.children as CardElement[]).at(-1)!.type).toBe('ellipse');
+	});
+
+	it('회전·흐림은 래퍼 스타일에 입혀요 (텍스트는 기준점을 원점으로 회전해요)', () => {
+		const shape = layerNodes(
+			greetingCard(
+				image([
+					{
+						id: 's',
+						type: 'shape',
+						shape: 'star',
+						x: 50,
+						y: 50,
+						width: 100,
+						height: 100,
+						color: '#ffffff',
+						opacity: 1,
+						rotation: 30,
+						blur: 12
+					}
+				]),
+				vars
+			)
+		)[0]!;
+		expect(style(shape)).toMatchObject({ transform: 'rotate(30deg)', filter: 'blur(12px)' });
+		const text = layerNodes(
+			greetingCard(
+				image([{ id: 't', type: 'text', x: 20, y: 40, size: 40, color: '#ffffff', bold: true, align: 'left', text: '안녕', rotation: -10 }]),
+				vars
+			)
+		)[0]!;
+		expect(style(text)).toMatchObject({ transform: 'rotate(-10deg)' });
+		expect(String(style(text).transformOrigin)).toMatch(/^0px /);
 	});
 
 	it('이미지 레이어는 dataUri를 width×height로 중심 기준에 놓아요', () => {
@@ -81,7 +116,8 @@ describe('greetingCard — 좌표 계약', () => {
 			]),
 			vars
 		);
-		expect(layerNodes(root).map((node) => style(node).backgroundColor)).toEqual(['#111111', '#333333']);
+		const fills = layerNodes(root).map((node) => ((children(node)[0] as CardElement).props.children as CardElement[]).at(-1)!.props.fill);
+		expect(fills).toEqual(['#111111', '#333333']);
 	});
 });
 

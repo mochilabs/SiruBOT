@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-	DEFAULT_WELCOME_GREETING,
 	DEFAULT_GOODBYE_GREETING,
+	DEFAULT_GREETINGS,
+	DEFAULT_WELCOME_GREETING,
+	GREETING_SHAPES,
 	GREETING_TEMPLATES,
+	greetingConfigSchema,
 	PRESET_BACKGROUNDS,
 	renderGreetingTemplate,
 	validateGreetingConfig
@@ -116,6 +119,51 @@ describe('GREETING_TEMPLATES', () => {
 			expect(validateGreetingConfig({ ...DEFAULT_WELCOME_GREETING, image: template.image })).not.toBeNull();
 			const layerIds = template.image.layers.map((layer) => layer.id);
 			expect(new Set(layerIds).size).toBe(layerIds.length);
+		}
+	});
+});
+
+describe('도형 레이어 확장 필드', () => {
+	const shape = { id: 's', type: 'shape', shape: 'star', x: 50, y: 50, width: 100, height: 100, color: '#ffffff', opacity: 1 } as const;
+	const withLayers = (layers: unknown[]) => ({ ...DEFAULT_GREETINGS.welcome, image: { background: { presetId: 'rose', dataUri: null }, layers } });
+
+	it('필수 필드만 있는 예전 도형도 그대로 통과해요', () => {
+		expect(greetingConfigSchema.safeParse(withLayers([{ ...shape, shape: 'rect' }])).success).toBe(true);
+	});
+
+	it('모든 도형 종류와 선택 필드(회전·둥글기·그라디언트·테두리·흐림)를 받아요', () => {
+		for (const kind of GREETING_SHAPES) {
+			const layer = {
+				...shape,
+				shape: kind,
+				rotation: -30,
+				radius: 24,
+				gradientTo: '#000000',
+				gradientAngle: 90,
+				strokeColor: '#ff0000',
+				strokeWidth: 6,
+				filled: false,
+				blur: 20
+			};
+			expect(greetingConfigSchema.safeParse(withLayers([layer])).success, kind).toBe(true);
+		}
+	});
+
+	it('범위를 벗어난 값과 알 수 없는 도형은 거부해요', () => {
+		expect(greetingConfigSchema.safeParse(withLayers([{ ...shape, shape: 'blob' }])).success).toBe(false);
+		expect(greetingConfigSchema.safeParse(withLayers([{ ...shape, rotation: 400 }])).success).toBe(false);
+		expect(greetingConfigSchema.safeParse(withLayers([{ ...shape, strokeWidth: 90 }])).success).toBe(false);
+		expect(greetingConfigSchema.safeParse(withLayers([{ ...shape, gradientTo: 'red' }])).success).toBe(false);
+	});
+
+	it('텍스트·이미지 레이어도 회전을 받아요', () => {
+		const text = { id: 't', type: 'text', x: 50, y: 50, size: 30, color: '#ffffff', bold: false, align: 'center', text: 'a', rotation: 12 };
+		expect(greetingConfigSchema.safeParse(withLayers([text])).success).toBe(true);
+	});
+
+	it('모든 템플릿이 스키마를 통과해요', () => {
+		for (const template of GREETING_TEMPLATES) {
+			expect(greetingConfigSchema.safeParse({ ...DEFAULT_GREETINGS.welcome, image: template.image }).success, template.id).toBe(true);
 		}
 	});
 });

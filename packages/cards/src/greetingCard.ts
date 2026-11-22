@@ -18,6 +18,7 @@ import {
 	type GreetingShapeLayer,
 	type GreetingTextLayer
 } from '@sirubot/utils/memberGreeting';
+import { shapeSvg } from './greetingShapes.js';
 import { CARD_FONT, h, img, type CardChild, type CardElement } from './kit.js';
 import { W } from './tokens.js';
 
@@ -115,7 +116,9 @@ function textNode(layer: GreetingTextLayer, vars: GreetingCardVars): CardElement
 			width: maxW,
 			height: boxH,
 			alignItems: 'center',
-			justifyContent: justify
+			justifyContent: justify,
+			// 회전은 텍스트 기준점(x, y)을 중심으로 해요 — left/right 정렬에서도 기준점이 그대로여야 해서 원점을 직접 줘요
+			...(layer.rotation ? { transform: `rotate(${layer.rotation}deg)`, transformOrigin: `${round(cx - left)}px ${round(boxH / 2)}px` } : {})
 		},
 		text
 			? h(
@@ -185,21 +188,26 @@ function imageNode(layer: GreetingImageLayer): CardElement {
 		top: round(cy - layer.height / 2),
 		width: layer.width,
 		height: layer.height,
-		opacity: layer.opacity
+		opacity: layer.opacity,
+		...(layer.rotation ? { transform: `rotate(${layer.rotation}deg)` } : {})
 	});
 }
 
-/** 도형 — 장식용 사각형 또는 원(타원: width×height), 중심 기준. */
+/** 도형 — SVG(`shapeSvg`)를 중심 기준에 놓고, 회전·투명도·흐림을 바깥 래퍼에 입혀요. */
 function shapeNode(layer: GreetingShapeLayer): CardElement {
 	const { cx, cy } = center(layer);
-	return h('div', {
-		position: 'absolute',
-		left: round(cx - layer.width / 2),
-		top: round(cy - layer.height / 2),
-		width: layer.width,
-		height: layer.height,
-		backgroundColor: layer.color,
-		opacity: layer.opacity,
-		borderRadius: layer.shape === 'circle' ? 9999 : 0
-	});
+	return h(
+		'div',
+		{
+			position: 'absolute',
+			left: round(cx - layer.width / 2),
+			top: round(cy - layer.height / 2),
+			width: layer.width,
+			height: layer.height,
+			opacity: layer.opacity,
+			...(layer.rotation ? { transform: `rotate(${layer.rotation}deg)` } : {}),
+			...(layer.blur ? { filter: `blur(${layer.blur}px)` } : {})
+		},
+		shapeSvg(layer)
+	);
 }

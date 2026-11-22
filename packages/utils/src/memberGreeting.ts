@@ -41,6 +41,8 @@ export type GreetingTextLayer = {
 	bold: boolean;
 	align: 'left' | 'center' | 'right';
 	text: string;
+	/** 회전(도, 시계 방향) — 텍스트 기준점(x, y) 중심. 기본 0 */
+	rotation?: number;
 	/** 숨김 레이어 — 렌더러가 건너뛴다 (에디터 보임/숨김 토글이 저장돼요) */
 	hidden?: boolean;
 };
@@ -66,20 +68,45 @@ export type GreetingImageLayer = {
 	height: number;
 	dataUri: string;
 	opacity: number; // 0~1
+	/** 회전(도, 시계 방향) — 이미지 중심 기준. 기본 0 */
+	rotation?: number;
 	hidden?: boolean;
 };
 
-/** 도형 레이어 — 장식용 사각형/원 */
+/** 도형 종류 — 렌더러가 SVG로 그려요 */
+export const GREETING_SHAPES = ['rect', 'circle', 'triangle', 'diamond', 'hexagon', 'star', 'heart'] as const;
+export type GreetingShapeKind = (typeof GREETING_SHAPES)[number];
+
+/**
+ * 도형 레이어 — 장식용 도형. 필수 필드(shape·x·y·width·height·color·opacity)만으로 예전처럼 단색 도형이 되고,
+ * 선택 필드로 회전·모서리 둥글기·그라디언트·테두리·윤곽선만 그리기·흐림(글로우)을 더할 수 있어요 (전부 생략 가능 — 하위 호환).
+ */
 export type GreetingShapeLayer = {
 	id: string;
 	type: 'shape';
-	shape: 'rect' | 'circle';
+	shape: GreetingShapeKind;
 	x: number;
 	y: number;
 	width: number;
 	height: number;
 	color: string;
 	opacity: number; // 0~1
+	/** 회전(도, 시계 방향) — 도형 중심 기준. 기본 0 */
+	rotation?: number;
+	/** 사각형 모서리 둥글기 px — shape가 rect일 때만 써요. 기본 0 */
+	radius?: number;
+	/** 그라디언트 끝색 — 있으면 color → gradientTo로 칠해요 */
+	gradientTo?: string | null;
+	/** 그라디언트 각도(도, 0 = 왼→오른, 90 = 위→아래, 시계 방향). 기본 45(좌상→우하) */
+	gradientAngle?: number;
+	/** 테두리 색 — strokeWidth가 0보다 클 때만 그려요 */
+	strokeColor?: string | null;
+	/** 테두리 두께 px. 기본 0 */
+	strokeWidth?: number;
+	/** false면 안쪽을 비우고 테두리만 그려요. 기본 true */
+	filled?: boolean;
+	/** 흐림 반경 px — 글로우·빛 번짐 장식용. 기본 0 */
+	blur?: number;
 	hidden?: boolean;
 };
 
@@ -130,6 +157,7 @@ const textLayerSchema = z.object({
 	bold: z.boolean(),
 	align: z.enum(['left', 'center', 'right']),
 	text: z.string().max(500),
+	rotation: z.number().min(-180).max(180).optional(),
 	hidden: z.boolean().optional()
 });
 
@@ -150,18 +178,27 @@ const imageLayerSchema = z.object({
 	height: z.number().min(1).max(675),
 	dataUri: z.string().regex(DATA_URI).max(DATA_URI_MAX_LENGTH),
 	opacity: z.number().min(0).max(1),
+	rotation: z.number().min(-180).max(180).optional(),
 	hidden: z.boolean().optional()
 });
 
 const shapeLayerSchema = z.object({
 	id: z.string().min(1).max(64),
 	type: z.literal('shape'),
-	shape: z.enum(['rect', 'circle']),
+	shape: z.enum(GREETING_SHAPES),
 	...position,
 	width: z.number().min(1).max(1200),
-	height: z.number().min(1).max(675),
+	height: z.number().min(1).max(1200),
 	color: z.string().regex(HEX_COLOR),
 	opacity: z.number().min(0).max(1),
+	rotation: z.number().min(-180).max(180).optional(),
+	radius: z.number().min(0).max(600).optional(),
+	gradientTo: z.string().regex(HEX_COLOR).nullable().optional(),
+	gradientAngle: z.number().min(0).max(360).optional(),
+	strokeColor: z.string().regex(HEX_COLOR).nullable().optional(),
+	strokeWidth: z.number().min(0).max(40).optional(),
+	filled: z.boolean().optional(),
+	blur: z.number().min(0).max(120).optional(),
 	hidden: z.boolean().optional()
 });
 
@@ -176,7 +213,7 @@ const greetingImageSchema = z.object({
 			.nullable(),
 		dataUri: z.string().regex(DATA_URI).max(DATA_URI_MAX_LENGTH).nullable()
 	}),
-	layers: z.array(greetingLayerSchema).max(50)
+	layers: z.array(greetingLayerSchema).max(80)
 });
 
 export const greetingConfigSchema = z
@@ -253,6 +290,83 @@ export type GreetingTemplate = {
 	name: string;
 	image: GreetingImage;
 };
+
+/** 템플릿 데이터를 짧게 쓰기 위한 도형 레이어 생성 헬퍼 — 저장되는 값은 일반 GreetingShapeLayer 그대로예요. */
+function shapeLayer(
+	id: string,
+	shape: GreetingShapeKind,
+	x: number,
+	y: number,
+	size: number | [number, number],
+	color: string,
+	opacity: number,
+	extra: Partial<GreetingShapeLayer> = {}
+): GreetingShapeLayer {
+	const [width, height] = typeof size === 'number' ? [size, size] : size;
+	return { id, type: 'shape', shape, x, y, width, height, color, opacity, ...extra };
+}
+
+/** 텍스트 레이어 생성 헬퍼 */
+function textLayer(
+	id: string,
+	x: number,
+	y: number,
+	size: number,
+	color: string,
+	text: string,
+	options: { bold?: boolean; align?: 'left' | 'center' | 'right'; rotation?: number } = {}
+): GreetingTextLayer {
+	return {
+		id,
+		type: 'text',
+		x,
+		y,
+		size,
+		color,
+		bold: options.bold ?? false,
+		align: options.align ?? 'center',
+		text,
+		...(options.rotation ? { rotation: options.rotation } : {})
+	};
+}
+
+/** 컨페티 조각 — [종류, x%, y%, 크기, 색, 회전] */
+const CONFETTI: readonly [GreetingShapeKind, number, number, number, string, number][] = [
+	['star', 8, 14, 46, '#fff0d6', 12],
+	['triangle', 17, 30, 34, '#ffd166', -24],
+	['circle', 6, 48, 22, '#ff6b8b', 0],
+	['diamond', 14, 70, 36, '#fff0d6', 18],
+	['star', 9, 88, 30, '#ffb36b', -10],
+	['heart', 22, 86, 34, '#ff6b8b', 14],
+	['triangle', 31, 12, 26, '#fff0d6', 30],
+	['hexagon', 40, 90, 30, '#ffd166', 8],
+	['circle', 60, 9, 20, '#fff0d6', 0],
+	['star', 71, 16, 40, '#ffd166', 20],
+	['diamond', 85, 10, 30, '#ff6b8b', -14],
+	['heart', 92, 30, 38, '#fff0d6', -18],
+	['triangle', 88, 52, 34, '#ffb36b', 24],
+	['circle', 94, 72, 26, '#ff6b8b', 0],
+	['star', 80, 88, 34, '#fff0d6', -8],
+	['hexagon', 68, 92, 26, '#ffd166', 16]
+];
+
+/** 별밤 — [x%, y%, 크기, 불투명도, 회전] */
+const STARS: readonly [number, number, number, number, number][] = [
+	[8, 12, 22, 0.9, 0],
+	[18, 28, 14, 0.6, 12],
+	[30, 10, 18, 0.8, -10],
+	[44, 20, 12, 0.5, 0],
+	[58, 8, 20, 0.85, 18],
+	[70, 26, 12, 0.55, 0],
+	[90, 14, 16, 0.7, -12],
+	[12, 60, 12, 0.5, 0],
+	[26, 78, 18, 0.7, 14],
+	[40, 90, 12, 0.45, 0],
+	[64, 84, 16, 0.65, -16],
+	[78, 70, 12, 0.5, 0],
+	[92, 86, 20, 0.8, 10],
+	[6, 88, 14, 0.6, 0]
+];
 
 export const GREETING_TEMPLATES: readonly GreetingTemplate[] = [
 	{
@@ -444,6 +558,144 @@ export const GREETING_TEMPLATES: readonly GreetingTemplate[] = [
 					align: 'center',
 					text: '{멤버수}번째 멤버가 되었어요'
 				}
+			]
+		}
+	},
+	{
+		id: 'aurora-glass',
+		name: '오로라 글라스',
+		image: {
+			background: { presetId: 'midnight', dataUri: null },
+			layers: [
+				shapeLayer('glow-violet', 'circle', 18, 22, [560, 380], '#6a4fb0', 0.6, { blur: 80 }),
+				shapeLayer('glow-pink', 'circle', 84, 80, [600, 400], '#ff85c1', 0.42, { blur: 90 }),
+				shapeLayer('glow-mint', 'circle', 62, 14, [320, 220], '#7fd6b0', 0.32, { blur: 70 }),
+				shapeLayer('glass', 'rect', 50, 50, [1010, 440], '#ffffff', 0.09, { radius: 52 }),
+				shapeLayer('glass-edge', 'rect', 50, 50, [1010, 440], '#ffffff', 0.38, {
+					radius: 52,
+					filled: false,
+					strokeColor: '#ffffff',
+					strokeWidth: 2
+				}),
+				shapeLayer('avatar-halo', 'circle', 27, 50, 292, '#ffffff', 0.9, { filled: false, strokeColor: '#b9a3ff', strokeWidth: 3 }),
+				{ id: 'avatar', type: 'avatar', x: 27, y: 50, size: 232, ringColor: '#ffffff' },
+				shapeLayer('pill', 'rect', 71.75, 30, [210, 46], '#ff85c1', 0.95, { radius: 23, gradientTo: '#b9a3ff', gradientAngle: 0 }),
+				textLayer('pill-text', 71.75, 30, 22, '#ffffff', 'WELCOME', { bold: true }),
+				textLayer('title', 63, 48, 54, '#ffffff', '{유저이름}', { bold: true, align: 'left' }),
+				textLayer('subtitle', 63, 63, 26, '#d9ccff', '{서버}에 오신 걸 환영해요', { align: 'left' }),
+				textLayer('count', 63, 74, 22, '#9db4ff', '{멤버수}번째 멤버', { align: 'left' })
+			]
+		}
+	},
+	{
+		id: 'confetti-party',
+		name: '컨페티 파티',
+		image: {
+			background: { presetId: 'sunset', dataUri: null },
+			layers: [
+				shapeLayer('burst', 'circle', 50, 36, 470, '#fff0d6', 0.3, { blur: 50 }),
+				...CONFETTI.map(([shape, x, y, size, color, rotation], i) =>
+					shapeLayer(`confetti-${i}`, shape, x, y, size, color, 0.9, { rotation })
+				),
+				shapeLayer('ring', 'circle', 50, 36, 330, '#fff0d6', 0.85, { filled: false, strokeColor: '#fff0d6', strokeWidth: 4 }),
+				{ id: 'avatar', type: 'avatar', x: 50, y: 36, size: 250, ringColor: '#fff0d6' },
+				shapeLayer('banner', 'rect', 50, 74, [820, 96], '#2a1410', 0.5, { radius: 48 }),
+				textLayer('title', 50, 74, 48, '#ffffff', '🎉 {유저이름} 님 환영해요!', { bold: true }),
+				textLayer('subtitle', 50, 90, 24, '#fff0d6', '{서버} · {멤버수}번째 멤버')
+			]
+		}
+	},
+	{
+		id: 'hex-tech',
+		name: '헥스 테크',
+		image: {
+			background: { presetId: 'ocean', dataUri: null },
+			layers: [
+				shapeLayer('hex-big', 'hexagon', 90, 16, 420, '#d6f0ff', 0.22, {
+					filled: false,
+					strokeColor: '#d6f0ff',
+					strokeWidth: 3,
+					rotation: 12
+				}),
+				shapeLayer('hex-fill', 'hexagon', 94, 88, 300, '#5fb0d9', 0.4, { gradientTo: '#1f4f73', gradientAngle: 90, rotation: -8 }),
+				shapeLayer('hex-small', 'hexagon', 70, 90, 90, '#d6f0ff', 0.5, { rotation: 20 }),
+				shapeLayer('bar-a', 'rect', 79.8, 24, [380, 6], '#d6f0ff', 0.7, { radius: 3 }),
+				shapeLayer('bar-b', 'rect', 70.25, 24, [150, 6], '#5fb0d9', 0.9, { radius: 3 }),
+				shapeLayer('frame-outer', 'hexagon', 24, 50, 420, '#5fb0d9', 0.35, { filled: false, strokeColor: '#5fb0d9', strokeWidth: 3 }),
+				shapeLayer('frame-inner', 'hexagon', 24, 50, 360, '#d6f0ff', 1, { filled: false, strokeColor: '#d6f0ff', strokeWidth: 8 }),
+				{ id: 'avatar', type: 'avatar', x: 24, y: 50, size: 224, ringColor: '#d6f0ff' },
+				textLayer('tag', 64, 34, 22, '#5fb0d9', 'NEW MEMBER', { bold: true, align: 'left' }),
+				textLayer('title', 64, 48, 58, '#ffffff', '{유저이름}', { bold: true, align: 'left' }),
+				shapeLayer('divider', 'rect', 76.5, 60, [300, 4], '#d6f0ff', 0.8, { radius: 2 }),
+				textLayer('subtitle', 64, 70, 26, '#d6f0ff', '{서버}의 {멤버수}번째 멤버', { align: 'left' })
+			]
+		}
+	},
+	{
+		id: 'heart-bloom',
+		name: '하트 블룸',
+		image: {
+			background: { presetId: 'rose', dataUri: null },
+			layers: [
+				shapeLayer('heart-glow', 'heart', 50, 42, [560, 520], '#ffe4f0', 0.4, { blur: 50 }),
+				shapeLayer('heart-back', 'heart', 50, 42, [470, 430], '#ffffff', 0.18, { rotation: -8, gradientTo: '#ff85c1', gradientAngle: 90 }),
+				shapeLayer('heart-l', 'heart', 12, 22, 110, '#ffe4f0', 0.9, { rotation: -18 }),
+				shapeLayer('heart-r', 'heart', 89, 28, 140, '#ffffff', 0.85, { rotation: 16, gradientTo: '#ffb3d9', gradientAngle: 90 }),
+				shapeLayer('heart-s1', 'heart', 22, 72, 64, '#ffffff', 0.8, { rotation: 12 }),
+				shapeLayer('heart-s2', 'heart', 80, 78, 80, '#ffe4f0', 0.85, { rotation: -14 }),
+				shapeLayer('heart-s3', 'heart', 6, 56, 40, '#ffffff', 0.7, { rotation: 20 }),
+				shapeLayer('heart-s4', 'heart', 94, 58, 44, '#ffffff', 0.7, { rotation: -22 }),
+				shapeLayer('spark-a', 'star', 33, 14, 34, '#ffffff', 0.9),
+				shapeLayer('spark-b', 'star', 68, 10, 24, '#fff0f6', 0.8, { rotation: 15 }),
+				{ id: 'avatar', type: 'avatar', x: 50, y: 38, size: 236, ringColor: '#ffffff' },
+				textLayer('title', 50, 72, 50, '#ffffff', '{유저이름} 님 반가워요 ♥', { bold: true }),
+				textLayer('subtitle', 50, 86, 26, '#ffe4f0', '{서버}의 {멤버수}번째 멤버')
+			]
+		}
+	},
+	{
+		id: 'diagonal-split',
+		name: '다이애고널 스플릿',
+		image: {
+			background: { presetId: 'lavender', dataUri: null },
+			layers: [
+				shapeLayer('slab', 'rect', 24, 50, [640, 1100], '#0c0820', 0.62, { rotation: 14 }),
+				shapeLayer('slab-edge', 'rect', 40, 50, [14, 1100], '#ffffff', 0.85, { rotation: 14, gradientTo: '#b9a3ff', gradientAngle: 90 }),
+				shapeLayer('slab-edge2', 'rect', 44.5, 50, [5, 1100], '#ffffff', 0.4, { rotation: 14 }),
+				shapeLayer('tri', 'triangle', 90, 84, 190, '#efe8ff', 0.28, { rotation: 12 }),
+				shapeLayer('tri2', 'triangle', 76, 92, 90, '#ffffff', 0.5, { rotation: -20 }),
+				shapeLayer('circle-a', 'circle', 86, 18, 120, '#ffffff', 0.9, { filled: false, strokeColor: '#efe8ff', strokeWidth: 5 }),
+				shapeLayer('circle-b', 'circle', 86, 18, 54, '#efe8ff', 0.8),
+				{ id: 'avatar', type: 'avatar', x: 20, y: 50, size: 250, ringColor: '#efe8ff' },
+				textLayer('title', 66, 40, 56, '#ffffff', '환영해요,', { bold: true, align: 'left' }),
+				textLayer('name', 66, 56, 52, '#2a1f5c', '{유저이름} 님', { bold: true, align: 'left' }),
+				textLayer('subtitle', 66, 72, 26, '#efe8ff', '{서버} · {멤버수}번째 멤버', { align: 'left' })
+			]
+		}
+	},
+	{
+		id: 'starry-night',
+		name: '별이 빛나는 밤',
+		image: {
+			background: { presetId: 'midnight', dataUri: null },
+			layers: [
+				shapeLayer('nebula', 'circle', 50, 100, [1100, 360], '#6a4fb0', 0.45, { blur: 90 }),
+				shapeLayer('nebula-2', 'circle', 16, 8, [420, 260], '#2b3a5c', 0.8, { blur: 70 }),
+				...STARS.map(([x, y, size, opacity, rotation], i) => shapeLayer(`star-${i}`, 'star', x, y, size, '#ffffff', opacity, { rotation })),
+				shapeLayer('moon-glow', 'circle', 82, 22, 220, '#f0e2cf', 0.35, { blur: 40 }),
+				shapeLayer('moon', 'circle', 82, 22, 130, '#f0e2cf', 1, { gradientTo: '#d4a574', gradientAngle: 45 }),
+				shapeLayer('crater-a', 'circle', 79.5, 20, 26, '#b08a5a', 0.35),
+				shapeLayer('crater-b', 'circle', 84, 26, 18, '#b08a5a', 0.3),
+				shapeLayer('crater-c', 'circle', 85.5, 17.5, 12, '#b08a5a', 0.3),
+				shapeLayer('hill-back', 'circle', 16, 100, [900, 300], '#10172a', 1),
+				shapeLayer('hill-front', 'circle', 88, 100, [900, 260], '#0a0f1c', 1),
+				{ id: 'avatar', type: 'avatar', x: 50, y: 34, size: 200, ringColor: '#9db4ff' },
+				shapeLayer('ring', 'circle', 50, 34, 266, '#9db4ff', 0.5, { filled: false, strokeColor: '#9db4ff', strokeWidth: 2 }),
+				textLayer('title', 50, 66, 48, '#ffffff', '{유저이름} 님, 반가워요', { bold: true }),
+				shapeLayer('divider', 'diamond', 50, 76, 16, '#9db4ff', 1),
+				shapeLayer('divider-l', 'rect', 41, 76, [160, 2], '#9db4ff', 0.6),
+				shapeLayer('divider-r', 'rect', 59, 76, [160, 2], '#9db4ff', 0.6),
+				textLayer('subtitle', 50, 86, 24, '#9db4ff', '{서버}의 {멤버수}번째 별이 되었어요')
 			]
 		}
 	}

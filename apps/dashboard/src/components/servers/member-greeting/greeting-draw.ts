@@ -141,6 +141,8 @@ export function createShapeLayer(): GreetingShapeLayer {
 	return { id: crypto.randomUUID(), type: "shape", shape: "rect", x: 50, y: 50, width: 400, height: 200, color: "#ff85c1", opacity: 0.6 };
 }
 
+const SHAPE_LABELS = { rect: "사각형", circle: "원", triangle: "삼각형", diamond: "마름모", hexagon: "육각형", star: "별", heart: "하트" } as const;
+
 /** 레이어 패널에서 보여줄 한 줄 라벨 */
 export function layerLabel(layer: GreetingLayer): string {
 	switch (layer.type) {
@@ -151,6 +153,6 @@ export function layerLabel(layer: GreetingLayer): string {
 		case "image":
 			return "이미지";
 		case "shape":
-			return layer.shape === "circle" ? "원" : "사각형";
+			return SHAPE_LABELS[layer.shape];
 	}
 }
