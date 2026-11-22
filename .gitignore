@@ -1,4 +1,5 @@
-core.*
+/core
+core.[0-9]*
 # Ignore a blackhole and the folder for development
 node_modules/
 .vs/
