@@ -83,7 +83,7 @@ export const audioActions = {
 		},
 		control: {
 			screen: 'audio',
-			row: 'tuning',
+			row: 'toggles',
 			build: () => new ButtonBuilder().setEmoji(emoji('repeat')).setLabel('겹침 시간 수정').setStyle(ButtonStyle.Secondary)
 		}
 	},
@@ -99,7 +99,7 @@ export const audioActions = {
 		},
 		control: {
 			screen: 'audio',
-			row: 'tuning',
+			row: 'toggles',
 			build: () => new ButtonBuilder().setEmoji(emoji('spectrum')).setLabel('AutoMix 고급 설정').setStyle(ButtonStyle.Secondary)
 		}
 	},

@@ -124,7 +124,7 @@ describe('settings 액션 표', () => {
 	it('navigate는 고른 화면으로, 알 수 없는 값이나 다른 컴포넌트면 메인으로 그려요', async () => {
 		await run('navigate', makeInteraction('string', ['dj']));
 		expect(lastMode()).toBe('dj');
-		for (const page of ['audio', 'ai', 'chatTools']) {
+		for (const page of ['music', 'audio', 'sponsorblock', 'ai', 'chatTools']) {
 			await run('navigate', makeInteraction('string', [page]));
 			expect(lastMode()).toBe(page);
 		}

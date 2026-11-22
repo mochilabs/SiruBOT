@@ -19,6 +19,14 @@ export type SettingsScreen = (typeof SETTINGS_SCREENS)[number];
 /** 첫 화면의 이동 셀렉트로 갈 수 있는 페이지 */
 export const SETTINGS_PAGES = SETTINGS_SCREENS.filter((s): s is Exclude<SettingsScreen, 'main'> => s !== 'main');
 
+/** 첫 화면에서 "음악" 한 항목으로 묶이는 페이지 — 각 페이지 위의 하위 이동 셀렉트로 서로 오가요 */
+export const MUSIC_SUBPAGES = ['music', 'audio', 'sponsorblock', 'dj'] as const satisfies readonly SettingsScreen[];
+export type MusicSubpage = (typeof MUSIC_SUBPAGES)[number];
+
+export function isMusicSubpage(screen: SettingsScreen): screen is MusicSubpage {
+	return (MUSIC_SUBPAGES as readonly string[]).includes(screen);
+}
+
 /** 컴포넌트가 아니라 모달·입력칸 ID라서 `SETTINGS_ACTIONS`에 없는 액션 — `settingsModal.ts`가 받아요 */
 export const SETTINGS_MODAL_ACTIONS = [
 	'jtcTemplateModal',
