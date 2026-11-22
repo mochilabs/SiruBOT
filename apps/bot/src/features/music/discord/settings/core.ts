@@ -20,9 +20,34 @@ import * as guildPlayback from '../../../../services/guildSettings/playback.ts';
 import { normalizeAiMode } from '../../../../services/guildSettings/types.ts';
 import { AI_MODE_LABELS, SPONSORBLOCK_SEGMENTS, sponsorBlockSegmentEmoji } from './labels.ts';
 import { jtcTemplateModal } from './modals.ts';
-import { SETTINGS_PAGES, type SettingsEntry, type SettingsScreen } from './types.ts';
+import { SETTINGS_PAGES, type MusicSubpage, type SettingsEntry, type SettingsScreen } from './types.ts';
+import type { Guild } from '@sirubot/prisma';
 
 const backButton = () => new ButtonBuilder().setStyle(ButtonStyle.Primary);
+
+/** 첫 화면 "음악" 항목의 한 줄 요약 (셀렉트 설명은 100자 이하) */
+export function musicNavDescription(
+	guild: Pick<Guild, 'sponsorBlockSegments' | 'djRoleId' | 'gaplessEnabled'> & Parameters<typeof transitionMode>[0]
+): string {
+	const sponsorBlock = guild.sponsorBlockSegments.length > 0 ? `스폰서블록 ${guild.sponsorBlockSegments.length}개 구간` : '스폰서블록 꺼짐';
+	return `곡 전환 ${TRANSITION_LABELS[transitionMode(guild)]} · 갭리스 ${guild.gaplessEnabled ? '켜짐' : '꺼짐'} · DJ ${guild.djRoleId ? '설정됨' : '미설정'} · ${sponsorBlock}`;
+}
+
+const MUSIC_SUBPAGE_OPTIONS: Array<{ value: MusicSubpage; emoji: string; label: string; description: string }> = [
+	{ value: 'music', emoji: emoji('music_note'), label: '재생', description: '컨트롤러·추천 곡·반복 모드' },
+	{ value: 'audio', emoji: emoji('spectrum'), label: '곡 전환·오디오', description: '전환·갭리스·크로스페이드·정규화·안내' },
+	{ value: 'sponsorblock', emoji: emoji('arrow_forward'), label: '스폰서블록', description: '건너뛸 구간 유형' },
+	{ value: 'dj', emoji: emoji('cd'), label: 'DJ 역할', description: '제어 권한을 가진 역할' }
+];
+
+/** 음악 하위 페이지 4개 위에 놓이는 이동 셀렉트 — 첫 화면과 같은 `navigate` 액션을 써서 customId는 그대로예요 */
+export function buildMusicSubNav(current: MusicSubpage): StringSelectMenuBuilder {
+	return new StringSelectMenuBuilder()
+		.setPlaceholder('음악 설정 페이지 이동')
+		.setMinValues(1)
+		.setMaxValues(1)
+		.addOptions(MUSIC_SUBPAGE_OPTIONS.map((option) => ({ ...option, default: option.value === current })));
+}
 
 /** 첫 화면·페이지 이동 — 하위 페이지의 뒤로가기 버튼은 뷰가 붙여요 */
 export const coreActions = {
@@ -36,7 +61,6 @@ export const coreActions = {
 			screen: 'main',
 			row: 'nav',
 			build: (guild) => {
-				const sponsorBlockDescription = guild.sponsorBlockSegments.length > 0 ? `현재 ${guild.sponsorBlockSegments.length}개 구간` : '꺼짐';
 				const channelDescription = guild.textChannelId
 					? guild.voiceChannelId
 						? '텍스트·음성 채널 설정됨'
@@ -50,15 +74,7 @@ export const coreActions = {
 					.setMinValues(1)
 					.setMaxValues(1)
 					.addOptions([
-						{ value: 'music', emoji: emoji('music_note'), label: '음악 설정', description: '컨트롤러·추천 곡·반복 모드' },
-						{
-							value: 'audio',
-							emoji: emoji('spectrum'),
-							label: '오디오(믹서)',
-							description: `곡 전환 ${TRANSITION_LABELS[transitionMode(guild)]} · 갭리스 ${guild.gaplessEnabled ? '켜짐' : '꺼짐'}`
-						},
-						{ value: 'sponsorblock', emoji: emoji('arrow_forward'), label: '스폰서블록', description: sponsorBlockDescription },
-						{ value: 'dj', emoji: emoji('cd'), label: 'DJ 설정', description: guild.djRoleId ? `<@&${guild.djRoleId}>` : '미설정' },
+						{ value: 'music', emoji: emoji('music_note'), label: '음악', description: musicNavDescription(guild) },
 						{ value: 'channel', emoji: emoji('scroll'), label: '채널 설정', description: channelDescription },
 						{ value: 'jtc', emoji: emoji('volume_up'), label: '임시 음성', description: guild.jtcEnabled ? '켜짐' : '꺼짐' },
 						{ value: 'ai', emoji: emoji('robot'), label: 'AI 채팅', description: aiMode },

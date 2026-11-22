@@ -8,7 +8,7 @@ import { SettingsModalHandler } from './settingsModal.ts';
 import { filterView } from '../views/filter.ts';
 import { settingsView, type SettingsMode } from '../views/settings.ts';
 import { automixModal, crossfadeModal, jtcTemplateModal } from '../settings/modals.ts';
-import { SETTINGS_SCREENS } from '../settings/types.ts';
+import { SETTINGS_SCREENS, isMusicSubpage } from '../settings/types.ts';
 import { searchResults } from '../views/search.ts';
 import { playlistLibraryView } from '../views/playlist.ts';
 import { askPlaylistAdd } from '../views/play.ts';
@@ -153,7 +153,10 @@ describe('audio custom id round trips', () => {
 		for (const [action, entry] of Object.entries(SETTINGS_ACTIONS)) {
 			if (!entry.control) continue;
 			expect(renderedActions(entry.control.screen), `${action} on ${entry.control.screen}`).toContain(action);
-			for (const other of SETTINGS_SCREENS.filter((screen) => screen !== entry.control!.screen)) {
+			// navigate는 첫 화면 외에 음악 하위 페이지 위의 이동 셀렉트로도 그려져요
+			for (const other of SETTINGS_SCREENS.filter(
+				(screen) => screen !== entry.control!.screen && !(action === 'navigate' && isMusicSubpage(screen))
+			)) {
 				expect(renderedActions(other), `${action} not on ${other}`).not.toContain(action);
 			}
 		}
