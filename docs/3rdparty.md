@@ -1,6 +1,6 @@
 # SiruBOT Third-Party Component Contracts (3rdparty)
 
-> **As of:** 2026-11-21 · **Verification method:** Every file reference was checked against the source. References are file paths only, never line numbers. Code takes precedence over documentation.
+> **As of:** 2026-11-22 · **Verification method:** Every file reference was checked against the source. References are file paths only, never line numbers. Code takes precedence over documentation.
 >
 > **Scope:** This document covers only the contract surfaces of external software and services that SiruBOT depends on through code, configuration, or deployment.
 >
@@ -13,7 +13,7 @@
 ## Table of Contents
 
 0. [TL;DR](#0-tldr)
-1. [Lavalink Node Plugins](#1-lavalink-node-plugins): 3RD-01 mixer-plugin · 3RD-02 youtube-file-cache · 3RD-03 youtube-plugin · 3RD-04 SponsorBlock
+1. [Lavalink Node Plugins](#1-lavalink-node-plugins): 3RD-01 mixer-plugin · 3RD-03 youtube-plugin · 3RD-04 SponsorBlock
 2. [Client Libraries](#2-client-libraries): 3RD-05 lavalink-client · 3RD-06 discord.js + Sapphire · 3RD-07 Runtime Dependencies
 3. [External HTTP Services](#3-external-http-services): 3RD-08 Provider Table
 4. [Upgrade Playbook](#4-upgrade-playbook)
@@ -26,21 +26,20 @@
 | ID | Component | Layer | Version / Source | Contract Surface | Most Critical Rule |
 |---|---|---|---|---|---|
 | 3RD-01 | `mixer-plugin` (`lavalink_mixer`) | Lavalink server plugin | Sibling project `../lavalink_mixer` (version from its git tag) | REST `/mixer/*` (v2 protocol), WebSocket `op: "mixer"` events, `pluginFilters.mixer` | Enable the filter **before** `player.play()` |
-| 3RD-02 | `youtube-file-cache` (`lavalink_file_cache`) | Lavalink server plugin | Sibling project `../lavalink_file_cache`, v0.1.0 | lavaplayer `AudioSourceManager`, REST `/youtube-file-cache/stats` | Cache key = YouTube `identifier` (videoId) |
-| 3RD-03 | `youtube-plugin` (official `youtube-source`) | Lavalink server plugin | `dev.lavalink.youtube:youtube-plugin:1.18.2` | Track loading / format resolution | 3RD-02 depends on its **internal APIs** |
+| 3RD-03 | `youtube-plugin` (official `youtube-source`) | Lavalink server plugin | `dev.lavalink.youtube:youtube-plugin` | Track loading / format resolution | Match the node's `lavaplayer` version |
 | 3RD-04 | SponsorBlock API | data-api external HTTP | `sponsor.ajay.app/api/skipSegments` | millisecond skip segments | BOT controls current-track seek; mixer receives incoming start |
 | 3RD-05 | `lavalink-client` | Bot client library | Patched `2.11.0` (`apps/bot/package.json`) | `LavalinkManager`, Player / QueueStore hooks | `autoSkip: false` is required |
 | 3RD-06 | `discord.js` + `@sapphire/framework` | Bot framework | `^14.27.0` / `^5.5.1` | Slash command and precondition registration | Bot conventions are in `.claude/skills/sapphire-command` |
 | 3RD-07 | Prisma, Redis, Fastify, Next.js, Takumi, Sentry, etc. | Runtime dependencies | See table in Section 2 | Type and client contracts | Run `yarn generate` first |
 | 3RD-08 | lrclib, Open-Meteo, tracker.delivery, TV Asahi, YouTube internal API, Deezer, MusicBrainz, OpenAI-compatible LLM, side servers | External HTTP | `apps/data-api/src/providers/*`, `packages/isrc/src/providers/*`, bot clients | REST, including unofficial APIs | YouTube's internal API can change without notice |
 
-For the overall system diagram, see [System Context in `architecture.md`, Section 2](./architecture.md#2-system-context). For the relationship among mixer, file-cache, and SiruBOT, consult the corresponding sibling-project documentation.
+For the overall system diagram, see [System Context in `architecture.md`, Section 2](./architecture.md#2-system-context). For the relationship between mixer and SiruBOT, consult the `../lavalink_mixer` documentation.
 
 ---
 
 ## 1. Lavalink Node Plugins
 
-Common installation model: place plugin JARs in Lavalink's `plugins/` directory on the node. The local dev stack in `docker/docker-compose.yml` runs the stock `ghcr.io/lavalink-devs/lavalink:4` image **without** plugins, so mixer, file-cache and YouTube playback are not available there unless you mount the JARs yourself. Built and deployed JARs are not tracked in this repository.
+Common installation model: place plugin JARs in Lavalink's `plugins/` directory on the node. The local dev stack in `docker/docker-compose.yml` runs the stock `ghcr.io/lavalink-devs/lavalink:4` image **without** plugins, so mixer and YouTube playback are not available there unless you mount the JARs yourself. Built and deployed JARs are not tracked in this repository.
 
 All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavaplayer:2.2.6`. These versions **must match the lavaplayer version used by the node**.
 
@@ -50,7 +49,7 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 - **Source:** Sibling project `../lavalink_mixer` (Kotlin, `dev.lavalink.mixer`). The JAR deployed to the server is a release/CI artifact from that repository.
 - **SiruBOT integration:**
   - `apps/bot/src/features/music/application/mixerService.ts`: REST wrapper for `/mixer/*` (protocol types and `MixerRequestError` in `apps/bot/src/features/music/lavalink/mixerProtocol.ts`)
-  - `apps/bot/src/features/music/discord/commands/mixer.ts`: the `/mixer` (`/믹서`) slash command; changing settings needs the DJ role or admin rights
+  - `apps/bot/src/features/music/discord/commands/settings.ts`: mixer settings live under `/설정` (music group); changing settings needs the DJ role or admin rights
   - `apps/bot/src/features/music/lavalink/handlers/nodeHandler.ts`: receives the plugin's `op: "mixer"` WebSocket events and dispatches them to `mixerHandlers.ts`
   - `apps/bot/src/features/music/lavalink/handlers/trackStartOrchestrator.ts`, `queueAdvancer.ts`: confirm track starts and advance the queue after server-side transitions
   - `apps/bot/src/services/guildSettings/mixer.ts`, `getMixerSettings()`: per-guild `MixerSettings` (gapless, crossfade and its length, normalization, AutoMix and its tempo/confidence limits)
@@ -92,36 +91,14 @@ All callers live in `mixerService.ts`. The plugin's `api/openapi.yaml` is the fu
 1. **Filter priming order:** If the filter is primed after `play()`, the effect is absent. Prime it before playback.
 2. **`guildId` must be a string.** Discord snowflakes exceed JavaScript's safe integer range (`2^53`); sending them as JSON numbers can corrupt them. Keep `guildId` string-valued in filter payloads.
 3. **Announcements queue; there is no 409:** `POST /mixer/announce` never reports "busy" — repeat calls stack into the queue and play sequentially. Surface the `position` from the `202` receipt instead of a retry hint, and do not treat a `202` as "speaking now".
-4. **Clamp crossfade duration:** The plugin accepts 500–30,000 ms; SiruBOT restricts it to 500–15,000 ms (`mixerService.ts`, command options `mixer.ts`, `packages/utils/src/guildSettingsContract.ts`). Review both sides when changing the contract.
-5. **Confirm track starts:** Do not trust the server's `trackStart` payload blindly. Match it with `resolveStartedTrack` in `trackStartOrchestrator.ts`; keep the confirmation window controlled by `MIXER_CONFIRM_TIMEOUT_MS` (default 5 seconds, `apps/bot/src/lib/config.ts`, used in `queueAdvancer.ts`). This contract interacts with 3RD-02.
+4. **Clamp crossfade duration:** The plugin accepts 500–30,000 ms; SiruBOT restricts it to 500–15,000 ms (`mixerService.ts`, `packages/utils/src/guildSettingsContract.ts`). Review both sides when changing the contract.
+5. **Confirm track starts:** Do not trust the server's `trackStart` payload blindly. Match it with `resolveStartedTrack` in `trackStartOrchestrator.ts`; keep the confirmation window controlled by `MIXER_CONFIRM_TIMEOUT_MS` (default 5 seconds, `apps/bot/src/lib/config.ts`, used in `queueAdvancer.ts`).
 6. **Respect capability flags:** Send `startPositionMs`/`outgoingEndPositionMs` only when `/mixer/info` reports support, and AutoMix calls only when `/mixer/state` reports the BPM fields; otherwise `setAutomix` throws `AutomixUnsupportedError` (`mixerService.ts`).
-
-### 3RD-02. `youtube-file-cache` (`lavalink_file_cache`)
-
-- **Purpose:** Caches YouTube audio on disk without modifying the official `youtube-source` plugin. Cache hits play local files; cache misses stream immediately while downloading in the background. It includes LRU eviction and per-videoId file locking.
-- **Source:** Sibling project `../lavalink_file_cache` (Java 17, `dev.lavalink.youtube.cache`, v0.1.0).
-- **SiruBOT integration:** No direct code-level reference. The dependency is contractual. Exceptions include display-name mapping in `apps/dashboard/src/utils/index.ts` (`"youtube-file-cache": "Youtube"`), source detection via `isYouTubeSource()` in `packages/utils/src/lavalinkTrack.ts` (prefix `youtube`), and videoId extraction via `resolveYouTubeVideoId()` (`lavalinkTrack.ts`).
-
-**Contract:**
-
-1. **Cache key = YouTube `identifier` (videoId).** The bot arms the mixer with `encodedTrack` (`mixerService.ts`, `arm()`); for YouTube tracks the encoded identifier is the videoId, which is also the file-cache key.
-2. **Stale metadata:** A cached track's `trackStart` payload may contain an old title or duration. The bot matches started tracks against the armed and queued tracks instead of trusting the payload (`trackStartOrchestrator.ts`, `resolveStartedTrack`), and `features/music/application/trackData.ts` tolerates an empty identifier.
-3. **Stats endpoint is currently broken:** `GET /youtube-file-cache/stats` always reports zero because the sibling project's `CacheStatsController.snapshotMap()` creates a new collector instance instead of using the actual counters held by `YoutubeFileCacheSourceManager`. Do not use this endpoint for monitoring. To inspect values, examine `.properties` files directly in the configured cache directory.
-4. **Configuration keys** under Lavalink `application.yaml` → `plugins.youtube-file-cache`: `enabled`, `directory` (default `./youtube-cache`), `max-size-mb` (1024), `download-threads` (2), `failure-cooldown-minutes` (30), `min-free-disk-mb` (500), `prefetch-limit` (10), and `max-track-length-minutes` (30).
-
-**Fragile Rules:**
-
-1. **Preserve the encoded track's source name.** Queued encoded tracks retain the `youtube-file-cache` source name. When changing source-name comparisons, also review the prefix match in `isYouTubeSource()`.
-2. **Do not cache live/segmented URLs.** Do not design latency calculations (for example, mixer silence-analysis cache lifetime) under the assumption that all sources are cached.
-3. **Shared directories across multiple nodes:** Per-videoId `FileLock` prevents duplicate downloads, but LRU accounting is per node. Plan capacity based on the number of nodes.
-4. **`prefetch-limit` applies only to the first N playlist tracks.** Playlist prefetch and the mixer's one-track-ahead preload can compete for download threads.
 
 ### 3RD-03. `youtube-plugin` (Official `youtube-source`)
 
-- **Purpose:** The de facto standard implementation for loading YouTube tracks, resolving formats, and streaming. 3RD-02 is built on top of it, and 3RD-01's auxiliary player also decodes tracks through this source.
-- **Version:** `dev.lavalink.youtube:youtube-plugin:1.18.2`, based on the compile dependency in 3RD-02's `build.gradle.kts`. A locally built artifact can replace the Maven artifact; `-PuseMavenYoutube` forces the Maven dependency.
+- **Purpose:** The de facto standard implementation for loading YouTube tracks, resolving formats, and streaming. 3RD-01's auxiliary player also decodes tracks through this source.
 - **SiruBOT integration:** Indirect. `apps/data-api/src/providers/lavalinkSearch.ts` delegates search to Lavalink REST `GET /v4/loadtracks?identifier=ytsearch:...`; this plugin provides the underlying source implementation.
-- **Fragile Rule:** 3RD-02 depends on **private internal APIs** of this plugin, including `YoutubeAudioSourceManager.getClients()`, `getCipherManager()`, and `buildAudioTrack()` (see `YoutubeFileCacheSourceManager.java` in the sibling project). Whenever 3RD-03 is upgraded, **rebuild and retest 3RD-02**. Upgrading 3RD-03 alone while leaving the old 3RD-02 JAR in place can cause runtime linkage errors.
 
 ### 3RD-04. SponsorBlock API
 
@@ -197,13 +174,12 @@ Authentication conventions (raw HTTP `Authorization` header and Redis hub channe
 
 ## 4. Upgrade Playbook
 
-### A. Replacing Node Plugin JARs (3RD-01–04)
+### A. Replacing Node Plugin JARs (3RD-01, 3RD-03–04)
 
-1. Verify that the target plugin's `plugin-api` and `lavaplayer` versions match the node's versions. 3RD-01 and 3RD-02 are built against `lavaplayer:2.2.6`.
-2. If 3RD-03 is upgraded, **rebuild 3RD-02** because it depends on internal APIs.
-3. When replacing 3RD-01, compare the REST contract in `api/openapi.yaml` with requests in `mixerService.ts`, especially the crossfade clamp (500–15,000 ms versus 500–30,000 ms).
-4. After restarting, verify response schemas for `/mixer/state` and `/youtube-file-cache/stats`. The stats endpoint currently has the zero-counter bug; check only that the expected schema keys exist.
-5. Compare deployment environment variables against the defaults hard-coded in code: `MIXER_CONFIRM_TIMEOUT_MS` and `MIXER_CALL_TIMEOUT_MS`.
+1. Verify that the target plugin's `plugin-api` and `lavaplayer` versions match the node's versions. 3RD-01 is built against `lavaplayer:2.2.6`.
+2. When replacing 3RD-01, compare the REST contract in `api/openapi.yaml` with requests in `mixerService.ts`, especially the crossfade clamp (500–15,000 ms versus 500–30,000 ms).
+3. After restarting, verify the response schema for `/mixer/state`.
+4. Compare deployment environment variables against the defaults hard-coded in code: `MIXER_CONFIRM_TIMEOUT_MS` and `MIXER_CALL_TIMEOUT_MS`.
 
 ### B. Upgrading `lavalink-client` (3RD-05)
 
@@ -228,6 +204,6 @@ Authentication conventions (raw HTTP `Authorization` header and Redis hub channe
 
 1. This document is governed by the “Code Is the Source of Truth” rule in [`./README.md`](./README.md). When a contract changes—endpoint, payload, environment variable, event, or key convention—update the relevant `3RD-xx` section in the same PR.
 2. Every behavioral claim must cite the file that implements it. Use file paths only, never line numbers (`./README.md`, writing rule 2).
-3. The sibling projects `../lavalink_mixer` and `../lavalink_file_cache` are authoritative. This document is a snapshot as of the date at the top. If a discrepancy is found, **the sibling-project code takes precedence** and this document must be corrected.
+3. The sibling project `../lavalink_mixer` is authoritative. This document is a snapshot as of the date at the top. If a discrepancy is found, **the sibling-project code takes precedence** and this document must be corrected.
 4. Add a **Fragile Rule** only when supported by an actual failure or a constraint enforced by code, ordering, or types. Label speculation as a hypothesis.
-5. Do not include statistics or performance figures without a source. The current 3RD-02 stats endpoint's zero-value bug is the only explicitly documented exception.
+5. Do not include statistics or performance figures without a source.
