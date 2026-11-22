@@ -47,9 +47,9 @@ export const BOT_MODULES: readonly BotModule[] = [
 		label: '커뮤니티',
 		emoji: '🏡',
 		appEmoji: 'people',
-		description: '역할 패널, 티켓, 프로필, 출석, 인사 메시지',
-		commands: ['rolepanel', 'ticket', 'profile', 'checkin', 'announce'],
-		componentNamespaces: ['role-panel', 'ticket'],
+		description: '역할 패널, 티켓, 프로필, 출석, 기브어웨이, 인사 메시지',
+		commands: ['rolepanel', 'ticket', 'profile', 'checkin', 'announce', 'giveaway'],
+		componentNamespaces: ['role-panel', 'ticket', 'giveaway'],
 		messageFeatures: [
 			{ id: 'greeting', summary: '새 멤버가 오고 갈 때 인사 메시지와 카드를 보내요' },
 			{ id: 'counting', summary: '카운팅 채널에서 다 같이 숫자를 이어 세요' },

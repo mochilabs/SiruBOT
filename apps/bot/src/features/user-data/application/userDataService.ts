@@ -22,6 +22,8 @@ export interface UserDataSummary {
 	ttsSettings: number;
 	/** 게임 전적 행 수 */
 	gameRecords: number;
+	/** 진행 중이거나 지난 기브어웨이에 참여한 기록 수 */
+	giveawayEntries: number;
 }
 
 export interface PurgeResult {
@@ -30,15 +32,17 @@ export interface PurgeResult {
 	profileRows: number;
 	ttsRows: number;
 	gameRecords: number;
+	giveawayEntries: number;
 }
 
 /** 열람 — 저장된 것들을 종류별 개수로만 보여줘요(내용 자체는 노출하지 않아요) */
 export async function summarizeUserData(db: PrismaClient, userId: string): Promise<UserDataSummary> {
-	const [memory, profile, ttsSettings, gameRecords] = await Promise.all([
+	const [memory, profile, ttsSettings, gameRecords, giveawayEntries] = await Promise.all([
 		db.userMemory.findUnique({ where: { userId }, select: { longTerm: true, shortTerm: true, shortTermSummary: true } }),
 		db.user.findUnique({ where: { id: userId }, select: { birthMonth: true, birthDay: true, intro: true } }),
 		db.ttsUserSetting.count({ where: { userId } }),
-		db.gameRecord.count({ where: { userId } })
+		db.gameRecord.count({ where: { userId } }),
+		db.giveawayEntry.count({ where: { userId } })
 	]);
 
 	const sections = parseMemoryMarkdown(typeof memory?.longTerm === 'string' ? memory.longTerm : '', { strictSections: false });
@@ -52,7 +56,8 @@ export async function summarizeUserData(db: PrismaClient, userId: string): Promi
 		hasBirthday: profile?.birthMonth != null && profile?.birthDay != null,
 		hasIntro: Boolean(profile?.intro),
 		ttsSettings,
-		gameRecords
+		gameRecords,
+		giveawayEntries
 	};
 }
 
@@ -77,12 +82,14 @@ export async function purgeUserData(db: PrismaClient, userId: string): Promise<P
 
 	const tts = await db.ttsUserSetting.deleteMany({ where: { userId } });
 	const games = await db.gameRecord.deleteMany({ where: { userId } });
+	const giveaways = await db.giveawayEntry.deleteMany({ where: { userId } });
 
 	return {
 		memoryRows,
 		shortTermCleared,
 		profileRows: profileUpdate.count,
 		ttsRows: tts.count,
-		gameRecords: games.count
+		gameRecords: games.count,
+		giveawayEntries: giveaways.count
 	};
 }
