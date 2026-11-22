@@ -8,6 +8,7 @@ import {
   BarChart3,
   Bell,
   Bot,
+  CalendarClock,
   Hash,
   Images,
   LayoutDashboard,
@@ -60,6 +61,7 @@ const SocialAlertsSettings = dynamic(() => import("./social-alerts-settings"), {
 const MemberGreetingSettings = dynamic(() => import("./member-greeting-settings").then((m) => m.MemberGreetingSettings), { loading: TabLoadingFallback });
 const TicketSettings = dynamic(() => import("./ticket-settings").then((m) => m.TicketSettings), { loading: TabLoadingFallback });
 const StarboardSettings = dynamic(() => import("./starboard-settings").then((m) => m.StarboardSettings), { loading: TabLoadingFallback });
+const ScheduledMessagesSettings = dynamic(() => import("./scheduled-messages-settings").then((m) => m.ScheduledMessagesSettings), { loading: TabLoadingFallback });
 const RolePanelsSettings = dynamic(() => import("./role-panels-settings").then((m) => m.RolePanelsSettings), { loading: TabLoadingFallback });
 const ICONS = {
   overview: <LayoutDashboard size={14} />,
@@ -78,6 +80,7 @@ const ICONS = {
   greeting: <UserPlus size={14} />,
   ticket: <Ticket size={14} />,
   starboard: <Star size={14} />,
+  "scheduled-messages": <CalendarClock size={14} />,
   "role-panels": <ShieldCheck size={14} />,
 } as const;
 // 탭 목록(키·라벨)은 server-tabs.ts가 단일 소스예요 — loading.tsx 스켈레톤도 여기를 따라가요
@@ -295,6 +298,9 @@ export function ServerDashboard({
                     )}
                     {item.key === "starboard" && (
                       <StarboardSettings guildId={guildId} />
+                    )}
+                    {item.key === "scheduled-messages" && (
+                      <ScheduledMessagesSettings guildId={guildId} />
                     )}
                     {item.key === "role-panels" && (
                       <RolePanelsSettings guildId={guildId} />

@@ -25,6 +25,7 @@ export default createConfig({
 		'src/birthday.ts',
 		'src/ticket.ts',
 		'src/starboard.ts',
+		'src/scheduledMessage.ts',
 		'src/rolePanel.ts',
 		'src/botAdmin.ts',
 		'src/memoryFile.ts',

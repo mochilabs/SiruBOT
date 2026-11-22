@@ -44,7 +44,7 @@ export const BOT_MODULES: readonly BotModule[] = [
 		label: '커뮤니티',
 		emoji: '🏡',
 		description: '역할 패널, 티켓, 프로필, 출석, 인사 메시지',
-		commands: ['rolepanel', 'ticket', 'profile', 'checkin'],
+		commands: ['rolepanel', 'ticket', 'profile', 'checkin', 'announce'],
 		componentNamespaces: ['role-panel', 'ticket'],
 		messageFeatures: [
 			{ id: 'greeting', summary: '새 멤버가 오고 갈 때 인사 메시지와 카드를 보내요' },

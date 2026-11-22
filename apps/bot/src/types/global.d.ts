@@ -55,6 +55,8 @@ declare module '@sapphire/pieces' {
 		/** 카운팅 채널 상태(샤드 메모리 + Redis write-behind) 소유자 */
 		countingState: import('../features/counting/index.ts').CountingStateStore;
 		/** 스타보드 반응 디바운스·게시·갱신 소유자 (features/starboard/application/starboardService.ts) */
+		/** 예약 메시지 생성·목록·삭제와 scheduled-message 핸들러 (features/scheduled-messages/application/scheduledMessageService.ts) */
+		scheduledMessages: import('../features/scheduled-messages/index.ts').ScheduledMessageService;
 		starboardService: import('../features/starboard/index.ts').StarboardService;
 		/** 재생 이벤트 data-api 리포트 소유자 — 진행 중인 요청을 종료 때 기다려요 */
 		playbackReporter: PlaybackReporter;

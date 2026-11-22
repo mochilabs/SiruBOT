@@ -20,6 +20,7 @@ const KNOWN_DUPLICATES: string[] = [];
 
 /** 이동 전 트리에서 만든 `<스토어>:<이름>` 스냅샷. 피스를 일부러 추가/삭제할 때만 고쳐요. */
 const EXPECTED_PIECES: string[] = [
+	'commands:announce',
 	'commands:avatar',
 	'commands:chat-settings',
 	'commands:chattools',
@@ -135,6 +136,7 @@ const EXPECTED_PIECES: string[] = [
 
 /** 커맨드 `<이름>=<fullCategory>` 스냅샷 (help 명령이 이 값으로 그룹을 나눠요). */
 const EXPECTED_COMMAND_CATEGORIES: string[] = [
+	'announce=일반',
 	'avatar=일반',
 	'chat-settings=일반',
 	'chattools=일반',
