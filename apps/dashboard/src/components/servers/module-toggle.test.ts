@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { guildSettingsSchema } from "@/lib/schemas";
 
-import { toggleModuleDisabled } from "./modules-settings";
+import { toggleModuleDisabled } from "./module-toggle";
 
 describe("toggleModuleDisabled", () => {
 	it("끄면 꺼진 목록에 모듈 표 순서로 들어가고, 켜면 빠져요", () => {

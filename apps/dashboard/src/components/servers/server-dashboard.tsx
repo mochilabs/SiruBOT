@@ -38,7 +38,7 @@ import { notifyApiError, notifySaved } from "@/lib/notify";
 
 import { FeatureSwitcherProvider } from "./feature-switcher";
 import { ModuleIcon } from "./module-icon";
-import { toggleModuleDisabled } from "./modules-settings";
+import { toggleModuleDisabled } from "./module-toggle";
 import { ServerFeatureSidebar } from "./server-feature-sidebar";
 import { ServerMobileNav } from "./server-mobile-nav";
 import { getTabModule, resolveServerTab, SERVER_TAB_GROUPS, SERVER_TABS, type ServerTabKey } from "./server-tabs";
@@ -50,7 +50,6 @@ function TabLoadingFallback() {
 }
 
 const ServerOverviewTab = dynamic(() => import("./server-overview-tab").then((m) => m.ServerOverviewTab), { loading: TabLoadingFallback });
-const ModulesSettings = dynamic(() => import("./modules-settings").then((m) => m.ModulesSettings), { loading: TabLoadingFallback });
 const AiSettings = dynamic(() => import("./ai-settings").then((m) => m.AiSettings), { loading: TabLoadingFallback });
 const CustomCommandsSettings = dynamic(() => import("./custom-commands-settings").then((m) => m.CustomCommandsSettings), { loading: TabLoadingFallback });
 const AssetsSettings = dynamic(() => import("./assets-settings").then((m) => m.AssetsSettings), { loading: TabLoadingFallback });
@@ -228,7 +227,7 @@ export function ServerDashboard({
         <ServerFeatureSidebar items={navItems} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} header={switcher} collapsibleGroups={["community"]} />
 
         <FeatureSwitcherProvider>
-        <div className="w-full min-w-0 flex-1">
+        <div className="-mx-1 w-full min-w-0 flex-1 sm:mx-0">
           <Tabs
             value={tab}
             onValueChange={selectTab}
@@ -272,7 +271,6 @@ export function ServerDashboard({
                 {visitedTabs.has(item.key) && (
                   <Fragment key={panelResets[item.key] ?? 0}>
                     {item.key === "overview" && <ServerOverviewTab guildId={guildId} onSelectTab={selectTab} />}
-                    {item.key === "modules" && <ModulesSettings guildId={guildId} />}
                     {item.key === "ai" && <AiSettings guildId={guildId} />}
                     {item.key === "custom-commands" && (
                       <CustomCommandsSettings guildId={guildId} />

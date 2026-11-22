@@ -7,7 +7,6 @@ import { ArrowRight, ExternalLink, Hash, LayoutDashboard, Play, Ticket } from "l
 
 import { SectionLabel } from "@/components/primitives/section-label";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useGuildSettings } from "@/hooks/use-guild-settings";
@@ -15,7 +14,7 @@ import { notifyApiError, notifySaved } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
 import { ModuleIcon } from "./module-icon";
-import { toggleModuleDisabled } from "./modules-settings";
+import { toggleModuleDisabled } from "./module-toggle";
 import type { ServerTabKey } from "./server-tabs";
 import { PanelError, PanelHeader, PanelLoading } from "./settings-shared";
 
@@ -125,10 +124,6 @@ export function ServerOverviewTab({ guildId, onSelectTab }: ServerOverviewTabPro
 						<h2 className="text-base font-bold text-foreground">모듈 상태</h2>
 						<p className="text-xs text-muted-foreground">이 서버에서 쓸 기능을 켜고 꺼요.</p>
 					</div>
-					<Button variant="ghost" size="sm" onClick={() => onSelectTab("modules")}>
-						모듈 설정 보기
-						<ArrowRight size={14} aria-hidden />
-					</Button>
 				</div>
 
 				<ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
