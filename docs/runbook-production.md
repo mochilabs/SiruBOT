@@ -1,6 +1,6 @@
 # Production runbook
 
-> **As of**: 2026-11-21
+> **As of**: 2026-11-22
 
 Architecture and contracts are in `./architecture.md`; the cross-app environment table is `./architecture.md#10-environment-variables`. This page covers operational behavior only.
 
