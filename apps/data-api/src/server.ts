@@ -7,7 +7,7 @@ import { sharedCache } from './utils/cache.ts';
 import { getLogger } from './utils/logger.ts';
 import { OpenAICompatTranslationProvider } from './providers/translate.ts';
 import { registerRoutes } from './routes/index.ts';
-import { getCardRenderer } from './renderers/takumi/takumiKit.tsx';
+import { getCardRenderer } from './renderers/shared/takumiKit.tsx';
 import { startOhaasaScheduler } from './services/ohaasaScheduler.ts';
 import { connectDb, disconnectDb, getDb } from './services/db.ts';
 import { startMemoryTidyScheduler } from './services/memoryTidy.ts';

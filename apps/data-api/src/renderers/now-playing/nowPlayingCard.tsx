@@ -8,10 +8,10 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { CARD_FONT, createAsyncLru, hexToRgba, mixHex, RADIUS, stripEmoji, T, W } from '@sirubot/cards';
 import { BOT_NAME } from '@sirubot/utils';
-import { formatClock } from './format.ts';
-import { prepareArtwork, type PreparedArtwork } from './artwork.ts';
-import type { IconName } from './icons.ts';
-import { Box, fetchImageDataUri, Icon, renderCardPng } from './takumiKit.tsx';
+import { formatClock } from '../shared/format.ts';
+import { prepareArtwork, type PreparedArtwork } from '../shared/artwork.ts';
+import type { IconName } from '../shared/icons.ts';
+import { Box, fetchImageDataUri, Icon, renderCardPng } from '../shared/takumiKit.tsx';
 
 export interface NowPlayingCardInput {
 	/** 캐시/dedup 키 — lavalink track.info.identifier */
@@ -61,7 +61,7 @@ const NEXT_MAX = 3;
 const loadArtwork = createAsyncLru<PreparedArtwork>(32, async (url) => prepareArtwork(await fetchImageDataUri(url), ART));
 const loadAvatar = createAsyncLru<string>(64, (url) => fetchImageDataUri(url));
 
-const ellipsis = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
+const ellipsis = { display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
 const fill = { position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' } as const satisfies CSSProperties;
 
 /** 뱃지(`Badge`): 텍스트 색 위에 같은 색 10~20% 배경 */
@@ -221,6 +221,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 								lineHeight: 1.18,
 								color: T.foreground,
 								marginTop: 14,
+								display: 'block',
 								lineClamp: 2
 							}}
 						>

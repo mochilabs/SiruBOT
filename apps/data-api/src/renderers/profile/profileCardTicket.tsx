@@ -6,7 +6,7 @@
 import { CARD_FONT, hexToRgba, RADIUS, stripEmoji, T, W } from '@sirubot/cards';
 import { BOT_NAME } from '@sirubot/utils';
 import { ellipsis, LIGHT, loadImage, Pill, STATUS_COLOR, Thumb, type ProfileCardInput } from './profileCard.tsx';
-import { Box, Icon, renderCardPng } from './takumiKit.tsx';
+import { Box, Icon, renderCardPng } from '../shared/takumiKit.tsx';
 
 export type ProfileTicketInput = Omit<ProfileCardInput, 'variant' | 'bannerUrl'>;
 
@@ -90,7 +90,7 @@ export async function renderProfileCardTicket(input: ProfileTicketInput): Promis
 						</Box>
 					</Box>
 				</Box>
-				{intro ? <Box style={{ fontSize: 24, color: theme.foreground, marginTop: 18, lineClamp: 2 }}>{intro}</Box> : null}
+				{intro ? <Box style={{ fontSize: 24, color: theme.foreground, marginTop: 18, display: 'block', lineClamp: 2 }}>{intro}</Box> : null}
 				{input.roleChips.length > 0 ? (
 					<Box style={{ flexWrap: 'wrap', marginTop: 18 }}>
 						{input.roleChips.slice(0, 4).map((role, i) => (

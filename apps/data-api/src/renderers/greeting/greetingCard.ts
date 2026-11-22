@@ -14,9 +14,9 @@ import {
 	type GreetingImage
 } from '@sirubot/utils';
 import { getLogger } from '../../utils/logger.ts';
-import { decodeDataUri, type GreetingCardContext } from '../memberGreetingCard.ts';
+import { decodeDataUri, type GreetingCardContext } from './memberGreetingCard.ts';
 import { createSemaphore } from '../../utils/semaphore.ts';
-import { fetchImageDataUri, renderCardAnimation, renderCardPng } from './takumiKit.tsx';
+import { fetchImageDataUri, renderCardAnimation, renderCardPng } from '../shared/takumiKit.tsx';
 
 const logger = getLogger('greetingCard');
 

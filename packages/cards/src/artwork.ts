@@ -1,6 +1,6 @@
 /**
  * 아트워크 순수 헬퍼 — 레터박스 감지, 대표색, 색 섞기, 이미지 헤더 크기 읽기예요. 런타임 독립(node·브라우저 공용)이에요.
- * 래스터가 필요한 `prepareArtwork`(Takumi)는 data-api `renderers/takumi/artwork.ts`에 있어요.
+ * 래스터가 필요한 `prepareArtwork`(Takumi)는 data-api `renderers/shared/artwork.ts`에 있어요.
  */
 
 export interface PreparedArtwork {

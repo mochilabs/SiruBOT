@@ -8,7 +8,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { CARD_FONT, RADIUS, stripEmoji, T, W } from '@sirubot/cards';
 import type { WrappedRanking, WrappedStats } from '../../services/wrapped.ts';
-import { Box, fetchImageDataUri, renderCardPng } from './takumiKit.tsx';
+import { Box, fetchImageDataUri, renderCardPng } from '../shared/takumiKit.tsx';
 
 export const WRAPPED_CARD_SIZE = { width: 900, height: 1700 } as const;
 /** 기록이 없을 때는 안내 카드 하나뿐이라 짧게 그려요. */
@@ -46,7 +46,7 @@ export function formatHour(hour: number): string {
 	return `${period} ${h12}시`;
 }
 
-const ellipsis = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
+const ellipsis = { display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
 
 /** `Card`: borderless rounded-card bg-card shadow-sm p-5 */
 function Card({ children, style }: { children: ReactNode; style?: CSSProperties }): ReactNode {
@@ -240,14 +240,28 @@ export async function renderWrappedCard(input: WrappedCardInput): Promise<Buffer
 										border: `2px solid ${T.borderStrong}`,
 										padding: '10px 24px',
 										marginRight: 12,
+										marginBottom: 10,
+										maxWidth: '100%',
 										fontSize: 26
 									}}
 								>
-									<Box style={{ fontWeight: W.semibold, color: T.foreground }}>{stripEmoji(artist.artist)}</Box>
-									<Box style={{ fontWeight: W.black, color: T.primaryText, marginLeft: 12 }}>{number(artist.plays)}</Box>
+									{/* 긴 이름은 한 줄에서 …로 줄이고, 횟수·순위는 밀리지 않게 고정해요 */}
+									<Box style={{ fontWeight: W.semibold, color: T.foreground, minWidth: 0, ...ellipsis }}>
+										{stripEmoji(artist.artist)}
+									</Box>
+									<Box style={{ fontWeight: W.black, color: T.primaryText, marginLeft: 12, flexShrink: 0 }}>
+										{number(artist.plays)}
+									</Box>
 									{stats.topArtistRanking && stats.topArtistRanking.artist === artist.artist ? (
 										<Box
-											style={{ fontSize: 22, fontWeight: W.semibold, color: T.brand, marginLeft: 14 }}
+											style={{
+												fontSize: 22,
+												fontWeight: W.semibold,
+												color: T.brand,
+												marginLeft: 14,
+												flexShrink: 0,
+												whiteSpace: 'nowrap'
+											}}
 										>{`상위 ${stats.topArtistRanking.topPercent}%`}</Box>
 									) : null}
 								</Box>

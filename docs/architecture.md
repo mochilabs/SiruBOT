@@ -203,7 +203,7 @@ Services are built by `BotApplication.setupServices` with explicit `deps` (db, `
 **Assembly order** (`src/server.ts`):
 
 1. Connect the shared-cache Redis + **start 8 hubs** from one array in `server.ts`: `playerHub`, `botProfileHub`, `memberGreetingHub`, `guildDataHub`, `playerWebHub`, `jtcSetupHub`, `botAdminHub`, `panelHub`
-2. Preload the Takumi card renderer and fonts (`getCardRenderer()` in `renderers/takumi/takumiKit.tsx`)
+2. Preload the Takumi card renderer and fonts (`getCardRenderer()` in `renderers/shared/takumiKit.tsx`)
 3. Two OpenAI-compatible providers — translation (`TRANSLATION_MODEL`; without it, raw horoscopes are served) and custom-command drafts (`CUSTOM_COMMAND_DRAFT_MODEL ?? TRANSLATION_MODEL`)
 4. Shared error handler (`app-kit`) → auth hook → route registration (Lavalink REST, notifier, and storage addresses/keys injected)
 5. Start the horoscope scheduler
@@ -218,7 +218,7 @@ Shutdown: stop the three schedulers → stop 8 hubs → cache Redis → DB → F
 graph TB
     R1["routes/<br/>index · cache-providers · ohaasa · embed-fix · render · ai · tts<br/>player · guild-data · panel · social · storage · bot-admin · incident-notice · dashboard"] --> P["providers/<br/>weather · lyrics · ohaasa · chapters · delivery · sponsorblock<br/>youtubeSuggestions · lavalinkSearch · embedFix · translate"]
     R1 --> S["services/<br/>8 hubs · ohaasaScheduler · memoryTidy · isrcEnricher · recordingMerge<br/>playbackStore · wrapped · db"]
-    R1 --> RD["renderers/takumi/ (TSX)<br/>profileCard · profileCardTicket · nowPlayingCard · wrappedCard · ohaasaCard · weatherCard · greetingCard"]
+    R1 --> RD["renderers/ (TSX, one folder per card)<br/>profileCard · profileCardTicket · nowPlayingCard · wrappedCard · ohaasaCard · weatherCard · greetingCard"]
     P --> U["utils/<br/>cache · dedup · breaker · metrics · semaphore · hubSubscriber · hubCorrelate · requestReplyHub"]
     S --> U
 ```

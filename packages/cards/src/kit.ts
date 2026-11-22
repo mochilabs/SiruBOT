@@ -1,6 +1,6 @@
 /**
  * Takumi 카드 공용 키트 중 런타임 독립 부분 — 요소 헬퍼, 폰트 이름, 이모지 제거, 비동기 LRU예요 (node·브라우저 공용).
- * 폰트 파일 읽기, 네이티브 래스터, 원격 이미지 다운로드 같은 node 전용 코드는 data-api `renderers/takumi/takumiKit.tsx`에 있어요.
+ * 폰트 파일 읽기, 네이티브 래스터, 원격 이미지 다운로드 같은 node 전용 코드는 data-api `renderers/shared/takumiKit.tsx`에 있어요.
  * 이 패키지는 JSX 빌드 설정 없이 쓰려고 `h()`로 요소를 만들어요 (data-api 카드는 TSX예요).
  */
 

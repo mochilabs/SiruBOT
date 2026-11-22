@@ -3,7 +3,7 @@ import { imageSizeOf } from '@sirubot/cards';
 import { decodeDataUri, GreetingBackgroundError, normalizeGreetingBackground, normalizeGreetingLayerImage } from './memberGreetingCard.ts';
 import { fromJsx } from '@takumi-rs/helpers/jsx';
 import { parseGifTiming } from '@sirubot/utils';
-import { getCardRenderer, renderSvgRaster } from './takumi/takumiKit.tsx';
+import { getCardRenderer, renderSvgRaster } from '../shared/takumiKit.tsx';
 
 /** 테스트용 단색 이미지를 dataURI로 — 업로드 정규화 입력을 만들어요. */
 async function solidImage(width: number, height: number): Promise<string> {

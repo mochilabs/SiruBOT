@@ -8,9 +8,9 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { CARD_FONT, createAsyncLru, hexToRgba, mixHex, RADIUS, stripEmoji, T, W } from '@sirubot/cards';
 import { BOT_NAME } from '@sirubot/utils';
-import { prepareArtwork, type PreparedArtwork } from './artwork.ts';
-import type { IconName } from './icons.ts';
-import { Box, fetchImageDataUri, Icon, renderCardPng } from './takumiKit.tsx';
+import { prepareArtwork, type PreparedArtwork } from '../shared/artwork.ts';
+import type { IconName } from '../shared/icons.ts';
+import { Box, fetchImageDataUri, Icon, renderCardPng } from '../shared/takumiKit.tsx';
 
 export type ProfileCardVariant = 'dashboard' | 'light' | 'aura';
 
@@ -99,7 +99,7 @@ export const loadImage = createAsyncLru<string>(96, (url) => fetchImageDataUri(u
 /** aura 배경: 배너/아바타 → 초소형 번짐 이미지 + 대표색 */
 const loadBackdrop = createAsyncLru<PreparedArtwork>(32, async (url) => prepareArtwork(await fetchImageDataUri(url), 64));
 
-export const ellipsis = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
+export const ellipsis = { display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
 const fill = { position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' } as const satisfies CSSProperties;
 
 export function Pill({ label, color, background, style }: { label: string; color: string; background: string; style?: CSSProperties }): ReactNode {
@@ -289,7 +289,17 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 							</Box>
 						</Box>
 						{intro.trim() ? (
-							<Box style={{ fontSize: 26, color: theme.foreground, marginTop: 14, lineHeight: 1.35, lineClamp: 2, maxWidth: '100%' }}>
+							<Box
+								style={{
+									fontSize: 26,
+									color: theme.foreground,
+									marginTop: 14,
+									lineHeight: 1.35,
+									display: 'block',
+									lineClamp: 2,
+									maxWidth: '100%'
+								}}
+							>
 								{intro}
 							</Box>
 						) : null}
