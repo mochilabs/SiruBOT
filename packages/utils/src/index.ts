@@ -8,7 +8,8 @@ export { versionInfo } from './version.js';
 export { BOT_NAME, DEFAULT_COLOR, VOICE_CHANNEL_REQUIRED_MESSAGE, WARN_COLOR } from './constants.js';
 export { emojiProgressBar, formatTrack, removeEmojis, volumeToEmoji } from './format.js';
 export { formatTime, formatTimeToKorean } from './time.js';
-export { addSeparator, createContainer, createSeparator, createThumbnail, resolveAccentColor, setContextAccentResolver } from './embed.js';
+export { addSeparator, createContainer, createSeparator, createThumbnail, resolveAccentColor } from './embed.js';
+export { currentThemePreset, setContextThemeResolver } from './themeContext.js';
 export { MemoryCache } from './memoryCache.js';
 export {
 	BOT_ADMIN_REQUEST_CHANNEL,

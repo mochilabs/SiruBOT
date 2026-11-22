@@ -1,5 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { themeEmojiName } from './guildSettingsContract.js';
+import { currentThemePreset } from './themeContext.js';
 
 /**
  * 앱 이모지 매니저 — 이름·폴백 관리를 한 곳에서 해요.
@@ -135,12 +137,16 @@ export type AppEmojiFallbackKey = keyof typeof APP_EMOJI_FALLBACKS;
 export function emoji(name: AppEmojiFallbackKey): string;
 export function emoji(name: string, fallback: string): string;
 export function emoji(name: string, fallback?: string): string {
-	const id = cachedMap?.[name];
 	const fallbackText = fallback ?? (name in APP_EMOJI_FALLBACKS ? APP_EMOJI_FALLBACKS[name as AppEmojiFallbackKey] : '❓');
+	// 서버 테마 세트(`name_<프리셋>`)를 먼저 찾고, 아직 업로드 전이거나 분홍이면 기본 이름(분홍)으로 폴백해요.
+	// 테마는 맥락 훅에서 동기로 읽어요 — DB를 건드리지 않아요.
+	const themed = themeEmojiName(name, currentThemePreset());
+	const resolvedName = cachedMap?.[themed] ? themed : name;
+	const id = cachedMap?.[resolvedName];
 	if (!id) return fallbackText;
 	// 이름에 이모지 이름 규칙 외 문자가 들어간 매핑은 방어적으로 무시
-	if (!/^[a-z0-9_]{2,32}$/.test(name)) return fallbackText;
-	return `<:${name}:${id}>`;
+	if (!/^[a-z0-9_]{2,32}$/.test(resolvedName)) return fallbackText;
+	return `<:${resolvedName}:${id}>`;
 }
 
 let cachedMap: EmojiIdMap | null = null;

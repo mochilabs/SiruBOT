@@ -3,7 +3,7 @@ import { usageFeatureKey } from '@sirubot/utils/modules';
 import { MessageFlags, type Interaction } from 'discord.js';
 import { customIdNamespace } from '../../lib/customId.ts';
 import { gateNamespace } from '../../lib/moduleGate.ts';
-import { withGuildAccent } from '../../lib/guildAccent.ts';
+import { withGuildTheme } from '../../lib/guildTheme.ts';
 import { notice } from '../../lib/notice.ts';
 import { isModuleEnabled } from '../../services/guildSettings/modules.ts';
 
@@ -27,10 +27,10 @@ export class CoreInteractionCreate extends Listener {
 			await this.route(interaction);
 			return;
 		}
-		// 서버 강조색을 맥락에 싣고 라우팅해요 — 이후 만들어지는 모든 컨테이너가 서버 색을 써요.
-		await withGuildAccent(
+		// 서버 테마를 맥락에 싣고 라우팅해요 — 이후 만들어지는 모든 컨테이너가 서버 색을 써요.
+		await withGuildTheme(
 			interaction.guildId,
-			async (guildId) => (await this.container.guildService.getGuild(guildId)).accentColor,
+			async (guildId) => (await this.container.guildService.getGuild(guildId)).themePreset,
 			() => this.route(interaction)
 		);
 	}

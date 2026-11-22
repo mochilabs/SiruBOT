@@ -1,6 +1,8 @@
 import { SeparatorSpacingSize } from 'discord.js';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_COLOR } from './constants.js';
+import { THEME_PRESETS } from './guildSettingsContract.js';
+import { setContextThemeResolver } from './themeContext.js';
 import { addSeparator, createContainer, createSeparator, createThumbnail, hexColorToInt } from './embed.ts';
 
 describe('hexColorToInt', () => {
@@ -53,19 +55,31 @@ describe('createThumbnail', () => {
 	});
 });
 
-describe('서버 강조색 맥락 훅', () => {
-	it('명시 색 → 맥락 색 → 기본색 순으로 써요', async () => {
-		const { setContextAccentResolver } = await import('./embed.ts');
+describe('서버 테마 맥락 훅', () => {
+	it('명시 색 → 서버 테마 → 기본색 순으로 써요', () => {
 		try {
-			setContextAccentResolver(() => '#abcdef');
-			expect(createContainer().toJSON().accent_color).toBe(0xabcdef);
+			setContextThemeResolver(() => 'blue');
+			expect(createContainer().toJSON().accent_color).toBe(0x5b9dff);
 			expect(createContainer('#123456').toJSON().accent_color).toBe(0x123456);
-			setContextAccentResolver(() => 'broken');
+			setContextThemeResolver(() => 'broken');
 			expect(createContainer().toJSON().accent_color).toBe(DEFAULT_COLOR);
-			setContextAccentResolver(() => null);
+			setContextThemeResolver(() => null);
 			expect(createContainer().toJSON().accent_color).toBe(DEFAULT_COLOR);
 		} finally {
-			setContextAccentResolver(null);
+			setContextThemeResolver(null);
+		}
+	});
+
+	it('프리셋 6개의 컨테이너 색이 서로 달라요', () => {
+		try {
+			const colors = THEME_PRESETS.map((preset) => {
+				setContextThemeResolver(() => preset);
+				return createContainer().toJSON().accent_color;
+			});
+			expect(new Set(colors).size).toBe(THEME_PRESETS.length);
+			expect(colors[0]).toBe(DEFAULT_COLOR);
+		} finally {
+			setContextThemeResolver(null);
 		}
 	});
 });

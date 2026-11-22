@@ -9,7 +9,7 @@ import { controllerView } from '../../discord/views/controller.ts';
 import type { CustomPlayer } from './customPlayer.ts';
 import type { LavalinkDeps } from '../deps.ts';
 import { nowPlayingTrack } from './nowPlaying.ts';
-import { withGuildAccent } from '../../../../lib/guildAccent.ts';
+import { withGuildTheme } from '../../../../lib/guildTheme.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 
 export interface ControllerCardPayloadOptions {
@@ -51,10 +51,10 @@ export async function buildControllerCardPayload(
 
 	const currentIdentifier = nowPlayingTrack(player)?.info.identifier;
 	const currentNode = player.node;
-	// 컨트롤러는 플레이어 이벤트에서 그려져 상호작용 맥락이 없으므로 서버 강조색을 직접 싣는다.
-	const components = await withGuildAccent(
+	// 컨트롤러는 플레이어 이벤트에서 그려져 상호작용 맥락이 없으므로 서버 테마를 직접 싣는다.
+	const components = await withGuildTheme(
 		player.guildId,
-		async (guildId) => (await deps.guildService.getGuild(guildId)).accentColor,
+		async (guildId) => (await deps.guildService.getGuild(guildId)).themePreset,
 		() =>
 			controllerView({
 				player,
