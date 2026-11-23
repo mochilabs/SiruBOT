@@ -84,11 +84,24 @@ function TimeColumns({ hour, minute, minuteStep, isDisabled, onPick }: TimeColum
 	const hourRef = useRef<HTMLDivElement>(null);
 	const minuteRef = useRef<HTMLDivElement>(null);
 
-	// 열려 있는 동안 고른 값이 항상 보이게 가운데로 스크롤해요
+	// 처음 열릴 때만 고른 값을 열 가운데로 옮기고, 이후엔 가려졌을 때만 최소한으로 맞춰요.
+	// scrollIntoView는 페이지·팝업까지 같이 스크롤해서 쓰지 않고, 열(column)의 scrollTop만 직접 바꿔요.
+	const opened = useRef(false);
 	useEffect(() => {
 		for (const column of [hourRef.current, minuteRef.current]) {
-			column?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView?.({ block: "center" });
+			const item = column?.querySelector<HTMLElement>('[aria-selected="true"]');
+			if (!column || !item) continue;
+			const top = item.offsetTop;
+			const bottom = top + item.offsetHeight;
+			if (!opened.current) {
+				column.scrollTop = top - (column.clientHeight - item.offsetHeight) / 2;
+			} else if (top < column.scrollTop) {
+				column.scrollTop = top;
+			} else if (bottom > column.scrollTop + column.clientHeight) {
+				column.scrollTop = bottom - column.clientHeight;
+			}
 		}
+		opened.current = true;
 	}, [hour, minute]);
 
 	const hourDisabled = (value: number) => minutes.every((candidate) => isDisabled(value, candidate));
@@ -107,7 +120,7 @@ function TimeColumns({ hour, minute, minuteStep, isDisabled, onPick }: TimeColum
 			if (!blocked) {
 				if (kind === "hour") onPick(next, minute ?? 0);
 				else onPick(hour ?? DEFAULT_TIME.hour, next);
-				event.currentTarget.querySelector<HTMLElement>(`[data-value="${next}"]`)?.focus();
+				event.currentTarget.querySelector<HTMLElement>(`[data-value="${next}"]`)?.focus({ preventScroll: true });
 				return;
 			}
 			index += delta;
@@ -193,7 +206,7 @@ function CalendarPanel({ selected, today, min, max, onSelect }: CalendarPanelPro
 	useEffect(() => {
 		if (!refocus.current) return;
 		refocus.current = false;
-		gridRef.current?.querySelector<HTMLElement>(`[data-date="${formatDate(focusDate)}"]`)?.focus();
+		gridRef.current?.querySelector<HTMLElement>(`[data-date="${formatDate(focusDate)}"]`)?.focus({ preventScroll: true });
 	}, [focusDate, view]);
 
 	const goTo = (date: DateParts, focus: boolean) => {
