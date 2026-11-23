@@ -60,8 +60,9 @@ function FooterAnchor({ link }: { link: FooterLink }) {
 }
 
 export function Footer() {
+	// 모바일 하단 탭바가 덮는 높이만큼 푸터 면을 늘려요 — 탭바 둥근 모서리 뒤로 다른 배경색이 비치지 않게 해요
 	return (
-		<footer className="bg-surface-1">
+		<footer className="bg-surface-1 pb-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] md:pb-0">
 			<div className="mx-auto w-full max-w-7xl px-4 pt-14 pb-8 sm:px-6 lg:px-8">
 				<div className="grid gap-12 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)]">
 					{/* 브랜드 + 초대 */}
