@@ -14,11 +14,13 @@ import { Field } from "@/components/primitives/field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
 import { useGuildChannels, useGuildRoles } from "@/hooks/use-guild-settings";
 import { toApiError, toError } from "@/lib/api-error";
+import { kstNow } from "@/lib/date-time";
 import type { GiveawayItem, GiveawayList } from "@/lib/giveaways";
 import { notifyApiError } from "@/lib/notify";
 import { createApiFetcher } from "@/lib/swr";
@@ -50,7 +52,7 @@ const dateFormat = new Intl.DateTimeFormat("ko-KR", {
 
 /** 지금부터 1시간 뒤를 "YYYY-MM-DDTHH:mm"(KST)로 — 마감 입력 기본값 */
 function defaultEndsAt(): string {
-  return new Date(Date.now() + 9 * 60 * 60_000 + 60 * 60_000).toISOString().slice(0, 16);
+  return kstNow(60);
 }
 
 type PendingAction = { kind: "end" | "cancel" | "reroll"; item: GiveawayItem };
@@ -274,7 +276,17 @@ export function GiveawaysSettings({ guildId }: { guildId: string }) {
             )}
           </Field>
           <Field label="마감 (한국 시간)" description="지금부터 1분 뒤 ~ 30일 안">
-            {({ id }) => <Input id={id} type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} disabled={creating} />}
+            {({ id, describedBy }) => (
+              <DateTimePicker
+                id={id}
+                aria-describedby={describedBy}
+                value={endsAt}
+                onChange={setEndsAt}
+                min={kstNow(1)}
+                max={kstNow(60 * 24 * 30)}
+                disabled={creating}
+              />
+            )}
           </Field>
         </div>
 
