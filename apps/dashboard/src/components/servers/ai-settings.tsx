@@ -6,7 +6,6 @@ import {
   Globe,
   Hash,
   PowerOff,
-  RefreshCw,
   Trash2,
 } from "lucide-react";
 
@@ -159,9 +158,6 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
       icon={<Bot className="h-5 w-5" />}
       title="AI 채팅 설정"
       description="응답할 채널 범위와 지침을 관리해요."
-      action={
-        <Button variant="icon" size="sm" aria-label="설정 새로고침" disabled={dirty || saving} icon={<RefreshCw size={16} />} onClick={reload} />
-      }
       notice={
         <InfoBox>
           <p>
