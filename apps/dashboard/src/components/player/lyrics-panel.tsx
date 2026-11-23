@@ -2,12 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { findActiveLineIndex } from "@sirubot/utils/lrc";
-import { Mic2 } from "lucide-react";
+import { Loader2, Mic2 } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import type { LyricsPayload } from "@/app/api/servers/[id]/lyrics/route";
-import { SkeletonLine } from "@/components/ui/skeleton";
-import { ApiError } from "@/lib/api-error";
 import { createApiFetcher, useGuildResource } from "@/lib/swr";
 import { cn } from "@/lib/utils";
 
@@ -47,7 +45,7 @@ interface LyricsPanelProps {
 export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsPanelProps) {
   const eligible = lyricsEligible(state);
   const path = lyricsQueryPath(state);
-  const { data, error, isLoading } = useGuildResource<LyricsPayload>(guildId, path ?? "/lyrics", {
+  const { data, error, isLoading, isValidating } = useGuildResource<LyricsPayload>(guildId, path ?? "/lyrics", {
     fetcher: lyricsFetcher,
     enabled: path !== null,
     // 서버가 뒤에서 번역하는 동안만 다시 물어봐요
@@ -58,17 +56,16 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
 
   if (!eligible) return null;
 
-  const notFound = !isLoading && (lyrics === null) && (error !== undefined || data !== undefined);
-  const failedForOtherReason = error !== undefined && !(error instanceof ApiError && error.status === 404);
+  // 응답이 오거나 재시도가 끝나 에러가 확정되면 "없음"으로 보여줘요. 그 전까지는 찾는 중이에요.
+  const finished = !isLoading && !isValidating && (data !== undefined || error !== undefined);
 
   return (
     <section aria-label="노래방 가사" className="flex flex-col gap-3 rounded-row bg-surface-2 p-3 sm:p-4">
-      {isLoading || (!lyrics && !notFound) ? (
+      {!lyrics && !finished ? (
         <LyricsFrame>
-          <div className="space-y-2" role="status" aria-label="가사 불러오는 중">
-            <SkeletonLine width="60%" height="h-4" />
-            <SkeletonLine width="80%" height="h-4" />
-            <SkeletonLine width="45%" height="h-4" />
+          <div role="status" className="flex items-center gap-2 py-6 text-sm text-muted-foreground sm:py-8">
+            <Loader2 size={16} className="animate-spin text-primary-text motion-reduce:animate-none" aria-hidden />
+            가사를 찾는 중이에요
           </div>
         </LyricsFrame>
       ) : lyrics ? (
@@ -82,9 +79,7 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
         />
       ) : (
         <LyricsFrame>
-          <p className="text-sm text-muted-foreground">
-            {failedForOtherReason ? "가사를 불러오지 못했어요." : "이 곡의 가사를 찾지 못했어요."}
-          </p>
+          <p className="py-6 text-center text-sm text-muted-foreground sm:py-8">이 곡의 가사를 찾지 못했어요.</p>
         </LyricsFrame>
       )}
     </section>
