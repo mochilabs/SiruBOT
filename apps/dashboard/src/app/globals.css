@@ -239,7 +239,7 @@
 
 	/* 다크 배경(#17111b) 위에서 검은 그림자는 파묻혀 안 보여요 — 블러 반경과
 	   불투명도를 올려 카드/오버레이가 실제로 떠 보이게 해요 */
-	--elev-1: 0 1px 2px 0 rgb(0 0 0 / 0.35), 0 2px 8px -2px rgb(0 0 0 / 0.3);
+	--elev-1: 0 1px 2px 0 rgb(0 0 0 / 0.25);
 	--elev-2: 0 2px 6px -2px rgb(0 0 0 / 0.45), 0 4px 12px -4px rgb(0 0 0 / 0.3);
 	--elev-3: 0 6px 20px -8px rgb(0 0 0 / 0.55), 0 8px 24px -12px rgb(0 0 0 / 0.35);
 	--elev-5: 0 28px 64px -24px rgb(0 0 0 / 0.65), 0 8px 24px -12px rgb(0 0 0 / 0.45);
@@ -332,9 +332,9 @@
 
 /* Component-independent utilities */
 @utility transition-control {
-	transition-property: color, background-color, box-shadow;
-	transition-timing-function: var(--tw-ease, var(--default-transition-timing-function, cubic-bezier(0.4, 0, 0.2, 1)));
-	transition-duration: var(--tw-duration, var(--default-transition-duration, 150ms));
+	transition-property: color, background-color, box-shadow, transform;
+	transition-timing-function: var(--tw-ease, var(--ease-out-expo));
+	transition-duration: var(--tw-duration, var(--motion-fast));
 }
 
 @utility duration-fast {

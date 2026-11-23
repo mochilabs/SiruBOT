@@ -56,7 +56,7 @@ export function ServerMobileNav({
             render={
               <button
                 type="button"
-                aria-label={`기능 선택 — 현재 ${current.label}`}
+                aria-label={`기능 선택, 현재 ${current.label}`}
                 className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-menu bg-card px-3.5 text-left text-sm font-bold text-foreground shadow-sm transition-colors duration-fast hover:bg-accent/15 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <span aria-hidden className="shrink-0 text-primary-text">

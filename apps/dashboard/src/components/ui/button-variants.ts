@@ -6,7 +6,7 @@ import { cva, type VariantProps } from "class-variance-authority";
  * 모든 Link/Button 우회 호출부가 같은 cva 정의를 공유해요.
  */
 export const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-control border-0 text-sm font-medium whitespace-nowrap transition-control duration-fast outline-none select-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+	"group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-control border-0 text-sm font-medium whitespace-nowrap transition-control duration-fast outline-none select-none active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
 			variant: {
@@ -21,14 +21,14 @@ export const buttonVariants = cva(
 				// 별칭 계약: danger와 destructive도 같은 클래스를 가리키는 공개 API 별칭이에요(호출부 혼용 유지).
 				danger: "bg-destructive/10 text-destructive hover:bg-destructive/15",
 				icon: "bg-secondary text-secondary-foreground shadow-control-boundary hover:bg-surface-3 hover:text-foreground",
-				// "on" 상태는 브랜드 핑크(primary-control) 채움 + 마룬 텍스트 (4.75:1)
+				// "on" 상태는 브랜드 핑크(primary-control) 채움 + 잉크 텍스트 (6.2:1 이상)
 				"state-toggle":
 					"bg-primary/10 text-primary-text hover:bg-primary/20 data-[active=true]:bg-primary-control data-[active=true]:text-primary-control-text",
 				cta: "bg-primary-control font-semibold text-primary-control-text shadow-sm hover:bg-primary-control-hover",
 				destructive: "bg-destructive/10 text-destructive hover:bg-destructive/15",
 				outline:
 					"border border-border-strong bg-outline-fill hover:bg-outline-fill-hover hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
-				link: "text-primary-text underline-offset-4 hover:underline",
+				link: "text-primary-text underline-offset-4 hover:underline active:scale-100",
 			},
 			size: {
 				default: "h-9 px-4",

@@ -101,7 +101,7 @@ export function GreetingBackgroundSection({
         )}
       </div>
       <p className="px-3 text-sm text-muted-foreground">
-        3MB 이하 PNG·JPEG·WebP는 JPEG(긴 변 1600px)로 줄여 저장돼요. GIF는 움직이는 배경으로 쓸 수 있어요 — 최대 5초까지, 너무 크면 크기와 프레임을 줄여 저장해요.
+        3MB 이하 PNG·JPEG·WebP는 JPEG(긴 변 1600px)로 줄여 저장돼요. GIF는 움직이는 배경으로 쓸 수 있어요. 최대 5초까지, 너무 크면 크기와 프레임을 줄여 저장해요.
       </p>
     </>
   );

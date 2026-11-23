@@ -44,7 +44,7 @@ export function PanelHeader({
               <button
                 type="button"
                 onClick={() => switcher.setOpen(true)}
-                aria-label={`기능 바꾸기 — 현재 ${title}`}
+                aria-label={`기능 바꾸기, 현재 ${title}`}
                 className="-mx-2 inline-flex items-center gap-1.5 rounded-menu px-2 py-0.5 text-left transition-control hover:bg-accent/15 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <span aria-hidden className="shrink-0 text-primary-text sm:hidden">
