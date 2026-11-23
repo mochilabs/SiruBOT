@@ -18,6 +18,9 @@ import { toggleModuleDisabled } from "./module-toggle";
 import type { ServerTabKey } from "./server-tabs";
 import { PanelError, PanelHeader, PanelLoading } from "./settings-shared";
 
+const quickRowClass =
+	"group flex min-h-14 w-full items-center gap-3.5 rounded-row py-3 text-left transition-colors duration-fast hover:bg-surface-2/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring";
+
 interface ServerOverviewTabProps {
 	guildId: string;
 	onSelectTab: (tab: ServerTabKey) => void;
@@ -66,54 +69,41 @@ export function ServerOverviewTab({ guildId, onSelectTab }: ServerOverviewTabPro
 					}
 				/>
 
-				{/* 빠른 작업 */}
-				<section aria-label="빠른 작업" className="space-y-3">
-					<SectionLabel>빠른 작업</SectionLabel>
-					<div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-						<button
-							type="button"
-							onClick={() => onSelectTab("channels")}
-							className="group flex min-h-11 items-start justify-between gap-3 rounded-control bg-surface-2 p-4 text-left transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-						>
-							<div className="min-w-0 space-y-1">
-								<p className="flex items-center gap-2 text-sm font-bold text-foreground">
-									<Hash size={15} aria-hidden className="shrink-0 text-primary-text" />
-									고정 채널 설정
-								</p>
-								<p className="text-xs text-muted-foreground">음악·카운팅·TTS 전용 채널 지정</p>
-							</div>
-							<ArrowRight size={15} aria-hidden className="mt-0.5 shrink-0 text-muted-foreground transition-transform duration-fast group-hover:translate-x-0.5" />
-						</button>
-
-						<Link
-							href={`/player/${guildId}`}
-							className="group flex min-h-11 items-start justify-between gap-3 rounded-control bg-surface-2 p-4 text-left transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-						>
-							<div className="min-w-0 space-y-1">
-								<p className="flex items-center gap-2 text-sm font-bold text-foreground">
-									<Play size={15} aria-hidden className="shrink-0 text-primary-text" />
-									플레이어 열기
-								</p>
-								<p className="text-xs text-muted-foreground">웹에서 재생과 대기열을 바로 조작</p>
-							</div>
-							<ExternalLink size={15} aria-hidden className="mt-0.5 shrink-0 text-muted-foreground" />
-						</Link>
-
-						<button
-							type="button"
-							onClick={() => onSelectTab("ticket")}
-							className="group flex min-h-11 items-start justify-between gap-3 rounded-control bg-surface-2 p-4 text-left transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-						>
-							<div className="min-w-0 space-y-1">
-								<p className="flex items-center gap-2 text-sm font-bold text-foreground">
-									<Ticket size={15} aria-hidden className="shrink-0 text-primary-text" />
-									티켓 패널 게시
-								</p>
-								<p className="text-xs text-muted-foreground">문의 패널을 채널에 올리고 관리</p>
-							</div>
-							<ArrowRight size={15} aria-hidden className="mt-0.5 shrink-0 text-muted-foreground transition-transform duration-fast group-hover:translate-x-0.5" />
-						</button>
-					</div>
+				{/* 빠른 작업: 같은 크기의 타일 대신 구분선으로 나눈 한 목록이에요 */}
+				<section aria-label="빠른 작업" className="space-y-1">
+					<SectionLabel className="px-0">빠른 작업</SectionLabel>
+					<ul className="divide-y divide-border-subtle">
+						<li>
+							<button type="button" onClick={() => onSelectTab("channels")} className={quickRowClass}>
+								<Hash size={18} aria-hidden className="shrink-0 text-primary-text" />
+								<span className="min-w-0 flex-1">
+									<span className="block text-sm font-semibold text-foreground">고정 채널 설정</span>
+									<span className="block text-xs text-muted-foreground">음악·카운팅·TTS 전용 채널 지정</span>
+								</span>
+								<ArrowRight size={16} aria-hidden className="shrink-0 text-muted-foreground transition-transform duration-fast group-hover:translate-x-0.5" />
+							</button>
+						</li>
+						<li>
+							<Link href={`/player/${guildId}`} className={quickRowClass}>
+								<Play size={18} aria-hidden className="shrink-0 text-primary-text" />
+								<span className="min-w-0 flex-1">
+									<span className="block text-sm font-semibold text-foreground">플레이어 열기</span>
+									<span className="block text-xs text-muted-foreground">웹에서 재생과 대기열을 바로 조작</span>
+								</span>
+								<ExternalLink size={16} aria-hidden className="shrink-0 text-muted-foreground" />
+							</Link>
+						</li>
+						<li>
+							<button type="button" onClick={() => onSelectTab("ticket")} className={quickRowClass}>
+								<Ticket size={18} aria-hidden className="shrink-0 text-primary-text" />
+								<span className="min-w-0 flex-1">
+									<span className="block text-sm font-semibold text-foreground">티켓 패널 게시</span>
+									<span className="block text-xs text-muted-foreground">문의 패널을 채널에 올리고 관리</span>
+								</span>
+								<ArrowRight size={16} aria-hidden className="shrink-0 text-muted-foreground transition-transform duration-fast group-hover:translate-x-0.5" />
+							</button>
+						</li>
+					</ul>
 				</section>
 			</Card>
 
@@ -126,21 +116,15 @@ export function ServerOverviewTab({ guildId, onSelectTab }: ServerOverviewTabPro
 					</div>
 				</div>
 
-				<ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+				<ul className="divide-y divide-border-subtle">
 					{BOT_MODULES.map((module) => {
 						const enabled = !isModuleDisabled(disabledModules, module.id);
 						const titleId = `overview-module-${module.id}-title`;
 						return (
-							<li
-								key={module.id}
-								className={cn(
-									"flex items-start justify-between gap-3 rounded-control bg-surface-2 p-4 transition-opacity duration-fast",
-									!enabled && "opacity-65",
-								)}
-							>
-								<div className="min-w-0 space-y-1.5">
+							<li key={module.id} className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0">
+								<div className={cn("min-w-0 space-y-0.5 transition-opacity duration-fast", !enabled && "opacity-60")}>
 									<div className="flex flex-wrap items-center gap-1.5">
-										<p id={titleId} className="text-sm font-bold text-foreground">
+										<p id={titleId} className="text-sm font-semibold text-foreground">
 											<ModuleIcon id={module.id} className="mr-1.5" />
 											{module.label}
 										</p>
@@ -152,7 +136,7 @@ export function ServerOverviewTab({ guildId, onSelectTab }: ServerOverviewTabPro
 									</div>
 									<p className="text-xs text-muted-foreground">{module.description}</p>
 								</div>
-								<div className="shrink-0 pt-0.5">
+								<div className="shrink-0">
 									<Switch
 										checked={enabled}
 										onChange={(checked: boolean) => void handleToggleModule(module.id, module.label, checked)}

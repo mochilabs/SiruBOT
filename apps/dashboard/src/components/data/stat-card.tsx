@@ -51,7 +51,7 @@ export function StatCard({ icon: Icon, label, value, sub, trend, trendValue, cla
 			</div>
 			<div className="space-y-1">
 				<div className="flex items-baseline gap-2">
-					<p className="text-2xl font-black tabular-nums text-primary-text">
+					<p className="text-2xl font-extrabold tabular-nums text-primary-text">
 						<StatValue value={value} />
 					</p>
 					{t && trendValue && (

@@ -23,7 +23,7 @@ export function PageHeader({
 		<header className={cn("mb-8 flex flex-col lg:flex-row lg:items-end justify-between gap-4 sm:gap-6 relative", className)}>
 			<div className="flex-1 min-w-0 max-w-full flex flex-col justify-center space-y-3">
 				<div className="space-y-1">
-					<h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tighter text-foreground break-words pb-1">
+					<h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tighter text-foreground break-words pb-1">
 						{title}
 					</h1>
 					{description && (

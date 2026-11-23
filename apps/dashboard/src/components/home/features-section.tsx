@@ -105,7 +105,7 @@ function MaskedTitle({ children }: { children: string }) {
 	const shouldReduce = useReducedMotion();
 	return (
 		<m.h4
-			className="overflow-hidden break-keep text-balance text-xl font-black tracking-tighter text-foreground sm:text-2xl"
+			className="overflow-hidden break-keep text-balance text-xl font-extrabold tracking-tighter text-foreground sm:text-2xl"
 			initial={shouldReduce ? false : "hidden"}
 			whileInView="visible"
 			viewport={{ once: true, margin: "-40px" }}
@@ -156,7 +156,7 @@ function ChapterHeader({ chapter }: { chapter: Chapter }) {
 	return (
 		<div className="space-y-3">
 			<div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-				<h3 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">{chapter.title}</h3>
+				<h3 className="text-2xl font-extrabold tracking-tighter text-foreground sm:text-3xl">{chapter.title}</h3>
 				<span className="text-sm font-medium text-muted-foreground sm:text-base">{chapter.desc}</span>
 			</div>
 			<m.div
@@ -176,7 +176,7 @@ export function FeaturesSection() {
 		<section id="features" className="py-14 sm:py-20 lg:py-24">
 			<div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
 				<div className="max-w-2xl space-y-3">
-					<h2 className="break-keep text-balance text-3xl font-black tracking-tighter text-foreground sm:text-5xl">필요한 기능은 간편하게, 설정은 자유롭게.</h2>
+					<h2 className="break-keep text-balance text-3xl font-extrabold tracking-tighter text-foreground sm:text-5xl">필요한 기능은 간편하게, 설정은 자유롭게.</h2>
 					<p className="text-base font-medium leading-relaxed text-muted-foreground sm:text-lg">명령어로 바로 실행하고, 웹 대시보드에서 내 서버에 맞게 설정하세요.</p>
 				</div>
 				<div className="mt-10 space-y-12 sm:mt-12 sm:space-y-16">

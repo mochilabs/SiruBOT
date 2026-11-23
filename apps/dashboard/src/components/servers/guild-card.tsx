@@ -29,13 +29,13 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 				{iconUrl ? (
 					<Image src={iconUrl} alt={`${guild.name} icon`} width={56} height={56} className="h-10 w-10 shrink-0 rounded-full ring-4 ring-primary/10 md:h-14 md:w-14" />
 				) : (
-					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-base font-black text-foreground transition-colors md:h-14 md:w-14 md:text-lg">
+					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-base font-extrabold text-foreground transition-colors md:h-14 md:w-14 md:text-lg">
 						{guild.name.charAt(0)}
 					</div>
 				)}
 				<div className="min-w-0">
 					{/* 모바일은 서버 아이콘+이름만 — 설치 표시(아이콘 포함)는 md 이상에서만 */}
-					<h3 className="line-clamp-1 text-base font-black tracking-tight text-foreground md:text-lg">{guild.name}</h3>
+					<h3 className="line-clamp-1 text-base font-extrabold tracking-tight text-foreground md:text-lg">{guild.name}</h3>
 					<div className="mt-0.5 hidden items-center gap-1 md:flex">
 						{guild.isInstalled ? (
 							<div className="flex items-center gap-1 text-xs font-bold text-primary-text">

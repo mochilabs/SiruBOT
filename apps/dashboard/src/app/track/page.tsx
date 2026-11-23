@@ -109,10 +109,10 @@ function TrackContent() {
             <PeriodSelector value={period} />
             <p className="shrink-0 text-sm font-medium text-muted-foreground tabular-nums" aria-live="polite">
               {query ? "결과" : "곡"}{" "}
-              <span className="font-black text-primary-text">{loading ? "–" : totalCount.toLocaleString()}</span>
+              <span className="font-extrabold text-primary-text">{loading ? "–" : totalCount.toLocaleString()}</span>
               <span className="mx-1.5" aria-hidden>·</span>
               {periodInfo.plays}{" "}
-              <span className="font-black text-primary-text">{loading ? "–" : totalPlaybacks.toLocaleString()}</span>
+              <span className="font-extrabold text-primary-text">{loading ? "–" : totalPlaybacks.toLocaleString()}</span>
             </p>
           </div>
         </div>

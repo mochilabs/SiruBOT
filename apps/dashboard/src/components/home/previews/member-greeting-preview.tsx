@@ -151,7 +151,7 @@ export function MemberGreetingPreview() {
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-discord-btn-active text-xs font-bold text-discord-text ring-2 ring-background/40 ring-offset-2 ring-offset-transparent">
                         서름
                       </div>
-                      <p className="text-base font-black tracking-tighter">
+                      <p className="text-base font-extrabold tracking-tighter">
                         {preset.title}
                       </p>
                       <AnimatePresence mode="wait" initial={false}>

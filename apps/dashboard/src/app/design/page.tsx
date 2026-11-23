@@ -98,7 +98,7 @@ export default function DesignPage() {
 			<div className="container mx-auto max-w-7xl px-4 pb-8">
 				<div className="flex items-start justify-between gap-4 mb-8">
 					<div>
-						<h1 className="text-3xl font-black tracking-tighter text-foreground">Design System</h1>
+						<h1 className="text-3xl font-extrabold tracking-tighter text-foreground">Design System</h1>
 						<p className="text-sm text-muted-foreground font-medium mt-1">SiruBOT 대시보드 UI 토큰과 컴포넌트 갤러리</p>
 					</div>
 					<ThemeToggle />

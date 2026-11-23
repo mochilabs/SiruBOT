@@ -3,9 +3,9 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ListMusic, MousePointer2, Pause, Repeat, SkipBack, SkipForward, Square, Volume2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ListMusic, Pause, Repeat, SkipBack, SkipForward, Square, Volume2 } from "lucide-react";
 
-import { motionBase, motionFast } from "@/components/motion/durations";
+import { motionBase, motionFast, motionSlow } from "@/components/motion/durations";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -321,7 +321,7 @@ function WeatherResult() {
 			<div className="relative aspect-[960/320] w-full">
 				<Image src="/images/demo-weather.png" alt="서울 현재 날씨 18도, 맑음, 체감 17도, 습도 45%" fill className="object-contain" sizes="(min-width: 1024px) 480px, 90vw" unoptimized />
 			</div>
-			<Subtext>서울, 대한민국 · 지금 날씨 · Open-Meteo 기준</Subtext>
+			<Subtext>서울, 대한민국 · 지금 날씨</Subtext>
 		</Container>
 	);
 }
@@ -339,7 +339,7 @@ function DiceResult({ clicked }: { clicked: boolean }) {
 					animate={{ opacity: 1, y: 0 }}
 					exit={{ opacity: 0 }}
 					transition={{ duration: motionFast }}
-					className="text-2xl font-black tabular-nums text-discord-text"
+					className="text-2xl font-extrabold tabular-nums text-discord-text"
 				>
 					{a} + {b} = <span className="text-discord-light">{a + b}</span>
 				</m.p>
@@ -379,10 +379,14 @@ function commandResult(slide: SlideConfig, clicked: boolean): ReactNode {
 const PHASES = ["typing", "sent", "thinking", "reply"] as const;
 type Phase = (typeof PHASES)[number];
 
+/** 강한 ease-out(등장·반응)과 ease-in-out(화면 위 이동) — 내장 이징보다 반응이 먼저 보여요 */
+const EASE_OUT = [0.23, 1, 0.32, 1] as const;
+const EASE_IN_OUT = [0.77, 0, 0.175, 1] as const;
 const TYPE_MS = 80;
 const CURSOR_MOVE_S = 0.7;
 const HOLD_AFTER_CLICK_MS = 2600;
 const HOLD_NO_TARGET_MS = 3800;
+const PRESS_MS = 160;
 
 interface ExchangeProps {
 	slide: SlideConfig;
@@ -399,7 +403,7 @@ function Exchange({ slide, phase, clicked, muted = false }: ExchangeProps) {
 	return (
 		<div data-current={muted ? undefined : ""} className={cn("space-y-4 transition-opacity duration-base", muted && "opacity-50")}>
 			{reached("sent") && (
-				<m.div initial={enter} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionFast, ease: "easeOut" }} className="flex gap-3">
+				<m.div initial={enter} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionFast, ease: EASE_OUT }} className="flex gap-3">
 					<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-discord-btn-active text-xs font-bold text-discord-text">사</div>
 					<div className="min-w-0">
 						<div className="flex items-baseline gap-2">
@@ -415,7 +419,7 @@ function Exchange({ slide, phase, clicked, muted = false }: ExchangeProps) {
 			)}
 
 			{reached("thinking") && (
-				<m.div initial={enter} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionFast, ease: "easeOut" }} className="flex gap-3">
+				<m.div initial={enter} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionFast, ease: EASE_OUT }} className="flex gap-3">
 					<div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full">
 						<Image src={BOT_AVATAR} alt="시루" fill className="object-cover" sizes="36px" />
 					</div>
@@ -435,7 +439,7 @@ function Exchange({ slide, phase, clicked, muted = false }: ExchangeProps) {
 								</span>
 							</p>
 						) : (
-							<m.div initial={muted ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionBase, ease: "easeOut" }}>
+							<m.div initial={muted ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionBase, ease: EASE_OUT }}>
 								{commandResult(slide, clicked)}
 							</m.div>
 						)}
@@ -524,7 +528,7 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 		};
 		const click = () => {
 			setCursor((prev) => ({ ...prev, pressed: true, tick: prev.tick + 1 }));
-			at(160, () => setCursor((prev) => ({ ...prev, pressed: false })));
+			at(PRESS_MS, () => setCursor((prev) => ({ ...prev, pressed: false })));
 		};
 
 		// 커서가 오른쪽 아래 바깥에서 들어와요
@@ -579,7 +583,7 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 	const typedArgs = fullText.slice(commandLength, typed);
 
 	return (
-		<Card ref={cardRef} variant="raised" padding="none" className="relative gap-0 overflow-hidden border-0 bg-discord-bg font-sans">
+		<Card ref={cardRef} aria-hidden variant="raised" padding="none" className="relative gap-0 overflow-hidden border-0 bg-discord-bg font-sans">
 			<div className="flex items-center gap-2 border-b border-discord-btn-active px-4 py-3">
 				<Volume2 size={15} className="text-discord-text-muted" aria-hidden />
 				<span className="text-sm font-semibold text-discord-text">음악-라운지</span>
@@ -587,7 +591,7 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 
 			{/* 메시지 영역 — 높이는 고정이고 Discord처럼 아래(입력창 쪽)부터 쌓여요. 직전 예시의 대화가 위에 남아
 			    새 명령을 입력하는 동안에도 빈 화면이 되지 않고, 긴 응답은 오래된 메시지부터 위로 밀려나요.
-			    aria-live 미사용: 데모가 자동 순환해 스크린 리더를 계속 방해해요. */}
+			    카드 전체가 aria-hidden이에요: 데모가 자동 순환해 스크린 리더를 계속 방해해서, 설명은 탭 패널의 sr-only 문구가 맡아요. */}
 			<div className="flex h-[22rem] shrink-0 flex-col justify-end gap-4 overflow-hidden p-4 sm:h-[21rem] sm:p-5">
 				{previousSlide && <Exchange key={`prev-${previousIndex}`} slide={previousSlide} phase="reply" clicked muted />}
 				<Exchange key={`current-${safeIndex}`} slide={currentSlide} phase={phase} clicked={clicked} />
@@ -620,18 +624,21 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 				className="pointer-events-none absolute top-0 left-0 z-10"
 				initial={false}
 				animate={{ x: cursor.x, y: cursor.y, opacity: cursor.visible ? 1 : 0 }}
-				transition={{ x: { duration: CURSOR_MOVE_S, ease: "easeInOut" }, y: { duration: CURSOR_MOVE_S, ease: "easeInOut" }, opacity: { duration: 0.2 } }}
+				transition={{ x: { duration: CURSOR_MOVE_S, ease: EASE_IN_OUT }, y: { duration: CURSOR_MOVE_S, ease: EASE_IN_OUT }, opacity: { duration: motionFast } }}
 			>
 				<m.span
 					key={cursor.tick}
 					className="absolute -top-4 -left-4 h-8 w-8 rounded-full border-2 border-primary-control"
-					initial={{ scale: 0.3, opacity: cursor.tick === 0 ? 0 : 1 }}
-					animate={{ scale: 1.6, opacity: 0 }}
-					transition={{ duration: 0.55, ease: "easeOut" }}
+					initial={{ scale: 0.4, opacity: cursor.tick === 0 ? 0 : 1 }}
+					animate={{ scale: 1.7, opacity: 0 }}
+					transition={{ duration: motionSlow, ease: EASE_OUT }}
 				/>
-				<m.span className="block origin-top-left" animate={{ scale: cursor.pressed ? 0.8 : 1 }} transition={{ duration: 0.12 }}>
-					<MousePointer2 size={26} strokeWidth={1.75} className="fill-foreground stroke-background drop-shadow-md" />
-				</m.span>
+				{/* 원형 핸들 — 눌리면 살짝 줄어들어요. 중심이 누르는 지점이에요 */}
+				<m.span
+					className="absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full border-2 border-foreground/85 bg-foreground/15 shadow-md"
+					animate={{ scale: cursor.pressed ? 0.78 : 1 }}
+					transition={{ duration: motionFast, ease: EASE_OUT }}
+				/>
 			</m.div>
 		</Card>
 	);

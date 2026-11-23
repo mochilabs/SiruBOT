@@ -35,16 +35,16 @@ export function PanelHeader({
   return (
     <header ref={headerRef} className="flex flex-col items-start justify-between gap-4 sm:flex-row">
       <div className="flex min-w-0 items-start gap-3.5">
-        <span className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-control sm:inline-flex bg-primary/20 text-primary-text shadow-xs">
+        <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-row sm:inline-flex bg-primary/20 text-primary-text">
           {icon}
         </span>
         <div className="min-w-0 break-words">
           {switcher && (
-            <h2 className="text-xl font-black tracking-tight text-foreground lg:hidden">
+            <h2 className="text-xl font-extrabold tracking-tight text-foreground lg:hidden">
               <button
                 type="button"
                 onClick={() => switcher.setOpen(true)}
-                aria-label={`기능 바꾸기 — 현재 ${title}`}
+                aria-label={`기능 바꾸기, 현재 ${title}`}
                 className="-mx-2 inline-flex items-center gap-1.5 rounded-menu px-2 py-0.5 text-left transition-control hover:bg-accent/15 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <span aria-hidden className="shrink-0 text-primary-text sm:hidden">
@@ -55,7 +55,7 @@ export function PanelHeader({
               </button>
             </h2>
           )}
-          <h2 className={cn("text-xl font-black tracking-tight text-foreground", switcher && "hidden lg:block")}>{title}</h2>
+          <h2 className={cn("text-2xl font-extrabold tracking-tight text-foreground", switcher && "hidden lg:block")}>{title}</h2>
           <p className="hidden text-sm font-medium text-muted-foreground/90 sm:block">{description}</p>
         </div>
       </div>

@@ -238,7 +238,7 @@ function RankChange({ change }: { change: ChartEntry["rankChange"] }) {
 	const up = change > 0;
 	return (
 		<span
-			className={`text-2xs font-black tabular-nums ${up ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}
+			className={`text-2xs font-extrabold tabular-nums ${up ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}
 			title={`직전 기간보다 ${Math.abs(change)}계단 ${up ? "상승" : "하락"}`}
 		>
 			{up ? "▲" : "▼"}
@@ -280,7 +280,7 @@ export const TrackItem = memo(function TrackItem({
 					{isTopThree ? (
 						<Crown className={`h-3 w-3 ${rank === 1 ? "text-rank-1" : rank === 2 ? "text-rank-2" : "text-rank-3"}`} />
 					) : (
-						<span className="text-xs font-black tracking-tighter text-foreground">{rank}</span>
+						<span className="text-xs font-extrabold tracking-tighter text-foreground">{rank}</span>
 					)}
 				</div>
 
@@ -301,7 +301,7 @@ export const TrackItem = memo(function TrackItem({
 			</div>
 
 			<div className="min-w-0 flex-1">
-				<h2 className="truncate text-base sm:text-lg font-black text-foreground leading-tight" title={entry.title}>
+				<h2 className="truncate text-base sm:text-lg font-extrabold text-foreground leading-tight" title={entry.title}>
 					{/^https?:\/\//i.test(entry.url ?? "") ? (
 						<a
 							href={entry.url!}
@@ -330,7 +330,7 @@ export const TrackItem = memo(function TrackItem({
 					{entry.duration > 0 ? formatTimeToKorean(entry.duration / 1000) : ""}
 				</p>
 				<div className="hidden sm:block text-right">
-					<p className="text-base sm:text-lg font-black text-primary-text leading-none tabular-nums">{entry.plays.toLocaleString()}</p>
+					<p className="text-base sm:text-lg font-extrabold text-primary-text leading-none tabular-nums">{entry.plays.toLocaleString()}</p>
 					<p className="hidden sm:block mt-1 text-xs text-muted-foreground font-bold">{playsLabel}</p>
 				</div>
 

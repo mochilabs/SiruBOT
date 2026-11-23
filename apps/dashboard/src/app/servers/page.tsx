@@ -2,13 +2,11 @@
 
 import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
-import { m } from "framer-motion";
 import { Server } from "lucide-react";
 
 import Container from "@/components/container";
 import { ErrorPanel } from "@/components/error-panel";
 import { PageHeader } from "@/components/layout/page-header";
-import { motionBase } from "@/components/motion/durations";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { GuildCard, SERVERS_GRID_CLASS, SOFT_PRIMARY_LINK_CLASS } from "@/components/servers/guild-card";
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
@@ -52,7 +50,7 @@ export default function ServersPage() {
                         </div>
                     )}
                     <div className="relative z-10">
-                        <p className="text-sm font-black text-foreground">{session?.user?.name}</p>
+                        <p className="text-sm font-extrabold text-foreground">{session?.user?.name}</p>
                         <p className="text-xs font-medium text-muted-foreground">내 계정이 아닌가요? <button type="button" onClick={() => signOut()} className="text-primary-text hover:underline">로그아웃</button></p>
                     </div>
                 </div>
@@ -87,16 +85,8 @@ export default function ServersPage() {
             ) : (
                 <section className="space-y-12">
                     <div className={SERVERS_GRID_CLASS}>
-                        {guilds.map((guild, index) => (
-                            <m.div
-                                key={guild.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true, margin: "-50px" }}
-                                transition={{ duration: motionBase, delay: Math.min(index, 11) * 0.05 }}
-                            >
-                                <GuildCard guild={guild} inviteUrl={buildInviteUrl({ guildId: guild.id })} />
-                            </m.div>
+                        {guilds.map((guild) => (
+                            <GuildCard key={guild.id} guild={guild} inviteUrl={buildInviteUrl({ guildId: guild.id })} />
                         ))}
                     </div>
                 </section>

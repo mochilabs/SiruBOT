@@ -39,7 +39,7 @@ function StreakCount({ streak }: { streak: number }) {
   const { ref, value } = useCountUp({ end: streak });
 
   return (
-    <p className="text-xl font-black tabular-nums text-primary-text">
+    <p className="text-xl font-extrabold tabular-nums text-primary-text">
       <span ref={ref}>{Math.round(value).toLocaleString("ko-KR")}</span>
       <span className="ml-1 text-xs font-bold text-muted-foreground">일 연속</span>
     </p>
@@ -145,7 +145,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-medium text-foreground/90">
                 <span>
                   가위바위보{" "}
-                  <span className="font-black tabular-nums">
+                  <span className="font-extrabold tabular-nums">
                     {games.rps ? `${games.rps.wins}승 ${games.rps.losses}패 ${games.rps.draws}무` : "-"}
                   </span>
                   {games.rps && games.rps.bestStreak >= 2 && (
@@ -154,7 +154,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                 </span>
                 <span>
                   숫자맞히기 최고 기록{" "}
-                  <span className="font-black tabular-nums">
+                  <span className="font-extrabold tabular-nums">
                     {games.guessBest != null ? `${games.guessBest}번` : "-"}
                   </span>
                 </span>
@@ -174,7 +174,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
 
       {/* 음악 통계 */}
       <div className="mt-6 space-y-3">
-        <h2 className="flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
+        <h2 className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-foreground">
           <ListMusic className="h-5 w-5 text-primary-text" aria-hidden />
           음악 통계
         </h2>
@@ -226,7 +226,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-black text-foreground" title={track.title}>
+                        <p className="truncate text-sm font-extrabold text-foreground" title={track.title}>
                           {/^https?:\/\//i.test(track.url ?? "") ? (
                             <a
                               href={track.url!}
@@ -245,7 +245,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-black tabular-nums text-primary-text">{track.count.toLocaleString()}회</p>
+                        <p className="text-sm font-extrabold tabular-nums text-primary-text">{track.count.toLocaleString()}회</p>
                       </div>
                       <TrackListenLink url={track.url} title={track.title} compact />
                     </div>

@@ -167,7 +167,14 @@
 @theme inline {
 	--font-sans: var(--font-stack);
 
-	--text-2xs: 0.6875rem;
+	/* 본문 15px · 캡션 13px · 마이크로 12px — 한글은 줄간격을 넉넉히 둬요. 기본 스케일(14/12/11px)보다 한 단계씩 커요. */
+	--text-sm: 0.9375rem;
+	--text-sm--line-height: 1.5rem;
+
+	--text-xs: 0.8125rem;
+	--text-xs--line-height: 1.25rem;
+
+	--text-2xs: 0.75rem;
 	--text-2xs--line-height: 1rem;
 
 	--text-3xs: 0.5rem;
@@ -181,11 +188,13 @@
 :root {
 	--radius: 1rem;
 
-	--r-control: 0.625rem;
-	--r-control-inner: 0.375rem;
-	--r-card: 1rem;
-	--r-menu: 0.75rem;
-	--r-dialog: 1rem;
+	/* 반경 위계: 컨트롤 12 · 행 14 · 메뉴 14 · 카드·다이얼로그 20 */
+	--r-control: 0.75rem;
+	--r-control-inner: 0.5rem;
+	--r-row: 0.875rem;
+	--r-card: 1.25rem;
+	--r-menu: 0.875rem;
+	--r-dialog: 1.25rem;
 
 	--surface-1: #ffffff;
 	--surface-2: #fff0f0;
@@ -204,6 +213,7 @@
 	--radius-lg: var(--radius);
 	--radius-control: var(--r-control);
 	--radius-control-inner: var(--r-control-inner);
+	--radius-row: var(--r-row);
 	--radius-card: var(--r-card);
 	--radius-menu: var(--r-menu);
 	--radius-dialog: var(--r-dialog);
@@ -325,9 +335,9 @@
 
 /* Component-independent utilities */
 @utility transition-control {
-	transition-property: color, background-color, box-shadow;
-	transition-timing-function: var(--tw-ease, var(--default-transition-timing-function, cubic-bezier(0.4, 0, 0.2, 1)));
-	transition-duration: var(--tw-duration, var(--default-transition-duration, 150ms));
+	transition-property: color, background-color, box-shadow, transform;
+	transition-timing-function: var(--tw-ease, var(--ease-out-expo));
+	transition-duration: var(--tw-duration, var(--motion-fast));
 }
 
 @utility duration-fast {
@@ -384,15 +394,14 @@
 	}
 }
 
+/* 페이지 전환은 불투명도만 — 매 이동마다 위로 떠오르는 진입은 쓰지 않아요 */
 @keyframes page-in {
 	from {
 		opacity: 0;
-		transform: translateY(8px);
 	}
 
 	to {
 		opacity: 1;
-		transform: translateY(0);
 	}
 }
 
@@ -408,17 +417,12 @@
 	}
 }
 
-/* 팝업 등장 모션 — 밋밋한 on/off 대신 살짝 오버슈트하는 스프링 느낌.
+/* 팝업 등장 모션 — 오버슈트 없이 살짝 작게 시작해 ease-out으로 펴져요.
    Base UI 팝업의 data-open(열림 상태)에만 붙어 열릴 때만 재생해요. */
 @keyframes pop-in {
 	from {
 		opacity: 0;
-		transform: translateY(-8px) scale(0.97);
-	}
-
-	60% {
-		opacity: 1;
-		transform: translateY(1px) scale(1.004);
+		transform: translateY(-4px) scale(0.97);
 	}
 
 	to {
@@ -428,7 +432,7 @@
 }
 
 .pop-in[data-open] {
-	animation: pop-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+	animation: pop-in 160ms var(--ease-out-expo);
 }
 
 /* 드롭다운 행 스태거 — 팝업이 열리면 행이 위에서 순차적으로 떠올라요.
@@ -499,6 +503,9 @@
 	body {
 		font-family: var(--font-stack);
 		background-color: var(--background);
+		/* Pretendard는 한글 본문에서 살짝 좁힐 때 단정해 보여요 */
+		letter-spacing: -0.01em;
+		font-synthesis: none;
 	}
 
 	/* 표준 스크롤바 스타일 (Chrome 121+, Edge 121+, Firefox, Safari 18.2+).
@@ -538,11 +545,12 @@
 
 /* Motion tokens & accessibility preferences */
 :root {
-	--motion-fast: 200ms;
-	--motion-base: 300ms;
-	--motion-slow: 500ms;
+	--motion-fast: 140ms;
+	--motion-base: 220ms;
+	--motion-slow: 400ms;
 
-	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+	/* 강한 ease-out — 기본 ease-out보다 반응이 먼저 보여요 */
+	--ease-out-expo: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 @theme inline {
@@ -600,7 +608,15 @@
 /* 스티키 헤더(navbar.tsx: sticky top-0, nav 높이 = var(--navbar-h)) 아래로 in-page 앵커가 가려지지 않도록 */
 html {
 	scroll-padding-block-start: var(--navbar-h);
+	/* 모바일 하단 탭바가 포커스된 요소를 가리지 않게 해요 (md 이상에서는 탭바가 없어요) */
+	scroll-padding-block-end: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
 	scrollbar-gutter: stable;
+}
+
+@media (min-width: 768px) {
+	html {
+		scroll-padding-block-end: 0;
+	}
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -621,30 +637,17 @@ html {
 }
 
 
-/* Home backdrop: 페이지 전체 높이에 걸쳐 핑크 ambient glow를 여러 곳에 흩뿌리고 정적 grain을 얹어요.
-   섹션마다 배경을 따로 두지 않아서 hard cut 경계가 생기지 않아요. */
+/* Home backdrop: 데모가 놓이는 오른쪽 위에만 petal 빛을 깔고, 맨 아래에 아주 옅은 빛 하나를 더해요.
+   섹션마다 배경을 따로 두지 않아서 hard cut 경계가 생기지 않아요. 노이즈 질감은 쓰지 않아요. */
 .hero-backdrop {
 	background-image:
-		radial-gradient(60rem 32rem at 82% 3%, color-mix(in oklab, var(--brand) 14%, transparent), transparent 70%),
-		radial-gradient(44rem 28rem at 4% 0%, color-mix(in oklab, var(--brand) 7%, transparent), transparent 70%),
-		radial-gradient(56rem 36rem at 100% 32%, color-mix(in oklab, var(--brand) 8%, transparent), transparent 70%),
-		radial-gradient(56rem 36rem at 0% 62%, color-mix(in oklab, var(--brand) 8%, transparent), transparent 70%),
-		radial-gradient(60rem 32rem at 70% 96%, color-mix(in oklab, var(--brand) 10%, transparent), transparent 70%);
-}
-
-.hero-grain {
-	opacity: 0.05;
-	mix-blend-mode: soft-light;
-	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-}
-
-.dark .hero-grain {
-	opacity: 0.08;
+		radial-gradient(56rem 30rem at 84% 2%, color-mix(in oklab, var(--brand) 12%, transparent), transparent 70%),
+		radial-gradient(52rem 30rem at 50% 100%, color-mix(in oklab, var(--brand) 7%, transparent), transparent 70%);
 }
 
 /* 모바일 하단 탭바가 차지하는 높이 — 숨기는 화면(서버 설정)에서는 0으로 둬서 여백·떠 있는 버튼이 같이 내려가요 */
 :root {
-  --tabbar-h: 5.25rem;
+  --tabbar-h: 4rem;
 }
 :root[data-tabbar-off] {
   --tabbar-h: 0px;

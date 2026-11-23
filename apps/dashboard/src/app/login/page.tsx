@@ -52,7 +52,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 		<main className="mx-auto grid min-h-[calc(100svh-var(--navbar-h))] w-full max-w-7xl items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">
 			<div className="flex flex-col items-start gap-8">
 				<div className="space-y-4">
-					<h1 className="break-keep text-4xl font-black tracking-tighter text-foreground sm:text-5xl">로그인하고 서버를 관리해요</h1>
+					<h1 className="break-keep text-4xl font-extrabold tracking-tighter text-foreground sm:text-5xl">로그인하고 서버를 관리해요</h1>
 					<p className="max-w-md break-keep text-base font-medium leading-relaxed text-muted-foreground sm:text-lg">
 						Discord 계정으로 로그인하면 플레이리스트·서버 설정·음악 컨트롤러를 그대로 이어서 쓸 수 있어요.
 					</p>

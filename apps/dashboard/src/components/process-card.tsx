@@ -28,7 +28,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 						<Server size={20} />
 					</div>
 					<div>
-						<h3 className="text-lg font-black tracking-tighter text-foreground">프로세스 #{index + 1}</h3>
+						<h3 className="text-lg font-extrabold tracking-tighter text-foreground">프로세스 #{index + 1}</h3>
 						<p className="text-xs font-mono text-muted-foreground uppercase">{process.wsId.slice(0, 12)}</p>
 					</div>
 				</div>
@@ -54,7 +54,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 					{ label: "운영 시간", value: formatUptime(process.uptime), icon: Clock3 },
 				].map((item, i) => (
 					<div key={i} className="rounded-control bg-surface-2 p-4 space-y-2 group hover:bg-surface-3 transition-colors duration-fast">
-						<div className="flex items-center gap-2 text-muted-foreground font-black text-xs">
+						<div className="flex items-center gap-2 text-muted-foreground font-extrabold text-xs">
 							<item.icon size={12} />
 							{item.label}
 						</div>

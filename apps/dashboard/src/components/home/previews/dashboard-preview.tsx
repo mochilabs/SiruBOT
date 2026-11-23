@@ -228,7 +228,7 @@ export function DashboardPreview() {
 							)}
 						>
 							<span
-								className={cn("rounded-full transition-all duration-base", activeTab === index ? "h-2 w-2 bg-primary-control" : "h-1.5 w-1.5 bg-border")}
+								className={cn("rounded-full transition-[width,height,background-color] duration-base", activeTab === index ? "h-2 w-2 bg-primary-control" : "h-1.5 w-1.5 bg-border")}
 							/>
 							{candidate.label}
 						</button>

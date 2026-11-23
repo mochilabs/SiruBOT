@@ -245,7 +245,7 @@ export function PlaylistDetail({
 				<div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
 					<div className="min-w-0 flex-1">
 						<div className="flex items-center gap-3">
-							<h2 className="min-w-0 break-words text-xl lg:text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
+							<h2 className="min-w-0 break-words text-xl lg:text-2xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
 								{activePlaylist.name === FAVORITES_PLAYLIST_NAME ? (
 									<Heart size={24} className="text-primary-text shrink-0" />
 								) : (
@@ -324,7 +324,7 @@ export function PlaylistDetail({
 					/>
 				) : (
 					<div ref={parentRef} className="overflow-auto flex-1 w-full">
-						<div ref={headerRef} className="hidden md:flex items-center px-4 py-3 border-b border-border-subtle bg-card text-xs font-black text-muted-foreground sticky top-0 z-10">
+						<div ref={headerRef} className="hidden md:flex items-center px-4 py-3 border-b border-border-subtle bg-card text-xs font-extrabold text-muted-foreground sticky top-0 z-10">
 							<div className="w-12 text-center shrink-0">#</div>
 							<div className="flex-1 min-w-[240px]">곡 정보</div>
 							<div className="w-32 shrink-0 px-2">아티스트</div>

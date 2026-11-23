@@ -20,8 +20,8 @@ import { MobileTabBar } from "./navbar/mobile-tab-bar";
 export function Navbar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
-  // 서버 설정 화면은 상단 서버 선택기·제목 버튼으로 이동하니 하단 탭바를 숨겨요 (여백 변수도 같이 0으로).
-  const hideTabBar = /^\/servers\/[^/]+/.test(pathname);
+  // 서버 설정 화면(과 같은 모양의 디자인 미리보기)은 상단 서버 선택기·제목 버튼으로 이동하니 하단 탭바를 숨겨요 (여백 변수도 같이 0으로).
+  const hideTabBar = /^\/(servers\/[^/]+|design\/dashboard)/.test(pathname);
   useEffect(() => {
     document.documentElement.toggleAttribute("data-tabbar-off", hideTabBar);
     return () => document.documentElement.removeAttribute("data-tabbar-off");
@@ -138,7 +138,7 @@ export function Navbar() {
                 className="object-cover"
               />
             </div>
-            <span className="text-2xl font-black tracking-tighter text-foreground">시루봇</span>
+            <span className="text-2xl font-extrabold tracking-tighter text-foreground">시루봇</span>
           </Link>
 
           <div className="flex flex-1 items-center gap-2 lg:gap-4">

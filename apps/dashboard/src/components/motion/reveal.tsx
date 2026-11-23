@@ -2,7 +2,7 @@
 
 import { m } from "framer-motion";
 
-import { motionSlow } from "@/components/motion/durations";
+import { motionBase } from "@/components/motion/durations";
 
 const containerVariants = {
 	hidden: {},
@@ -10,8 +10,8 @@ const containerVariants = {
 } as const;
 
 const itemVariants = {
-	hidden: { opacity: 0, y: 24 },
-	visible: { opacity: 1, y: 0, transition: { duration: motionSlow, ease: "easeOut" } },
+	hidden: { opacity: 0, y: 8 },
+	visible: { opacity: 1, y: 0, transition: { duration: motionBase, ease: [0.23, 1, 0.32, 1] } },
 } as const;
 
 interface RevealProps {

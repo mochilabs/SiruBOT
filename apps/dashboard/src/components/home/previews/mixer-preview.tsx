@@ -115,7 +115,7 @@ export function MixerPreview() {
 		<div className="space-y-2 rounded-card bg-surface-2 p-3 sm:p-4">
 			<div className="flex items-center gap-2 px-1 pb-1">
 				<SlidersHorizontal size={14} className="text-muted-foreground" aria-hidden />
-				<p className="text-xs font-black tracking-tighter text-foreground">믹서</p>
+				<p className="text-xs font-extrabold tracking-tighter text-foreground">믹서</p>
 			</div>
 
 			{/* 타임라인 — 토글과 필터 상태가 그대로 그려져요 */}

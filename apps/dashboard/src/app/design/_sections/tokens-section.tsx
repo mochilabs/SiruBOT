@@ -84,7 +84,7 @@ export function TokensSection() {
 						<p className="text-2xl text-foreground">text-2xl</p>
 						<p className="text-3xl text-foreground">text-3xl</p>
 						<p className="text-4xl text-foreground">text-4xl</p>
-						<p className="text-4xl font-black tracking-tighter text-primary-text">Title Sample</p>
+						<p className="text-4xl font-extrabold tracking-tighter text-primary-text">Title Sample</p>
 					</div>
 				</ShowcaseRow>
 

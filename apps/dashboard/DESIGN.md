@@ -53,11 +53,12 @@ typography:
     lineHeight: 1.4
     letterSpacing: "0.01em"
 rounded:
-  control-inner: "0.375rem"
-  control: "0.625rem"
-  menu: "0.75rem"
-  card: "1rem"
-  dialog: "1rem"
+  control-inner: "0.5rem"
+  control: "0.75rem"
+  menu: "0.875rem"
+  row: "0.875rem"
+  card: "1.25rem"
+  dialog: "1.25rem"
 spacing:
   xs: "4px"
   sm: "8px"
@@ -152,7 +153,7 @@ Pink Beret 음악 봇 팔레트(베이스 `#ffdada`)를 중심으로 소프트 �
 ## Layout
 
 - **Container Model**: 상단 네비게이션이 `sticky`이므로 `Container`(`max-w-7xl`, `pt-6 sm:pt-8 pb-16`)를 통해 헤더와의 최소 여백을 항상 유지합니다.
-- **Mobile Navigation**: 모바일(`< md`)에서는 하단 플로팅 탭바(`MobileTabBar`)가 활성화되며, 루트 레이아웃에서 safe-area를 고려한 패딩(`pb-[calc(5.25rem+env(safe-area-inset-bottom))]`)을 부여해 컨텐츠 가림을 방지합니다.
+- **Mobile Navigation**: 모바일(`< md`)에서는 화면 아래에 붙은 전폭 탭바(`MobileTabBar`, 불투명 표면 + 둥근 위쪽 모서리 + 위쪽 그림자, 5칸 균등)가 활성화되며, 루트 레이아웃에서 `--tabbar-h`(4rem)와 safe-area를 고려한 패딩을 부여해 컨텐츠 가림을 방지합니다. 현재 탭은 아이콘 뒤 알약 배경과 굵은 글자로 표시합니다.
 - **Sidebar & Scroll**: 서버 설정 사이드바(`ServerFeatureSidebar`)는 `lg:sticky lg:top-20`과 `max-h-[calc(100svh-7rem)] overflow-y-auto`를 적용해 작은 노트북 해상도에서도 스크롤이 끊기지 않습니다.
 - **SaveBar Island**: 변경 사항 발생 시 화면 최하단에 플로팅되는 `SaveBar`(`bg-surface-3 rounded-card shadow-2xl`)는 포털로 마운트되며, 바의 실측 높이만큼 폼 하단에 여백을 확보합니다.
 
@@ -177,11 +178,12 @@ Pink Beret 음악 봇 팔레트(베이스 `#ffdada`)를 중심으로 소프트 �
 ## Shapes
 
 - **Role-Based Radius**: 임의의 `rounded-lg` 대신 목적별 토큰만 사용한다.
-  - `--r-control-inner` (`0.375rem` / 6px): 컨트롤 내부 칩, 애드온, 셀렉트 배지.
-  - `--r-control` (`0.625rem` / 10px): 버튼, 입력창(`Input`), 셀렉트 트리거.
-  - `--r-menu` (`0.75rem` / 12px): 드롭다운, 팝오버 메뉴 아이템.
-  - `--r-card` (`1rem` / 16px): 카드 패널, 리스트 컨테이너, 섹션 래퍼.
-  - `--r-dialog` (`1rem` / 16px): 모달 창(`Dialog`), 시트(`Sheet`).
+  - `--r-control-inner` (`0.5rem` / 8px): 컨트롤 내부 칩, 애드온, 셀렉트 배지.
+  - `--r-control` (`0.75rem` / 12px): 버튼, 입력창(`Input`), 셀렉트 트리거.
+  - `--r-menu` (`0.875rem` / 14px): 드롭다운, 팝오버 메뉴 아이템.
+  - `--r-row` (`0.875rem` / 14px): 카드 안의 그룹 행, 리스트 행.
+  - `--r-card` (`1.25rem` / 20px): 카드 패널, 리스트 컨테이너, 섹션 래퍼.
+  - `--r-dialog` (`1.25rem` / 20px): 모달 창(`Dialog`), 시트(`Sheet`).
   - `rounded-full`: 아바타, 상태 표시 점(`StatusDot`), 단독 칩에만 한정.
 
 ---
@@ -189,14 +191,14 @@ Pink Beret 음악 봇 팔레트(베이스 `#ffdada`)를 중심으로 소프트 �
 ## Components
 
 ### Buttons
-- **Shape**: `rounded-control` (10px), `h-9 px-4 text-sm font-medium`.
+- **Shape**: `rounded-control` (12px), `h-10 px-4.5 text-sm font-medium` (모바일은 `h-11`).
 - **Default/Primary**: `bg-primary text-primary-foreground hover:bg-primary/70` — 부드러운 핑크 채움.
 - **CTA**: `bg-primary-control text-primary-control-text font-semibold shadow-sm hover:bg-primary-control-hover` — 주요 저장/진행 액션.
 - **Secondary**: `bg-secondary text-secondary-foreground shadow-control-boundary hover:bg-surface-3` — 카드 위 보조 버튼.
 - **Destructive**: `bg-destructive/10 text-destructive hover:bg-destructive/15` — 위험 작업.
 
 ### Inputs & Fields
-- **Style**: `h-9 rounded-control bg-input px-3 py-1 text-sm text-foreground shadow-control-boundary`.
+- **Style**: `h-10 rounded-control bg-input px-3.5 py-1 text-sm text-foreground shadow-control-boundary`.
 - **Focus**: `focus-visible:ring-2 focus-visible:ring-ring`.
 - **Invalid**: `aria-invalid:shadow-control-boundary-invalid aria-invalid:focus-visible:ring-destructive`.
 

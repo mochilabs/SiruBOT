@@ -17,7 +17,7 @@ export function InviteTicketSection() {
             <span className="absolute -right-6 -bottom-20 h-48 w-48 rotate-12 rounded-[2.5rem] bg-primary-control/10 sm:right-40 sm:h-56 sm:w-56" />
           </div>
           <div className="relative flex min-w-0 flex-col gap-3">
-            <h2 className="break-keep text-balance text-3xl font-black tracking-tighter sm:text-5xl">
+            <h2 className="break-keep text-balance text-3xl font-extrabold tracking-tighter sm:text-5xl">
               시루를 서버에 초대해 보세요
             </h2>
             <p className="break-keep text-base font-medium leading-relaxed text-muted-foreground sm:text-lg">

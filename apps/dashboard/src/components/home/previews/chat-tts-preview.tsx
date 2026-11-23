@@ -96,7 +96,7 @@ export function ChatTtsPreview() {
 							</span>
 						</div>
 						<div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-discord-btn-active" aria-hidden>
-							<div className={cn("h-full rounded-full bg-discord-voice transition-all duration-base", isReading ? "w-[68%]" : "w-[28%]")} />
+							<div className={cn("h-full rounded-full bg-discord-voice transition-[width] duration-base", isReading ? "w-[68%]" : "w-[28%]")} />
 						</div>
 					</div>
 				</div>
@@ -112,7 +112,7 @@ export function ChatTtsPreview() {
 							<li
 								key={`${message.author}${message.text}`}
 								className={cn(
-									"flex gap-2.5 rounded-control px-2.5 py-2 transition-all duration-fast",
+									"flex gap-2.5 rounded-control px-2.5 py-2 transition-[background-color,box-shadow,opacity] duration-fast",
 									reading && "bg-discord-btn-active/45 ring-1 ring-inset ring-primary-control/30",
 									typing && "bg-discord-btn-active/20",
 									pending && "opacity-40",

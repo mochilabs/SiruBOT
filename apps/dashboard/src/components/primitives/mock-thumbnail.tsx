@@ -7,7 +7,7 @@ export function MockThumbnail({ className }: { className: string }) {
 	return (
 		<div className={cn("flex flex-col items-center justify-center bg-surface-2 relative", className)}>
 			<Music4 className="h-1/3 w-1/3 text-primary-text relative z-10" aria-hidden />
-			<span className="absolute bottom-1 right-1 text-3xs font-black text-primary-text tracking-tighter select-none z-10">
+			<span className="absolute bottom-1 right-1 text-3xs font-extrabold text-primary-text tracking-tighter select-none z-10">
 				이미지 없음
 			</span>
 		</div>

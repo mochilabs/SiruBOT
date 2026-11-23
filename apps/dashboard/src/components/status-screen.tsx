@@ -37,7 +37,7 @@ export function StatusScreen({ title, description, meta, actions, illustration, 
 		>
 			<div className="flex max-w-2xl flex-col items-start gap-8">
 				<div className="space-y-3">
-					<h1 className="break-keep text-4xl font-black tracking-tighter text-foreground sm:text-5xl">{title}</h1>
+					<h1 className="break-keep text-4xl font-extrabold tracking-tighter text-foreground sm:text-5xl">{title}</h1>
 					<div className="max-w-md break-keep text-base font-medium leading-relaxed text-muted-foreground sm:text-lg">{description}</div>
 					{meta}
 				</div>

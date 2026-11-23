@@ -75,7 +75,7 @@ function TopTrackList({ tracks }: { tracks: StatsServerStatsResponse["topTracks"
             transition: `opacity var(--motion-base) var(--ease-out-expo) ${index * STAGGER_STEP_MS}ms, transform var(--motion-base) var(--ease-out-expo) ${index * STAGGER_STEP_MS}ms`,
           }}
         >
-          <span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground">
+          <span className="w-5 shrink-0 text-center text-sm font-extrabold tabular-nums text-muted-foreground">
             {index + 1}
           </span>
           {track.thumbnail ? (
@@ -136,7 +136,7 @@ function RequesterList({ requesters }: { requesters: StatsServerStatsResponse["t
             transition: `opacity var(--motion-base) var(--ease-out-expo) ${index * STAGGER_STEP_MS}ms, transform var(--motion-base) var(--ease-out-expo) ${index * STAGGER_STEP_MS}ms`,
           }}
         >
-          <span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground">
+          <span className="w-5 shrink-0 text-center text-sm font-extrabold tabular-nums text-muted-foreground">
             {index + 1}
           </span>
           {requester.avatarUrl ? (
