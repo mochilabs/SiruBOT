@@ -636,3 +636,11 @@ html {
 		radial-gradient(56rem 30rem at 84% 2%, color-mix(in oklab, var(--brand) 12%, transparent), transparent 70%),
 		radial-gradient(52rem 30rem at 50% 100%, color-mix(in oklab, var(--brand) 7%, transparent), transparent 70%);
 }
+
+/* 모바일 하단 탭바가 차지하는 높이 — 숨기는 화면(서버 설정)에서는 0으로 둬서 여백·떠 있는 버튼이 같이 내려가요 */
+:root {
+  --tabbar-h: 4rem;
+}
+:root[data-tabbar-off] {
+  --tabbar-h: 0px;
+}
