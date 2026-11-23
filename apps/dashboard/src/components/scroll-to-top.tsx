@@ -34,7 +34,7 @@ export function ScrollToTop() {
 					transition={{ duration: motionFast, ease: "easeOut" }}
 					onClick={scrollToTop}
 					// 모바일은 하단 탭 바가 있고, 그 위에 떠 있으면 카드 오른쪽 끝을 계속 가려서 md부터만 보여요
-					className="fixed bottom-[calc(max(var(--tabbar-h),0.75rem)+0.25rem+env(safe-area-inset-bottom))] right-[calc(1rem+env(safe-area-inset-right))] z-(--z-float) hidden h-11 w-11 items-center justify-center rounded-control bg-background/70 text-foreground shadow-lg backdrop-blur-xl transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:flex md:bottom-[calc(2rem+env(safe-area-inset-bottom))] md:right-[calc(2rem+env(safe-area-inset-right))]"
+					className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-[calc(1rem+env(safe-area-inset-right))] z-(--z-float) hidden h-11 w-11 items-center justify-center rounded-control bg-background/70 text-foreground shadow-lg backdrop-blur-xl transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:flex md:bottom-[calc(2rem+env(safe-area-inset-bottom))] md:right-[calc(2rem+env(safe-area-inset-right))]"
 					aria-label="맨 위로 가기"
 				>
 					<ArrowUp className="h-5 w-5" aria-hidden />

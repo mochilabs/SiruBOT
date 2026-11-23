@@ -146,14 +146,14 @@ Pink Beret 음악 봇 팔레트(베이스 `#ffdada`)를 중심으로 소프트 �
 - **Headline** (Bold 700, `1.5rem` / 24px, `line-height: 1.3`): 서버 대시보드 페이지 타이틀 및 주요 모달 제목.
 - **Title** (Semibold 600, `1.125rem` / 18px, `line-height: 1.4`): 카드 헤더(`CardTitle`), 섹션 그룹 라벨.
 - **Body** (Regular 400 / Medium 500, `0.875rem` / 14px, `line-height: 1.5`): 기본 설명 문구, 테이블 행 텍스트, 폼 컨트롤 본문.
-- **Label / Micro** (Medium 500, `0.6875rem` / 11px, `text-2xs`): 배지, 상태 점 설명, 모바일 탭바 라벨. 워터마크나 극소형 메타데이터는 8px(`text-3xs`) 사용.
+- **Label / Micro** (Medium 500, `0.75rem` / 12px, `text-2xs`): 배지, 상태 점 설명. 워터마크나 극소형 메타데이터는 8px(`text-3xs`) 사용.
 
 ---
 
 ## Layout
 
 - **Container Model**: 상단 네비게이션이 `sticky`이므로 `Container`(`max-w-7xl`, `pt-6 sm:pt-8 pb-16`)를 통해 헤더와의 최소 여백을 항상 유지합니다.
-- **Mobile Navigation**: 모바일(`< md`)에서는 하단 플로팅 탭바(`MobileTabBar`)가 활성화되며, 루트 레이아웃에서 safe-area를 고려한 패딩(`pb-[calc(5.25rem+env(safe-area-inset-bottom))]`)을 부여해 컨텐츠 가림을 방지합니다.
+- **Mobile Navigation**: 모바일(`< md`)에서는 상단 바 아래에 가로 스크롤 메뉴 줄(`Navbar` 안, `navLinks` 공유)이 데스크톱 메뉴를 대신합니다. 서버 설정 화면(`/servers/[id]`)은 자체 서버 선택기와 제목 버튼으로 이동하므로 이 줄을 숨깁니다.
 - **Sidebar & Scroll**: 서버 설정 사이드바(`ServerFeatureSidebar`)는 `lg:sticky lg:top-20`과 `max-h-[calc(100svh-7rem)] overflow-y-auto`를 적용해 작은 노트북 해상도에서도 스크롤이 끊기지 않습니다.
 - **SaveBar Island**: 변경 사항 발생 시 화면 최하단에 플로팅되는 `SaveBar`(`bg-surface-3 rounded-card shadow-2xl`)는 포털로 마운트되며, 바의 실측 높이만큼 폼 하단에 여백을 확보합니다.
 

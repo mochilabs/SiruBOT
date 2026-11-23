@@ -15,17 +15,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUIStore } from "@/store/use-ui-store";
 
 import { getNavHref, navLinks } from "./navbar/links";
-import { MobileTabBar } from "./navbar/mobile-tab-bar";
 
 export function Navbar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
-  // 서버 설정 화면(과 같은 모양의 디자인 미리보기)은 상단 서버 선택기·제목 버튼으로 이동하니 하단 탭바를 숨겨요 (여백 변수도 같이 0으로).
-  const hideTabBar = /^\/(servers\/[^/]+|design\/dashboard)/.test(pathname);
-  useEffect(() => {
-    document.documentElement.toggleAttribute("data-tabbar-off", hideTabBar);
-    return () => document.documentElement.removeAttribute("data-tabbar-off");
-  }, [hideTabBar]);
+  // 서버 설정 화면(과 같은 모양의 디자인 미리보기)은 상단 서버 선택기·제목 버튼으로 이동하니 모바일 메뉴 줄을 숨겨요.
+  const hideMobileNav = /^\/(servers\/[^/]+|design\/dashboard)/.test(pathname);
   const { theme, resolvedTheme, setTheme } = useTheme();
   const currentTheme = resolvedTheme ?? theme;
   const [mounted, setMounted] = useState(false);
@@ -177,7 +172,7 @@ export function Navbar() {
               })}
             </div>
 
-            {/* Action Buttons — 우측 끝에 밀착. 모바일에서는 하단 탭바가 내비를 대신하므로 액션만 남겨요 */}
+            {/* Action Buttons — 우측 끝에 밀착. 모바일에서는 메뉴가 아래 줄로 내려가므로 액션만 남겨요 */}
             <div className="ml-auto flex items-center gap-2">
               <div className="flex items-center gap-2">
                 {/* 검색+테마 토글을 하나의 세그먼트 pill로 묶어요 — 공유 표면/경계로 한 덩어리,
@@ -318,10 +313,30 @@ export function Navbar() {
           </div>
         </div>
       </nav>
-    </div>
 
-    {/* 모바일 하단 탭바 — md 이상에서 숨겨져요 */}
-    {!hideTabBar && <MobileTabBar status={status} />}
+      {/* 모바일 메뉴 줄 — md 미만에서 데스크톱 메뉴를 대신해요. 가로로 스크롤돼요 */}
+      {!hideMobileNav && (
+        <div className="md:hidden">
+          <div className="scrollbar-none mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-4 pb-2 sm:px-6">
+            {navLinks.map((link) => {
+              const active = isActiveLink(link.href);
+              return (
+                <Link
+                  key={link.label}
+                  href={getNavHref(link, status)}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex h-11 shrink-0 items-center rounded-menu px-3.5 text-sm font-semibold transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    active ? "bg-primary-control/10 text-primary-text" : "text-muted-foreground hover:text-primary-text"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
     </>
   );
 }
