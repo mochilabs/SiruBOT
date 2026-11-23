@@ -32,6 +32,8 @@ model Guild {
   jtcMarkerChannelId String?
   jtcTemplate        String  @default("{user}의 방")
   jtcUserLimit       Int     @default(0)
+  // 봇 테마 프리셋(pink|blue|purple|green|orange|yellow): 컨테이너 강조선·앱 이모지(name_<프리셋>)·기본 카드 색. 사용자가 색을 직접 정한 기능(역할 패널 등)이 우선해요.
+  themePreset   String   @default("pink")
   gaplessEnabled Boolean @default(true)
   crossfadeEnabled Boolean @default(true)
   crossfadeMs   Int      @default(5000)

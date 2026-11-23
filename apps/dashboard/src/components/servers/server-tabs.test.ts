@@ -17,11 +17,12 @@ describe("server-tabs", () => {
 		for (const tab of SERVER_TABS) {
 			expect(resolveServerTab(tab.key)).toBe(tab.key);
 		}
+		// 모듈 탭은 개요(모듈 켜기/끄기)와 봇 프로필(테마)로 합쳐졌어요.
+		expect(resolveServerTab("modules")).toBe("overview");
 	});
 
 	it("모듈에 속한 탭과 항상 켜진 탭을 구분해요", () => {
 		expect(getTabModule("overview")).toBeNull();
-		expect(getTabModule("modules")).toBeNull();
 		expect(getTabModule("channels")).toBeNull();
 		expect(getTabModule("music")).toBe("music");
 		expect(getTabModule("player-live")).toBe("music");

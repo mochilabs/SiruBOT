@@ -6,6 +6,7 @@ import { deduped } from '../utils/dedup.ts';
 import { metrics } from '../utils/metrics.ts';
 import { DataApiError } from './serveCached.ts';
 import { playerUserIdSchema, sendDomainError, sendError } from './common.ts';
+import { THEME_PRESET_DEFAULT, THEME_PRESETS } from '@sirubot/utils/guildSettingsContract';
 import { renderProfileCard } from '../renderers/profile/profileCard.tsx';
 import { renderProfileCardTicket } from '../renderers/profile/profileCardTicket.tsx';
 import { normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/greeting/memberGreetingCard.ts';
@@ -48,6 +49,8 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		.default(null);
 	const profileCardSchema = z.object({
 		preset: z.enum(['dark', 'ticket', 'dashboard', 'light', 'aura']).default('dark'),
+		// 서버 테마 — 다크 계열 카드의 색을 정해요. 요청 본문 해시에 들어가서 테마별로 캐시가 갈려요.
+		themePreset: z.enum(THEME_PRESETS).default(THEME_PRESET_DEFAULT),
 		bannerUrl: z.string().url().nullable().default(null),
 		listenText: z.string().trim().max(40).default(''),
 		checkinStreak: z.number().int().min(0).max(100_000).nullable().default(null),
@@ -109,7 +112,12 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 				};
 				if (body.preset === 'ticket') return renderProfileCardTicket(card);
 				// dark는 dashboard와 같은 다크 대시보드 모양이에요
-				return renderProfileCard({ ...card, variant: body.preset === 'dark' ? 'dashboard' : body.preset, bannerUrl: body.bannerUrl });
+				return renderProfileCard({
+					...card,
+					variant: body.preset === 'dark' ? 'dashboard' : body.preset,
+					bannerUrl: body.bannerUrl,
+					themePreset: body.themePreset
+				});
 			});
 			metrics.request(`image-profile-${body.preset}`);
 			return reply.type('image/png').send(buffer);

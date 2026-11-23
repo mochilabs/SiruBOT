@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
+import { useFeatureSwitcher } from "./feature-switcher";
 import {
   type ServerFeatureItem,
   ServerNavGroupLabel,
@@ -38,36 +39,44 @@ export function ServerMobileNav({
   groupLabels,
   trailing,
 }: ServerMobileNavProps) {
-  const [open, setOpen] = useState(false);
+  // 시트 상태는 컨텍스트가 들고 있어서 패널 제목(PanelHeader)도 같은 시트를 열 수 있어요.
+  const switcher = useFeatureSwitcher();
+  const [localOpen, setLocalOpen] = useState(false);
+  const open = switcher ? switcher.open : localOpen;
+  const setOpen = switcher ? switcher.setOpen : setLocalOpen;
+  // 패널 제목이 전환 버튼을 겸하면 상단 기능 버튼은 숨겨요 (서버 선택기만 남아요).
+  const showTrigger = !switcher?.headerPresent;
   const current = items.find((item) => item.key === active) ?? items[0];
 
   return (
-    <div className="mb-3 flex items-center gap-2 lg:hidden">
+    <div className={"mb-3 flex items-center gap-2 lg:hidden"}>
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger
-          render={
-            <button
-              type="button"
-              aria-label={`기능 선택 — 현재 ${current.label}`}
-              className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-menu bg-card px-3.5 text-left text-sm font-bold text-foreground shadow-sm transition-colors duration-fast hover:bg-accent/15 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span aria-hidden className="shrink-0 text-primary-text">
-                {current.icon}
-              </span>
-              <span className="min-w-0 flex-1 truncate">{current.label}</span>
-              {current.group && (
-                <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                  {groupLabels[current.group]}
+        {showTrigger && (
+          <SheetTrigger
+            render={
+              <button
+                type="button"
+                aria-label={`기능 선택 — 현재 ${current.label}`}
+                className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-menu bg-card px-3.5 text-left text-sm font-bold text-foreground shadow-sm transition-colors duration-fast hover:bg-accent/15 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span aria-hidden className="shrink-0 text-primary-text">
+                  {current.icon}
                 </span>
-              )}
-              <ChevronsUpDown
-                size={14}
-                aria-hidden
-                className="shrink-0 text-muted-foreground"
-              />
-            </button>
-          }
-        />
+                <span className="min-w-0 flex-1 truncate">{current.label}</span>
+                {current.group && (
+                  <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                    {groupLabels[current.group]}
+                  </span>
+                )}
+                <ChevronsUpDown
+                  size={14}
+                  aria-hidden
+                  className="shrink-0 text-muted-foreground"
+                />
+              </button>
+            }
+          />
+        )}
         <SheetContent
           side="bottom"
           className="max-h-[85dvh] overflow-hidden rounded-t-dialog pb-[env(safe-area-inset-bottom)]"
@@ -127,7 +136,12 @@ export function ServerMobileNav({
           </nav>
         </SheetContent>
       </Sheet>
-      {trailing}
+      {showTrigger ? (
+        trailing
+      ) : (
+        // 기능 버튼이 없을 땐 서버 선택기가 줄 전체를 써요 — 혼자 좁게 붙어 있지 않게요.
+        <div className="min-w-0 flex-1 [&>div]:w-full [&>div]:max-w-full">{trailing}</div>
+      )}
     </div>
   );
 }

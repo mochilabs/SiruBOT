@@ -12,6 +12,7 @@ import { clearNowPlayingCard, getCachedNowPlayingCard, getNowPlayingCardKey, res
 import type { LavalinkDeps } from '../deps.ts';
 import { Guild } from '@sirubot/prisma';
 import { pinnedIdleView } from '../../discord/views/pinnedIdle.ts';
+import { withGuildTheme } from '../../../../lib/guildTheme.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 
 type ControllerOptions = Pick<Guild, 'enableController' | 'volume'>;
@@ -48,6 +49,15 @@ export class PlayerNotifier implements Stoppable {
 
 	constructor(private readonly deps: LavalinkDeps) {
 		this.logger = deps.logger.getSubLogger({ name: 'playerNotifier' });
+	}
+
+	/** 고정 채널 대기 화면 — 플레이어 이벤트에서 그려져 상호작용 맥락이 없으므로 서버 테마를 직접 싣는다. */
+	private idleView(guildId: string) {
+		return withGuildTheme(
+			guildId,
+			async (id) => (await this.deps.guildService.getGuild(id)).themePreset,
+			() => pinnedIdleView()
+		);
 	}
 
 	public sendController(player: CustomPlayer, interaction?: ChatInputCommandInteraction): Promise<void> {
@@ -428,7 +438,7 @@ export class PlayerNotifier implements Stoppable {
 				// 이미 재생 중이면 곧 컨트롤러가 이 채널로 오므로 대기 화면을 올리지 않는다.
 				if (player?.queue.current) return;
 				const message = await channel.send({
-					components: [pinnedIdleView()],
+					components: [await this.idleView(guildId)],
 					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 					allowedMentions: { roles: [], users: [] }
 				});
@@ -513,8 +523,9 @@ export class PlayerNotifier implements Stoppable {
 			this.controllerVersions.set(player, (this.controllerVersions.get(player) ?? 0) + 1);
 			this.resetControllerState(player);
 			// 진행 중인 편집과 겹쳐도 파괴 경로가 막히지 않게 기다리지 않는다.
+			const idleView = await this.idleView(player.guildId);
 			void panel
-				.edit({ components: [pinnedIdleView()], attachments: [], files: [], flags: [MessageFlags.IsComponentsV2] })
+				.edit({ components: [idleView], attachments: [], files: [], flags: [MessageFlags.IsComponentsV2] })
 				.catch((error: { code?: number }) => {
 					if (error.code !== 10008) this.logger.warn(`Failed to reset pinned panel for guild ${player.guildId}:`, error);
 				});

@@ -1,6 +1,8 @@
 import { SeparatorSpacingSize } from 'discord.js';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_COLOR } from './constants.js';
+import { THEME_PRESETS } from './guildSettingsContract.js';
+import { setContextThemeResolver } from './themeContext.js';
 import { addSeparator, createContainer, createSeparator, createThumbnail, hexColorToInt } from './embed.ts';
 
 describe('hexColorToInt', () => {
@@ -50,5 +52,34 @@ describe('createSeparator/addSeparator', () => {
 describe('createThumbnail', () => {
 	it('URL을 그대로 심어요', () => {
 		expect(createThumbnail('https://example.com/a.png').toJSON().media.url).toBe('https://example.com/a.png');
+	});
+});
+
+describe('서버 테마 맥락 훅', () => {
+	it('명시 색 → 서버 테마 → 기본색 순으로 써요', () => {
+		try {
+			setContextThemeResolver(() => 'blue');
+			expect(createContainer().toJSON().accent_color).toBe(0x5b9dff);
+			expect(createContainer('#123456').toJSON().accent_color).toBe(0x123456);
+			setContextThemeResolver(() => 'broken');
+			expect(createContainer().toJSON().accent_color).toBe(DEFAULT_COLOR);
+			setContextThemeResolver(() => null);
+			expect(createContainer().toJSON().accent_color).toBe(DEFAULT_COLOR);
+		} finally {
+			setContextThemeResolver(null);
+		}
+	});
+
+	it('프리셋 6개의 컨테이너 색이 서로 달라요', () => {
+		try {
+			const colors = THEME_PRESETS.map((preset) => {
+				setContextThemeResolver(() => preset);
+				return createContainer().toJSON().accent_color;
+			});
+			expect(new Set(colors).size).toBe(THEME_PRESETS.length);
+			expect(colors[0]).toBe(DEFAULT_COLOR);
+		} finally {
+			setContextThemeResolver(null);
+		}
 	});
 });

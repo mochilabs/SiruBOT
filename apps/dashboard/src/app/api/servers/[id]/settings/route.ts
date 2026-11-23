@@ -5,6 +5,7 @@ import {
   normalizePinnedChannelMode,
   normalizeRepeatMode,
   normalizeSponsorBlockSegments,
+  normalizeThemePreset,
   normalizeTtsAnnounceMode,
 } from "@sirubot/utils/guildSettingsContract";
 import { sanitizeDisabledModules } from "@sirubot/utils/modules";
@@ -65,6 +66,7 @@ function toSettings(guild: PrismaGuild | null): GuildSettings {
     embedFixTranslateLang: normalizeEmbedFixTranslateLang(guild.embedFixTranslateLang),
     countingEnabled: guild.countingEnabled,
     countingChannelId: guild.countingChannelId,
+    themePreset: normalizeThemePreset(guild.themePreset),
     disabledModules: sanitizeDisabledModules(guild.disabledModules),
   };
 }

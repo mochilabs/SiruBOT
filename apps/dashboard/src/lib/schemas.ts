@@ -13,6 +13,8 @@ import {
 	REPEAT_MODE_DEFAULT,
 	REPEAT_MODES,
 	SPONSORBLOCK_SEGMENTS,
+	THEME_PRESET_DEFAULT,
+	THEME_PRESETS,
 	TTS_ANNOUNCE_MODE_DEFAULT,
 	TTS_ANNOUNCE_MODES,
 	TTS_DUCK_LEVEL_RANGE,
@@ -111,6 +113,9 @@ export const guildSettingsSchema = z.object({
 	embedFixTranslateLang: z.enum(EMBED_FIX_TRANSLATE_LANGS, "임베드 번역 언어가 잘못됐어요.").optional(),
 	countingEnabled: z.boolean().optional(),
 	countingChannelId: nullableSnowflake.optional(),
+	// 봇 테마 프리셋 — 컨테이너 강조선·앱 이모지·기본 카드 색 (봇 계약: packages/utils guildSettingsContract)
+	// 부분 저장(PUT)이 다른 설정 때문에 테마를 기본값으로 덮어쓰지 않게 default를 두지 않아요.
+	themePreset: z.enum(THEME_PRESETS, "테마가 잘못됐어요.").optional(),
 	// 꺼진 기능 모듈 id (P-06). 모르는 id와 끌 수 없는 모듈(관리)은 라우트가 sanitizeDisabledModules로 버려요.
 	disabledModules: z.array(z.string().max(32, "모듈 ID가 잘못됐어요."), "모듈 목록이 잘못됐어요.").max(BOT_MODULES.length, "모듈 목록이 잘못됐어요.").optional(),
 });
@@ -167,6 +172,7 @@ export const GUILD_SETTINGS_DEFAULTS = {
 	embedFixTranslateLang: "off",
 	countingEnabled: false,
 	countingChannelId: null,
+	themePreset: THEME_PRESET_DEFAULT,
 	disabledModules: [],
 } satisfies GuildSettings;
 

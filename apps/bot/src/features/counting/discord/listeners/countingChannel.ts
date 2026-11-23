@@ -15,6 +15,7 @@ import { Events, Listener } from '@sapphire/framework';
 import { Message, MessageFlags } from 'discord.js';
 import { emoji, enqueueOperation, evaluateCounting, parseCountingMessage } from '@sirubot/utils';
 import { usageFeatureKey } from '@sirubot/utils/modules';
+import { inGuildTheme } from '../../../../lib/guildThemeScope.ts';
 
 /** 최고 기록 알림 기준 — 매 숫자마다 알리면 시끄러워요 */
 const COUNTING_ANNOUNCE_MIN = 10;
@@ -53,7 +54,7 @@ export class CountingChannelListener extends Listener {
 			// 성공은 조용히 — 새 최고 기록만 알려줘요
 			if (result.ok) {
 				if (result.newBest && attempt >= COUNTING_ANNOUNCE_MIN) {
-					await this.announce(message, `-# ${emoji('crown')} ${attempt}까지! 새 최고 기록이에요.`);
+					await this.announce(message, () => `-# ${emoji('crown')} ${attempt}까지! 새 최고 기록이에요.`);
 				}
 				return;
 			}
@@ -62,16 +63,18 @@ export class CountingChannelListener extends Listener {
 			if (!result.reset) return;
 
 			const reason = attempt === state.current + 1 ? '방금 센 분은 바로 이어서 셀 수 없어요!' : `${state.current + 1}부터 차례로 세야 해요!`;
-			await this.announce(message, `-# ${emoji('warning')} ${reason} 다시 1부터 시작해요. (최고 기록 ${state.best})`);
+			await this.announce(message, () => `-# ${emoji('warning')} ${reason} 다시 1부터 시작해요. (최고 기록 ${state.best})`);
 		} catch (error) {
 			this.container.logger.error(`[countingChannel] unhandled error (guild ${guildId}): ${error}`);
 		}
 	}
 
-	private announce(message: Message, content: string): Promise<unknown> {
+	/** 안내 문구는 서버 테마 맥락 안에서 만들어요 (앱 이모지·강조선이 서버 색을 따라가도록) */
+	private async announce(message: Message, buildContent: () => string): Promise<unknown> {
+		const components = [await inGuildTheme(message.guildId, () => notice(buildContent()))];
 		return message
 			.reply({
-				components: [notice(content)],
+				components,
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 				allowedMentions: { parse: [] }
 			})

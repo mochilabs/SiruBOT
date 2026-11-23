@@ -8,7 +8,6 @@ import type { BotModuleId } from "@sirubot/utils/modules";
  */
 export const SERVER_TABS = [
 	{ key: "overview", label: "개요", group: "general" },
-	{ key: "modules", label: "모듈", group: "general" },
 	{ key: "music", label: "음악", group: "music", module: "music" },
 	{ key: "player-live", label: "라이브", group: "music", module: "music" },
 	{ key: "stats", label: "통계", group: "music", module: "music" },

@@ -1,5 +1,7 @@
 import { ContainerBuilder, SeparatorBuilder, ThumbnailBuilder, SeparatorSpacingSize } from 'discord.js';
 import { DEFAULT_COLOR } from './constants.js';
+import { THEME_PRESET_HEX } from './guildSettingsContract.js';
+import { currentThemePreset } from './themeContext.js';
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
@@ -21,10 +23,17 @@ export function addSeparator(container: ContainerBuilder): void {
 	container.addSeparatorComponents(createSeparator());
 }
 
+/** 컨테이너에 쓸 강조색 숫자 — 명시 값 → 서버 테마(맥락) → 봇 기본색 순이에요. */
+export function resolveAccentColor(accentColor?: string | null): number {
+	const explicit = accentColor ? hexColorToInt(accentColor) : undefined;
+	if (explicit !== undefined) return explicit;
+	return hexColorToInt(THEME_PRESET_HEX[currentThemePreset()]) ?? DEFAULT_COLOR;
+}
+
 export function createContainer(accentColor?: string | null): ContainerBuilder {
 	const container = new ContainerBuilder();
-	// 커스텀 강조색(#RRGGBB)이 있으면 그 색을, 없거나 형식이 틀리면 봇 기본색을 써요.
-	container.setAccentColor((accentColor ? hexColorToInt(accentColor) : undefined) ?? DEFAULT_COLOR);
+	// 명시 강조색(#RRGGBB) → 서버 테마(맥락) → 봇 기본색. 형식이 틀린 값은 건너뛰어요.
+	container.setAccentColor(resolveAccentColor(accentColor));
 	return container;
 }
 

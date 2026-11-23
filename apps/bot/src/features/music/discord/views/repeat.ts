@@ -1,5 +1,4 @@
-import { DEFAULT_COLOR, emoji, type AppEmojiFallbackKey } from '@sirubot/utils';
-import { ContainerBuilder } from 'discord.js';
+import { createContainer, emoji, type AppEmojiFallbackKey } from '@sirubot/utils';
 import { RepeatMode } from 'lavalink-client';
 
 type RepeatUpdatedProps = {
@@ -37,13 +36,13 @@ const UPDATED_REPEAT_MODE_NAMES: Record<RepeatMode, string> = {
 } as const;
 
 export function repeatUpdated({ mode }: RepeatUpdatedProps) {
-	return new ContainerBuilder()
-		.setAccentColor(DEFAULT_COLOR)
-		.addTextDisplayComponents((textDisplay) => textDisplay.setContent(`${repeatEmoji(mode)} 반복 모드를 ${UPDATED_REPEAT_MODE_NAMES[mode]}`));
+	return createContainer().addTextDisplayComponents((textDisplay) =>
+		textDisplay.setContent(`${repeatEmoji(mode)} 반복 모드를 ${UPDATED_REPEAT_MODE_NAMES[mode]}`)
+	);
 }
 
 export function repeatCurrent({ mode }: RepeatUpdatedProps) {
-	return new ContainerBuilder()
-		.setAccentColor(DEFAULT_COLOR)
-		.addTextDisplayComponents((textDisplay) => textDisplay.setContent(`${repeatEmoji(mode)} 현재 반복 모드 **${REPEAT_MODE_NAMES[mode]}**`));
+	return createContainer().addTextDisplayComponents((textDisplay) =>
+		textDisplay.setContent(`${repeatEmoji(mode)} 현재 반복 모드 **${REPEAT_MODE_NAMES[mode]}**`)
+	);
 }

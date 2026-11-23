@@ -14,6 +14,7 @@ import { actorFromMember } from '../../application/actor.ts';
 import { trackPlayFeedback } from '../utils/playFeedback.ts';
 import { RESULT_LIMIT, SELECT_TIMEOUT_MS } from '../utils/searchSelect.ts';
 import { usageFeatureKey } from '@sirubot/utils/modules';
+import { inGuildTheme } from '../../../../lib/guildThemeScope.ts';
 
 /** 검색어로 취급할 최대 길이 — 일반 대화로 보이는 긴 메시지는 거절 안내를 보낸다. */
 const MAX_QUERY_LENGTH = 100;
@@ -35,7 +36,8 @@ export class CommandChannelListener extends Listener {
 
 	public override async run(message: Message): Promise<void> {
 		try {
-			await this.handle(message);
+			// 서버 테마 맥락 안에서 처리해요 — 검색 결과·안내 뷰가 서버 색을 써요.
+			await inGuildTheme(message.guildId, () => this.handle(message));
 		} catch (error) {
 			this.container.logger.error(`[commandChannel] unhandled error (guild ${message.guildId}): ${error}`);
 			await message

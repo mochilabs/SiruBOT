@@ -4,6 +4,7 @@ import { Message } from 'discord.js';
 import { notice } from '../../../../lib/notice.ts';
 import { emoji, MemoryCache } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
+import { inGuildTheme } from '../../../../lib/guildThemeScope.ts';
 
 const deleteCountCache = new MemoryCache<string, number>({
 	maxSize: 100,
@@ -39,8 +40,10 @@ export class MessageDeleteListener extends Listener {
 						try {
 							const tooltip = await message.channel.send({
 								components: [
-									notice(
-										`-# ${emoji('bulb')} 봇의 노래 재생 메시지가 불편하시다면, /설정 명령어로 **[오디오 컨트롤러]** 옵션을 끌 수 있어요.`
+									await inGuildTheme(guildId, () =>
+										notice(
+											`-# ${emoji('bulb')} 봇의 노래 재생 메시지가 불편하시다면, /설정 명령어로 **[오디오 컨트롤러]** 옵션을 끌 수 있어요.`
+										)
 									)
 								]
 							});

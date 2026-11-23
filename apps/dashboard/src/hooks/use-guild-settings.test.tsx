@@ -22,7 +22,7 @@ const saved: GuildSettings = {
   emojiEnlargeMode: "off", emojiEnlargeChannelIds: [], quoteMode: "off", quoteChannelIds: [],
   embedFixMode: "off", embedFixChannelIds: [],
   embedFixSites: ["x", "instagram", "booth"], embedFixSuppressOriginal: false, embedFixTranslateLang: "off",
-  countingEnabled: false, countingChannelId: null, disabledModules: [],
+  countingEnabled: false, countingChannelId: null, themePreset: "pink", disabledModules: [],
 };
 const editable = (settings: GuildSettings) => ({ volume: settings.volume, sponsorBlockSegments: settings.sponsorBlockSegments });
 let current: ReturnType<typeof useSettingsForm<ReturnType<typeof editable>>>;

@@ -50,3 +50,33 @@ describe('renderProfileCard', () => {
 		expect(png.length).toBeGreaterThan(1000);
 	});
 });
+
+describe('서버 테마', () => {
+	it('테마가 다르면 다른 이미지를, 분홍·미지정은 같은 이미지를 그려요', async () => {
+		const input = {
+			variant: 'dashboard' as const,
+			displayName: '시루',
+			username: 'siru',
+			avatarUrl: null,
+			status: 'online' as const,
+			statusLabel: '온라인',
+			intro: '',
+			createdText: '',
+			joinedText: '',
+			roleChips: [],
+			playlistCount: 1,
+			requestedCount: 2,
+			listenText: '',
+			checkinStreak: null,
+			topTracks: [],
+			nowPlaying: null
+		};
+		const [none, pink, blue] = await Promise.all([
+			renderProfileCard(input),
+			renderProfileCard({ ...input, themePreset: 'pink' }),
+			renderProfileCard({ ...input, themePreset: 'blue' })
+		]);
+		expect(none.equals(pink)).toBe(true);
+		expect(none.equals(blue)).toBe(false);
+	});
+});

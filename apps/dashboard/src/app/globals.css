@@ -349,6 +349,21 @@
 	animation: page-in var(--motion-base) var(--ease-out-expo) both;
 }
 
+/* 토스트 자동 닫힘 진행 막대 — 길이는 토스트 timeout(--toast-duration)과 같아요. 일시정지는 data-expanded(호버·포커스)와 맞춰요. */
+@utility animate-toast-progress {
+	animation: toast-progress var(--toast-duration, 5000ms) linear forwards;
+}
+
+@keyframes toast-progress {
+	from {
+		transform: scaleX(1);
+	}
+
+	to {
+		transform: scaleX(0);
+	}
+}
+
 @utility animate-pulse-soft {
 	animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 	will-change: transform, opacity;
@@ -625,4 +640,12 @@ html {
 
 .dark .hero-grain {
 	opacity: 0.08;
+}
+
+/* 모바일 하단 탭바가 차지하는 높이 — 숨기는 화면(서버 설정)에서는 0으로 둬서 여백·떠 있는 버튼이 같이 내려가요 */
+:root {
+  --tabbar-h: 5.25rem;
+}
+:root[data-tabbar-off] {
+  --tabbar-h: 0px;
 }

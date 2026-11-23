@@ -1,5 +1,4 @@
-import { DEFAULT_COLOR, emoji, emojiProgressBar, volumeToEmoji } from '@sirubot/utils';
-import { ContainerBuilder } from 'discord.js';
+import { createContainer, emoji, emojiProgressBar, volumeToEmoji } from '@sirubot/utils';
 
 export type VolumeTarget = 'music' | 'tts' | 'duck';
 
@@ -14,8 +13,7 @@ function row(label: string, value: number, maxValue: number): string {
 }
 
 export function volumeOverview({ volume, ttsVolume, ttsDuck }: { volume: number; ttsVolume: number; ttsDuck: number }) {
-	return new ContainerBuilder()
-		.setAccentColor(DEFAULT_COLOR)
+	return createContainer()
 		.addTextDisplayComponents((textDisplay) =>
 			textDisplay.setContent(`### ${emoji('volume_up')} 볼륨 설정\n-# 노래 · TTS · TTS 덕킹 볼륨이에요.`)
 		)
@@ -26,11 +24,9 @@ export function volumeOverview({ volume, ttsVolume, ttsDuck }: { volume: number;
 
 export function volumeUpdated({ volume, target, isPlaying }: volumeUpdatedProps) {
 	const label = target === 'music' ? '노래 볼륨' : target === 'tts' ? 'TTS 볼륨' : 'TTS 덕킹 볼륨';
-	return new ContainerBuilder()
-		.setAccentColor(DEFAULT_COLOR)
-		.addTextDisplayComponents((textDisplay) =>
-			textDisplay.setContent(
-				`${volumeToEmoji(volume)} ${isPlaying ? '현재 ' : ''}${label}을(를) **${volume}%** 로 설정했어요.${!isPlaying ? `\n-# ${emoji('sparkle')} 설정된 볼륨은 다음 재생 시 적용돼요.` : ''}`
-			)
-		);
+	return createContainer().addTextDisplayComponents((textDisplay) =>
+		textDisplay.setContent(
+			`${volumeToEmoji(volume)} ${isPlaying ? '현재 ' : ''}${label}을(를) **${volume}%** 로 설정했어요.${!isPlaying ? `\n-# ${emoji('sparkle')} 설정된 볼륨은 다음 재생 시 적용돼요.` : ''}`
+		)
+	);
 }

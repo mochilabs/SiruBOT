@@ -8,7 +8,7 @@ import {
 	SeparatorSpacingSize,
 	TextDisplayBuilder
 } from 'discord.js';
-import { DEFAULT_COLOR, emoji } from '@sirubot/utils';
+import { createContainer, emoji } from '@sirubot/utils';
 import type { TicketConfig } from '@sirubot/utils/ticket';
 import { ticketId } from '../customIds.ts';
 import type { Ticket } from '@sirubot/prisma';
@@ -17,8 +17,7 @@ import type { Ticket } from '@sirubot/prisma';
  * 길드 유저들이 티켓을 열 수 있는 공개 안내 패널 메시지 뷰 (Components V2)
  */
 export function ticketPanelView(config: TicketConfig): { flags: number; components: [ContainerBuilder, ActionRowBuilder<ButtonBuilder>] } {
-	const container = new ContainerBuilder()
-		.setAccentColor(DEFAULT_COLOR)
+	const container = createContainer()
 		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`### ${emoji('ticket')} ${config.panelTitle}`))
 		.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small))
 		.addTextDisplayComponents(new TextDisplayBuilder().setContent(config.panelDescription));
@@ -41,7 +40,7 @@ export function ticketPanelView(config: TicketConfig): { flags: number; componen
  * 새로 생성된 티켓 채널의 첫 머리에 표시되는 환영 및 관리 컨트롤러 뷰
  */
 export function ticketWelcomeView(ticket: Ticket): { flags: number; components: [ContainerBuilder, ActionRowBuilder<ButtonBuilder>] } {
-	const container = new ContainerBuilder().setAccentColor(DEFAULT_COLOR);
+	const container = createContainer();
 	const lines = [
 		`<@${ticket.ownerId}> 님의 티켓이 생성되었어요.`,
 		'',
@@ -77,7 +76,7 @@ export function ticketWelcomeView(ticket: Ticket): { flags: number; components: 
  * 티켓 명령어 처리 결과 피드백 뷰 (Components V2)
  */
 export function ticketMessageView(message: string): { flags: number; components: [ContainerBuilder] } {
-	const container = new ContainerBuilder().setAccentColor(DEFAULT_COLOR).addTextDisplayComponents(new TextDisplayBuilder().setContent(message));
+	const container = createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(message));
 	return {
 		flags: MessageFlags.IsComponentsV2,
 		components: [container]

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { normalizeThemePreset, THEME_PRESET_LABELS, type ThemePreset } from "@sirubot/utils/guildSettingsContract";
 import { ImagePlus, RotateCcw, UserRoundCog } from "lucide-react";
 
 import { Field } from "@/components/primitives/field";
@@ -13,9 +14,10 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { useBotProfile } from "@/hooks/use-bot-profile";
-import { notifyApiError } from "@/lib/notify";
+import { notifyApiError, notifySaved } from "@/lib/notify";
+import type { GuildSettings } from "@/types/settings";
 
-import { SettingsPanel } from "./settings-panel";
+import { SettingsPanel, useSettingsPanel } from "./settings-panel";
 import { SettingsSection } from "./settings-section";
 import {
   PanelError,
@@ -24,6 +26,7 @@ import {
   RetryLink,
   WarningBox,
 } from "./settings-shared";
+import { ThemePresetPicker } from "./theme-preset-picker";
 
 const MAX_NICKNAME_LENGTH = 32;
 const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
@@ -37,10 +40,20 @@ function describeApplyError(error: string): string {
   return error;
 }
 
+interface ThemeForm {
+  themePreset: ThemePreset;
+}
+
+const toThemeForm = (settings: GuildSettings): ThemeForm => ({
+  themePreset: normalizeThemePreset(settings.themePreset),
+});
+
 function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
   const toast = useToast();
   const { profile, refreshFailed, isLoading, error, saving, save, reload } =
     useBotProfile(guildId);
+  // 봇 테마는 길드 설정(DB)이라 프로필(Discord 적용)과 저장 경로가 달라요. 저장 바 하나로 둘을 같이 저장해요.
+  const theme = useSettingsPanel(guildId, toThemeForm, "봇 테마를 저장했어요.");
 
   const [nickname, setNickname] = useState("");
   const [nicknameTouched, setNicknameTouched] = useState(false);
@@ -148,7 +161,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
     [cropSource],
   );
 
-  const handleSave = useCallback(async (): Promise<boolean> => {
+  const saveProfile = useCallback(async (): Promise<boolean> => {
     const form = new FormData();
     if (avatarFile) form.append("avatar", avatarFile);
     else if (avatarReset) form.append("avatarReset", "1");
@@ -190,6 +203,22 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
     toast,
   ]);
 
+  const themeSubmit = theme.submit;
+  const themeDirty = theme.dirty;
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    // 프로필이 실패하면 테마는 건드리지 않아요 — 저장 바가 남아 있어서 다시 누를 수 있어요.
+    if (!(await saveProfile())) return false;
+    if (!themeDirty) return true;
+    try {
+      await themeSubmit();
+      notifySaved("봇 테마를 저장했어요.");
+      return true;
+    } catch (err) {
+      notifyApiError(err, "테마 저장에 실패했어요.");
+      return false;
+    }
+  }, [saveProfile, themeDirty, themeSubmit]);
+
   // 로드 실패/초기 로딩부터는 조기 반환해요 — 모든 훅은 위에서 호출됐어요.
   if (error) return <PanelError error={error} onRetry={reload} />;
   if (isLoading && !profile)
@@ -220,7 +249,8 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
     avatarFile !== null ||
     avatarReset ||
     bannerFile !== null ||
-    bannerReset;
+    bannerReset ||
+    theme.dirty;
   // 미리보기: 새 파일 → 초기화 요청이면 전역 아바타 → 현재 길드 아바타 → 전역 아바타 순이에요.
   const previewUrl =
     avatarPreviewUrl ??
@@ -265,7 +295,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
       panel={panel}
       icon={<UserRoundCog className="h-5 w-5" />}
       title="봇 프로필"
-      description="봇이 이 서버에서 보여질 이름과 프로필 사진을 관리해요. 다른 서버에는 영향이 없어요."
+      description="봇이 이 서버에서 보여질 이름·사진·배너와 메시지 테마 색을 관리해요. 다른 서버에는 영향이 없어요."
       notice={
         <AvatarCropModal
           source={cropSource?.file ?? null}
@@ -388,6 +418,19 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
           )}
         </Field>
           </SettingsSection>
+
+          {theme.form && (
+            <SettingsSection title="봇 테마" summary={THEME_PRESET_LABELS[theme.form.themePreset]} defaultOpen>
+              <p className="mb-3 text-xs text-muted-foreground sm:text-sm">
+                봇 메시지의 강조선, 진행바·아이콘 이모지, 프로필 카드 색이 함께 바뀌어요. 역할 패널처럼 색을 직접 정한 기능은 그 색을 그대로 써요.
+              </p>
+              <ThemePresetPicker
+                value={theme.form.themePreset}
+                disabled={saving || theme.saving}
+                onChange={(preset) => theme.patch({ themePreset: preset })}
+              />
+            </SettingsSection>
+          )}
 
           <SettingsSection title="배너" summary={bannerPreview ? "설정됨" : "없음"}>
       <Field label="배너 이미지" description={bannerCaption}>

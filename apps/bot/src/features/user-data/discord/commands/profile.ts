@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { emoji, formatTimeToKorean } from '@sirubot/utils';
+import { currentThemePreset, emoji, formatTimeToKorean } from '@sirubot/utils';
 import {
 	birthdayAnnounceView,
 	birthdayClearedView,
@@ -308,6 +308,8 @@ export class ProfileCommand extends Command {
 		const cardPng = await this.container.dataApi
 			.renderProfileCard({
 				preset,
+				// 상호작용 맥락의 서버 테마 — 추가 DB 조회 없이 메모리 값을 읽어요.
+				themePreset: currentThemePreset(),
 				userId: target.id,
 				displayName: target.displayName ?? target.username,
 				username: target.username,

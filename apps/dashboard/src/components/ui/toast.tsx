@@ -15,11 +15,18 @@ type ToastVariant = "success" | "error" | "warning" | "info"
  */
 const toastManager = ToastPrimitive.createToastManager()
 
+/** 토스트 자동 닫힘 시간(ms) — Base UI 기본값(5000)과 같고, 진행 막대 길이도 이 값을 따라요. */
+const TOAST_TIMEOUT_MS = 5000
+
 const toast = Object.assign(toastManager, {
-  success: (message: string, description?: string) => toastManager.add({ type: "success", title: message, description }),
-  error: (message: string, description?: string) => toastManager.add({ type: "error", title: message, description }),
-  warning: (message: string, description?: string) => toastManager.add({ type: "warning", title: message, description }),
-  info: (message: string, description?: string) => toastManager.add({ type: "info", title: message, description }),
+  success: (message: string, description?: string) =>
+    toastManager.add({ type: "success", title: message, description, timeout: TOAST_TIMEOUT_MS }),
+  error: (message: string, description?: string) =>
+    toastManager.add({ type: "error", title: message, description, timeout: TOAST_TIMEOUT_MS }),
+  warning: (message: string, description?: string) =>
+    toastManager.add({ type: "warning", title: message, description, timeout: TOAST_TIMEOUT_MS }),
+  info: (message: string, description?: string) =>
+    toastManager.add({ type: "info", title: message, description, timeout: TOAST_TIMEOUT_MS }),
 })
 
 type LucideIcon = React.ComponentType<{ className?: string }>
@@ -30,12 +37,13 @@ const variantConfig: Record<
     icon: LucideIcon
     iconColor: string
     iconBg: string
+    barBg: string
   }
 > = {
-  success: { icon: CircleCheckIcon, iconColor: "text-success", iconBg: "bg-success/10" },
-  error: { icon: OctagonXIcon, iconColor: "text-destructive", iconBg: "bg-destructive/10" },
-  warning: { icon: TriangleAlertIcon, iconColor: "text-warning", iconBg: "bg-warning/10" },
-  info: { icon: InfoIcon, iconColor: "text-info", iconBg: "bg-info/10" },
+  success: { icon: CircleCheckIcon, iconColor: "text-success", iconBg: "bg-success/10", barBg: "bg-success" },
+  error: { icon: OctagonXIcon, iconColor: "text-destructive", iconBg: "bg-destructive/10", barBg: "bg-destructive" },
+  warning: { icon: TriangleAlertIcon, iconColor: "text-warning", iconBg: "bg-warning/10", barBg: "bg-warning" },
+  info: { icon: InfoIcon, iconColor: "text-info", iconBg: "bg-info/10", barBg: "bg-info" },
 }
 
 function ToastPortal({ ...props }: ToastPrimitive.Portal.Props) {
@@ -62,7 +70,7 @@ function Toast({ className, ...props }: ToastPrimitive.Root.Props) {
     <ToastPrimitive.Root
       data-slot="toast"
       className={cn(
-        "group/toast pointer-events-auto relative mb-3 w-full rounded-card border-0 bg-popover text-popover-foreground shadow-lg outline-none select-none focus-visible:ring-2 focus-visible:ring-ring",
+        "group/toast pointer-events-auto relative mb-3 w-full overflow-hidden rounded-card border-0 bg-popover text-popover-foreground shadow-lg outline-none select-none focus-visible:ring-2 focus-visible:ring-ring",
         "transition-[opacity,transform] duration-fast [transform:translateX(var(--toast-swipe-movement-x))_translateY(var(--toast-swipe-movement-y))] data-starting-style:opacity-0 data-ending-style:opacity-0 data-limited:hidden",
         className
       )}
@@ -163,6 +171,26 @@ function ToastIcon({ type }: { type: string | undefined }) {
   )
 }
 
+/** 자동 닫힘까지 남은 시간을 보여주는 막대 — 호버·포커스로 타이머가 멈추면(data-expanded) 같이 멈춰요. */
+function ToastProgress({ type, timeout }: { type: string | undefined; timeout: number | undefined }) {
+  const variant = type as ToastVariant | undefined
+  const duration = timeout ?? TOAST_TIMEOUT_MS
+  // timeout 0 = 자동으로 닫히지 않는 토스트라 막대가 없어요.
+  if (duration <= 0) return null
+
+  return (
+    <span aria-hidden="true" data-slot="toast-progress" className="pointer-events-none absolute inset-x-0 bottom-0 h-1 motion-reduce:hidden">
+      <span
+        className={cn(
+          "block h-full origin-left animate-toast-progress group-data-expanded/toast:[animation-play-state:paused]",
+          variant && variantConfig[variant] ? variantConfig[variant].barBg : "bg-primary-control"
+        )}
+        style={{ "--toast-duration": `${duration}ms` } as React.CSSProperties}
+      />
+    </span>
+  )
+}
+
 function ToastList() {
   const { toasts } = ToastPrimitive.useToastManager()
 
@@ -182,6 +210,7 @@ function ToastList() {
         {toastItem.actionProps && <ToastAction />}
         <ToastClose />
       </ToastContent>
+      <ToastProgress type={toastItem.type} timeout={toastItem.timeout} />
     </Toast>
   ))
 }

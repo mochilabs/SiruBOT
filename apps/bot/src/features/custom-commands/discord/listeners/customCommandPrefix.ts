@@ -18,6 +18,7 @@ import { CUSTOM_COMMAND_MAX_ARGS, CUSTOM_COMMAND_RESERVED_NAMES, MemoryCache, em
 import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../application/context.ts';
 import { runCustomCommandSpec, type CustomCommandContext } from '../../application/interpreter.ts';
 import { usageFeatureKey } from '@sirubot/utils/modules';
+import { inGuildTheme } from '../../../../lib/guildThemeScope.ts';
 
 /** 유저별 실행 쿨다운 (ms) — 길드+유저 키 */
 const EXECUTE_COOLDOWN_MS = 3_000;
@@ -35,7 +36,13 @@ export function parseCustomCommandArgs(rest: string): string[] {
 export class CustomCommandPrefixListener extends Listener {
 	private readonly cooldowns = new MemoryCache<string, true>({ ttl: EXECUTE_COOLDOWN_MS, maxSize: 5_000 });
 
-	public override async run(message: Message) {
+	public override run(message: Message) {
+		// 서버 테마 맥락 안에서 처리해요 — 길드 설정은 어차피 캐시에서 읽어요(모든 길드 메시지가 이미 거쳐요).
+		if (message.author.bot || !message.inGuild()) return Promise.resolve();
+		return inGuildTheme(message.guildId, () => this.handle(message));
+	}
+
+	private async handle(message: Message) {
 		if (message.author.bot || !message.inGuild()) return;
 		if (!message.channel.isSendable()) return;
 		if (!(await isMessageFeatureEnabled(this.container.guildService, message.guildId, 'custom-command'))) return;

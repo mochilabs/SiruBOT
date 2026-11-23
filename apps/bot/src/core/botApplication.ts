@@ -11,6 +11,9 @@ import { ClientOptions } from 'discord.js';
 import { LavalinkManager, LavalinkNodeOptions } from 'lavalink-client';
 
 import { GuildService } from '../services/guildService.ts';
+import { setContextThemeResolver } from '@sirubot/utils';
+import { currentGuildTheme } from '../lib/guildTheme.ts';
+import { inGuildTheme } from '../lib/guildThemeScope.ts';
 import { ChatTtsService, TtsPronunciationService, TtsService, TtsUserSettingsService, getTtsConfig } from '../features/tts/index.ts';
 import { CountingStateStore } from '../features/counting/index.ts';
 import { UsageRecorder } from '../features/usage-metrics/index.ts';
@@ -228,6 +231,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.dataApi = createDataApiClient({ logger: appLogger });
 		container.webhookRelay = new WebhookRelay({ logger: appLogger, getBotUser: () => container.client.user });
 		container.guildService = new GuildService({ db: container.db });
+		// 컨테이너 강조선·앱 이모지가 서버 테마(themePreset)를 따르도록 맥락 훅을 연결해요.
+		setContextThemeResolver(currentGuildTheme);
 		container.trackService = new TrackService({ db: container.db });
 		container.playlistService = new PlaylistService({ db: container.db });
 		container.audioService = new AudioService({
@@ -373,7 +378,9 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			db: container.db,
 			getOwnedGuildIds: () => [...container.client.guilds.cache.keys()],
 			logger: appLogger,
-			processId: `${hostname()}:${process.pid}`
+			processId: `${hostname()}:${process.pid}`,
+			// 예약 메시지·나눔 종료 같은 작업이 서버 테마 색으로 나가도록 길드 맥락 안에서 실행해요
+			runInGuild: inGuildTheme
 		});
 		container.stoppables.push(container.guildJobScheduler);
 		container.starboardService = createStarboardService({

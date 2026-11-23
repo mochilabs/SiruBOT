@@ -7,6 +7,47 @@
  */
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from './playerLimits.js';
 
+/* ── 서버 테마 ───────────────────────────────────────────── */
+
+/**
+ * 봇 테마 프리셋 — 메시지 컨테이너 강조선, 앱 이모지(`name_<프리셋>`), 기본 카드의 색을 한 번에 정해요.
+ * 앱 이모지는 봇 전체에서 하나라서 색마다 미리 올려 둔 세트 중에서 고르는 방식이에요. 사용자가 색을 직접 정하는
+ * 기능(역할 패널, 사용자 정의 명령 등)은 이 값보다 항상 우선해요.
+ */
+export const THEME_PRESETS = ['pink', 'blue', 'purple', 'green', 'orange', 'yellow'] as const;
+export type ThemePreset = (typeof THEME_PRESETS)[number];
+export const THEME_PRESET_DEFAULT: ThemePreset = 'pink';
+
+/** 프리셋 표시 이름 (대시보드 선택기) */
+export const THEME_PRESET_LABELS: Record<ThemePreset, string> = {
+	pink: '분홍',
+	blue: '파랑',
+	purple: '보라',
+	green: '초록',
+	orange: '주황',
+	yellow: '노랑'
+};
+
+/** 프리셋 대표색 '#rrggbb' — 컨테이너 강조선과 이모지 렌더(accent)가 같은 값을 써요. 분홍은 기존 봇 기본색이에요. */
+export const THEME_PRESET_HEX: Record<ThemePreset, string> = {
+	pink: '#ff85c0',
+	blue: '#5b9dff',
+	purple: '#a78bfa',
+	green: '#4ade80',
+	orange: '#ffa24d',
+	yellow: '#fbd24a'
+};
+
+/** 알 수 없는 값·깨진 값은 기본(분홍)으로 되돌려요 */
+export function normalizeThemePreset(value: string | null | undefined): ThemePreset {
+	return value && (THEME_PRESETS as readonly string[]).includes(value) ? (value as ThemePreset) : THEME_PRESET_DEFAULT;
+}
+
+/** 앱 이모지 이름에 붙는 접미사 — 기본(분홍)은 기존 이름을 그대로 써서 접미사가 없어요. */
+export function themeEmojiName(name: string, preset: ThemePreset): string {
+	return preset === THEME_PRESET_DEFAULT ? name : `${name}_${preset}`;
+}
+
 /* ── AI 채팅 모드 ─────────────────────────────────────────── */
 
 /** AI 채팅 모드 — all: 모든 채널 / channels: 특정 채널만 / off: 끄기 */

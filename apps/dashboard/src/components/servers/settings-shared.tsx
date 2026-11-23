@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AlertCircle, Check, LogIn, X } from "lucide-react";
+import { AlertCircle, Check, ChevronsUpDown, LogIn, X } from "lucide-react";
 
 import { Portal } from "@/components/overlay/portal";
 import { InfoBox, WarningBox } from "@/components/primitives/notice-box";
@@ -13,6 +13,8 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiError } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
+
+import { useFeatureSwitcher, useRegisterPanelHeader } from "./feature-switcher";
 
 export function PanelHeader({
   icon,
@@ -25,14 +27,35 @@ export function PanelHeader({
   description: string;
   action?: ReactNode;
 }) {
+  // lg 미만에서는 제목이 기능 전환 버튼을 겸해요 (상단 막대와 같은 바텀시트를 열어요).
+  const switcher = useFeatureSwitcher();
+  const headerRef = useRef<HTMLElement>(null);
+  useRegisterPanelHeader(headerRef);
+
   return (
-    <header className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+    <header ref={headerRef} className="flex flex-col items-start justify-between gap-4 sm:flex-row">
       <div className="flex min-w-0 items-start gap-3.5">
         <span className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-control sm:inline-flex bg-primary/20 text-primary-text shadow-xs">
           {icon}
         </span>
         <div className="min-w-0 break-words">
-          <h2 className="text-xl font-black tracking-tight text-foreground">{title}</h2>
+          {switcher && (
+            <h2 className="text-xl font-black tracking-tight text-foreground lg:hidden">
+              <button
+                type="button"
+                onClick={() => switcher.setOpen(true)}
+                aria-label={`기능 바꾸기 — 현재 ${title}`}
+                className="-mx-2 inline-flex items-center gap-1.5 rounded-menu px-2 py-0.5 text-left transition-control hover:bg-accent/15 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span aria-hidden className="shrink-0 text-primary-text sm:hidden">
+                  {icon}
+                </span>
+                {title}
+                <ChevronsUpDown size={14} aria-hidden className="shrink-0 text-muted-foreground" />
+              </button>
+            </h2>
+          )}
+          <h2 className={cn("text-xl font-black tracking-tight text-foreground", switcher && "hidden lg:block")}>{title}</h2>
           <p className="hidden text-sm font-medium text-muted-foreground/90 sm:block">{description}</p>
         </div>
       </div>
@@ -428,7 +451,7 @@ export function SaveBar({
           onBlurCapture={(event) => {
             if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) islandHadFocusRef.current = false;
           }}
-          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-(--z-savebar) flex items-center justify-between gap-3 rounded-card bg-surface-3 py-2 pl-4 pr-2 text-foreground shadow-lg animate-in fade-in-0 slide-in-from-bottom-2 duration-fast md:bottom-[calc(0.75rem+env(safe-area-inset-bottom))] md:left-[var(--island-left)] md:right-auto md:w-[var(--island-width)]"
+          className="fixed bottom-[calc(max(var(--tabbar-h),0.75rem)+0.25rem+env(safe-area-inset-bottom))] left-4 right-4 z-(--z-savebar) flex items-center justify-between gap-3 rounded-card bg-surface-3 py-2 pl-4 pr-2 text-foreground shadow-lg animate-in fade-in-0 slide-in-from-bottom-2 duration-fast md:bottom-[calc(0.75rem+env(safe-area-inset-bottom))] md:left-[var(--island-left)] md:right-auto md:w-[var(--island-width)]"
           style={{ "--island-left": `${geometry.left}px`, "--island-width": `${geometry.width}px` } as React.CSSProperties}>
           <p role="status" className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground sm:text-sm">
             {saving || submitting ? "변경 사항을 저장하고 있어요…" : "저장하지 않은 변경 사항이 있어요!"}

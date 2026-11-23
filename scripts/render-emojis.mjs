@@ -14,6 +14,9 @@
  *   node scripts/render-emojis.mjs --only play,star | --only pb_mid_end,pb_start_half
  *   node scripts/render-emojis.mjs --ink 400 --stroke 2.6        # 파라미터 재정의
  *   node scripts/render-emojis.mjs --list | --dry-run
+ *   node scripts/render-emojis.mjs --mode=all --preset=blue --out resources/emoji_replacement
+ *       # 서버 테마 세트: accent를 프리셋 색으로 바꾸고 파일명에 `_<프리셋>` 접미사를 붙여요 (분홍은 접미사 없는 기존 이름).
+ *       # 프리셋 색·이름의 단일 소스는 packages/utils guildSettingsContract (빌드된 dist를 읽어요).
  *
  * 파라미터 (모두 CLI로 재정의 가능): PARAMS 정의 참조 — ink/accent/stroke/pbHeight/pbWidth/pbCapRadius/pbEmptyColor.
  * 의존성: @takumi-rs/core, @takumi-rs/helpers, lucide-react (repo node_modules에서 탐색).
@@ -23,7 +26,7 @@ import { Renderer } from "@takumi-rs/core";
 import { container, image } from "@takumi-rs/helpers";
 import { readdir, writeFile, mkdir, readFile } from "node:fs/promises";
 import { join, dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -358,6 +361,25 @@ async function main() {
     return i >= 0 ? args[i + 1] : undefined;
   };
   const params = parseParams(args);
+  // 서버 테마 세트 — accent와 파일명 접미사를 계약에서 가져와요 (분홍은 접미사 없음).
+  const { THEME_PRESET_HEX, THEME_PRESET_DEFAULT, THEME_PRESETS } = await import(
+    pathToFileURL(join(REPO_ROOT, "packages", "utils", "dist", "guildSettingsContract.js")).href
+  );
+  const presetArg = getArg("--preset");
+  let suffix = "";
+  if (presetArg) {
+    if (!THEME_PRESET_HEX[presetArg])
+      throw new Error(`알 수 없는 프리셋: ${presetArg} (${THEME_PRESETS.join(", ")})`);
+    params.accent = THEME_PRESET_HEX[presetArg];
+    // 진행바 빈 트랙도 프리셋 색을 따라가요 — 기본 분홍(#ff85c0 → #fbd3e7)과 같은 비율(흰색에 accent 37%)로 섞어요.
+    if (!args.some((a) => a.startsWith("--pbEmptyColor"))) {
+      const ch = (i) => parseInt(params.accent.slice(1 + i * 2, 3 + i * 2), 16);
+      const mix = (c) => Math.round(255 - (255 - c) * 0.37).toString(16).padStart(2, "0");
+      params.pbEmptyColor = `#${mix(ch(0))}${mix(ch(1))}${mix(ch(2))}`;
+    }
+    if (presetArg !== THEME_PRESET_DEFAULT) suffix = `_${presetArg}`;
+  }
+  const themeSuffixes = THEME_PRESETS.filter((p) => p !== THEME_PRESET_DEFAULT).map((p) => `_${p}`);
   const srcDir = join(REPO_ROOT, "resources", "emoji_replacement");
   const outDir = resolve(
     REPO_ROOT,
@@ -385,7 +407,7 @@ async function main() {
       let cnt = 0;
       for (const [k, s] of cells) {
         await writeFile(
-          join(outDir, `pb_${k}_${s}.png`),
+          join(outDir, `pb_${k}_${s}${suffix}.png`),
           await renderProgressBarCell(k, s, params),
         );
         cnt++;
@@ -401,7 +423,9 @@ async function main() {
   // 정사각 이름 = 리소스 폴더의 pb_ 아닌 png 파일명 ∩ 매핑 테이블 키 (+ --only로 지정한 유효 이름)
   const pngNames = (await readdir(srcDir))
     .filter((f) => f.endsWith(".png") && !f.startsWith("pb_"))
-    .map((f) => f.replace(".png", ""));
+    .map((f) => f.replace(".png", ""))
+    // 이미 생성된 테마 세트(`name_blue`)는 원본 이름 목록에서 빼요.
+    .filter((n) => !themeSuffixes.some((sfx) => n.endsWith(sfx)));
   const candidateNames = only
     ? Array.from(new Set([...pngNames, ...only]))
     : pngNames;
@@ -444,7 +468,7 @@ async function main() {
       );
       if (empty)
         throw new Error(`빈 아이콘(ink 없음) — 미지원 태그만 있거나 노드 없음`);
-      await writeFile(join(outDir, name + ".png"), png);
+      await writeFile(join(outDir, name + suffix + ".png"), png);
       if (skipped?.length)
         console.warn(`경고 ${name}: 미지원 태그 ${skipped.join(",")} 건너뜀`);
       ok++;

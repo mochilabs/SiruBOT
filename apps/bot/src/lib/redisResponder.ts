@@ -22,6 +22,7 @@ import { unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import type { Guild } from 'discord.js';
 import type { z } from 'zod';
 import { AppError, plainUserMessage } from './appError.ts';
+import { inGuildTheme } from './guildThemeScope.ts';
 import type { RedisLogger, RedisPublisher } from './redisPublisher.ts';
 
 /** 응답자 핸들러가 실제로 쓰는 런타임 의존 — core/botApplication이 한 번 만들어 모든 바인딩에 넘겨요 */
@@ -166,7 +167,8 @@ export function createRedisResponder<TContract extends GuildRpcContract>(
 		options,
 		(request, runtime) => {
 			const guild = runtime.resolveGuild((request as unknown as { guildId: string }).guildId) as Guild;
-			return handler({ guild, request, logger: runtime.logger });
+			// 대시보드 요청으로 보내는 메시지(패널 게시 등)도 서버 테마를 따라가도록 맥락을 열어요.
+			return inGuildTheme(guild?.id, () => handler({ guild, request, logger: runtime.logger }));
 		},
 		true
 	);

@@ -14,6 +14,7 @@ import { isChannelToggleEnabled } from '../../../services/guildService.ts';
 import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
 import { isMessageFeatureEnabled } from '../../../services/guildSettings/modules.ts';
 import { usageFeatureKey } from '@sirubot/utils/modules';
+import { inGuildTheme } from '../../../lib/guildThemeScope.ts';
 
 const QUOTE_IMAGE_MAX = 4;
 const QUOTE_COOLDOWN_MS = 3_000;
@@ -24,7 +25,13 @@ const QUOTE_COOLDOWN_MS = 3_000;
 export class MessageQuoteListener extends Listener {
 	private readonly cooldowns = new MemoryCache<string, true>({ ttl: QUOTE_COOLDOWN_MS, maxSize: 5_000 });
 
-	public override async run(message: Message) {
+	public override run(message: Message) {
+		// 서버 테마 맥락 안에서 처리해요 — 길드 설정은 어차피 캐시에서 읽어요(모든 길드 메시지가 이미 거쳐요).
+		if (message.author.bot || !message.inGuild() || message.webhookId) return Promise.resolve();
+		return inGuildTheme(message.guildId, () => this.handle(message));
+	}
+
+	private async handle(message: Message) {
 		if (message.author.bot || !message.inGuild() || message.webhookId) return;
 		if (!message.channel.isSendable()) return;
 

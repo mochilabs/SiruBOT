@@ -3,6 +3,7 @@ import { usageFeatureKey } from '@sirubot/utils/modules';
 import { MessageFlags, type Interaction } from 'discord.js';
 import { customIdNamespace } from '../../lib/customId.ts';
 import { gateNamespace } from '../../lib/moduleGate.ts';
+import { withGuildTheme } from '../../lib/guildTheme.ts';
 import { notice } from '../../lib/notice.ts';
 import { isModuleEnabled } from '../../services/guildSettings/modules.ts';
 
@@ -21,6 +22,20 @@ export class CoreInteractionCreate extends Listener {
 	}
 
 	public override async run(interaction: Interaction) {
+		// 자동완성은 컨테이너를 만들지 않으니 색 맥락 없이 바로 라우팅해요.
+		if (interaction.isAutocomplete()) {
+			await this.route(interaction);
+			return;
+		}
+		// 서버 테마를 맥락에 싣고 라우팅해요 — 이후 만들어지는 모든 컨테이너가 서버 색을 써요.
+		await withGuildTheme(
+			interaction.guildId,
+			async (guildId) => (await this.container.guildService.getGuild(guildId)).themePreset,
+			() => this.route(interaction)
+		);
+	}
+
+	private async route(interaction: Interaction) {
 		if (interaction.isChatInputCommand()) {
 			this.container.client.emit(Events.PossibleChatInputCommand, interaction);
 		} else if (interaction.isContextMenuCommand()) {
