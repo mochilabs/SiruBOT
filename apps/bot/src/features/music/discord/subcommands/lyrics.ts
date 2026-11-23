@@ -2,7 +2,9 @@ import { container, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { searchLyrics } from '../../../../services/dataApiClient.ts';
-import { lyricsView } from '../views/lyrics.ts';
+import { LYRICS_BUTTON_IDS, lyricsView } from '../views/lyrics.ts';
+import { buildLyricsText, hasTranslation, type LyricsViewMode } from '../utils/lyricsText.ts';
+import { createComponentSession } from '../../../../lib/componentSession.ts';
 import { errorView } from '../../../../lib/errorView.ts';
 
 export const name = 'lyrics';
@@ -59,23 +61,37 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 			return;
 		}
 
-		const result = results[0];
-		let lyrics = result.plainLyrics ?? result.syncedLyrics ?? '';
+		let result = results[0];
+		let mode: LyricsViewMode = hasTranslation(result) ? 'both' : 'original';
+		const render = (disabled = false) => {
+			const translation = hasTranslation(result) ? 'ready' : result.translation?.status === 'pending' ? 'pending' : 'none';
+			return {
+				components: [lyricsView(result.trackName, result.artistName, buildLyricsText(result, mode), { translation, mode, disabled })],
+				flags: [MessageFlags.IsComponentsV2 as const]
+			};
+		};
 
-		// 동기화 가사를 쓰면 타임스탬프는 제거하고 본문만 남긴다
-		if (!result.plainLyrics && result.syncedLyrics) {
-			lyrics = lyrics.replace(/\[\d{2}:\d{2}\.\d{2,3}\]\s*/g, '');
-		}
+		const message = await interaction.editReply(render());
+		if (!hasTranslation(result) && result.translation?.status !== 'pending') return;
 
-		// Truncate if too long (Discord limit)
-		const maxLength = 3800;
-		if (lyrics.length > maxLength) {
-			lyrics = lyrics.substring(0, maxLength) + '\n\n*... (가사가 너무 길어 잘렸어요)*';
-		}
-
-		await interaction.editReply({
-			components: [lyricsView(result.trackName, result.artistName, lyrics)],
-			flags: [MessageFlags.IsComponentsV2]
+		// 번역 보기 방식을 바꾸거나(ready), 준비 중인 번역을 다시 불러와요(pending)
+		createComponentSession(message, {
+			time: 10 * 60 * 1000,
+			owner: { userId: interaction.user.id },
+			logger: container.logger,
+			onCollect: async (button) => {
+				if (button.customId === LYRICS_BUTTON_IDS.refresh) {
+					const refreshed = await searchLyrics(query!).catch(() => null);
+					if (refreshed?.[0]) result = refreshed[0];
+					if (hasTranslation(result)) mode = 'both';
+				} else if (button.customId === LYRICS_BUTTON_IDS.original) mode = 'original';
+				else if (button.customId === LYRICS_BUTTON_IDS.translation) mode = 'translation';
+				else if (button.customId === LYRICS_BUTTON_IDS.both) mode = 'both';
+				await button.update(render());
+			},
+			onTimeout: async () => {
+				await interaction.editReply(render(true)).catch(() => null);
+			}
 		});
 	} catch (error) {
 		container.logger.error(`[lyrics] lyrics search failed (guild ${interaction.guildId}): ${error}`);
