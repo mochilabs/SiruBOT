@@ -2,14 +2,12 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { m } from "framer-motion";
 import { RadioTower, ShieldCheck } from "lucide-react";
 import useSWR from "swr";
 
 import Container from "@/components/container";
 import { DataApiSection } from "@/components/data-api-section";
 import { PageHeader } from "@/components/layout/page-header";
-import { motionBase } from "@/components/motion/durations";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { ProcessCard } from "@/components/process-card";
 import { ShardStats } from "@/components/shard-stats";
@@ -114,15 +112,7 @@ export default function ShardsPage() {
                         ) : (
                             <div className="grid gap-8 md:grid-cols-2">
                                 {processes.map((process, index) => (
-                                    <m.div
-                                        key={process.wsId}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        whileInView={{ opacity: 1, y: 0 }}
-                                        viewport={{ once: true, margin: "-50px" }}
-                                        transition={{ duration: motionBase, delay: index * 0.05 }}
-                                    >
-                                        <ProcessCard process={process} index={index} />
-                                    </m.div>
+                                    <ProcessCard key={process.wsId} process={process} index={index} />
                                 ))}
                             </div>
                         )}
