@@ -103,11 +103,11 @@ function buildMetrics(input: WeatherCardInput, day: DailyDay | undefined): Metri
 
 function Header({ input }: { input: WeatherCardInput }): ReactNode {
 	return (
-		<Box style={{ alignItems: 'center', justifyContent: 'space-between', height: 44 }}>
+		<Box style={{ alignItems: 'center', justifyContent: 'space-between', height: 56 }}>
 			<Box
-				style={{ fontSize: 20, fontWeight: 700, color: MUTED, maxWidth: 620, ...ellipsis }}
+				style={{ fontSize: 28, fontWeight: 700, color: MUTED, maxWidth: 600, ...ellipsis }}
 			>{`${input.locationLabel} · ${SCOPE_LABELS[input.scope]}`}</Box>
-			{input.observedAt ? <Box style={{ fontSize: 17, fontWeight: 500, color: MUTED }}>{input.observedAt}</Box> : null}
+			{input.observedAt ? <Box style={{ fontSize: 24, fontWeight: 500, color: MUTED }}>{input.observedAt}</Box> : null}
 		</Box>
 	);
 }
@@ -123,31 +123,31 @@ function Single({ input, accent }: { input: WeatherCardInput; accent: string }):
 
 	return (
 		<>
-			<Box style={{ alignItems: 'center', height: 164, marginTop: 4 }}>
-				<Box style={{ width: 150, flexShrink: 0, fontSize: 104, lineHeight: 1 }}>
+			<Box style={{ alignItems: 'center', height: 176, marginTop: 4 }}>
+				<Box style={{ width: 170, flexShrink: 0, fontSize: 120, lineHeight: 1 }}>
 					{emojiForCode(code, input.scope === 'now' ? input.isDay : true)}
 				</Box>
 				<Box style={{ flexDirection: 'column', flex: 1, minWidth: 0 }}>
 					{input.scope === 'now' ? (
-						<Box style={{ fontSize: 108, fontWeight: 800, color: TEXT, lineHeight: 1 }}>{fmtTemp(input.temperatureC)}</Box>
+						<Box style={{ fontSize: 120, fontWeight: 800, color: TEXT, lineHeight: 1 }}>{fmtTemp(input.temperatureC)}</Box>
 					) : (
 						<Box style={{ alignItems: 'baseline' }}>
-							<Box style={{ fontSize: 92, fontWeight: 800, color: TEXT, lineHeight: 1 }}>{fmtTemp(day?.tempMax ?? null)}</Box>
-							<Box style={{ fontSize: 48, fontWeight: 600, color: MUTED, marginLeft: 16 }}>{`/ ${fmtTemp(day?.tempMin ?? null)}`}</Box>
+							<Box style={{ fontSize: 104, fontWeight: 800, color: TEXT, lineHeight: 1 }}>{fmtTemp(day?.tempMax ?? null)}</Box>
+							<Box style={{ fontSize: 60, fontWeight: 600, color: MUTED, marginLeft: 16 }}>{`/ ${fmtTemp(day?.tempMin ?? null)}`}</Box>
 						</Box>
 					)}
 					<Box style={{ alignItems: 'baseline', marginTop: 10 }}>
-						<Box style={{ fontSize: 28, fontWeight: 800, color: accent, maxWidth: W - PAD * 2 - 150 - 160, ...ellipsis }}>
+						<Box style={{ fontSize: 38, fontWeight: 800, color: accent, maxWidth: W - PAD * 2 - 170 - 200, ...ellipsis }}>
 							{text || '-'}
 						</Box>
 						{showFeels ? (
-							<Box style={{ fontSize: 21, fontWeight: 500, color: MUTED, marginLeft: 16 }}>{`체감 ${fmtTemp(input.feelsLikeC)}`}</Box>
+							<Box style={{ fontSize: 28, fontWeight: 500, color: MUTED, marginLeft: 16 }}>{`체감 ${fmtTemp(input.feelsLikeC)}`}</Box>
 						) : null}
 					</Box>
 				</Box>
 			</Box>
 			{metrics.length > 0 ? (
-				<Box style={{ marginTop: 12, borderTop: `1px solid ${LINE}`, height: 96, paddingTop: 18 }}>
+				<Box style={{ marginTop: 12, borderTop: `1px solid ${LINE}`, height: 124, paddingTop: 18 }}>
 					{metrics.map((metric, i) => (
 						<Box
 							key={metric.label}
@@ -159,8 +159,8 @@ function Single({ input, accent }: { input: WeatherCardInput; accent: string }):
 								borderLeft: i === 0 ? undefined : `1px solid ${LINE}`
 							}}
 						>
-							<Box style={{ fontSize: 16, fontWeight: 600, color: MUTED }}>{`${metric.emoji} ${metric.label}`}</Box>
-							<Box style={{ fontSize: 28, fontWeight: 800, color: TEXT, marginTop: 12, ...ellipsis }}>{metric.value}</Box>
+							<Box style={{ fontSize: 24, fontWeight: 600, color: MUTED }}>{`${metric.emoji} ${metric.label}`}</Box>
+							<Box style={{ fontSize: 36, fontWeight: 800, color: TEXT, marginTop: 10, ...ellipsis }}>{metric.value}</Box>
 						</Box>
 					))}
 				</Box>
@@ -174,13 +174,13 @@ function Week({ input, accent }: { input: WeatherCardInput; accent: string }): R
 	const days = input.daily.slice(0, 7);
 	if (days.length === 0) {
 		return (
-			<Box style={{ height: 200, alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 500, color: MUTED }}>
+			<Box style={{ height: 260, alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 500, color: MUTED }}>
 				예보 정보를 가져올 수 없어요
 			</Box>
 		);
 	}
 	return (
-		<Box style={{ height: 250, marginTop: 12 }}>
+		<Box style={{ height: 308, marginTop: 12 }}>
 			{days.map((day, i) => {
 				const { weekday, md } = dayLabel(day.date);
 				return (
@@ -194,15 +194,15 @@ function Week({ input, accent }: { input: WeatherCardInput; accent: string }): R
 							borderLeft: i === 0 ? undefined : `1px solid ${LINE}`
 						}}
 					>
-						<Box style={{ fontSize: 24, fontWeight: 800, color: TEXT }}>{weekday}</Box>
+						<Box style={{ fontSize: 34, fontWeight: 800, color: TEXT }}>{weekday}</Box>
 						<Box style={{ width: 28, height: 3, marginTop: 4, background: i === 0 ? accent : 'transparent' }} />
-						<Box style={{ fontSize: 15, fontWeight: 500, color: MUTED, marginTop: 6 }}>{md}</Box>
-						<Box style={{ fontSize: 52, lineHeight: 1, marginTop: 10 }}>{emojiForCode(day.weatherCode, true)}</Box>
-						<Box style={{ fontSize: 30, fontWeight: 800, color: TEXT, marginTop: 14 }}>{fmtTemp(day.tempMax)}</Box>
-						<Box style={{ fontSize: 22, fontWeight: 600, color: MUTED }}>{fmtTemp(day.tempMin)}</Box>
+						<Box style={{ fontSize: 22, fontWeight: 500, color: MUTED, marginTop: 6 }}>{md}</Box>
+						<Box style={{ fontSize: 64, lineHeight: 1, marginTop: 10 }}>{emojiForCode(day.weatherCode, true)}</Box>
+						<Box style={{ fontSize: 40, fontWeight: 800, color: TEXT, marginTop: 14 }}>{fmtTemp(day.tempMax)}</Box>
+						<Box style={{ fontSize: 30, fontWeight: 600, color: MUTED }}>{fmtTemp(day.tempMin)}</Box>
 						{day.precipitationProbabilityMaxPct != null ? (
 							<Box
-								style={{ fontSize: 17, fontWeight: 700, color: TONE_COLORS.rain, marginTop: 8 }}
+								style={{ fontSize: 24, fontWeight: 700, color: TONE_COLORS.rain, marginTop: 8 }}
 							>{`☔ ${Math.round(day.precipitationProbabilityMaxPct)}%`}</Box>
 						) : null}
 					</Box>
@@ -217,7 +217,7 @@ export async function renderWeatherCard(input: WeatherCardInput): Promise<Buffer
 		TONE_COLORS[
 			toneForCode(input.scope === 'now' || input.scope === 'week' ? input.weatherCode : (input.daily[0]?.weatherCode ?? input.weatherCode))
 		];
-	const H = input.scope === 'week' ? 330 : 320;
+	const H = input.scope === 'week' ? 380 : 376;
 	const card = (
 		<Box
 			style={{

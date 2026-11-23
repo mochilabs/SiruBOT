@@ -95,9 +95,9 @@ export function starsForRank(rank: number): number {
 
 function Header({ title, date }: { title: string; date?: string }): ReactNode {
 	return (
-		<Box style={{ alignItems: 'center', justifyContent: 'space-between', height: 44 }}>
-			<Box style={{ fontSize: 20, fontWeight: 700, color: MUTED }}>{title}</Box>
-			{date ? <Box style={{ fontSize: 17, fontWeight: 500, color: MUTED }}>{date}</Box> : null}
+		<Box style={{ alignItems: 'center', justifyContent: 'space-between', height: 56 }}>
+			<Box style={{ fontSize: 28, fontWeight: 700, color: MUTED }}>{title}</Box>
+			{date ? <Box style={{ fontSize: 24, fontWeight: 500, color: MUTED }}>{date}</Box> : null}
 		</Box>
 	);
 }
@@ -108,11 +108,11 @@ function Stars({ filled, color }: { filled: number; color: string }): ReactNode 
 			{[0, 1, 2, 3, 4].map((i) =>
 				i < filled ? (
 					<Box key={i} style={{ marginRight: 6 }}>
-						<Icon name="star" size={22} color={color} filled />
+						<Icon name="star" size={30} color={color} filled />
 					</Box>
 				) : (
 					<Box key={i} style={{ marginRight: 6 }}>
-						<Icon name="star" size={22} color="rgba(255,255,255,0.22)" strokeWidth={1.6} />
+						<Icon name="star" size={30} color="rgba(255,255,255,0.22)" strokeWidth={1.6} />
 					</Box>
 				)
 			)}
@@ -137,7 +137,7 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 	if (item) boxes.push({ icon: 'gift', label: '행운의 아이템', value: item });
 	if (key) boxes.push({ icon: 'key', label: '행운의 열쇠', value: key });
 
-	const H = boxes.length > 0 ? 304 : 210;
+	const H = boxes.length > 0 ? 366 : 244;
 	const card = (
 		<Box
 			style={{
@@ -153,26 +153,26 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 		>
 			<Header title="오늘의 운세" date={input.date} />
 			{/* 왼쪽: 별자리 기호 + 이름(한/일) + 별점 / 오른쪽: 큰 순위 */}
-			<Box style={{ alignItems: 'center', height: 148, marginTop: 4 }}>
-				<Box style={{ width: 150, flexShrink: 0, paddingLeft: 8 }}>
-					<Icon name={zodiacIcon(input.zodiacCode)} size={104} color={theme.primary} strokeWidth={1.7} />
+			<Box style={{ alignItems: 'center', height: 172, marginTop: 4 }}>
+				<Box style={{ width: 176, flexShrink: 0, paddingLeft: 8 }}>
+					<Icon name={zodiacIcon(input.zodiacCode)} size={120} color={theme.primary} strokeWidth={1.7} />
 				</Box>
 				<Box style={{ flexDirection: 'column', flex: 1, minWidth: 0 }}>
-					<Box style={{ fontSize: 46, fontWeight: 800, color: TEXT, ...ellipsis }}>{zodiac.ko}</Box>
-					<Box style={{ fontSize: 22, fontWeight: 600, color: MUTED, marginTop: 2, ...ellipsis }}>{zodiac.jp}</Box>
+					<Box style={{ fontSize: 58, fontWeight: 800, color: TEXT, ...ellipsis }}>{zodiac.ko}</Box>
+					<Box style={{ fontSize: 30, fontWeight: 600, color: MUTED, marginTop: 2, ...ellipsis }}>{zodiac.jp}</Box>
 					<Box style={{ marginTop: 12 }}>
 						<Stars filled={starsForRank(input.rank)} color={theme.primary} />
 					</Box>
 				</Box>
 				<Box style={{ alignItems: 'baseline', flexShrink: 0, marginLeft: 24 }}>
-					<Box style={{ fontSize: 112, fontWeight: 800, color: theme.primary, lineHeight: 1 }}>{String(input.rank)}</Box>
-					<Box style={{ fontSize: 40, fontWeight: 800, color: MUTED, marginLeft: 8 }}>위</Box>
+					<Box style={{ fontSize: 128, fontWeight: 800, color: theme.primary, lineHeight: 1 }}>{String(input.rank)}</Box>
+					<Box style={{ fontSize: 48, fontWeight: 800, color: MUTED, marginLeft: 8 }}>위</Box>
 				</Box>
 			</Box>
 			{/* 구분선 + 럭키 열: 구분선으로 나누고 박스는 쓰지 않아요 */}
 			{boxes.length > 0 ? (
 				<Box style={{ flexDirection: 'column', marginTop: 8, borderTop: `1px solid ${LINE}` }}>
-					<Box style={{ height: 96, paddingTop: 18 }}>
+					<Box style={{ height: 124, paddingTop: 18 }}>
 						{boxes.map((box, i) => (
 							<Box
 								key={box.label}
@@ -185,10 +185,10 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 								}}
 							>
 								<Box style={{ alignItems: 'center' }}>
-									<Icon name={box.icon} size={18} color={theme.primary} />
-									<Box style={{ fontSize: 16, fontWeight: 600, color: MUTED, marginLeft: 8 }}>{box.label}</Box>
+									<Icon name={box.icon} size={26} color={theme.primary} />
+									<Box style={{ fontSize: 24, fontWeight: 600, color: MUTED, marginLeft: 8 }}>{box.label}</Box>
 								</Box>
-								<Box style={{ fontSize: 28, fontWeight: 800, color: TEXT, marginTop: 12, ...ellipsis }}>{box.value}</Box>
+								<Box style={{ fontSize: 38, fontWeight: 800, color: TEXT, marginTop: 10, ...ellipsis }}>{box.value}</Box>
 							</Box>
 						))}
 					</Box>
@@ -202,7 +202,7 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 /** TOP 3 — 순위·별자리 기호·이름을 3열로 나란히 보여줘요 */
 export async function renderOhaasaTopCard(input: OhaasaTopCardInput): Promise<Buffer> {
 	const items = input.items.slice(0, 3);
-	const H = 290;
+	const H = 372;
 	const card = (
 		<Box
 			style={{
@@ -217,7 +217,7 @@ export async function renderOhaasaTopCard(input: OhaasaTopCardInput): Promise<Bu
 			}}
 		>
 			<Header title="오늘의 운세 TOP 3" date={input.date} />
-			<Box style={{ height: 226, marginTop: 14 }}>
+			<Box style={{ height: 300, marginTop: 12 }}>
 				{items.map((entry, i) => {
 					const theme = ZODIAC_THEMES[entry.zodiacCode] ?? ZODIAC_THEMES['12']!;
 					const zodiac = ZODIAC_MAP[entry.zodiacCode] ?? ZODIAC_MAP['12']!;
@@ -233,18 +233,18 @@ export async function renderOhaasaTopCard(input: OhaasaTopCardInput): Promise<Bu
 							}}
 						>
 							{/* 순위 — 1위에는 왕관을 얹어요 */}
-							<Box style={{ height: 24, alignItems: 'center' }}>
-								{entry.rank === 1 ? <Icon name="crown" size={24} color={theme.primary} filled /> : null}
+							<Box style={{ height: 30, alignItems: 'center' }}>
+								{entry.rank === 1 ? <Icon name="crown" size={30} color={theme.primary} filled /> : null}
 							</Box>
 							<Box style={{ alignItems: 'baseline', marginTop: 2 }}>
-								<Box style={{ fontSize: 60, fontWeight: 800, color: theme.primary, lineHeight: 1 }}>{String(entry.rank)}</Box>
-								<Box style={{ fontSize: 26, fontWeight: 800, color: MUTED, marginLeft: 4 }}>위</Box>
+								<Box style={{ fontSize: 68, fontWeight: 800, color: theme.primary, lineHeight: 1 }}>{String(entry.rank)}</Box>
+								<Box style={{ fontSize: 34, fontWeight: 800, color: MUTED, marginLeft: 4 }}>위</Box>
 							</Box>
 							<Box style={{ marginTop: 12 }}>
-								<Icon name={zodiacIcon(entry.zodiacCode)} size={72} color={theme.primary} strokeWidth={1.7} />
+								<Icon name={zodiacIcon(entry.zodiacCode)} size={80} color={theme.primary} strokeWidth={1.7} />
 							</Box>
-							<Box style={{ fontSize: 30, fontWeight: 800, color: TEXT, marginTop: 10, maxWidth: '85%', ...ellipsis }}>{zodiac.ko}</Box>
-							<Box style={{ fontSize: 18, fontWeight: 600, color: MUTED, maxWidth: '85%', ...ellipsis }}>{zodiac.jp}</Box>
+							<Box style={{ fontSize: 40, fontWeight: 800, color: TEXT, marginTop: 10, maxWidth: '85%', ...ellipsis }}>{zodiac.ko}</Box>
+							<Box style={{ fontSize: 26, fontWeight: 600, color: MUTED, maxWidth: '85%', ...ellipsis }}>{zodiac.jp}</Box>
 						</Box>
 					);
 				})}
