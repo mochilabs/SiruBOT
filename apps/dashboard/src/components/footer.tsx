@@ -4,7 +4,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 
-const footerLink = "inline-flex min-h-7 items-center text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground";
+const footerLink = "inline-flex min-h-7 items-center max-sm:min-h-9 text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground";
 
 interface FooterLink {
 	label: string;
@@ -43,6 +43,9 @@ const linkGroups = [
 	{ title: '지원', links: supportLinks },
 ];
 
+/** 모바일 한 덩어리 링크 — 위의 초대 버튼과 겹치는 "봇 초대하기"는 빼요 */
+const mobileLinks: FooterLink[] = linkGroups.flatMap((group) => group.links).filter((link) => link.href !== '/invite');
+
 function FooterAnchor({ link }: { link: FooterLink }) {
 	if (link.internal) {
 		return (
@@ -63,8 +66,32 @@ export function Footer() {
 	// 모바일 하단 탭바가 덮는 높이만큼 푸터 면을 늘려요 — 탭바 둥근 모서리 뒤로 다른 배경색이 비치지 않게 해요
 	return (
 		<footer className="bg-surface-1 pb-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] md:pb-0">
-			<div className="mx-auto w-full max-w-7xl px-4 pt-14 pb-8 sm:px-6 lg:px-8">
-				<div className="grid gap-12 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)]">
+			<div className="mx-auto w-full max-w-7xl px-4 pt-7 pb-6 sm:px-6 sm:pt-14 sm:pb-8 lg:px-8">
+				{/* 모바일 — 로고와 초대 버튼을 한 줄에, 링크는 그룹 제목 없이 한 덩어리로 흘려 높이를 줄여요 */}
+				<div className="space-y-4 sm:hidden">
+					<div className="flex items-center justify-between gap-3">
+						<Link href="/" className="inline-flex items-center gap-2">
+							<span className="relative block h-8 w-8 overflow-hidden rounded-full">
+								<Image src="/images/siru-profile.png" alt="시루봇" fill className="object-cover" sizes="32px" />
+							</span>
+							<span className="text-xl font-extrabold tracking-tighter text-foreground">시루봇</span>
+						</Link>
+						<Link href="/invite" className={cn(buttonVariants({ variant: "cta", size: "sm" }), "font-bold")}>
+							초대하기
+						</Link>
+					</div>
+					<nav aria-label="바로가기">
+						<ul className="flex flex-wrap gap-x-5">
+							{mobileLinks.map((link) => (
+								<li key={link.label}>
+									<FooterAnchor link={link} />
+								</li>
+							))}
+						</ul>
+					</nav>
+				</div>
+
+				<div className="hidden gap-12 sm:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)]">
 					{/* 브랜드 + 초대 */}
 					<div className="space-y-5">
 						<Link href="/" className="inline-flex items-center gap-2.5">
@@ -98,7 +125,7 @@ export function Footer() {
 					</div>
 				</div>
 
-				<div className="mt-12 flex flex-col gap-3 border-t border-border-subtle pt-6 sm:flex-row sm:items-center sm:justify-between">
+				<div className="mt-4 flex flex-col-reverse gap-2 border-t border-border-subtle pt-4 sm:mt-12 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:pt-6">
 					<p className="text-xs font-medium text-muted-foreground">© 2026 mochiLabs. 시루봇은 Discord와 무관한 커뮤니티 프로젝트예요.</p>
 					<nav aria-label="약관" className="flex items-center gap-4">
 						{legalLinks.map((link) => (
