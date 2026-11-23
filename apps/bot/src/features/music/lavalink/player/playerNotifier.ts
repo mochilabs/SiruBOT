@@ -10,6 +10,7 @@ import { nowPlayingTrack } from './nowPlaying.ts';
 import { buildControllerCardPayload } from './controllerPayload.ts';
 import { clearNowPlayingCard, getCachedNowPlayingCard, getNowPlayingCardKey, resolveNowPlayingCard } from './nowPlayingCard.ts';
 import type { LavalinkDeps } from '../deps.ts';
+import { normalizeTrackEncoded } from '../trackEncoded.ts';
 import { Guild } from '@sirubot/prisma';
 import { pinnedIdleView } from '../../discord/views/pinnedIdle.ts';
 import { withGuildTheme } from '../../../../lib/guildTheme.ts';
@@ -251,7 +252,8 @@ export class PlayerNotifier implements Stoppable {
 	 * 편집이 스킵될 수 있다.
 	 */
 	private renderSignature(player: CustomPlayer, components: { toJSON(): unknown }): string {
-		return `${nowPlayingTrack(player)?.encoded ?? ''}::${JSON.stringify(components.toJSON())}`;
+		const encoded = nowPlayingTrack(player)?.encoded;
+		return `${typeof encoded === 'string' ? normalizeTrackEncoded(encoded) : ''}::${JSON.stringify(components.toJSON())}`;
 	}
 
 	private async updateControllerNow(player: CustomPlayer, allowDisabled = false, revision?: number): Promise<void> {
