@@ -2,6 +2,7 @@ import { load as loadYaml } from 'js-yaml';
 import type { LyricLine, LyricWord } from '@sirubot/utils/lrc';
 import { displayMetadata, durationMatches, normalizeArtist, normalizeTitle } from '@sirubot/utils/trackIdentity';
 import type { LyricsResult } from './types.ts';
+import { fetchCaptionLyrics } from './youtubeCaptions.ts';
 
 const LRCLIB_API = 'https://lrclib.net/api';
 const TIMEOUT_MS = 10_000;
@@ -23,6 +24,8 @@ export interface LyricsTrackQuery {
 	/** 곡 길이(ms). 모르면 0 */
 	durationMs: number;
 	sourceName?: string | null;
+	/** 유튜브 영상 ID — 있으면 LRCLIB에 싱크 가사가 없을 때 업로더 자막을 가사로 써요. */
+	videoId?: string | null;
 }
 
 interface LrclibTrack {
@@ -202,6 +205,33 @@ function toResult(track: LrclibTrack, matchKind: NonNullable<LyricsResult['match
 	};
 }
 
+function pad(n: number, width = 2): string {
+	return String(n).padStart(width, '0');
+}
+
+function toLrcTimestamp(ms: number): string {
+	const total = Math.max(0, Math.round(ms / 10));
+	return `[${pad(Math.floor(total / 6000))}:${pad(Math.floor(total / 100) % 60)}.${pad(total % 100)}]`;
+}
+
+/** 업로더 자막을 가사 결과로 — 줄 싱크 가사로 내리고, 한국어 자막은 번역 힌트로 실어요(응답엔 안 나가요). */
+async function captionResult(query: LyricsTrackQuery, cleaned: { track: string; artist: string }): Promise<LyricsResult | null> {
+	if (!query.videoId) return null;
+	const captions = await fetchCaptionLyrics(query.videoId);
+	if (!captions) return null;
+	return {
+		trackName: cleaned.track,
+		artistName: cleaned.artist,
+		plainLyrics: captions.lines.map((l) => l.text).join('\n'),
+		syncedLyrics: captions.lines.map((l) => `${toLrcTimestamp(l.startMs)}${l.text}`).join('\n'),
+		durationSec: query.durationMs > 0 ? Math.round(query.durationMs / 1000) : null,
+		hasWordSync: false,
+		wordSync: null,
+		matchKind: 'captions',
+		captionTranslation: captions.koreanByLine
+	};
+}
+
 /** 자유 검색(`q`) 첫 결과 — 봇 `/음악 가사`와 마지막 폴백이 써요. */
 async function searchByQuery(query: string, matchKind: 'query', accept?: (track: LrclibTrack) => boolean): Promise<LyricsResult | null> {
 	const q = query.replace(STRIP_PARENS, '').trim();
@@ -248,7 +278,9 @@ export async function fetchLyricsForTrack(query: LyricsTrackQuery): Promise<Lyri
 		if (best?.syncedLyrics) return toResult(best, 'search');
 		if (best && !plainOnly) plainOnly = { track: best, kind: 'search' };
 	}
-	// 같은 곡의 일반 가사가 있으면 그걸 쓰고, 없을 때만 자유 검색 첫 결과로 폴백해요.
+	// LRCLIB에 싱크 가사가 없으면 업로더 자막(싱크 있음)을 먼저 써요. 그다음 같은 곡의 일반 가사, 마지막으로 자유 검색이에요.
+	const captions = await captionResult(query, cleaned);
+	if (captions) return captions;
 	if (plainOnly) return toResult(plainOnly.track, plainOnly.kind);
 
 	// 자유 검색 결과는 엉뚱한 곡이 섞이니, 제목이 같고 아티스트나 길이 중 하나가 맞는 것만 받아요.
@@ -265,5 +297,7 @@ export function lyricsTrackCacheKey(query: LyricsTrackQuery): string {
 	const cleaned = cleanLyricsTerms({ title: query.title, artist: query.artist, sourceName: query.sourceName });
 	// 길이는 5초 단위로 묶어 같은 곡의 사소한 길이 차이가 캐시를 쪼개지 않게 해요
 	const bucket = Math.round(query.durationMs / 5000);
-	return `dataapi:v2:lyrics-track:${normalizeQuery(cleaned.artist)}|${normalizeQuery(cleaned.track)}|${bucket}`;
+	const base = `dataapi:v2:lyrics-track:${normalizeQuery(cleaned.artist)}|${normalizeQuery(cleaned.track)}|${bucket}`;
+	// 자막 폴백은 영상마다 달라서 videoId가 있으면 키에 넣어요(없으면 기존 키 그대로예요)
+	return query.videoId ? `${base}|${query.videoId}` : base;
 }

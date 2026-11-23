@@ -116,9 +116,11 @@ export async function searchLyricsForTrack(track: {
 	artist: string;
 	durationMs: number;
 	sourceName?: string | null;
+	videoId?: string | null;
 }): Promise<LyricsResult[]> {
 	const params = new URLSearchParams({ title: track.title, artist: track.artist, durationMs: String(Math.max(0, Math.round(track.durationMs))) });
 	if (track.sourceName) params.set('source', track.sourceName);
+	if (track.videoId) params.set('videoId', track.videoId);
 	const data = await gatewayGet<LyricsResult>(`/v1/lyrics?${params}`);
 	if (!data?.trackName) throw new Error('lyrics not found');
 	return [data];

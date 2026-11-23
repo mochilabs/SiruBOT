@@ -45,7 +45,9 @@ export interface LyricsResult {
 	/** 단어 싱크 줄 목록 — 시각은 `lyricsfile` 기준이라 `syncedLyrics`와 몇 백 ms 다를 수 있어요. */
 	wordSync?: LyricLine[] | null;
 	/** 어떻게 찾았는지: get(제목·아티스트·길이 정확 조회) | search(필드 검색+선택 규칙) | query(자유 검색 첫 결과) */
-	matchKind?: 'get' | 'search' | 'query';
+	matchKind?: 'get' | 'search' | 'query' | 'captions';
+	/** 유튜브 한국어 자막에서 짝지은 번역(원문 줄 → 번역) — 번역 저장에만 쓰고 응답엔 싣지 않아요. */
+	captionTranslation?: Record<string, string> | null;
 	/** 한국어 번역 — `/v1/lyrics` 응답에서 캐시와 따로 붙어요. lines는 원문 줄 → 번역이에요. */
 	translation?: { status: 'ready' | 'pending' | 'none'; lines: Record<string, string> | null };
 }

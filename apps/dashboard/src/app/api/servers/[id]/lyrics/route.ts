@@ -10,6 +10,7 @@ const lyricsQuerySchema = z.object({
   artist: z.string().trim().max(200).default(""),
   durationMs: z.coerce.number().int().min(0).max(24 * 3600 * 1000).default(0),
   source: z.string().trim().max(40).optional(),
+  videoId: z.string().regex(/^[\w-]{11}$/).optional(),
 });
 
 const wordSchema = z.object({ startMs: z.number(), text: z.string() });
@@ -54,9 +55,10 @@ export const GET = createGuildApiHandler({
     if (!query.success) {
       return NextResponse.json({ error: "곡 정보가 올바르지 않아요." }, { status: 400 });
     }
-    const { title, artist, durationMs, source } = query.data;
+    const { title, artist, durationMs, source, videoId } = query.data;
     const params = new URLSearchParams({ title, artist, durationMs: String(durationMs) });
     if (source) params.set("source", source);
+    if (videoId) params.set("videoId", videoId);
 
     const data = await fetchDataApi<unknown>(`/v1/lyrics?${params}`);
     const parsed = lyricsResponseSchema.safeParse(data);

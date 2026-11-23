@@ -1,5 +1,5 @@
 import { container, UserError } from '@sapphire/framework';
-import { emoji } from '@sirubot/utils';
+import { emoji, resolveYouTubeVideoId } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { searchLyrics, searchLyricsForTrack } from '../../../../services/dataApiClient.ts';
 import { LYRICS_BUTTON_IDS, lyricsView } from '../views/lyrics.ts';
@@ -34,7 +34,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	await interaction.deferReply();
 
 	let query = interaction.options.getString('query');
-	let current: { title: string; artist: string; durationMs: number; sourceName: string | null } | null = null;
+	let current: { title: string; artist: string; durationMs: number; sourceName: string | null; videoId: string | null } | null = null;
 
 	if (!query) {
 		const player = container.audio.getPlayer(interaction.guildId);
@@ -45,7 +45,8 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 				title: track.info.title,
 				artist: track.info.author,
 				durationMs: track.info.duration,
-				sourceName: track.info.sourceName ?? null
+				sourceName: track.info.sourceName ?? null,
+				videoId: resolveYouTubeVideoId(track)
 			};
 		} else {
 			throw new UserError({

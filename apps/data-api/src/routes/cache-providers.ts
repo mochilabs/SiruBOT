@@ -35,13 +35,17 @@ export function registerCacheProviderRoutes(fastify: FastifyInstance, deps: Pick
 				.min(0)
 				.max(24 * 3600 * 1000)
 				.default(0),
-			source: z.string().trim().max(40).optional()
+			source: z.string().trim().max(40).optional(),
+			videoId: z
+				.string()
+				.regex(/^[\w-]{11}$/)
+				.optional()
 		})
 		.refine((v) => v.q || v.title, { message: 'q 또는 title이 필요해요.' });
 	fastify.get('/v1/lyrics', async (request, reply) => {
 		try {
-			const { q, title, artist, durationMs, source } = lyricsQuery.parse(request.query);
-			const track = title ? { title, artist, durationMs, sourceName: source ?? null } : null;
+			const { q, title, artist, durationMs, source, videoId } = lyricsQuery.parse(request.query);
+			const track = title ? { title, artist, durationMs, sourceName: source ?? null, videoId: videoId ?? null } : null;
 			const { data, cached } = await serveCached({
 				route: 'lyrics',
 				key: track ? lyricsTrackCacheKey(track) : lyricsCacheKey(q!),
@@ -52,7 +56,8 @@ export function registerCacheProviderRoutes(fastify: FastifyInstance, deps: Pick
 			});
 			// 번역은 캐시된 가사와 따로 붙여요 — 없으면 뒤에서 번역을 시작하고 pending으로 알려요
 			const translation = await lyricsTranslator.lookup(data);
-			return reply.send({ ...data, translation, _cached: cached });
+			const { captionTranslation: _hint, ...body } = data;
+			return reply.send({ ...body, translation, _cached: cached });
 		} catch (error) {
 			return sendError(reply, error);
 		}

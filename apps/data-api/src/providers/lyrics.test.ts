@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanLyricsTerms, fetchLyrics, fetchLyricsForTrack, parseLyricsfileWords } from './lyrics.ts';
+import { cleanLyricsTerms, lyricsTrackCacheKey, fetchLyrics, fetchLyricsForTrack, parseLyricsfileWords } from './lyrics.ts';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -174,6 +174,13 @@ describe('fetchLyricsForTrack', () => {
 			vi.fn().mockImplementation(async () => json([]))
 		);
 		await expect(fetchLyricsForTrack({ ...query, durationMs: 0 })).rejects.toThrow('lyrics not found');
+	});
+});
+
+describe('captions fallback', () => {
+	it('adds the video id to the cache key only when present', () => {
+		const q = { title: 'Ditto', artist: 'NewJeans', durationMs: 186_000 };
+		expect(lyricsTrackCacheKey({ ...q, videoId: 'dQw4w9WgXcQ' })).toBe(`${lyricsTrackCacheKey(q)}|dQw4w9WgXcQ`);
 	});
 });
 
