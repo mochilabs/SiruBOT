@@ -10,6 +10,9 @@ import { deliveryTrackCacheKey, searchDeliveryCarriers, trackDelivery } from '..
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
 import { fetchSponsorBlockSegmentsFresh, sponsorBlockCacheKey, sponsorBlockSegmentsSchema } from '../providers/sponsorblock.ts';
 import { sharedCache } from '../utils/cache.ts';
+import { getDb } from '../services/db.ts';
+import { LyricsTranslator } from '../services/lyricsTranslation.ts';
+import type { RouteDeps } from './index.ts';
 import { fetchYouTubeSuggestionsFresh, youtubeSuggestionsCacheKey } from '../providers/youtubeSuggestions.ts';
 
 /** 캐시형 외부 프로바이더 읽기 — 가사(lrclib)·날씨(Open-Meteo)·택배(tracker.delivery)·유튜브 챕터. TTL은 라우트 단위 상수로 여기에 둬요. */
@@ -17,7 +20,8 @@ import { fetchYouTubeSuggestionsFresh, youtubeSuggestionsCacheKey } from '../pro
 const LYRICS_TTL_SECONDS = 30 * 24 * 3600;
 const WEATHER_TTL_SECONDS = 15 * 60;
 
-export function registerCacheProviderRoutes(fastify: FastifyInstance): void {
+export function registerCacheProviderRoutes(fastify: FastifyInstance, deps: Pick<RouteDeps, 'translationProvider'>): void {
+	const lyricsTranslator = new LyricsTranslator(getDb, deps.translationProvider);
 	// 가사
 	// `q`(자유 검색)는 기존 소비자용이고, `title`+`artist`(+`durationMs`)는 재생 중인 곡을 정확히 찾을 때 써요.
 	const lyricsQuery = z
@@ -46,7 +50,9 @@ export function registerCacheProviderRoutes(fastify: FastifyInstance): void {
 				fetchFresh: () => (track ? fetchLyricsForTrack(track) : fetchLyrics(q!)),
 				validate: (d) => Boolean(d.plainLyrics || d.syncedLyrics)
 			});
-			return reply.send({ ...data, _cached: cached });
+			// 번역은 캐시된 가사와 따로 붙여요 — 없으면 뒤에서 번역을 시작하고 pending으로 알려요
+			const translation = await lyricsTranslator.lookup(data);
+			return reply.send({ ...data, translation, _cached: cached });
 		} catch (error) {
 			return sendError(reply, error);
 		}

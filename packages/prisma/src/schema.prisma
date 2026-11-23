@@ -686,3 +686,14 @@ model GiveawayEntry {
 
   @@id([giveawayId, userId])
 }
+
+/// 가사 한국어 번역 — 가사 원문 줄 집합의 해시가 키라 같은 가사는 곡이 달라도 한 번만 번역해요. data-api가 쓰고 읽어요.
+model LyricsTranslation {
+  /// sha256(hex) of 원문 줄 목록 (data-api lyricsTranslation.ts의 lyricsSourceHash)
+  sourceHash String   @id
+  /// 원문 줄 → 한국어 번역 `{ "원문": "번역" }`
+  lines      Json
+  /// 번역에 쓴 모델
+  model      String
+  createdAt  DateTime @default(now())
+}
