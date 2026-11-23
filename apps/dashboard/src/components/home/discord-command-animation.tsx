@@ -3,7 +3,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ListMusic, MousePointer2, Pause, Repeat, SkipBack, SkipForward, Square, Volume2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ListMusic, Pause, Repeat, SkipBack, SkipForward, Square, Volume2 } from "lucide-react";
 
 import { motionBase, motionFast } from "@/components/motion/durations";
 import { Card } from "@/components/ui/card";
@@ -379,6 +379,9 @@ function commandResult(slide: SlideConfig, clicked: boolean): ReactNode {
 const PHASES = ["typing", "sent", "thinking", "reply"] as const;
 type Phase = (typeof PHASES)[number];
 
+/** 강한 ease-out(등장·반응)과 ease-in-out(화면 위 이동) — 내장 이징보다 반응이 먼저 보여요 */
+const EASE_OUT = [0.23, 1, 0.32, 1] as const;
+const EASE_IN_OUT = [0.77, 0, 0.175, 1] as const;
 const TYPE_MS = 80;
 const CURSOR_MOVE_S = 0.7;
 const HOLD_AFTER_CLICK_MS = 2600;
@@ -399,7 +402,7 @@ function Exchange({ slide, phase, clicked, muted = false }: ExchangeProps) {
 	return (
 		<div data-current={muted ? undefined : ""} className={cn("space-y-4 transition-opacity duration-base", muted && "opacity-50")}>
 			{reached("sent") && (
-				<m.div initial={enter} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionFast, ease: "easeOut" }} className="flex gap-3">
+				<m.div initial={enter} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionFast, ease: EASE_OUT }} className="flex gap-3">
 					<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-discord-btn-active text-xs font-bold text-discord-text">사</div>
 					<div className="min-w-0">
 						<div className="flex items-baseline gap-2">
@@ -415,7 +418,7 @@ function Exchange({ slide, phase, clicked, muted = false }: ExchangeProps) {
 			)}
 
 			{reached("thinking") && (
-				<m.div initial={enter} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionFast, ease: "easeOut" }} className="flex gap-3">
+				<m.div initial={enter} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionFast, ease: EASE_OUT }} className="flex gap-3">
 					<div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full">
 						<Image src={BOT_AVATAR} alt="시루" fill className="object-cover" sizes="36px" />
 					</div>
@@ -435,7 +438,7 @@ function Exchange({ slide, phase, clicked, muted = false }: ExchangeProps) {
 								</span>
 							</p>
 						) : (
-							<m.div initial={muted ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionBase, ease: "easeOut" }}>
+							<m.div initial={muted ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionBase, ease: EASE_OUT }}>
 								{commandResult(slide, clicked)}
 							</m.div>
 						)}
@@ -620,17 +623,22 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 				className="pointer-events-none absolute top-0 left-0 z-10"
 				initial={false}
 				animate={{ x: cursor.x, y: cursor.y, opacity: cursor.visible ? 1 : 0 }}
-				transition={{ x: { duration: CURSOR_MOVE_S, ease: "easeInOut" }, y: { duration: CURSOR_MOVE_S, ease: "easeInOut" }, opacity: { duration: 0.2 } }}
+				transition={{ x: { duration: CURSOR_MOVE_S, ease: EASE_IN_OUT }, y: { duration: CURSOR_MOVE_S, ease: EASE_IN_OUT }, opacity: { duration: motionFast } }}
 			>
 				<m.span
 					key={cursor.tick}
 					className="absolute -top-4 -left-4 h-8 w-8 rounded-full border-2 border-primary-control"
-					initial={{ scale: 0.3, opacity: cursor.tick === 0 ? 0 : 1 }}
-					animate={{ scale: 1.6, opacity: 0 }}
-					transition={{ duration: 0.55, ease: "easeOut" }}
+					initial={{ scale: 0.4, opacity: cursor.tick === 0 ? 0 : 1 }}
+					animate={{ scale: 1.7, opacity: 0 }}
+					transition={{ duration: 0.4, ease: EASE_OUT }}
 				/>
-				<m.span className="block origin-top-left" animate={{ scale: cursor.pressed ? 0.8 : 1 }} transition={{ duration: 0.12 }}>
-					<MousePointer2 size={26} strokeWidth={1.75} className="fill-foreground stroke-background drop-shadow-md" />
+				{/* 원형 핸들 — 눌리면 살짝 줄어들고 안의 점이 진해져요. 중심이 누르는 지점이에요 */}
+				<m.span
+					className="absolute -top-3.5 -left-3.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-foreground/85 bg-foreground/15 shadow-md"
+					animate={{ scale: cursor.pressed ? 0.78 : 1 }}
+					transition={{ duration: motionFast, ease: EASE_OUT }}
+				>
+					<span className={cn("h-1.5 w-1.5 rounded-full bg-foreground transition-opacity duration-fast", cursor.pressed ? "opacity-100" : "opacity-60")} />
 				</m.span>
 			</m.div>
 		</Card>
