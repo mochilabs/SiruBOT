@@ -94,6 +94,8 @@ export const POST = createGuildApiHandler({
         let title = "제목 없음";
         let artist = "아티스트 없음";
         let thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+        // noembed가 실제 메타데이터를 돌려준 경우에만 기존 곡을 갱신해요 (기본값이 봇이 저장한 정상 값을 덮어쓰지 않게)
+        let fetchedMetadata = false;
 
         try {
           const res = await fetch(
@@ -106,6 +108,7 @@ export const POST = createGuildApiHandler({
               title = json.title || title;
               artist = json.author_name || artist;
               thumbnail = json.thumbnail_url || thumbnail;
+              fetchedMetadata = true;
             }
           }
         } catch (err) {
@@ -125,11 +128,7 @@ export const POST = createGuildApiHandler({
             source: "youtube",
             thumbnail,
           },
-          update: {
-            title,
-            artist,
-            thumbnail,
-          },
+          update: fetchedMetadata ? { title, artist, thumbnail } : {},
         });
 
         finalTrackId = track.id;

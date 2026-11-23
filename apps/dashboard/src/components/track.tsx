@@ -320,14 +320,14 @@ export const TrackItem = memo(function TrackItem({
 				</p>
 				{/* 모바일 전용 줄 — 데스크톱은 길이·재생 수를 오른쪽 열에 보여줘요 */}
 				<p className="mt-1 truncate text-xs font-medium text-muted-foreground sm:hidden">
-					<RankChange change={entry.rankChange} /> {formatTimeToKorean(entry.duration / 1000)} ·{" "}
+					<RankChange change={entry.rankChange} /> {entry.duration > 0 ? `${formatTimeToKorean(entry.duration / 1000)} · ` : ""}
 					<span className="font-bold text-primary-text tabular-nums">{entry.plays.toLocaleString()}</span>회
 				</p>
 			</div>
 
 			<div className="flex items-center gap-1.5 sm:gap-4 pr-0.5 sm:pr-2 shrink-0">
 				<p className="hidden sm:block w-20 text-right text-sm font-medium text-muted-foreground tabular-nums">
-					{formatTimeToKorean(entry.duration / 1000)}
+					{entry.duration > 0 ? formatTimeToKorean(entry.duration / 1000) : ""}
 				</p>
 				<div className="hidden sm:block text-right">
 					<p className="text-base sm:text-lg font-black text-primary-text leading-none tabular-nums">{entry.plays.toLocaleString()}</p>

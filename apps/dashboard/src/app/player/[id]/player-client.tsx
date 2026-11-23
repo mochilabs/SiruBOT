@@ -205,7 +205,7 @@ export function PlayerClient({
 									key={track.id}
 									index={index}
 									track={track}
-									meta={`${track.playCount.toLocaleString()}회 · ${formatDuration(track.duration)}`}
+									meta={`${track.playCount.toLocaleString()}회${track.duration > 0 ? ` · ${formatDuration(track.duration)}` : ""}`}
 									onPlay={onPlay}
 									playingUrl={playingUrl}
 								/>
