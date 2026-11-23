@@ -18,8 +18,8 @@ const cardVariants = cva(
 			padding: {
 				none: "",
 				sm: "p-4",
-				md: "p-5",
-				lg: "p-4 sm:p-6",
+				md: "p-6",
+				lg: "p-5 sm:p-7",
 			},
 		},
 		defaultVariants: {
@@ -46,7 +46,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
-	return <div data-slot="card-title" className={cn("text-base font-semibold leading-tight text-foreground", className)} {...props} />;
+	return <div data-slot="card-title" className={cn("text-lg font-bold leading-tight tracking-tight text-foreground", className)} {...props} />;
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<"div">) {

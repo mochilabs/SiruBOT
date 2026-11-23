@@ -30,7 +30,7 @@ const thumbSizes = {
 
 // Unchecked track: secondary fill is too subtle against cards, so it pairs with
 // an inset boundary. Checked track uses primary-control (= var(--brand) — light
-// #f27b99 / dark #f58aa5) for a clear on-state fill.
+// #ee6f8b / dark #f98aa0) for a clear on-state fill.
 // Thumb is always solid white via --switch-thumb (iOS/Discord convention).
 // knob에 elevation shadow를 얹지 않는다 — 핑크 on-state 트랙 위에서 그림자가
 // 흰 dot 아래로 번져 knob이 몇 픽셀 낮게 보이는 착시를 만들어요.

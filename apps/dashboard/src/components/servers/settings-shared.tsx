@@ -35,7 +35,7 @@ export function PanelHeader({
   return (
     <header ref={headerRef} className="flex flex-col items-start justify-between gap-4 sm:flex-row">
       <div className="flex min-w-0 items-start gap-3.5">
-        <span className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-control sm:inline-flex bg-primary/20 text-primary-text shadow-xs">
+        <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-row sm:inline-flex bg-primary/20 text-primary-text">
           {icon}
         </span>
         <div className="min-w-0 break-words">
@@ -55,7 +55,7 @@ export function PanelHeader({
               </button>
             </h2>
           )}
-          <h2 className={cn("text-xl font-extrabold tracking-tight text-foreground", switcher && "hidden lg:block")}>{title}</h2>
+          <h2 className={cn("text-2xl font-extrabold tracking-tight text-foreground", switcher && "hidden lg:block")}>{title}</h2>
           <p className="hidden text-sm font-medium text-muted-foreground/90 sm:block">{description}</p>
         </div>
       </div>

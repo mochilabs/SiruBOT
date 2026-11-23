@@ -56,7 +56,7 @@ export function NotFoundGame({ onExit }: { onExit: () => void }) {
 		const css = getComputedStyle(document.documentElement);
 		const color = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
 		const bg = color("--background", "#1c1416");
-		const accent = color("--primary-control", "#f58aa5");
+		const accent = color("--primary-control", "#f98aa0");
 		const fg = color("--foreground", "#ffffff");
 		const muted = color("--muted-foreground", "#b8a5a9");
 

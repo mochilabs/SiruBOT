@@ -85,7 +85,7 @@ export function ServerOverviewTab({ guildId, onSelectTab }: ServerOverviewTabPro
 						</li>
 						<li>
 							<Link href={`/player/${guildId}`} className={quickRowClass}>
-								<Play size={18} aria-hidden className="shrink-0 text-highlight" />
+								<Play size={18} aria-hidden className="shrink-0 text-primary-text" />
 								<span className="min-w-0 flex-1">
 									<span className="block text-sm font-semibold text-foreground">플레이어 열기</span>
 									<span className="block text-xs text-muted-foreground">웹에서 재생과 대기열을 바로 조작</span>
