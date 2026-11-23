@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { findActiveLineIndex, findActiveWordIndex } from "@sirubot/utils/lrc";
-import { Mic2, Minus, Plus, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { findActiveLineIndex } from "@sirubot/utils/lrc";
+import { Mic2 } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import type { LyricsPayload } from "@/app/api/servers/[id]/lyrics/route";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { SkeletonLine } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api-error";
 import { createApiFetcher, useGuildResource } from "@/lib/swr";
@@ -15,21 +13,16 @@ import { cn } from "@/lib/utils";
 
 import { interpolatedPositionMs } from "./live-progress-bar";
 import {
-  clampLyricsOffset,
-  formatLyricsOffset,
   type KaraokeLyrics,
-  LYRICS_OFFSET_STEP_MS,
   LYRICS_TRANSLATION_POLL_MS,
   LYRICS_VIEW_MODES,
   lyricsEligible,
   lyricsQueryPath,
   lyricsTrackKey,
   type LyricsViewMode,
-  readLyricsOffset,
   readLyricsViewMode,
   toKaraokeLyrics,
   translatedLine,
-  writeLyricsOffset,
   writeLyricsViewMode,
 } from "./lyrics-sync";
 
@@ -47,7 +40,7 @@ interface LyricsPanelProps {
 }
 
 /**
- * 노래방 가사 — 현재 줄(과 단어)을 하이라이트하고 따라 스크롤해요.
+ * 노래방 가사 — 현재 줄을 하이라이트하고 따라 스크롤해요.
  * 위치는 진행바와 같은 `interpolatedPositionMs` 보간을 매 프레임 읽어요.
  * 싱크가 없는 곡은 일반 가사를 그대로 보여줘요.
  */
@@ -86,7 +79,6 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
           state={state}
           receivedAt={receivedAt}
           unavailable={unavailable}
-          trackKey={trackKey}
         />
       ) : (
         <LyricsFrame>
@@ -99,14 +91,13 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
   );
 }
 
-function LyricsFrame({ children, badge, controls }: { children: React.ReactNode; badge?: React.ReactNode; controls?: React.ReactNode }) {
+function LyricsFrame({ children, controls }: { children: React.ReactNode; controls?: React.ReactNode }) {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm font-bold text-foreground">
           <Mic2 size={16} className="text-primary-text" aria-hidden />
           가사
-          {badge}
         </div>
         {controls}
       </div>
@@ -121,14 +112,12 @@ function LyricsBody({
   state,
   receivedAt,
   unavailable,
-  trackKey,
 }: {
   lyrics: KaraokeLyrics;
   translation: LyricsPayload["translation"];
   state: LivePlayerState;
   receivedAt: number;
   unavailable: boolean;
-  trackKey: string;
 }) {
   const translationLines = translation?.status === "ready" ? translation.lines : null;
   const translationPending = translation?.status === "pending";
@@ -142,29 +131,13 @@ function LyricsBody({
   };
   const showOriginal = !translationLines || viewMode !== "translation";
   const showTranslation = Boolean(translationLines) && viewMode !== "original";
-  const [offsetMs, setOffsetMs] = useState(0);
   const [activeLine, setActiveLine] = useState(-1);
-  const [activeWord, setActiveWord] = useState(-1);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lineRefs = useRef<Array<HTMLLIElement | null>>([]);
   const pausedUntilRef = useRef(0);
   const firstScrollRef = useRef(true);
 
-  // 저장된 오프셋은 브라우저에서만 읽을 수 있어 마운트 뒤에 적용해요 (곡이 바뀌면 이 컴포넌트가 새로 마운트돼요)
-  useEffect(() => {
-    setOffsetMs(readLyricsOffset(trackKey));
-  }, [trackKey]);
-
-  const changeOffset = useCallback(
-    (next: number) => {
-      const clamped = clampLyricsOffset(next);
-      setOffsetMs(clamped);
-      writeLyricsOffset(trackKey, clamped);
-    },
-    [trackKey],
-  );
-
-  // 매 프레임 위치를 읽어 현재 줄·단어만 state로 올려요 (같은 값이면 리렌더하지 않아요)
+  // 매 프레임 위치를 읽어 현재 줄만 state로 올려요 (같은 값이면 리렌더하지 않아요)
   const stateRef = useRef({ state, receivedAt, unavailable });
   stateRef.current = { state, receivedAt, unavailable };
   useEffect(() => {
@@ -173,17 +146,12 @@ function LyricsBody({
     const tick = () => {
       const current = stateRef.current;
       const snapshot = current.unavailable ? { ...current.state, stale: true } : current.state;
-      // 오프셋이 +면 가사가 더 빨리 나오도록 읽는 위치를 앞으로 당겨요
-      const positionMs = interpolatedPositionMs(snapshot, current.receivedAt) + offsetMs;
-      const line = findActiveLineIndex(lyrics.lines, positionMs);
-      setActiveLine(line);
-      const words = line >= 0 ? lyrics.lines[line]?.words : undefined;
-      setActiveWord(words ? findActiveWordIndex(words, positionMs) : -1);
+      setActiveLine(findActiveLineIndex(lyrics.lines, interpolatedPositionMs(snapshot, current.receivedAt)));
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [lyrics, offsetMs]);
+  }, [lyrics]);
 
   // 사용자가 직접 스크롤하면 잠깐 자동 스크롤을 멈춰요 (프로그램 스크롤은 wheel/touch 이벤트가 아니에요)
   useEffect(() => {
@@ -216,12 +184,6 @@ function LyricsBody({
     firstScrollRef.current = false;
   }, [activeLine]);
 
-  const badge = (
-    <Badge size="sm" variant={lyrics.wordSync ? "primary" : "secondary"}>
-      {lyrics.wordSync ? "단어 싱크" : lyrics.synced ? "줄 싱크" : "일반 가사"}
-    </Badge>
-  );
-
   const viewToggle = translationLines ? (
     <div role="radiogroup" aria-label="가사 보기 방식" className="flex items-center rounded-control bg-surface-1 p-0.5">
       {LYRICS_VIEW_MODES.map((mode) => (
@@ -246,49 +208,8 @@ function LyricsBody({
     </span>
   ) : null;
 
-  const syncControls = lyrics.synced ? (
-    <div className="flex items-center gap-1" role="group" aria-label="가사 싱크 조절">
-      <Button
-        variant="secondary"
-        size="icon-xs"
-        icon={<Minus size={12} />}
-        aria-label="가사 0.5초 늦게"
-        onClick={() => changeOffset(offsetMs - LYRICS_OFFSET_STEP_MS)}
-        className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
-      />
-      <span aria-live="polite" className="w-14 text-center text-xs font-bold tabular-nums text-muted-foreground">
-        {formatLyricsOffset(offsetMs)}
-      </span>
-      <Button
-        variant="secondary"
-        size="icon-xs"
-        icon={<Plus size={12} />}
-        aria-label="가사 0.5초 빠르게"
-        onClick={() => changeOffset(offsetMs + LYRICS_OFFSET_STEP_MS)}
-        className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
-      />
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        icon={<RotateCcw size={12} />}
-        aria-label="가사 싱크 초기화"
-        disabled={offsetMs === 0}
-        onClick={() => changeOffset(0)}
-        className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
-      />
-    </div>
-  ) : null;
-
-  const controls =
-    viewToggle || syncControls ? (
-      <div className="flex flex-wrap items-center gap-2">
-        {viewToggle}
-        {syncControls}
-      </div>
-    ) : null;
-
   return (
-    <LyricsFrame badge={badge} controls={controls}>
+    <LyricsFrame controls={viewToggle}>
       <div
         ref={containerRef}
         tabIndex={0}
@@ -327,17 +248,7 @@ function LyricsBody({
                     active ? "font-bold text-foreground" : "font-medium text-muted-foreground/60",
                   )}
                 >
-                  {originalVisible &&
-                    (active && line.words && line.words.length > 0
-                      ? line.words.map((word, wordIndex) => (
-                          <span
-                            key={wordIndex}
-                            className={cn("transition-colors duration-fast", wordIndex <= activeWord ? "text-primary-text" : "text-muted-foreground")}
-                          >
-                            {word.text}
-                          </span>
-                        ))
-                      : line.text)}
+                  {originalVisible && line.text}
                   {translated && showTranslation && (
                     <span className={cn("block", originalVisible && "mt-0.5 text-sm font-medium", active && originalVisible && "text-foreground/80")}>
                       {translated}
