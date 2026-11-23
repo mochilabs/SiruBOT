@@ -21,12 +21,14 @@ import { Field } from "@/components/primitives/field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { toApiError, toError } from "@/lib/api-error";
+import { kstNow } from "@/lib/date-time";
 import { notifyApiError } from "@/lib/notify";
 import type { ScheduledMessageItem } from "@/lib/scheduled-messages";
 import { createApiFetcher } from "@/lib/swr";
@@ -52,8 +54,7 @@ const STATUS_BADGE = {
 
 /** 지금부터 10분 뒤를 "YYYY-MM-DDTHH:mm"(KST)로 — 입력 기본값 */
 function defaultRunAt(): string {
-  const kst = new Date(Date.now() + 9 * 60 * 60_000 + 10 * 60_000);
-  return kst.toISOString().slice(0, 16);
+  return kstNow(10);
 }
 
 function snippet(text: string, max: number): string {
@@ -193,8 +194,16 @@ export function ScheduledMessagesSettings({ guildId }: { guildId: string }) {
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="일시 (한국 시간)" description="지금부터 1분 뒤 ~ 1년 안">
-            {({ id }) => (
-              <Input id={id} type="datetime-local" value={runAt} onChange={(event) => setRunAt(event.target.value)} disabled={creating} />
+            {({ id, describedBy }) => (
+              <DateTimePicker
+                id={id}
+                aria-describedby={describedBy}
+                value={runAt}
+                onChange={setRunAt}
+                min={kstNow(1)}
+                max={kstNow(60 * 24 * 365)}
+                disabled={creating}
+              />
             )}
           </Field>
           <Field label="반복" description="매주·매월은 위 일시의 요일·날짜를 따라요.">

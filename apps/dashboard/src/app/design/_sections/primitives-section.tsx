@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ColorPicker } from "@/components/ui/color-picker";
+import { DateTimePicker, TimePicker } from "@/components/ui/date-time-picker";
 import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { Input } from "@/components/ui/input";
 import { SkeletonCard, SkeletonCircle, SkeletonLine } from "@/components/ui/skeleton";
@@ -19,6 +20,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { kstNow } from "@/lib/date-time";
 
 import { SectionHeader, Showcase, ShowcaseRow } from "./shared";
 
@@ -31,6 +33,8 @@ const tabItems = [
 export function PrimitivesSection() {
 	const [switchVal, setSwitchVal] = useState(true);
 	const [sliderVal, setSliderVal] = useState(60);
+	const [runAt, setRunAt] = useState(() => kstNow(90));
+	const [sendTime, setSendTime] = useState("09:00");
 	const [cooldownVal, setCooldownVal] = useState(30);
 	const [dismissableDemo, setDismissableDemo] = useState(true);
 	const [accentColor, setAccentColor] = useState("#ffdaff");
@@ -114,6 +118,22 @@ export function PrimitivesSection() {
 						</Field>
 						<Field label="비활성화">
 							<ColorPicker value="#a3416f" label="비활성 색" onChange={() => {}} disabled />
+						</Field>
+					</div>
+				</ShowcaseRow>
+
+				<ShowcaseRow label="DateTimePicker · TimePicker" block>
+					<div className="grid items-start gap-4 sm:grid-cols-3">
+						<Field label="일시 (한국 시간)" description="지금부터 1분 뒤 ~ 30일 안만 고를 수 있어요.">
+							{({ id, describedBy }) => (
+								<DateTimePicker id={id} aria-describedby={describedBy} value={runAt} onChange={setRunAt} min={kstNow(1)} max={kstNow(60 * 24 * 30)} />
+							)}
+						</Field>
+						<Field label="보내는 시각" description="날짜 없이 시각만 골라요.">
+							{({ id, describedBy }) => <TimePicker id={id} aria-describedby={describedBy} value={sendTime} onChange={setSendTime} />}
+						</Field>
+						<Field label="비활성화">
+							{({ id }) => <DateTimePicker id={id} value="" onChange={() => {}} disabled />}
 						</Field>
 					</div>
 				</ShowcaseRow>

@@ -13,7 +13,7 @@ import useSWR from "swr";
 import { RoleSelect } from "@/components/discord/role-select";
 import { Field } from "@/components/primitives/field";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { TimePicker } from "@/components/ui/date-time-picker";
 import { Tabs } from "@/components/ui/tabs";
 import { useGuildChannels, useGuildRoles } from "@/hooks/use-guild-settings";
 import { toApiError, toError } from "@/lib/api-error";
@@ -120,15 +120,15 @@ export function BirthdaySettings({
         <section className="min-w-0 space-y-5 border-t border-border pt-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="보내는 시각 (한국 시간)" description="매일 이 시각에 그날 생일인 멤버를 모아서 한 번에 축하해요. 기본 09:00">
-              {({ id }) => (
-                <Input
+              {({ id, describedBy }) => (
+                <TimePicker
                   id={id}
-                  type="time"
+                  aria-describedby={describedBy}
                   value={sendTime}
                   disabled={saving}
-                  onChange={(event) => {
+                  onChange={(next) => {
                     setTouched(true);
-                    setSendTime(event.target.value);
+                    setSendTime(next);
                   }}
                 />
               )}
