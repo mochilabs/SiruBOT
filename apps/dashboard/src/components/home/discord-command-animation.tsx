@@ -632,14 +632,12 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 					animate={{ scale: 1.7, opacity: 0 }}
 					transition={{ duration: 0.4, ease: EASE_OUT }}
 				/>
-				{/* 원형 핸들 — 눌리면 살짝 줄어들고 안의 점이 진해져요. 중심이 누르는 지점이에요 */}
+				{/* 원형 핸들 — 눌리면 살짝 줄어들어요. 중심이 누르는 지점이에요 */}
 				<m.span
-					className="absolute -top-3.5 -left-3.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-foreground/85 bg-foreground/15 shadow-md"
+					className="absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full border-2 border-foreground/85 bg-foreground/15 shadow-md"
 					animate={{ scale: cursor.pressed ? 0.78 : 1 }}
 					transition={{ duration: motionFast, ease: EASE_OUT }}
-				>
-					<span className={cn("h-1.5 w-1.5 rounded-full bg-foreground transition-opacity duration-fast", cursor.pressed ? "opacity-100" : "opacity-60")} />
-				</m.span>
+				/>
 			</m.div>
 		</Card>
 	);
