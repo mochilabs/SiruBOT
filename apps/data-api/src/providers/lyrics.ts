@@ -39,7 +39,8 @@ interface LrclibTrack {
 
 // 제목 속 괄호에 이런 단어가 있으면 업로드 표기예요. 그 밖의 괄호((아이브), (feat. X), (Inst.))는 건드리지 않아요.
 const NOISE_WORDS = String.raw`official|mv|m\/v|music\s+video|video|audio|lyrics?|visualizer|performance|live\s+clip|teaser|가사|뮤직\s*비디오|공식|해석|hd|4k|1080p`;
-const NOISE_BRACKET = new RegExp(String.raw`\s*[\[(【][^\])】]*\b(?:${NOISE_WORDS})\b[^\])】]*[\])】]`, 'giu');
+// `\b`는 한글·가나 옆에서 동작하지 않아서(`【공식】`) 글자·숫자가 아닌 경계를 직접 써요.
+const NOISE_BRACKET = new RegExp(String.raw`\s*[\[(【][^\])】]*(?<![\p{L}\p{N}])(?:${NOISE_WORDS})(?![\p{L}\p{N}])[^\])】]*[\])】]`, 'giu');
 // 괄호 없이 제목 끝에 붙는 업로드 표기: `… MV`, `… Official Video`, `… M/V`, `… Lyric Video`
 const NOISE_TAIL = new RegExp(
 	String.raw`\s+(?:official\s+)?(?:music\s+video|mv|m\/v|lyric\s+video|lyrics?\s+video|audio|video|visualizer)\s*$`,
@@ -144,13 +145,24 @@ function titleMatches(candidate: string, wanted: string): boolean {
 	return a === b;
 }
 
-/** 같은 곡 규칙(D-9)에 맞는 후보인지 — 연주곡 제외, 제목·아티스트 일치, 길이 ±3초(모르면 길이는 보지 않아요). */
+/** 가사 후보의 길이 허용 오차 — MV·라이브 편집본은 인트로 때문에 몇 초씩 달라서 기본 ±3초보다 넉넉해요. */
+const LYRICS_DURATION_TOLERANCE_MS = 10_000;
+
+/** 같은 곡 규칙(D-9)에 맞는 후보인지 — 연주곡 제외, 제목·아티스트 일치, 길이 ±10초(모르면 길이는 보지 않아요). */
 function isSameTrack(candidate: LrclibTrack, query: LyricsTrackQuery, cleaned: { track: string; artist: string }): boolean {
 	if (candidate.instrumental) return false;
 	if (!candidate.trackName || !titleMatches(candidate.trackName, cleaned.track)) return false;
 	if (cleaned.artist && !(candidate.artistName && artistMatches(candidate.artistName, cleaned.artist))) return false;
-	if (query.durationMs > 0 && !durationMatches(query.durationMs, (candidate.duration ?? 0) * 1000)) return false;
+	if (query.durationMs > 0 && !durationMatches(query.durationMs, (candidate.duration ?? 0) * 1000, LYRICS_DURATION_TOLERANCE_MS)) return false;
 	return true;
+}
+
+/** 자유 검색 폴백용 느슨한 규칙 — 제목 일치 + (아티스트 일치 또는 길이 일치). */
+function isLooseSameTrack(candidate: LrclibTrack, query: LyricsTrackQuery, cleaned: { track: string; artist: string }): boolean {
+	if (candidate.instrumental || !candidate.trackName || !titleMatches(candidate.trackName, cleaned.track)) return false;
+	const artistOk = Boolean(cleaned.artist && candidate.artistName && artistMatches(candidate.artistName, cleaned.artist));
+	const durationOk = query.durationMs > 0 && durationMatches(query.durationMs, (candidate.duration ?? 0) * 1000, LYRICS_DURATION_TOLERANCE_MS);
+	return artistOk || durationOk;
 }
 
 /** 같은 곡 후보 중 최선 — 단어 싱크 > 싱크 가사 > 일반 가사, 같으면 길이가 가까운 것, 같으면 검색 순서. */
@@ -191,13 +203,12 @@ function toResult(track: LrclibTrack, matchKind: NonNullable<LyricsResult['match
 }
 
 /** 자유 검색(`q`) 첫 결과 — 봇 `/음악 가사`와 마지막 폴백이 써요. */
-async function searchByQuery(query: string, matchKind: 'query'): Promise<LyricsResult | null> {
+async function searchByQuery(query: string, matchKind: 'query', accept?: (track: LrclibTrack) => boolean): Promise<LyricsResult | null> {
 	const q = query.replace(STRIP_PARENS, '').trim();
 	if (!q) return null;
 	const { body } = await lrclibJson<LrclibTrack[]>(`/search?q=${encodeURIComponent(q)}`);
-	const first = body?.[0];
-	if (!first || (!first.plainLyrics && !first.syncedLyrics)) return null;
-	return toResult(first, matchKind);
+	const found = (body ?? []).find((t) => (t.plainLyrics || t.syncedLyrics) && (!accept || accept(t)));
+	return found ? toResult(found, matchKind) : null;
 }
 
 /** 가사 검색 — 결과 불변이라 장기 캐시해요. */
@@ -240,7 +251,8 @@ export async function fetchLyricsForTrack(query: LyricsTrackQuery): Promise<Lyri
 	// 같은 곡의 일반 가사가 있으면 그걸 쓰고, 없을 때만 자유 검색 첫 결과로 폴백해요.
 	if (plainOnly) return toResult(plainOnly.track, plainOnly.kind);
 
-	const fallback = await searchByQuery(`${cleaned.artist} ${cleaned.track}`, 'query');
+	// 자유 검색 결과는 엉뚱한 곡이 섞이니, 제목이 같고 아티스트나 길이 중 하나가 맞는 것만 받아요.
+	const fallback = await searchByQuery(`${cleaned.artist} ${cleaned.track}`, 'query', (t) => isLooseSameTrack(t, query, cleaned));
 	if (!fallback) throw new Error('lyrics not found');
 	return fallback;
 }

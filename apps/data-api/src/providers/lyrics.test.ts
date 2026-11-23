@@ -22,6 +22,10 @@ lines:
 `;
 
 describe('cleanLyricsTerms', () => {
+	it('strips Hangul and fullwidth bracket labels like 【공식】', () => {
+		expect(cleanLyricsTerms({ title: '【공식】 Ditto (뮤직비디오)', artist: 'NewJeans', sourceName: 'youtube' }).track).toBe('Ditto');
+	});
+
 	it('strips MV label, quotes and artist prefix from a YouTube title', () => {
 		expect(cleanLyricsTerms({ title: "IVE (아이브) 'LOVE DIVE' MV", artist: 'IVE', sourceName: 'youtube' })).toEqual({
 			track: 'LOVE DIVE',
@@ -115,18 +119,44 @@ describe('fetchLyricsForTrack', () => {
 		expect(result.hasWordSync).toBe(true);
 	});
 
-	it('falls back to the q search first result when nothing matches', async () => {
-		const other = { ...synced, trackName: 'Other', artistName: 'Someone' };
+	it('falls back to the q search for a same-title result with a different artist spelling', async () => {
+		const alt = { ...synced, artistName: '뉴진스', duration: 190 };
 		const fetchMock = vi
 			.fn()
 			.mockResolvedValueOnce(json({}, 404))
-			.mockResolvedValueOnce(json([other]))
-			.mockResolvedValueOnce(json([other]));
+			.mockResolvedValueOnce(json([]))
+			.mockResolvedValueOnce(json([alt]));
 		vi.stubGlobal('fetch', fetchMock);
 		const result = await fetchLyricsForTrack(query);
 		expect(new URL(fetchMock.mock.calls[2]![0]).searchParams.get('q')).toBe('NewJeans Ditto');
 		expect(result.matchKind).toBe('query');
-		expect(result.trackName).toBe('Other');
+		expect(result.artistName).toBe('뉴진스');
+	});
+
+	it('rejects a q search result that is a different song', async () => {
+		const other = { ...synced, trackName: 'Other', artistName: 'Someone' };
+		vi.stubGlobal(
+			'fetch',
+			vi
+				.fn()
+				.mockResolvedValueOnce(json({}, 404))
+				.mockResolvedValueOnce(json([]))
+				.mockResolvedValueOnce(json([other]))
+		);
+		await expect(fetchLyricsForTrack(query)).rejects.toThrow('lyrics not found');
+	});
+
+	it('accepts a candidate whose length differs by up to 10 seconds', async () => {
+		const near = { ...synced, duration: 194 };
+		vi.stubGlobal(
+			'fetch',
+			vi
+				.fn()
+				.mockResolvedValueOnce(json({}, 404))
+				.mockResolvedValueOnce(json([near]))
+		);
+		const result = await fetchLyricsForTrack(query);
+		expect(result.matchKind).toBe('search');
 	});
 
 	it('prefers a same-track plain lyric over the q fallback', async () => {
