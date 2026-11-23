@@ -29,7 +29,7 @@ export function MobileTabBar({ status }: { status: "authenticated" | "unauthenti
 	return (
 		<nav
 			aria-label="주요 메뉴"
-			className="fixed inset-x-0 bottom-0 z-(--z-float) rounded-t-card border-t border-border-subtle bg-background pb-[env(safe-area-inset-bottom)] shadow-up md:hidden"
+			className="fixed inset-x-0 bottom-0 z-(--z-float) rounded-t-card border-t border-border-subtle bg-surface-1 pb-[env(safe-area-inset-bottom)] shadow-up md:hidden"
 		>
 			<ul className="mx-auto flex h-[var(--tabbar-h)] max-w-md items-stretch">
 				{navLinks.map((link) => {
