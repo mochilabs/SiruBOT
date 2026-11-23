@@ -2,7 +2,7 @@
 
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useInView, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useInView, useReducedMotion } from "framer-motion";
 import { ArrowRight, LayoutDashboard, Pause, Play } from "lucide-react";
 
 import {
@@ -10,6 +10,7 @@ import {
   slideConfigs,
 } from "@/components/home/discord-command-animation";
 import { ROTATING_WORDS, WordRotator } from "@/components/home/word-rotator";
+import { motionBase, motionSlow } from "@/components/motion/durations";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -154,9 +155,22 @@ export function HeroSection() {
                 aria-label={paused ? "데모 재생" : "데모 일시정지"}
                 aria-pressed={paused}
                 onClick={() => setPaused((prev) => !prev)}
-                className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-control text-muted-foreground transition-colors duration-fast hover:bg-surface-2 hover:text-foreground sm:size-9"
+                className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-control text-muted-foreground transition-[color,background-color,transform] duration-fast hover:bg-surface-2 hover:text-foreground active:scale-95 sm:size-9"
               >
-                {paused ? <Play size={16} fill="currentColor" aria-hidden /> : <Pause size={16} fill="currentColor" aria-hidden />}
+                {/* 아이콘이 바뀔 때 반 바퀴씩 돌아 나가고 들어와서, 합쳐 한 바퀴처럼 보여요 */}
+                <span className="relative flex size-4 items-center justify-center">
+                  <AnimatePresence initial={false} mode="popLayout">
+                    <m.span
+                      key={paused ? "play" : "pause"}
+                      className="flex"
+                      initial={{ rotate: -180, scale: 0.4, opacity: 0 }}
+                      animate={{ rotate: 0, scale: 1, opacity: 1, transition: { duration: motionSlow, ease: [0.23, 1, 0.32, 1] } }}
+                      exit={{ rotate: 180, scale: 0.4, opacity: 0, transition: { duration: motionBase, ease: [0.23, 1, 0.32, 1] } }}
+                    >
+                      {paused ? <Play size={16} fill="currentColor" aria-hidden /> : <Pause size={16} fill="currentColor" aria-hidden />}
+                    </m.span>
+                  </AnimatePresence>
+                </span>
               </button>
             )}
           </div>
