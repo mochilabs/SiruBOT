@@ -237,8 +237,6 @@
 	--elev-2: 0 2px 6px -2px rgb(0 0 0 / 0.1), 0 1px 3px -1px rgb(0 0 0 / 0.06);
 	--elev-3: 0 6px 20px -8px rgb(0 0 0 / 0.16), 0 2px 6px -4px rgb(0 0 0 / 0.1);
 	--elev-5: 0 28px 64px -24px rgb(0 0 0 / 0.35), 0 8px 20px -12px rgb(0 0 0 / 0.2);
-	/* 화면 아래에 붙은 패널(하단 탭바)이 위로 떠 보이게 하는 위쪽 그림자 */
-	--elev-up: 0 -6px 20px -8px rgb(0 0 0 / 0.18), 0 -1px 4px -2px rgb(0 0 0 / 0.1);
 }
 
 .dark {
@@ -252,7 +250,6 @@
 	--elev-2: 0 2px 6px -2px rgb(0 0 0 / 0.45), 0 4px 12px -4px rgb(0 0 0 / 0.3);
 	--elev-3: 0 6px 20px -8px rgb(0 0 0 / 0.55), 0 8px 24px -12px rgb(0 0 0 / 0.35);
 	--elev-5: 0 28px 64px -24px rgb(0 0 0 / 0.65), 0 8px 24px -12px rgb(0 0 0 / 0.45);
-	--elev-up: 0 -8px 24px -8px rgb(0 0 0 / 0.55), 0 -1px 4px -2px rgb(0 0 0 / 0.35);
 }
 
 /* Z-index 토큰 — z-50(모달류)보다 위 토스트의 층위를 변수로 추적해요.
@@ -277,7 +274,6 @@
 	--shadow-md: var(--elev-2);
 	--shadow-lg: var(--elev-3);
 	--shadow-2xl: var(--elev-5);
-	--shadow-up: var(--elev-up);
 }
 
 /* Status colors */

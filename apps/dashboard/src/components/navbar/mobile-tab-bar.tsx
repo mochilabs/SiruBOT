@@ -18,8 +18,8 @@ const tabIcons: Record<string, ComponentType<{ size?: number; className?: string
 };
 
 /**
- * 모바일 하단 탭바 — 화면 아래에 붙어 있는(docked) 전폭 바예요. 위쪽 모서리를 둥글리고 위로 퍼지는 그림자(shadow-up)를 줘서
- * 콘텐츠 위에 얹힌 시트처럼 보이게 하고, 칸 5개를 같은 폭으로 나눠 엄지가 어디서든 닿게 해요 (md 이상은 데스크톱 메뉴가 대신해요).
+ * 모바일 하단 탭바 — 화면 아래에 붙어 있는(docked) 전폭 바예요. 위쪽 모서리를 둥글리고 페이지보다 한 톤 밝은 면(surface-1)으로 그려서
+ * 그림자 없이도 콘텐츠 위에 얹힌 시트처럼 보이게 하고, 칸 5개를 같은 폭으로 나눠 엄지가 어디서든 닿게 해요 (md 이상은 데스크톱 메뉴가 대신해요).
  * 현재 탭은 아이콘 뒤 알약 배경과 굵은 글자로 표시하고, 칸 전체가 눌리는 영역이에요.
  * 높이는 --tabbar-h(+ safe-area)와 맞물려 루트 레이아웃·저장 바·맨 위로 버튼의 여백을 정해요.
  */
@@ -29,7 +29,7 @@ export function MobileTabBar({ status }: { status: "authenticated" | "unauthenti
 	return (
 		<nav
 			aria-label="주요 메뉴"
-			className="fixed inset-x-0 bottom-0 z-(--z-float) rounded-t-card border-t border-border-subtle bg-surface-1 pb-[env(safe-area-inset-bottom)] shadow-up md:hidden"
+			className="fixed inset-x-0 bottom-0 z-(--z-float) rounded-t-card border-t border-border-subtle bg-surface-1 pb-[env(safe-area-inset-bottom)] md:hidden"
 		>
 			<ul className="mx-auto flex h-[var(--tabbar-h)] max-w-md items-stretch">
 				{navLinks.map((link) => {
