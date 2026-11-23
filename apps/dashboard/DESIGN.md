@@ -153,7 +153,7 @@ Pink Beret 음악 봇 팔레트(베이스 `#ffdada`)를 중심으로 소프트 �
 ## Layout
 
 - **Container Model**: 상단 네비게이션이 `sticky`이므로 `Container`(`max-w-7xl`, `pt-6 sm:pt-8 pb-16`)를 통해 헤더와의 최소 여백을 항상 유지합니다.
-- **Mobile Navigation**: 모바일(`< md`)에서는 화면 아래에 붙은 전폭 탭바(`MobileTabBar`, 불투명 표면 + 윗선, 5칸 균등)가 활성화되며, 루트 레이아웃에서 `--tabbar-h`(4rem)와 safe-area를 고려한 패딩을 부여해 컨텐츠 가림을 방지합니다. 현재 탭은 아이콘 뒤 알약 배경과 굵은 글자로 표시합니다.
+- **Mobile Navigation**: 모바일(`< md`)에서는 화면 아래에 붙은 전폭 탭바(`MobileTabBar`, 불투명 표면 + 둥근 위쪽 모서리 + 위쪽 그림자, 5칸 균등)가 활성화되며, 루트 레이아웃에서 `--tabbar-h`(4rem)와 safe-area를 고려한 패딩을 부여해 컨텐츠 가림을 방지합니다. 현재 탭은 아이콘 뒤 알약 배경과 굵은 글자로 표시합니다.
 - **Sidebar & Scroll**: 서버 설정 사이드바(`ServerFeatureSidebar`)는 `lg:sticky lg:top-20`과 `max-h-[calc(100svh-7rem)] overflow-y-auto`를 적용해 작은 노트북 해상도에서도 스크롤이 끊기지 않습니다.
 - **SaveBar Island**: 변경 사항 발생 시 화면 최하단에 플로팅되는 `SaveBar`(`bg-surface-3 rounded-card shadow-2xl`)는 포털로 마운트되며, 바의 실측 높이만큼 폼 하단에 여백을 확보합니다.
 
