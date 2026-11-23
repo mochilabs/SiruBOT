@@ -11,7 +11,7 @@ import { OG_IMAGES, SITE_DESCRIPTION, SITE_TITLE, socialMetadata } from "@/lib/s
 import "./globals.css";
 
 export const viewport: Viewport = {
-	themeColor: "#1f1618",
+	themeColor: "#17111b",
 	// iOS 노치·홈 인디케이터 safe-area를 CSS env()로 계산하기 위해 viewport-fit=cover 확장
 	viewportFit: "cover"
 }

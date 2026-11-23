@@ -21,24 +21,24 @@
 	/* Pretendard(next/font) → Pretendard JP(일본어 한자) → Twemoji(이모지) → 네이티브 이모지 → 시스템 폴백 */
 	--font-stack: var(--font-pretendard), var(--font-pretendard-jp), "Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-	/* Pink Beret Music Bot palette (shadcn, base #ffdada):
-	   포커스 링·브랜드 액션(--brand)은 포인트 핑크, 본체(--primary)는 라이트 핑크 서피스.
-	   텍스트는 primary-foreground(마룬) / accent-foreground 계열로 AA를 맞춘다.
+	/* 시루봇 팔레트 — plum-ink 배경 위에 petal(브랜드), honey(살아 있는 상태·순위), sage(온라인·성공).
+	   포커스 링·브랜드 액션(--brand)은 petal, 본체(--primary)는 옅은 petal 서피스.
+	   텍스트는 primary-foreground / accent-foreground 계열로 AA를 맞춘다.
 	   서피스 슬롯(card·popover·secondary·muted)은 --surface-* 단일 소스를 참조한다. */
-	--background: #fff9f9;
-	--foreground: #3a2c30;
+	--background: #fdf4f6;
+	--foreground: #33232b;
 	--card: var(--surface-1);
-	--card-foreground: #3a2c30;
+	--card-foreground: #33232b;
 	--popover: var(--surface-1);
-	--popover-foreground: #3a2c30;
-	--primary: #ffdada;
-	--primary-foreground: #4f1c2a;
+	--popover-foreground: #33232b;
+	--primary: #fbdce5;
+	--primary-foreground: #3d1020;
 	/* 브랜드 액션 핑크 — 포커스 링·on 상태·액션 컨트롤에 사용 */
-	--brand: #ee6f8b;
-	/* 단색 액션 컨트롤 채움 — #4f1c2a 텍스트 대비 4.75:1 (AA) */
+	--brand: #f27b99;
+	/* 단색 액션 컨트롤 채움 — #3d1020 텍스트 대비 6.24:1 (AA) */
 	--primary-control: var(--brand);
-	/* hover는 명도를 올려 텍스트 대비를 유지 (#4f1c2a on #f27c96 5.29:1) */
-	--primary-control-hover: #f27c96;
+	/* hover는 명도를 올려 텍스트 대비를 유지 (#3d1020 on #f58aa5 7.01:1) */
+	--primary-control-hover: #f58aa5;
 	/* primary-control 위 텍스트 — primary-foreground와 동일 */
 	--primary-control-text: var(--primary-foreground);
 	/* 스위치 thumb — 항상 단색 흰색 (iOS/Discord 관례), bg-switch-thumb로 소비 */
@@ -46,16 +46,16 @@
 	/* 중립 서피스 위 핑크 계열 accent 텍스트 — accent-foreground와 동일 (배경 대비 13:1+) */
 	--primary-text: var(--accent-foreground);
 	--secondary: var(--surface-2);
-	--secondary-foreground: #3a2c30;
+	--secondary-foreground: #33232b;
 	--muted: var(--surface-2);
-	--muted-foreground: #7d686d;
-	--accent: #ffc3c9;
-	--accent-foreground: #4f1c2a;
-	--border: #f3d3d6;
+	--muted-foreground: #6f5a64;
+	--accent: #fbdce5;
+	--accent-foreground: #6d1f3a;
+	--border: #ecd0d9;
 	--input: var(--border);
-	/* 라이트 포커스 링: --brand(#ee6f8b)는 라이트 서피스 위 2.07~2.88:1이라 3:1에 못 미쳐요.
-	   같은 핑크 계열의 더 어두운 값(#c4476a)으로 올려 3.39~4.71:1을 확보해요(비텍스트 3:1 기준). */
-	--ring: #c4476a;
+	/* 라이트 포커스 링: --brand(#f27b99)는 라이트 서피스 위 3:1에 못 미쳐요.
+	   같은 핑크 계열의 더 어두운 값(#b83b62)으로 올려 4.25~5.47:1을 확보해요(비텍스트 3:1 기준). */
+	--ring: #b83b62;
 
 	--discord-embed: #f2f3f5;
 	--discord-text: #313338;
@@ -76,31 +76,31 @@
 
 }
 .dark {
-	--background: #1f1618;
-	--foreground: #fbeeee;
+	--background: #17111b;
+	--foreground: #fbf1f3;
 	--card: var(--surface-1);
-	--card-foreground: #fbeeee;
+	--card-foreground: #fbf1f3;
 	--popover: var(--surface-1);
-	--popover-foreground: #fbeeee;
-	--primary: #ffdada;
-	--primary-foreground: #3a1a22;
-	--brand: #f98aa0;
+	--popover-foreground: #fbf1f3;
+	--primary: #ffd1dd;
+	--primary-foreground: #2a0f1a;
+	--brand: #f58aa5;
 	--primary-control: var(--brand);
-	/* hover — #3a1a22 텍스트 대비 5.82:1 */
-	--primary-control-hover: #f27890;
+	/* hover — #2a0f1a 텍스트 대비 9.15:1 */
+	--primary-control-hover: #f99bb3;
 	--primary-control-text: var(--primary-foreground);
 	/* 스위치 thumb — 항상 단색 흰색 (iOS/Discord 관례), bg-switch-thumb로 소비 */
 	--switch-thumb: #ffffff;
 	--primary-text: var(--accent-foreground);
 	--secondary: var(--surface-2);
-	--secondary-foreground: #fbeeee;
+	--secondary-foreground: #fbf1f3;
 	--muted: var(--surface-2);
-	--muted-foreground: #b9a4a9;
-	--accent: #4d3b40;
-	--accent-foreground: #ffdada;
-	--border: #4d3b40;
+	--muted-foreground: #c9b4bd;
+	--accent: #3b2a40;
+	--accent-foreground: #ffd1dd;
+	--border: #3d3044;
 	--input: var(--border);
-	/* 다크 링은 --brand(#f98aa0) 그대로로 서피스 위 6.88~7.73:1 통과 */
+	/* 다크 링은 --brand(#f58aa5) 그대로로 서피스 위 5.46~8.0:1 통과 */
 	--ring: var(--brand);
 
 	--discord-embed: #2b2d31;
@@ -181,21 +181,23 @@
 :root {
 	--radius: 1rem;
 
+	/* 반경 위계: 컨트롤 10 · 행 12 · 메뉴 12 · 카드·다이얼로그 20 */
 	--r-control: 0.625rem;
 	--r-control-inner: 0.375rem;
-	--r-card: 1rem;
+	--r-row: 0.75rem;
+	--r-card: 1.25rem;
 	--r-menu: 0.75rem;
-	--r-dialog: 1rem;
+	--r-dialog: 1.25rem;
 
 	--surface-1: #ffffff;
-	--surface-2: #fff0f0;
-	--surface-3: #ffe6e8;
+	--surface-2: #f9e9ee;
+	--surface-3: #f4dde5;
 }
 
 .dark {
-	--surface-1: #2b2023;
-	--surface-2: #3a2c30;
-	--surface-3: #3a2c30;
+	--surface-1: #231a28;
+	--surface-2: #2e2433;
+	--surface-3: #3a2f40;
 }
 
 @theme inline {
@@ -204,6 +206,7 @@
 	--radius-lg: var(--radius);
 	--radius-control: var(--r-control);
 	--radius-control-inner: var(--r-control-inner);
+	--radius-row: var(--r-row);
 	--radius-card: var(--r-card);
 	--radius-menu: var(--r-menu);
 	--radius-dialog: var(--r-dialog);
@@ -215,9 +218,9 @@
 
 /* Border & shadow tokens */
 :root {
-	--border-subtle: #f8e1e4;
-	/* 인터랙티브 컨트롤 경계선 — #b4779b는 #ffffff 대비 3.47:1, #fff9f9 대비 3.36:1로 3.0:1 통과 */
-	--border-strong: #b4779b;
+	--border-subtle: #f4e0e7;
+	/* 인터랙티브 컨트롤 경계선 — #a8708a는 #ffffff 대비 3.93:1, #fdf4f6 대비 3.64:1, #f9e9ee 대비 3.35:1로 3.0:1 통과 */
+	--border-strong: #a8708a;
 
 	/* Paint-only 1px boundary for inputs. (.dark에서 값이 같아 재정의하지 않는다) */
 	--control-boundary: inset 0 0 0 1px var(--border-strong);
@@ -230,11 +233,11 @@
 }
 
 .dark {
-	--border-subtle: #3a2c30;
-	/* 다크 인터랙티브 컨트롤 경계선 — #a37d89는 #1f1618 대비 6.2:1, #2b2023 대비 4.39:1 통과 */
-	--border-strong: #a37d89;
+	--border-subtle: #2e2433;
+	/* 다크 인터랙티브 컨트롤 경계선 — #9c8696은 #17111b 대비 5.53:1, #231a28 대비 5.01:1, #3a2f40 대비 3.77:1 통과 */
+	--border-strong: #9c8696;
 
-	/* 다크 배경(#1f1618) 위에서 검은 그림자는 파묻혀 안 보여요 — 블러 반경과
+	/* 다크 배경(#17111b) 위에서 검은 그림자는 파묻혀 안 보여요 — 블러 반경과
 	   불투명도를 올려 카드/오버레이가 실제로 떠 보이게 해요 */
 	--elev-1: 0 1px 2px 0 rgb(0 0 0 / 0.35), 0 2px 8px -2px rgb(0 0 0 / 0.3);
 	--elev-2: 0 2px 6px -2px rgb(0 0 0 / 0.45), 0 4px 12px -4px rgb(0 0 0 / 0.3);
@@ -272,22 +275,25 @@
    상태 *-foreground은 Badge의 warning/destructive solid 톤만 소비한다 — success/info-foreground는
    소비처 0이라 제거했고, 신규 소비가 필요하면 tint 배지 체계(bg-{tone}/10 + text-{tone})를 쓴다. */
 :root {
-	--destructive: #d4183d;
+	--destructive: #c4122f;
 	--destructive-foreground: #ffffff;
 	--success: #0f7a52;
-	--warning: #9a6100;
+	--warning: #8f5800;
 	--warning-foreground: #ffffff;
 	--info: #0b6bb0;
+	/* 살아 있는 상태(재생 중·라이브)와 1위 같은 순위에만 쓰는 두 번째 색(honey) */
+	--highlight: #8a5a00;
 }
 
 .dark {
-	/* 다크에서는 팔레트 pastel destructive — #2b2023 카드 대비 6.34:1 (R-25) */
-	--destructive: #ff7b8a;
+	/* 다크에서는 pastel 상태색 — #231a28 카드 대비 6.6~7.5:1 */
+	--destructive: #ff8a98;
 	--destructive-foreground: #2b1018;
-	--success: #34d399;
-	--warning: #fbbf24;
+	--success: #8fc7a8;
+	--warning: #f4c36a;
 	--warning-foreground: #451a03;
-	--info: #38bdf8;
+	--info: #7cc8f5;
+	--highlight: #f4c36a;
 }
 
 @theme inline {
@@ -297,6 +303,7 @@
 	--color-warning: var(--warning);
 	--color-warning-foreground: var(--warning-foreground);
 	--color-info: var(--info);
+	--color-highlight: var(--highlight);
 }
 
 /* 랭킹 메달(금·은·동 왕관) — 장식 아이콘이라 비텍스트 3:1만 맞춘다.
@@ -311,7 +318,7 @@
 }
 
 .dark {
-	--rank-1: #f0b232;
+	--rank-1: var(--highlight);
 	--rank-2: #b9bbbe;
 	--rank-3: #cd7f32;
 }
@@ -384,15 +391,14 @@
 	}
 }
 
+/* 페이지 전환은 불투명도만 — 매 이동마다 위로 떠오르는 진입은 쓰지 않아요 */
 @keyframes page-in {
 	from {
 		opacity: 0;
-		transform: translateY(8px);
 	}
 
 	to {
 		opacity: 1;
-		transform: translateY(0);
 	}
 }
 
@@ -408,17 +414,12 @@
 	}
 }
 
-/* 팝업 등장 모션 — 밋밋한 on/off 대신 살짝 오버슈트하는 스프링 느낌.
+/* 팝업 등장 모션 — 오버슈트 없이 살짝 작게 시작해 ease-out으로 펴져요.
    Base UI 팝업의 data-open(열림 상태)에만 붙어 열릴 때만 재생해요. */
 @keyframes pop-in {
 	from {
 		opacity: 0;
-		transform: translateY(-8px) scale(0.97);
-	}
-
-	60% {
-		opacity: 1;
-		transform: translateY(1px) scale(1.004);
+		transform: translateY(-4px) scale(0.97);
 	}
 
 	to {
@@ -428,7 +429,7 @@
 }
 
 .pop-in[data-open] {
-	animation: pop-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+	animation: pop-in 160ms var(--ease-out-expo);
 }
 
 /* 드롭다운 행 스태거 — 팝업이 열리면 행이 위에서 순차적으로 떠올라요.
@@ -538,11 +539,12 @@
 
 /* Motion tokens & accessibility preferences */
 :root {
-	--motion-fast: 200ms;
-	--motion-base: 300ms;
-	--motion-slow: 500ms;
+	--motion-fast: 140ms;
+	--motion-base: 220ms;
+	--motion-slow: 400ms;
 
-	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+	/* 강한 ease-out — 기본 ease-out보다 반응이 먼저 보여요 */
+	--ease-out-expo: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 @theme inline {

@@ -9,8 +9,8 @@
 import { OG_IMAGES } from "@/lib/site-metadata";
 
 export const DISCORD_EMBED_MAX_BYTES = 3000;
-/** 다크 테마 --brand(#f98aa0)와 같은 색이에요 */
-const ACCENT_COLOR = 0xf98aa0;
+/** 다크 테마 --brand(#f58aa5)와 같은 색이에요 */
+const ACCENT_COLOR = 0xf58aa5;
 const LINK_BUTTON_STYLE = 5;
 
 export interface DiscordEmbedButton {
