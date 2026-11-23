@@ -10,12 +10,14 @@ import { emoji } from '@sirubot/utils';
 import { buildGiveawayConditions, GIVEAWAY_DAYS_MAX, GIVEAWAY_PRIZE_MAX, GIVEAWAY_WINNERS_MAX, parseGiveawayDuration } from '@sirubot/utils/giveaway';
 import { parseKstDateTime } from '@sirubot/utils/scheduledMessage';
 import { AppError } from '../../../../lib/appError.ts';
+import { emptyGiveawaySetup, type GiveawaySetupState } from '../../application/giveawaySetup.ts';
+import { runGiveawaySetupSession } from '../giveawaySetupSession.ts';
 import { giveawayNoticeView } from '../views/giveawayViews.ts';
 
 export const name = 'start';
 export const ko = '시작';
-export const description = '나눔을 열어요. 참여 조건은 직접 정할 수 있어요.';
-export const descriptionEn = 'Start a giveaway with custom entry conditions.';
+export const description = '나눔을 열어요. 옵션 없이 쓰면 버튼과 메뉴로 설정해요.';
+export const descriptionEn = 'Start a giveaway. Without options, a setup panel opens.';
 export const preconditions: string[] = ['ManageGuild'];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
@@ -31,8 +33,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 				.setName('prize')
 				.setNameLocalizations({ ko: '상품' })
 				.setDescription('What the winners get.')
-				.setDescriptionLocalizations({ ko: '당첨자가 받을 상품' })
-				.setRequired(true)
+				.setDescriptionLocalizations({ ko: '당첨자가 받을 상품 (옵션을 모두 비우면 버튼으로 설정해요)' })
 				.setMaxLength(GIVEAWAY_PRIZE_MAX)
 		)
 		.addIntegerOption((o) =>
@@ -102,20 +103,11 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 }
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>) {
+	const prize = interaction.options.getString('prize');
 	const durationText = interaction.options.getString('duration');
 	const endsAtText = interaction.options.getString('ends_at');
-	if ((durationText === null) === (endsAtText === null)) {
+	if (durationText !== null && endsAtText !== null) {
 		throw new AppError('invalid_input', '마감은 기간 또는 마감시각 중 하나만 정해 주세요.', { ephemeral: true });
-	}
-	let endsAt: Date;
-	if (durationText !== null) {
-		const ms = parseGiveawayDuration(durationText);
-		if (ms === null) throw new AppError('invalid_input', '기간은 "30분", "2h", "1d12h"처럼 적어 주세요.', { ephemeral: true });
-		endsAt = new Date(Date.now() + ms);
-	} else {
-		const parsed = parseKstDateTime(endsAtText!);
-		if (!parsed) throw new AppError('invalid_input', '마감시각은 "2026-12-25 21:00"처럼 적어 주세요. (한국 시간)', { ephemeral: true });
-		endsAt = parsed;
 	}
 
 	const roles = (...keys: string[]) =>
@@ -123,24 +115,51 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>) {
 			const role = interaction.options.getRole(key);
 			return role ? [role.id] : [];
 		});
-	const conditions = buildGiveawayConditions({
-		requiredRoleIds: roles('required_role', 'required_role_2', 'required_role_3'),
-		requiredMatch: (interaction.options.getString('role_match') as 'any' | 'all' | null) ?? 'any',
-		blockedRoleIds: roles('blocked_role', 'blocked_role_2'),
-		minJoinDays: interaction.options.getInteger('min_join_days'),
-		minAccountAgeDays: interaction.options.getInteger('min_account_days')
-	});
+	const channelId = interaction.options.getChannel('channel')?.id ?? interaction.channelId;
+	const requiredRoleIds = roles('required_role', 'required_role_2', 'required_role_3');
+	const requiredMatch = (interaction.options.getString('role_match') as 'any' | 'all' | null) ?? 'any';
+	const blockedRoleIds = roles('blocked_role', 'blocked_role_2');
+	const minJoinDays = interaction.options.getInteger('min_join_days');
+	const minAccountDays = interaction.options.getInteger('min_account_days');
+	const winnerCount = interaction.options.getInteger('winners') ?? 1;
+
+	let endsAt: Date | null = null;
+	if (durationText !== null) {
+		const ms = parseGiveawayDuration(durationText);
+		if (ms === null) throw new AppError('invalid_input', '기간은 "30분", "2h", "1d12h"처럼 적어 주세요.', { ephemeral: true });
+		endsAt = new Date(Date.now() + ms);
+	} else if (endsAtText !== null) {
+		endsAt = parseKstDateTime(endsAtText);
+		if (!endsAt) throw new AppError('invalid_input', '마감시각은 "2026-12-25 21:00"처럼 적어 주세요. (한국 시간)', { ephemeral: true });
+	}
 
 	await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-	const channelId = interaction.options.getChannel('channel')?.id ?? interaction.channelId;
+
+	// 상품이나 마감이 빠졌으면 적어 준 옵션을 채워 둔 설정 패널을 열어요.
+	if (prize === null || endsAt === null) {
+		const state: GiveawaySetupState = {
+			...emptyGiveawaySetup(channelId),
+			prize,
+			winnerCount,
+			end: endsAt ? { kind: 'absolute', at: endsAt } : null,
+			requiredRoleIds,
+			requiredMatch,
+			blockedRoleIds,
+			minJoinDays,
+			minAccountDays
+		};
+		await runGiveawaySetupSession(interaction, state);
+		return;
+	}
+
 	await container.giveaways.start({
 		guildId: interaction.guildId,
 		channelId,
 		userId: interaction.user.id,
-		prize: interaction.options.getString('prize', true),
-		winnerCount: interaction.options.getInteger('winners') ?? 1,
+		prize,
+		winnerCount,
 		endsAt,
-		conditions
+		conditions: buildGiveawayConditions({ requiredRoleIds, requiredMatch, blockedRoleIds, minJoinDays, minAccountAgeDays: minAccountDays })
 	});
 	await interaction.editReply(giveawayNoticeView(`${emoji('success')} 나눔을 열었어요. <#${channelId}>에서 확인하세요.`));
 }
