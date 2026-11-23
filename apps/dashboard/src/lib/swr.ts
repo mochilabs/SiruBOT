@@ -65,7 +65,7 @@ export function useAuthedSWR<T>(key: string | null, callbackUrl: string): SWRRes
 export function useGuildResource<T>(
 	guildId: string,
 	path: string,
-	options: { fetcher: Fetcher<T, string>; enabled?: boolean; refreshInterval?: number },
+	options: { fetcher: Fetcher<T, string>; enabled?: boolean; refreshInterval?: number | ((latest?: T) => number) },
 ): SWRResponse<T> & { guildUrl: string; redirectToLogin: () => void } {
 	const { fetcher, enabled = true, refreshInterval } = options;
 	const guildUrl = `/api/servers/${guildId}${path}`;

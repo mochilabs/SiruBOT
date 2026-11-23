@@ -4,13 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 
 import {
-  clampLyricsOffset,
-  formatLyricsOffset,
   lyricsEligible,
   lyricsQueryPath,
-  readLyricsOffset,
   toKaraokeLyrics,
-  writeLyricsOffset,
 } from "./lyrics-sync";
 
 const base = { trackName: "t", artistName: "a", plainLyrics: null, syncedLyrics: null };
@@ -29,19 +25,24 @@ afterEach(() => {
 });
 
 describe("toKaraokeLyrics", () => {
-  it("prefers word sync lines", () => {
+  it("uses LRC lines even when word sync exists", () => {
     const lyrics = toKaraokeLyrics({
       ...base,
       hasWordSync: true,
       syncedLyrics: "[00:01.00] a",
       wordSync: [{ startMs: 900, text: "a b", words: [{ startMs: 900, text: "a " }, { startMs: 1200, text: "b" }] }],
     });
-    expect(lyrics).toMatchObject({ synced: true, wordSync: true });
-    expect(lyrics?.lines[0]?.startMs).toBe(900);
+    expect(lyrics?.lines).toEqual([{ startMs: 1000, text: "a" }]);
+    expect(lyrics?.lines[0]?.words).toBeUndefined();
+  });
+
+  it("falls back to the line starts of word sync when there is no LRC", () => {
+    const lyrics = toKaraokeLyrics({ ...base, hasWordSync: true, wordSync: [{ startMs: 900, text: "a b", words: [{ startMs: 900, text: "a b" }] }] });
+    expect(lyrics?.lines).toEqual([{ startMs: 900, text: "a b", endMs: undefined }]);
   });
 
   it("falls back to LRC lines, then plain text, then null", () => {
-    expect(toKaraokeLyrics({ ...base, syncedLyrics: "[00:01.00] a\n[00:02.00] b" })).toMatchObject({ synced: true, wordSync: false });
+    expect(toKaraokeLyrics({ ...base, syncedLyrics: "[00:01.00] a\n[00:02.00] b" })).toMatchObject({ synced: true });
     expect(toKaraokeLyrics({ ...base, plainLyrics: " 그냥 가사 " })).toMatchObject({ synced: false, plainText: "그냥 가사" });
     expect(toKaraokeLyrics({ ...base, syncedLyrics: "[ar:x]" })).toBeNull();
   });
@@ -56,39 +57,5 @@ describe("lyrics query", () => {
     expect(params.get("source")).toBe("youtube");
     expect(lyricsQueryPath(state({ isStream: true }))).toBeNull();
     expect(lyricsEligible(state({ trackTitle: null }))).toBe(false);
-  });
-});
-
-describe("offset", () => {
-  it("clamps and snaps to 0.5s steps", () => {
-    expect(clampLyricsOffset(700)).toBe(500);
-    expect(clampLyricsOffset(99_999)).toBe(10_000);
-    expect(clampLyricsOffset(-99_999)).toBe(-10_000);
-    expect(clampLyricsOffset(Number.NaN)).toBe(0);
-  });
-
-  it("formats", () => {
-    expect(formatLyricsOffset(0)).toBe("0초");
-    expect(formatLyricsOffset(500)).toBe("+0.5초");
-    expect(formatLyricsOffset(-1000)).toBe("-1초");
-  });
-
-  it("persists per track and removes the key at zero", () => {
-    writeLyricsOffset("k", 1500);
-    expect(readLyricsOffset("k")).toBe(1500);
-    expect(readLyricsOffset("other")).toBe(0);
-    writeLyricsOffset("k", 0);
-    expect(window.localStorage.getItem("sirubot:lyrics-offset:k")).toBeNull();
-  });
-
-  it("survives a throwing localStorage", () => {
-    const broken = {
-      getItem: () => { throw new Error("blocked"); },
-      setItem: () => { throw new Error("blocked"); },
-      removeItem: () => { throw new Error("blocked"); },
-    };
-    vi.stubGlobal("localStorage", broken);
-    expect(readLyricsOffset("k")).toBe(0);
-    expect(() => writeLyricsOffset("k", 500)).not.toThrow();
   });
 });

@@ -23,6 +23,8 @@ export interface LyricsResult {
 	artistName: string;
 	plainLyrics: string | null;
 	syncedLyrics: string | null;
+	/** 한국어 번역 — pending이면 data-api가 뒤에서 번역 중이라 잠시 뒤 다시 조회하면 채워져요 */
+	translation?: { status: 'ready' | 'pending' | 'none'; lines: Record<string, string> | null };
 }
 
 export interface YouTubeChapter {

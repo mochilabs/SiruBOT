@@ -79,7 +79,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 
 	registerOhaasaRoutes(fastify, deps);
 	registerEmbedFixRoutes(fastify, deps);
-	registerCacheProviderRoutes(fastify);
+	registerCacheProviderRoutes(fastify, deps);
 	registerRenderRoutes(fastify);
 	registerAiRoutes(fastify, deps);
 	registerPlayerRoutes(fastify, deps);

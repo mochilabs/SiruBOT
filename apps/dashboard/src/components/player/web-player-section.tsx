@@ -81,13 +81,13 @@ function SearchResultRow({
 		.filter(Boolean)
 		.join(" · ");
 	return (
-		<div className="flex min-w-0 items-center gap-3 rounded-card bg-surface-2 p-2.5">
+		<div className="flex min-w-0 items-center gap-3 rounded-row bg-surface-2 p-2.5">
 			{track.artworkUrl ? (
-				<div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-control">
+				<div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-control-inner">
 					<Image src={track.artworkUrl} alt="" fill className="object-cover" sizes="48px" unoptimized />
 				</div>
 			) : (
-				<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-control bg-surface-1 text-muted-foreground">
+				<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-control-inner bg-surface-1 text-muted-foreground">
 					<ListMusic size={16} aria-hidden />
 				</div>
 			)}
@@ -332,12 +332,12 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 				)}
 
 				{!canPlay && (
-					<p className="rounded-card bg-surface-2 px-4 py-3 text-sm text-muted-foreground">
+					<p className="rounded-row bg-surface-2 px-4 py-3 text-sm text-muted-foreground">
 						봇과 같은 음성 채널에 접속하면 검색 결과에서 바로 재생할 수 있어요.
 					</p>
 				)}
 				{searchNotice && (
-					<p className="rounded-card bg-surface-2 px-4 py-3 text-sm text-muted-foreground" role="status">
+					<p className="rounded-row bg-surface-2 px-4 py-3 text-sm text-muted-foreground" role="status">
 						{searchNotice}
 					</p>
 				)}
