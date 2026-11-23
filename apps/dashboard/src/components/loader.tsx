@@ -47,7 +47,7 @@ export default function Loader({
                 {(text || description) && (
                     <div className="text-center space-y-2">
                         {text && (
-                            <p className="text-xl font-black tracking-tight text-foreground/80 animate-pulse-soft">
+                            <p className="text-xl font-extrabold tracking-tight text-foreground/80 animate-pulse-soft">
                                 {text}
                             </p>
                         )}

@@ -138,7 +138,7 @@ export function Navbar() {
                 className="object-cover"
               />
             </div>
-            <span className="text-2xl font-black tracking-tighter text-foreground">시루봇</span>
+            <span className="text-2xl font-extrabold tracking-tighter text-foreground">시루봇</span>
           </Link>
 
           <div className="flex flex-1 items-center gap-2 lg:gap-4">

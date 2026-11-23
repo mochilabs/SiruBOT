@@ -53,7 +53,7 @@ export function LicenseList({ entries, summary, total }: LicenseListProps) {
 	return (
 		<Card padding="lg" className="gap-4">
 			<div className="flex flex-wrap items-center justify-between gap-2">
-				<h2 className="text-base font-black tracking-tight text-foreground">
+				<h2 className="text-base font-extrabold tracking-tight text-foreground">
 					코드 의존성 <span className="font-medium text-muted-foreground">총 {total.toLocaleString()}개</span>
 				</h2>
 				<span className="text-xs text-muted-foreground">직접 · 전이 의존성 전체 고지예요</span>

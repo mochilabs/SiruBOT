@@ -63,13 +63,13 @@ export default function LicensesPage() {
       />
       <div className="space-y-4">
         <Card padding="lg" className="gap-2">
-          <h2 className="text-base font-black tracking-tight text-foreground">임베디드 자산</h2>
+          <h2 className="text-base font-extrabold tracking-tight text-foreground">임베디드 자산</h2>
           <p className="text-sm text-muted-foreground">npm 패키지가 아니라 레포에 파일로 포함돼요.</p>
         </Card>
         {bundledAssets.map((entry) => (
           <Card key={entry.name} padding="lg" className="gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-black tracking-tight text-foreground">{entry.name}</h3>
+              <h3 className="text-sm font-extrabold tracking-tight text-foreground">{entry.name}</h3>
               <Badge variant="primary" size="sm">
                 {entry.license}
               </Badge>

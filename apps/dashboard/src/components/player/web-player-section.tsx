@@ -286,7 +286,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 			<div className="min-w-0 space-y-6">
 			<Card padding="lg" className="gap-4 p-4 sm:gap-5 sm:p-6">
 				<div className="flex flex-wrap items-center justify-between gap-3">
-					<h2 className="flex items-center gap-2 text-base font-black tracking-tight text-foreground">
+					<h2 className="flex items-center gap-2 text-base font-extrabold tracking-tight text-foreground">
 						<span className="text-primary-text">
 							<Search size={15} aria-hidden />
 						</span>

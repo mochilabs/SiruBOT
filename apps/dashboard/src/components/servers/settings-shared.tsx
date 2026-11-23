@@ -40,7 +40,7 @@ export function PanelHeader({
         </span>
         <div className="min-w-0 break-words">
           {switcher && (
-            <h2 className="text-xl font-black tracking-tight text-foreground lg:hidden">
+            <h2 className="text-xl font-extrabold tracking-tight text-foreground lg:hidden">
               <button
                 type="button"
                 onClick={() => switcher.setOpen(true)}
@@ -55,7 +55,7 @@ export function PanelHeader({
               </button>
             </h2>
           )}
-          <h2 className={cn("text-xl font-black tracking-tight text-foreground", switcher && "hidden lg:block")}>{title}</h2>
+          <h2 className={cn("text-xl font-extrabold tracking-tight text-foreground", switcher && "hidden lg:block")}>{title}</h2>
           <p className="hidden text-sm font-medium text-muted-foreground/90 sm:block">{description}</p>
         </div>
       </div>

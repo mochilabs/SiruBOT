@@ -172,7 +172,7 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
                   : undefined
               }
             >
-              <span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground">
+              <span className="w-5 shrink-0 text-center text-sm font-extrabold tabular-nums text-muted-foreground">
                 {index + 1}
               </span>
               {track.artworkUrl ? (

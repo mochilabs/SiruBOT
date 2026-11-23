@@ -70,7 +70,7 @@ export function Footer() {
 							<span className="relative block h-10 w-10 overflow-hidden rounded-full">
 								<Image src="/images/siru-profile.png" alt="시루봇" fill className="object-cover" sizes="40px" />
 							</span>
-							<span className="text-2xl font-black tracking-tighter text-foreground">시루봇</span>
+							<span className="text-2xl font-extrabold tracking-tighter text-foreground">시루봇</span>
 						</Link>
 						<p className="max-w-xs break-keep text-sm font-medium leading-relaxed text-muted-foreground">
 							음악·AI 채팅·서버 관리를 한 곳에서. 초대하고 바로 시작하세요.

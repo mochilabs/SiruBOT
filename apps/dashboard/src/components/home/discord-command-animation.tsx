@@ -339,7 +339,7 @@ function DiceResult({ clicked }: { clicked: boolean }) {
 					animate={{ opacity: 1, y: 0 }}
 					exit={{ opacity: 0 }}
 					transition={{ duration: motionFast }}
-					className="text-2xl font-black tabular-nums text-discord-text"
+					className="text-2xl font-extrabold tabular-nums text-discord-text"
 				>
 					{a} + {b} = <span className="text-discord-light">{a + b}</span>
 				</m.p>

@@ -167,7 +167,14 @@
 @theme inline {
 	--font-sans: var(--font-stack);
 
-	--text-2xs: 0.6875rem;
+	/* 본문 15px · 캡션 13px · 마이크로 12px — 한글은 줄간격을 넉넉히 둬요. 기본 스케일(14/12/11px)보다 한 단계씩 커요. */
+	--text-sm: 0.9375rem;
+	--text-sm--line-height: 1.5rem;
+
+	--text-xs: 0.8125rem;
+	--text-xs--line-height: 1.25rem;
+
+	--text-2xs: 0.75rem;
 	--text-2xs--line-height: 1rem;
 
 	--text-3xs: 0.5rem;
@@ -500,6 +507,9 @@
 	body {
 		font-family: var(--font-stack);
 		background-color: var(--background);
+		/* Pretendard는 한글 본문에서 살짝 좁힐 때 단정해 보여요 */
+		letter-spacing: -0.01em;
+		font-synthesis: none;
 	}
 
 	/* 표준 스크롤바 스타일 (Chrome 121+, Edge 121+, Firefox, Safari 18.2+).

@@ -52,7 +52,7 @@ export default function ServersPage() {
                         </div>
                     )}
                     <div className="relative z-10">
-                        <p className="text-sm font-black text-foreground">{session?.user?.name}</p>
+                        <p className="text-sm font-extrabold text-foreground">{session?.user?.name}</p>
                         <p className="text-xs font-medium text-muted-foreground">내 계정이 아닌가요? <button type="button" onClick={() => signOut()} className="text-primary-text hover:underline">로그아웃</button></p>
                     </div>
                 </div>

@@ -44,7 +44,7 @@ export function HeroSection() {
       {/* 히어로를 위로 올리고, 아래 스탯·기능 카드가 첫 화면 하단에 걸쳐 보이게 해요. 데모 컬럼이 더 넓어요 */}
       <div className="relative mx-auto grid w-full max-w-7xl items-center gap-8 px-4 pb-10 pt-8 sm:gap-10 sm:px-6 sm:pb-20 sm:pt-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12 lg:px-8 lg:pb-24 lg:pt-10 xl:gap-16">
         <div className="flex min-w-0 flex-col items-start gap-5 text-left sm:gap-6">
-          <h1 className="text-[clamp(2.05rem,9vw,2.85rem)] font-black leading-[1.16] tracking-tighter text-foreground break-keep sm:text-5xl lg:text-[clamp(2.5rem,3.8vw,3.375rem)]">
+          <h1 className="text-[clamp(2.05rem,9vw,2.85rem)] font-extrabold leading-[1.16] tracking-tighter text-foreground break-keep sm:text-5xl lg:text-[clamp(2.5rem,3.8vw,3.375rem)]">
             음악부터 AI까지,
             <br />
             <span className="text-primary-text">

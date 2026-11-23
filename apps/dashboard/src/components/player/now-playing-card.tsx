@@ -218,12 +218,12 @@ export function NowPlaying({
               href={state.trackUri!}
               target="_blank"
               rel="noopener noreferrer"
-              className="line-clamp-1 break-words text-lg font-black tracking-tight text-foreground hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
+              className="line-clamp-1 break-words text-lg font-extrabold tracking-tight text-foreground hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
             >
               {state.trackTitle}
             </a>
           ) : (
-            <p className="line-clamp-1 break-words text-lg font-black tracking-tight text-foreground">
+            <p className="line-clamp-1 break-words text-lg font-extrabold tracking-tight text-foreground">
               {state.trackTitle ?? "재생 중인 곡이 없어요"}
             </p>
           )}

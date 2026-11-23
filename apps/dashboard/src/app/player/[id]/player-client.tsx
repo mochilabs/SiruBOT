@@ -45,7 +45,7 @@ const playerStatsFetcher = createApiFetcher<PlayerStats>("재생 기록을 불�
 
 function SectionHeading({ icon, title }: { icon: React.ReactNode; title: string }) {
 	return (
-		<h2 className="flex items-center gap-2 text-base font-black tracking-tight text-foreground">
+		<h2 className="flex items-center gap-2 text-base font-extrabold tracking-tight text-foreground">
 			<span className="text-primary-text">{icon}</span>
 			{title}
 		</h2>
