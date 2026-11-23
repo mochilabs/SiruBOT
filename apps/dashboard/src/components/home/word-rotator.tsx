@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 
+import { motionSlow } from "@/components/motion/durations";
+
 // 헤드라인 회전 단어 — "음악부터 AI까지, ___ 시루봇 하나면 돼요"의 빈칸에 아래에서 위로 밀려 올라와 교체돼요
 export const ROTATING_WORDS = ['서버에 필요한 모든 걸', '한국어 커뮤니티에 맞게', '게임부터 서버 꾸미기까지'] as const;
 const ROTATE_INTERVAL_MS = 2600;
@@ -13,17 +15,21 @@ const ROTATE_INTERVAL_MS = 2600;
  * 더 긴 단어가 진입하는 동안 overflow-hidden에 잘려요.
  * 마스크 하단 패딩은 자모 받침 클리핑 방지용이에요.
  */
-export function WordRotator() {
+export function WordRotator({ running = true }: { running?: boolean }) {
 	const [index, setIndex] = useState(0);
 
 	useEffect(() => {
+		if (!running) return undefined;
 		const timer = setInterval(() => setIndex((prev) => (prev + 1) % ROTATING_WORDS.length), ROTATE_INTERVAL_MS);
 		return () => clearInterval(timer);
-	}, []);
+	}, [running]);
 
+	// 스크린 리더엔 첫 문구만 고정으로 읽혀요. 회전하는 글자는 장식이라 숨겨요.
 	return (
-		<span className="relative inline-block overflow-hidden whitespace-pre pb-[0.12em] -mb-[0.12em] align-bottom">
-			<span className="invisible" aria-hidden>
+		<>
+			<span className="sr-only">{ROTATING_WORDS[0]}</span>
+			<span aria-hidden className="relative inline-block overflow-hidden whitespace-pre pb-[0.12em] -mb-[0.12em] align-bottom">
+			<span className="invisible">
 				{ROTATING_WORDS[index]}
 			</span>
 			<AnimatePresence initial={false}>
@@ -33,12 +39,13 @@ export function WordRotator() {
 					initial={{ y: "110%", opacity: 0 }}
 					animate={{ y: "0%", opacity: 1 }}
 					exit={{ y: "-110%", opacity: 0 }}
-					transition={{ type: "spring", stiffness: 260, damping: 32 }}
+					transition={{ duration: motionSlow, ease: [0.23, 1, 0.32, 1] }}
 				>
 					{ROTATING_WORDS[index]}
 				</m.span>
 			</AnimatePresence>
-		</span>
+			</span>
+		</>
 	);
 }
 

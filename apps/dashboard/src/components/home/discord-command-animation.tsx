@@ -5,7 +5,7 @@ import Image from "next/image";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ListMusic, Pause, Repeat, SkipBack, SkipForward, Square, Volume2 } from "lucide-react";
 
-import { motionBase, motionFast } from "@/components/motion/durations";
+import { motionBase, motionFast, motionSlow } from "@/components/motion/durations";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -321,7 +321,7 @@ function WeatherResult() {
 			<div className="relative aspect-[960/320] w-full">
 				<Image src="/images/demo-weather.png" alt="서울 현재 날씨 18도, 맑음, 체감 17도, 습도 45%" fill className="object-contain" sizes="(min-width: 1024px) 480px, 90vw" unoptimized />
 			</div>
-			<Subtext>서울, 대한민국 · 지금 날씨 · Open-Meteo 기준</Subtext>
+			<Subtext>서울, 대한민국 · 지금 날씨</Subtext>
 		</Container>
 	);
 }
@@ -386,6 +386,7 @@ const TYPE_MS = 80;
 const CURSOR_MOVE_S = 0.7;
 const HOLD_AFTER_CLICK_MS = 2600;
 const HOLD_NO_TARGET_MS = 3800;
+const PRESS_MS = 160;
 
 interface ExchangeProps {
 	slide: SlideConfig;
@@ -527,7 +528,7 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 		};
 		const click = () => {
 			setCursor((prev) => ({ ...prev, pressed: true, tick: prev.tick + 1 }));
-			at(160, () => setCursor((prev) => ({ ...prev, pressed: false })));
+			at(PRESS_MS, () => setCursor((prev) => ({ ...prev, pressed: false })));
 		};
 
 		// 커서가 오른쪽 아래 바깥에서 들어와요
@@ -582,7 +583,7 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 	const typedArgs = fullText.slice(commandLength, typed);
 
 	return (
-		<Card ref={cardRef} variant="raised" padding="none" className="relative gap-0 overflow-hidden border-0 bg-discord-bg font-sans">
+		<Card ref={cardRef} aria-hidden variant="raised" padding="none" className="relative gap-0 overflow-hidden border-0 bg-discord-bg font-sans">
 			<div className="flex items-center gap-2 border-b border-discord-btn-active px-4 py-3">
 				<Volume2 size={15} className="text-discord-text-muted" aria-hidden />
 				<span className="text-sm font-semibold text-discord-text">음악-라운지</span>
@@ -590,7 +591,7 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 
 			{/* 메시지 영역 — 높이는 고정이고 Discord처럼 아래(입력창 쪽)부터 쌓여요. 직전 예시의 대화가 위에 남아
 			    새 명령을 입력하는 동안에도 빈 화면이 되지 않고, 긴 응답은 오래된 메시지부터 위로 밀려나요.
-			    aria-live 미사용: 데모가 자동 순환해 스크린 리더를 계속 방해해요. */}
+			    카드 전체가 aria-hidden이에요: 데모가 자동 순환해 스크린 리더를 계속 방해해서, 설명은 탭 패널의 sr-only 문구가 맡아요. */}
 			<div className="flex h-[22rem] shrink-0 flex-col justify-end gap-4 overflow-hidden p-4 sm:h-[21rem] sm:p-5">
 				{previousSlide && <Exchange key={`prev-${previousIndex}`} slide={previousSlide} phase="reply" clicked muted />}
 				<Exchange key={`current-${safeIndex}`} slide={currentSlide} phase={phase} clicked={clicked} />
@@ -630,7 +631,7 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 					className="absolute -top-4 -left-4 h-8 w-8 rounded-full border-2 border-primary-control"
 					initial={{ scale: 0.4, opacity: cursor.tick === 0 ? 0 : 1 }}
 					animate={{ scale: 1.7, opacity: 0 }}
-					transition={{ duration: 0.4, ease: EASE_OUT }}
+					transition={{ duration: motionSlow, ease: EASE_OUT }}
 				/>
 				{/* 원형 핸들 — 눌리면 살짝 줄어들어요. 중심이 누르는 지점이에요 */}
 				<m.span

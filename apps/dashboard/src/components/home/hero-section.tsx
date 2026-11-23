@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useInView, useReducedMotion } from "framer-motion";
-import { ArrowRight, LayoutDashboard } from "lucide-react";
+import { ArrowRight, LayoutDashboard, Pause, Play } from "lucide-react";
 
 import {
   DiscordCommandAnimation,
@@ -18,8 +18,19 @@ export function HeroSection() {
   const heroRef = useRef<HTMLElement>(null);
   const shouldReduce = useReducedMotion();
 
-  // 히어로가 보이기 시작하면 데모를 재생해요.
-  const heroInView = useInView(heroRef, { once: true, amount: 0.2 });
+  // 히어로가 화면에 보이고 탭이 활성일 때만 움직여요. 벗어나면 멈췄다가, 돌아오면 현재 예시를 처음부터 다시 재생해요.
+  const heroInView = useInView(heroRef, { amount: 0.2 });
+  const [pageVisible, setPageVisible] = useState(true);
+  useEffect(() => {
+    const sync = () => setPageVisible(!document.hidden);
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
+  }, []);
+  // 사용자가 직접 멈추는 일시정지(데모와 헤드라인 회전을 함께 제어해요). 마우스를 헤드라인에 올리면 회전만 잠시 멈춰요.
+  const [paused, setPaused] = useState(false);
+  const [headlineHover, setHeadlineHover] = useState(false);
+  const playing = heroInView && pageVisible && !paused;
 
   // 한 예시(커서 → 타이핑 → 전송 → 응답 → 버튼 클릭)가 끝나면 다음 예시로 넘어가요.
   // 칩을 직접 눌러도 그 예시부터 이어서 순환해요.
@@ -35,6 +46,21 @@ export function HeroSection() {
     });
   }, [activeSlide, shouldReduce]);
 
+  // 탭 키보드 패턴: 화살표로 이동하고, 선택된 탭만 Tab 순서에 들어가요
+  const onTabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const last = slideConfigs.length - 1;
+    const next =
+      event.key === "ArrowRight" ? (activeSlide + 1) % slideConfigs.length
+      : event.key === "ArrowLeft" ? (activeSlide + last) % slideConfigs.length
+      : event.key === "Home" ? 0
+      : event.key === "End" ? last
+      : null;
+    if (next === null) return;
+    event.preventDefault();
+    setActiveSlide(next);
+    (tabListRef.current?.children[next] as HTMLElement | undefined)?.focus();
+  };
+
   return (
     <section
       ref={heroRef}
@@ -44,11 +70,14 @@ export function HeroSection() {
       {/* 히어로를 위로 올리고, 아래 스탯·기능 카드가 첫 화면 하단에 걸쳐 보이게 해요. 데모 컬럼이 더 넓어요 */}
       <div className="relative mx-auto grid w-full max-w-7xl items-center gap-8 px-4 pb-10 pt-8 sm:gap-10 sm:px-6 sm:pb-20 sm:pt-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12 lg:px-8 lg:pb-24 lg:pt-10 xl:gap-16">
         <div className="flex min-w-0 flex-col items-start gap-5 text-left sm:gap-6">
-          <h1 className="text-[clamp(2.05rem,9vw,2.85rem)] font-extrabold leading-[1.16] tracking-tighter text-foreground break-keep sm:text-5xl lg:text-[clamp(2.5rem,3.8vw,3.375rem)]">
+          <h1
+            onPointerEnter={(event) => event.pointerType === "mouse" && setHeadlineHover(true)}
+            onPointerLeave={() => setHeadlineHover(false)}
+            className="text-[clamp(2.05rem,9vw,2.85rem)] font-extrabold leading-[1.16] tracking-tight text-balance text-foreground break-keep sm:text-5xl lg:text-[clamp(2.5rem,3.8vw,3.375rem)]">
             음악부터 AI까지,
             <br />
             <span className="text-primary-text">
-              {shouldReduce ? ROTATING_WORDS[0] : <WordRotator />}
+              {shouldReduce ? ROTATING_WORDS[0] : <WordRotator running={playing && !headlineHover} />}
             </span>
             <br />
             시루봇 하나면 돼요
@@ -88,36 +117,61 @@ export function HeroSection() {
           </div>
         </div>
 
-        {/* 데모 컬럼 — 컨테이너 오른쪽 끝까지 채워 크게 보여요. 예시 탭은 카드 위에 붙어요 */}
+        {/* 데모 컬럼 — 컨테이너 오른쪽 끝까지 채워 크게 보여요. 예시 탭은 카드 위에 붙고, 일시정지 버튼이 줄 끝에 있어요 */}
         <div className="flex min-w-0 flex-col gap-3">
-          <div
-            ref={tabListRef}
-            role="tablist"
-            aria-label="Discord 명령어 예시"
-            className="relative -mx-4 flex scrollbar-none items-center gap-0.5 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 lg:flex-nowrap lg:justify-between"
-          >
-            {slideConfigs.map((slide, index) => (
+          <div className="flex items-center gap-1">
+            <div
+              ref={tabListRef}
+              role="tablist"
+              aria-label="Discord 명령어 예시"
+              onKeyDown={onTabKeyDown}
+              className="relative flex min-w-0 flex-1 scrollbar-none items-center gap-0.5 overflow-x-auto sm:flex-wrap sm:overflow-visible lg:flex-nowrap lg:justify-between"
+            >
+              {slideConfigs.map((slide, index) => (
+                <button
+                  key={slide.command}
+                  id={`hero-tab-${index}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeSlide === index}
+                  aria-controls="hero-demo-panel"
+                  tabIndex={activeSlide === index ? 0 : -1}
+                  onClick={() => setActiveSlide(index)}
+                  className={cn(
+                    "min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-control px-2 py-2 text-xs font-bold transition-colors duration-fast sm:min-h-9 sm:py-1.5",
+                    activeSlide === index
+                      ? "bg-primary/10 text-primary-text"
+                      : "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
+                  )}
+                >
+                  {slide.command}
+                </button>
+              ))}
+            </div>
+            {!shouldReduce && (
               <button
-                key={slide.command}
                 type="button"
-                role="tab"
-                aria-selected={activeSlide === index}
-                onClick={() => setActiveSlide(index)}
-                className={cn(
-                  "min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-control px-2 py-2 text-xs font-bold transition-colors duration-fast sm:min-h-0 sm:py-1.5",
-                  activeSlide === index
-                    ? "bg-primary/10 text-primary-text"
-                    : "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
-                )}
+                aria-label={paused ? "데모 재생" : "데모 일시정지"}
+                aria-pressed={paused}
+                onClick={() => setPaused((prev) => !prev)}
+                className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-control text-muted-foreground transition-colors duration-fast hover:bg-surface-2 hover:text-foreground sm:size-9"
               >
-                {slide.command}
+                {paused ? <Play size={16} fill="currentColor" aria-hidden /> : <Pause size={16} fill="currentColor" aria-hidden />}
               </button>
-            ))}
+            )}
           </div>
-          <div className="min-w-0">
+          <div
+            id="hero-demo-panel"
+            role="tabpanel"
+            aria-labelledby={`hero-tab-${activeSlide}`}
+            className="min-w-0"
+          >
+            <p className="sr-only">
+              Discord에서 {slideConfigs[activeSlide].command} 명령어를 쓰면 시루가 응답하는 예시 화면이에요.
+            </p>
             <DiscordCommandAnimation
               activeSlide={activeSlide}
-              active={heroInView}
+              active={playing}
               onDone={() =>
                 setActiveSlide((prev) => (prev + 1) % slideConfigs.length)
               }
