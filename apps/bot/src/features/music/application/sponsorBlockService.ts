@@ -9,6 +9,7 @@ import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { GuildService } from '../../../services/guildService.ts';
 import type { MixerService } from './mixerService.ts';
 import type { LavalinkDeps } from '../lavalink/deps.ts';
+import { isSameEncodedTrack, normalizeTrackEncoded } from '../lavalink/trackEncoded.ts';
 import type { MixerNeedNextEventPayload } from '../lavalink/handlers/mixerHandlers.ts';
 
 const LOOKUP_TTL_MS = 10 * 60_000;
@@ -99,7 +100,7 @@ export class SponsorBlockService {
 
 	public outgoingEndPositionMs(player: CustomPlayer): number | undefined {
 		const state = this.playback.get(player);
-		if (!state || player.queue.current?.encoded !== state.track.encoded || !state.categories.has('outro')) return undefined;
+		if (!state || !isSameEncodedTrack(player.queue.current?.encoded, state.track.encoded) || !state.categories.has('outro')) return undefined;
 		const duration = state.track.info.duration ?? 0;
 		const outro = state.segments
 			.filter((s) => s.category === 'outro' && s.endMs >= duration - 2_000 && s.startMs > 500 && s.startMs < duration - 500)
@@ -176,13 +177,13 @@ export class SponsorBlockService {
 		const currentEncoded = state.track.encoded;
 		const end = target && this.outgoingEndPositionMs(player);
 		if (!target?.encoded || !currentEncoded || !end || this.deps.getMixerService().isOverlapActive(player.guildId)) return;
-		const key = `${player.currentEpoch}:${target.encoded}:${end}`;
+		const key = `${player.currentEpoch}:${normalizeTrackEncoded(target.encoded)}:${end}`;
 		if (key === state.lastOutroArmKey) return;
 		state.outroArmTimer = setTimeout(() => {
 			state.outroArmTimer = null;
 			if (
 				this.playback.get(player) !== state ||
-				getTargetNextTrack(player)?.encoded !== target.encoded ||
+				!isSameEncodedTrack(getTargetNextTrack(player)?.encoded, target.encoded) ||
 				this.outgoingEndPositionMs(player) !== end
 			)
 				return;
@@ -201,7 +202,7 @@ export class SponsorBlockService {
 		if (!state) return;
 		if (state.timer) clearTimeout(state.timer);
 		state.timer = null;
-		if (!player.playing || player.paused || player.queue.current?.encoded !== state.track.encoded || state.busy) return;
+		if (!player.playing || player.paused || !isSameEncodedTrack(player.queue.current?.encoded, state.track.encoded) || state.busy) return;
 		const position = player.position ?? 0;
 		const duration = state.track.info.duration ?? 0;
 		const boundary = duration - state.crossfadeMs;

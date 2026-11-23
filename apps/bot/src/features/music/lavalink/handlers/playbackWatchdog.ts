@@ -4,6 +4,7 @@ import { ILogObj, Logger } from 'tslog';
 import * as Sentry from '@sentry/node';
 import { CustomPlayer, transitionConfirmTimeoutMs } from '../player/customPlayer.ts';
 import type { TrackTransitionHost } from './trackHandler.ts';
+import { isSameEncodedTrack, normalizeTrackEncoded } from '../trackEncoded.ts';
 import { getTargetNextTrack, getTrackUid, notifyQueueMutated } from '../queue/queueWrapper.ts';
 
 /** 라이브러리의 지연 continuation(trackEnd 후속 처리)이 settle된 뒤 현재 상태를 복원하는 지연 시간. */
@@ -16,32 +17,7 @@ export function syncPlayingFlagFromProbe(player: { playing: boolean }, probe: Se
 	if (probe.known && probe.track) player.playing = !probe.paused;
 }
 
-/**
- * Lavaplayer base64 트랙의 마지막 8바이트(track.getPosition())를 0으로 정규화한다.
- * TrackEndEvent/fetchPlayer 등에서 position > 0으로 인코딩된 문자열이
- * TrackStartEvent/loadTracks 시점(position = 0) 문자열과 달라지는 문제를 막는다.
- */
-export function normalizeTrackEncoded(encoded: string): string {
-	if (typeof encoded !== 'string' || encoded.length < 20) return encoded;
-	try {
-		const buf = Buffer.from(encoded, 'base64');
-		if (buf.length < 16) return encoded;
-		const header = buf.readUInt32BE(0);
-		if (header >>> 30 !== 1 || (header & 0x3fffffff) !== buf.length - 4) return encoded;
-		if (buf.readBigUInt64BE(buf.length - 8) === 0n) return encoded;
-		buf.writeBigUInt64BE(0n, buf.length - 8);
-		return buf.toString('base64');
-	} catch {
-		return encoded;
-	}
-}
-
-/** position 바이트 차이를 무시하고 두 encoded 문자열이 같은 트랙인지 판별한다. */
-export function isSameEncodedTrack(a: unknown, b: unknown): boolean {
-	if (typeof a !== 'string' || typeof b !== 'string') return false;
-	if (a === b) return true;
-	return normalizeTrackEncoded(a) === normalizeTrackEncoded(b);
-}
+export { isSameEncodedTrack, normalizeTrackEncoded } from '../trackEncoded.ts';
 
 /** encoded가 달라도(파일캐시 재구성·position 바이트 차이 등) 같은 영상이면 같은 트랙으로 본다. */
 export function isSameTrack(

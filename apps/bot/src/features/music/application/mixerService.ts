@@ -5,6 +5,7 @@ import { commitLocal, sendOverride } from '../lavalink/handlers/mixerHandlers.ts
 import { cancelPendingInvalidate, getTargetNextTrack, notifyQueueMutated, type QueueMutationOptions } from '../lavalink/queue/queueWrapper.ts';
 import { removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 import type { LavalinkDeps } from '../lavalink/deps.ts';
+import { normalizeTrackEncoded } from '../lavalink/trackEncoded.ts';
 import {
 	MixerRequestError,
 	type ArmRequestOptions,
@@ -301,8 +302,9 @@ export class MixerService {
 			return;
 		}
 		const previous = this.analysisTargets.get(player);
-		if (previous?.encoded === track.encoded && previous.node === player.node) return;
-		const target = { encoded: track.encoded, node: player.node };
+		const encodedTrack = normalizeTrackEncoded(track.encoded);
+		if (previous?.encoded === encodedTrack && previous.node === player.node) return;
+		const target = { encoded: encodedTrack, node: player.node };
 		this.analysisTargets.set(player, target);
 		try {
 			const settings = await guildMixer.getMixerSettings(this.deps.guildService, player.guildId);
@@ -319,7 +321,7 @@ export class MixerService {
 			}
 			const receipt: unknown = await this.rawCall(player, '/mixer/analyze', {
 				method: 'POST',
-				body: JSON.stringify({ guildId: String(player.guildId), encodedTrack: track.encoded }),
+				body: JSON.stringify({ guildId: String(player.guildId), encodedTrack }),
 				signal: AbortSignal.timeout(750)
 			});
 			if (

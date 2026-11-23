@@ -623,7 +623,7 @@ export async function hardResync(deps: LavalinkDeps, player: CustomPlayer): Prom
 		}
 		const current = player.queue.current;
 		const action: OverrideAction = current ? 'PLAY_NOW' : 'STOP';
-		const encodedTrack = current?.encoded ?? null;
+		const encodedTrack = current?.encoded ? normalizeTrackEncoded(current.encoded) : null;
 		const resyncKey = randomUUID();
 		try {
 			await deps.mixerService.override(player, { epoch: player.currentEpoch, action, encodedTrack }, resyncKey);

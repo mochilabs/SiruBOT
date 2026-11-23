@@ -10,6 +10,7 @@ import { isRelatedTrack, removeStaleRelatedTracks } from '../lavalink/autoPlayRe
 import { cancelPendingInvalidate, notifyQueueMutated } from '../lavalink/queue/queueWrapper.ts';
 import { sendOverride } from '../lavalink/handlers/mixerHandlers.ts';
 import type { LavalinkDeps } from '../lavalink/deps.ts';
+import { isSameEncodedTrack } from '../lavalink/trackEncoded.ts';
 import { destroyStoppedPlayer, type CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import type { MixerService } from './mixerService.ts';
 
@@ -170,7 +171,7 @@ export class AudioService {
 			serverPlayer.track &&
 			!serverPlayer.paused &&
 			queued &&
-			serverPlayer.track.encoded === queued
+			isSameEncodedTrack(serverPlayer.track.encoded, queued)
 		) {
 			player.playing = true;
 			return;

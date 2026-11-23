@@ -19,16 +19,16 @@ const base = { zodiacCode: '07', rank: 1, date: '2026/10/09' } as const;
 describe('renderOhaasaCard', () => {
 	it('아이템+열쇠 요약 카드를 960폭 PNG로 렌더해요', async () => {
 		const buffer = await renderOhaasaCard({ ...base, luckyItem: '핑크색', luckyKey: '친구' });
-		expectPngSize(buffer, 960, 304);
+		expectPngSize(buffer, 960, 366);
 		expect(buffer.length).toBeGreaterThan(1_000);
 	});
 
 	it('아이템만 있으면 한 칸만 렌더해요', async () => {
-		expectPngSize(await renderOhaasaCard({ ...base, luckyItem: '타올' }), 960, 304);
+		expectPngSize(await renderOhaasaCard({ ...base, luckyItem: '타올' }), 960, 366);
 	});
 
 	it('럭키 정보가 없으면 칸 없이 축약 렌더해요', async () => {
-		expectPngSize(await renderOhaasaCard({ ...base }), 960, 210);
+		expectPngSize(await renderOhaasaCard({ ...base }), 960, 244);
 		expect((await renderOhaasaCard({ ...base })).length).toBeGreaterThan(1_000);
 	});
 
@@ -39,12 +39,12 @@ describe('renderOhaasaCard', () => {
 	});
 
 	it('일본어로 넘어온 아이템도 그대로 그려요 (주말 원문 폴백)', async () => {
-		expectPngSize(await renderOhaasaCard({ ...base, luckyItem: 'タオル', luckyKey: '手紙' }), 960, 304);
+		expectPngSize(await renderOhaasaCard({ ...base, luckyItem: 'タオル', luckyKey: '手紙' }), 960, 366);
 	});
 });
 
 describe('renderOhaasaTopCard', () => {
-	it('TOP 3 카드를 960×290 PNG로 렌더해요', async () => {
+	it('TOP 3 카드를 960×372 PNG로 렌더해요', async () => {
 		const buffer = await renderOhaasaTopCard({
 			date: '2026/10/09',
 			items: [
@@ -53,11 +53,11 @@ describe('renderOhaasaTopCard', () => {
 				{ zodiacCode: '11', rank: 3 }
 			]
 		});
-		expectPngSize(buffer, 960, 290);
+		expectPngSize(buffer, 960, 372);
 	});
 
 	it('1건만 있어도 렌더해요', async () => {
-		expectPngSize(await renderOhaasaTopCard({ items: [{ zodiacCode: '01', rank: 1 }] }), 960, 290);
+		expectPngSize(await renderOhaasaTopCard({ items: [{ zodiacCode: '01', rank: 1 }] }), 960, 372);
 	});
 });
 
