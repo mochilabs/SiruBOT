@@ -165,7 +165,7 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
           {state.queue.map((track, index) => (
             <li
               key={rowKeys[index]}
-              className={`flex items-center gap-3 rounded-card bg-surface-2 p-2.5 ${animateEntry.current ? "animate-page-in opacity-0" : ""}`}
+              className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-row bg-surface-2 p-2.5 ${animateEntry.current ? "animate-page-in opacity-0" : ""}`}
               style={
                 animateEntry.current
                   ? { animationDelay: `${Math.min(index, 9) * 40}ms`, animationFillMode: "forwards" }
@@ -177,13 +177,13 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
               </span>
               {track.artworkUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={track.artworkUrl} alt="" className="h-11 w-11 shrink-0 rounded-control object-cover" />
+                <img src={track.artworkUrl} alt="" className="h-11 w-11 shrink-0 rounded-control-inner object-cover" />
               ) : (
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-surface-1 text-muted-foreground">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control-inner bg-surface-1 text-muted-foreground">
                   <ListMusic size={16} aria-hidden />
                 </div>
               )}
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 basis-32">
                 <div className="flex min-w-0 items-center gap-2">
                   {/^https?:\/\//i.test(track.uri ?? "") ? (
                     <a
@@ -213,7 +213,7 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
               <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:inline">
                 {track.isStream ? "스트림" : formatDuration(track.durationMs)}
               </span>
-              <div className="flex shrink-0 items-center gap-0.5">
+              <div className="ml-auto flex shrink-0 items-center gap-0.5">
                 <Button
                   variant="ghost"
                   size="icon-sm"

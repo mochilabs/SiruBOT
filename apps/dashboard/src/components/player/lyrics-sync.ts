@@ -36,6 +36,42 @@ export function toKaraokeLyrics(payload: LyricsPayload): KaraokeLyrics | null {
   return null;
 }
 
+/** 번역 보기 방식 — 원문만, 번역만, 둘 다 */
+export type LyricsViewMode = "original" | "translation" | "both";
+export const LYRICS_VIEW_MODES: ReadonlyArray<{ value: LyricsViewMode; label: string }> = [
+  { value: "original", label: "원문" },
+  { value: "translation", label: "번역" },
+  { value: "both", label: "둘 다" },
+];
+
+/** 번역 폴링 간격 — 서버가 뒤에서 번역하는 동안만 다시 물어봐요 */
+export const LYRICS_TRANSLATION_POLL_MS = 5000;
+
+/** 줄의 번역 — 번역이 없거나 원문과 같으면 null */
+export function translatedLine(lines: Record<string, string> | null | undefined, text: string): string | null {
+  const translated = lines?.[text.trim()];
+  return translated && translated !== text.trim() ? translated : null;
+}
+
+const VIEW_STORAGE_KEY = "sirubot:lyrics-view";
+
+export function readLyricsViewMode(): LyricsViewMode {
+  try {
+    const raw = window.localStorage.getItem(VIEW_STORAGE_KEY);
+    return raw === "original" || raw === "translation" || raw === "both" ? raw : "both";
+  } catch {
+    return "both";
+  }
+}
+
+export function writeLyricsViewMode(mode: LyricsViewMode): void {
+  try {
+    window.localStorage.setItem(VIEW_STORAGE_KEY, mode);
+  } catch {
+    // 저장은 편의 기능이라 조용히 넘어가요
+  }
+}
+
 /** 가사를 찾을 수 있는 곡인지 — 스트림이나 제목 없는 상태는 건너뛰어요 */
 export function lyricsEligible(state: LivePlayerState): boolean {
   return !state.isStream && Boolean(state.trackTitle);

@@ -28,6 +28,13 @@ const lyricsResponseSchema = z.object({
   syncedLyrics: z.string().nullable(),
   hasWordSync: z.boolean().optional(),
   wordSync: z.array(lineSchema).nullable().optional(),
+  /** 한국어 번역 — pending이면 data-api가 뒤에서 번역 중이라 다시 조회하면 채워져요 */
+  translation: z
+    .object({
+      status: z.enum(["ready", "pending", "none"]),
+      lines: z.record(z.string(), z.string()).nullable(),
+    })
+    .optional(),
 });
 
 export type LyricsPayload = z.infer<typeof lyricsResponseSchema>;

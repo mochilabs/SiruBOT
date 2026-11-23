@@ -19,12 +19,18 @@ import {
   formatLyricsOffset,
   type KaraokeLyrics,
   LYRICS_OFFSET_STEP_MS,
+  LYRICS_TRANSLATION_POLL_MS,
+  LYRICS_VIEW_MODES,
   lyricsEligible,
   lyricsQueryPath,
   lyricsTrackKey,
+  type LyricsViewMode,
   readLyricsOffset,
+  readLyricsViewMode,
   toKaraokeLyrics,
+  translatedLine,
   writeLyricsOffset,
+  writeLyricsViewMode,
 } from "./lyrics-sync";
 
 /** 사용자가 직접 스크롤한 뒤 자동 스크롤을 멈춰 두는 시간 */
@@ -51,6 +57,8 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
   const { data, error, isLoading } = useGuildResource<LyricsPayload>(guildId, path ?? "/lyrics", {
     fetcher: lyricsFetcher,
     enabled: path !== null,
+    // 서버가 뒤에서 번역하는 동안만 다시 물어봐요
+    refreshInterval: (latest) => (latest?.translation?.status === "pending" ? LYRICS_TRANSLATION_POLL_MS : 0),
   });
   const lyrics = useMemo(() => (data ? toKaraokeLyrics(data) : null), [data]);
   const trackKey = lyricsTrackKey(state);
@@ -61,7 +69,7 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
   const failedForOtherReason = error !== undefined && !(error instanceof ApiError && error.status === 404);
 
   return (
-    <section aria-label="노래방 가사" className="flex flex-col gap-3 rounded-card bg-surface-2 p-3 sm:p-4">
+    <section aria-label="노래방 가사" className="flex flex-col gap-3 rounded-row bg-surface-2 p-3 sm:p-4">
       {isLoading || (!lyrics && !notFound) ? (
         <LyricsFrame>
           <div className="space-y-2" role="status" aria-label="가사 불러오는 중">
@@ -74,6 +82,7 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
         <LyricsBody
           key={trackKey}
           lyrics={lyrics}
+          translation={data?.translation}
           state={state}
           receivedAt={receivedAt}
           unavailable={unavailable}
@@ -108,17 +117,31 @@ function LyricsFrame({ children, badge, controls }: { children: React.ReactNode;
 
 function LyricsBody({
   lyrics,
+  translation,
   state,
   receivedAt,
   unavailable,
   trackKey,
 }: {
   lyrics: KaraokeLyrics;
+  translation: LyricsPayload["translation"];
   state: LivePlayerState;
   receivedAt: number;
   unavailable: boolean;
   trackKey: string;
 }) {
+  const translationLines = translation?.status === "ready" ? translation.lines : null;
+  const translationPending = translation?.status === "pending";
+  const [viewMode, setViewMode] = useState<LyricsViewMode>("both");
+  useEffect(() => {
+    setViewMode(readLyricsViewMode());
+  }, []);
+  const changeViewMode = (mode: LyricsViewMode) => {
+    setViewMode(mode);
+    writeLyricsViewMode(mode);
+  };
+  const showOriginal = !translationLines || viewMode !== "translation";
+  const showTranslation = Boolean(translationLines) && viewMode !== "original";
   const [offsetMs, setOffsetMs] = useState(0);
   const [activeLine, setActiveLine] = useState(-1);
   const [activeWord, setActiveWord] = useState(-1);
@@ -199,7 +222,31 @@ function LyricsBody({
     </Badge>
   );
 
-  const controls = lyrics.synced ? (
+  const viewToggle = translationLines ? (
+    <div role="radiogroup" aria-label="가사 보기 방식" className="flex items-center rounded-control bg-surface-1 p-0.5">
+      {LYRICS_VIEW_MODES.map((mode) => (
+        <button
+          key={mode.value}
+          type="button"
+          role="radio"
+          aria-checked={viewMode === mode.value}
+          onClick={() => changeViewMode(mode.value)}
+          className={cn(
+            "min-h-7 cursor-pointer rounded-control-inner px-2.5 text-xs font-bold transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11",
+            viewMode === mode.value ? "bg-primary/10 text-primary-text" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {mode.label}
+        </button>
+      ))}
+    </div>
+  ) : translationPending ? (
+    <span role="status" className="text-xs text-muted-foreground">
+      한국어 번역을 준비하고 있어요
+    </span>
+  ) : null;
+
+  const syncControls = lyrics.synced ? (
     <div className="flex items-center gap-1" role="group" aria-label="가사 싱크 조절">
       <Button
         variant="secondary"
@@ -232,13 +279,21 @@ function LyricsBody({
     </div>
   ) : null;
 
+  const controls =
+    viewToggle || syncControls ? (
+      <div className="flex flex-wrap items-center gap-2">
+        {viewToggle}
+        {syncControls}
+      </div>
+    ) : null;
+
   return (
     <LyricsFrame badge={badge} controls={controls}>
       <div
         ref={containerRef}
         tabIndex={0}
         aria-label="가사 목록"
-        className="relative h-60 overflow-y-auto rounded-control bg-surface-1 px-4 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-72"
+        className="relative h-60 overflow-y-auto rounded-control-inner bg-surface-1 px-4 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-72"
       >
         {lyrics.synced ? (
           <ol className="space-y-3 py-[6.5rem] text-center sm:py-32">
@@ -258,6 +313,8 @@ function LyricsBody({
                   </li>
                 );
               }
+              const translated = translatedLine(translationLines, line.text);
+              const originalVisible = showOriginal || !translated;
               return (
                 <li
                   key={index}
@@ -270,22 +327,42 @@ function LyricsBody({
                     active ? "font-bold text-foreground" : "font-medium text-muted-foreground/60",
                   )}
                 >
-                  {active && line.words && line.words.length > 0
-                    ? line.words.map((word, wordIndex) => (
-                        <span
-                          key={wordIndex}
-                          className={cn("transition-colors duration-fast", wordIndex <= activeWord ? "text-primary-text" : "text-muted-foreground")}
-                        >
-                          {word.text}
-                        </span>
-                      ))
-                    : line.text}
+                  {originalVisible &&
+                    (active && line.words && line.words.length > 0
+                      ? line.words.map((word, wordIndex) => (
+                          <span
+                            key={wordIndex}
+                            className={cn("transition-colors duration-fast", wordIndex <= activeWord ? "text-primary-text" : "text-muted-foreground")}
+                          >
+                            {word.text}
+                          </span>
+                        ))
+                      : line.text)}
+                  {translated && showTranslation && (
+                    <span className={cn("block", originalVisible && "mt-0.5 text-sm font-medium", active && originalVisible && "text-foreground/80")}>
+                      {translated}
+                    </span>
+                  )}
                 </li>
               );
             })}
           </ol>
         ) : (
-          <p className="whitespace-pre-wrap break-words text-center text-sm leading-relaxed text-foreground">{lyrics.plainText}</p>
+          <div className="space-y-2 break-words text-center text-sm leading-relaxed text-foreground">
+            {lyrics.plainText.split(/\r?\n/).map((text, index) => {
+              if (!text.trim()) return <div key={index} aria-hidden className="h-3" />;
+              const translated = translatedLine(translationLines, text);
+              const originalVisible = showOriginal || !translated;
+              return (
+                <p key={index}>
+                  {originalVisible && text}
+                  {translated && showTranslation && (
+                    <span className={cn("block", originalVisible && "text-xs text-muted-foreground")}>{translated}</span>
+                  )}
+                </p>
+              );
+            })}
+          </div>
         )}
       </div>
     </LyricsFrame>

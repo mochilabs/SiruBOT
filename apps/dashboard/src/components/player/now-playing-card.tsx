@@ -184,7 +184,7 @@ export function NowPlaying({
   const commandsOff = controlsDisabled || !hasCurrentTrack;
 
   return (
-    <section className="flex flex-col gap-3 rounded-card bg-surface-2 p-3 sm:p-4">
+    <section className="flex flex-col gap-3 rounded-row bg-surface-2 p-3 sm:p-4">
       <div className="flex min-w-0 items-center gap-3 sm:gap-4">
         {/* 아트워크 — 다음/이미지 도메인 없이 일반 img로 렌더 (외부 CDN 다양성) */}
         {state.artworkUrl ? (
@@ -192,10 +192,10 @@ export function NowPlaying({
           <img
             src={state.artworkUrl}
             alt=""
-            className="h-16 w-16 shrink-0 rounded-card object-cover sm:h-20 sm:w-20"
+            className="h-16 w-16 shrink-0 rounded-control object-cover sm:h-20 sm:w-20"
           />
         ) : (
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-card bg-surface-1 text-muted-foreground sm:h-20 sm:w-20">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-control bg-surface-1 text-muted-foreground sm:h-20 sm:w-20">
             <ListMusic size={24} />
           </div>
         )}
