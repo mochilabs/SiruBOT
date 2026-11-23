@@ -89,7 +89,7 @@ function buildContainer(result: WeatherResult) {
 	const lines = [`### ${emoji('sun_cloud')} ${locationLine} · ${SCOPE_LABELS[result.scope]}`, ''];
 	lines.push(...(result.scope === 'now' ? buildNowLines(result) : result.scope === 'week' ? buildWeekLines(result) : buildForecastLines(result)));
 	lines.push('');
-	lines.push(`-# Open-Meteo 기준 · 관측 시각 ${result.observedAt || '알 수 없음'}${result.timezone ? ` (${result.timezone})` : ''}`);
+	lines.push(`-# 관측 시각 ${result.observedAt || '알 수 없음'}${result.timezone ? ` (${result.timezone})` : ''}`);
 
 	return notice(lines.join('\n'));
 }
@@ -129,13 +129,12 @@ function buildAltText(result: WeatherResult): string {
 	return lines.join('\n').slice(0, 1000);
 }
 
-/** 이미지 카드 — 제목 한 줄은 텍스트로 두고(검색·복사용), 본문은 이미지로 보여요. 렌더 실패 시 null. */
+/** 이미지 카드 — 위치·범위·관측 시각까지 이미지에 있어서 텍스트는 붙이지 않아요. 렌더 실패 시 null. */
 async function buildImageReply(dataApi: DataApiClient, result: WeatherResult) {
 	const png = await dataApi.renderWeatherCard(toCardRequest(result)).catch(() => null);
 	if (!png) return null;
 	const filename = `weather-${result.scope}.png`;
-	const locationLine = [result.localityName, result.country].filter(Boolean).join(', ');
-	const container = weatherImageView(filename, buildAltText(result), `-# ${locationLine} · ${SCOPE_LABELS[result.scope]} · Open-Meteo 기준`);
+	const container = weatherImageView(filename, buildAltText(result));
 	return { files: [new AttachmentBuilder(png, { name: filename })], container };
 }
 
