@@ -79,7 +79,7 @@ export function Footer() {
 						<div className="space-y-3">
 							<Link href="/" className="inline-flex items-center gap-2 sm:gap-2.5">
 								<span className="relative block h-8 w-8 overflow-hidden rounded-full sm:h-10 sm:w-10">
-									<Image src="/images/siru-profile.png" alt="시루봇" fill className="object-cover" sizes="40px" />
+									<Image src="/images/siru-profile.png" alt="" fill className="object-cover" sizes="40px" />
 								</span>
 								<span className="text-xl font-extrabold tracking-tighter text-foreground sm:text-2xl">시루봇</span>
 							</Link>

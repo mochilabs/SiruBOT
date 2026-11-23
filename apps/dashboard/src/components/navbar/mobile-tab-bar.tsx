@@ -41,7 +41,7 @@ export function MobileTabBar({ status }: { status: "authenticated" | "unauthenti
 								href={getNavHref(link, status)}
 								aria-current={active ? "page" : undefined}
 								className={cn(
-									"group flex h-full min-h-11 flex-col items-center justify-center gap-1 px-1 text-2xs font-semibold transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+									"group flex h-full min-h-11 touch-manipulation flex-col items-center justify-center gap-1 px-1 text-2xs font-semibold transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
 									active ? "text-primary-text" : "text-muted-foreground hover:text-foreground"
 								)}
 							>

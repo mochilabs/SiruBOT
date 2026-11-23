@@ -608,7 +608,15 @@
 /* 스티키 헤더(navbar.tsx: sticky top-0, nav 높이 = var(--navbar-h)) 아래로 in-page 앵커가 가려지지 않도록 */
 html {
 	scroll-padding-block-start: var(--navbar-h);
+	/* 모바일 하단 탭바가 포커스된 요소를 가리지 않게 해요 (md 이상에서는 탭바가 없어요) */
+	scroll-padding-block-end: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
 	scrollbar-gutter: stable;
+}
+
+@media (min-width: 768px) {
+	html {
+		scroll-padding-block-end: 0;
+	}
 }
 
 @media (prefers-reduced-motion: no-preference) {
