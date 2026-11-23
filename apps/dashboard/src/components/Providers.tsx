@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { domAnimation, LazyMotion, MotionConfig } from "framer-motion";
 import { SWRConfig } from "swr";
 
+import { ThemeColorSync } from "@/components/theme-color-sync";
 import { Toaster } from "@/components/ui/toast";
 import { fetcher } from "@/lib/fetcher";
 
@@ -12,6 +13,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 	return (
 		<SWRConfig value={{ fetcher, revalidateOnFocus: false, dedupingInterval: 5000, errorRetryCount: 3 }}>
 			<ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+				<ThemeColorSync />
 				<LazyMotion features={domAnimation}>
 					<MotionConfig reducedMotion="user">
 						<SessionProvider>{children}</SessionProvider>
