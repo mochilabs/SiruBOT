@@ -6,6 +6,14 @@ import { fetchCaptionLyrics } from './youtubeCaptions.ts';
 
 const LRCLIB_API = 'https://lrclib.net/api';
 const TIMEOUT_MS = 10_000;
+
+/** 어느 단계에서도 가사를 못 찾았어요 — 업스트림 장애가 아니에요. */
+export class LyricsNotFoundError extends Error {
+	public constructor() {
+		super('lyrics not found');
+		this.name = 'LyricsNotFoundError';
+	}
+}
 const HEADERS = { 'User-Agent': 'SiruBOT/1.0' };
 /** 단어 싱크 YAML 상한 — 비정상적으로 큰 응답은 파싱하지 않아요. */
 const MAX_LYRICSFILE_CHARS = 400_000;
@@ -215,20 +223,28 @@ function toLrcTimestamp(ms: number): string {
 }
 
 /** 업로더 자막을 가사 결과로 — 줄 싱크 가사로 내리고, 한국어 자막은 번역 힌트로 실어요(응답엔 안 나가요). */
-async function captionResult(query: LyricsTrackQuery, cleaned: { track: string; artist: string }): Promise<LyricsResult | null> {
-	if (!query.videoId) return null;
-	const captions = await fetchCaptionLyrics(query.videoId);
-	if (!captions) return null;
+async function captionResult(
+	query: LyricsTrackQuery,
+	cleaned: { track: string; artist: string }
+): Promise<{ result: LyricsResult | null; status: 'ok' | 'none' | 'error' | null }> {
+	if (!query.videoId) return { result: null, status: null };
+	const outcome = await fetchCaptionLyrics(query.videoId);
+	if (outcome.status !== 'ok') return { result: null, status: outcome.status };
+	const { captions } = outcome;
 	return {
-		trackName: cleaned.track,
-		artistName: cleaned.artist,
-		plainLyrics: captions.lines.map((l) => l.text).join('\n'),
-		syncedLyrics: captions.lines.map((l) => `${toLrcTimestamp(l.startMs)}${l.text}`).join('\n'),
-		durationSec: query.durationMs > 0 ? Math.round(query.durationMs / 1000) : null,
-		hasWordSync: false,
-		wordSync: null,
-		matchKind: 'captions',
-		captionTranslation: captions.koreanByLine
+		status: 'ok',
+		result: {
+			trackName: cleaned.track,
+			artistName: cleaned.artist,
+			plainLyrics: captions.lines.map((l) => l.text).join('\n'),
+			syncedLyrics: captions.lines.map((l) => `${toLrcTimestamp(l.startMs)}${l.text}`).join('\n'),
+			durationSec: query.durationMs > 0 ? Math.round(query.durationMs / 1000) : null,
+			hasWordSync: false,
+			wordSync: null,
+			matchKind: 'captions',
+			captionTranslation: captions.koreanByLine,
+			captionStatus: 'ok'
+		}
 	};
 }
 
@@ -244,7 +260,7 @@ async function searchByQuery(query: string, matchKind: 'query', accept?: (track:
 /** 가사 검색 — 결과 불변이라 장기 캐시해요. */
 export async function fetchLyrics(query: string): Promise<LyricsResult> {
 	const found = await searchByQuery(query, 'query');
-	if (!found) throw new Error('lyrics not found');
+	if (!found) throw new LyricsNotFoundError();
 	return found;
 }
 
@@ -280,13 +296,14 @@ export async function fetchLyricsForTrack(query: LyricsTrackQuery): Promise<Lyri
 	}
 	// LRCLIB에 싱크 가사가 없으면 업로더 자막(싱크 있음)을 먼저 써요. 그다음 같은 곡의 일반 가사, 마지막으로 자유 검색이에요.
 	const captions = await captionResult(query, cleaned);
-	if (captions) return captions;
-	if (plainOnly) return toResult(plainOnly.track, plainOnly.kind);
+	if (captions.result) return captions.result;
+	// 자막이 막혀서 대신 내리는 결과는 captionStatus로 표시해 짧게만 캐시해요(자막이 풀리면 다시 시도해요)
+	if (plainOnly) return { ...toResult(plainOnly.track, plainOnly.kind), captionStatus: captions.status };
 
 	// 자유 검색 결과는 엉뚱한 곡이 섞이니, 제목이 같고 아티스트나 길이 중 하나가 맞는 것만 받아요.
 	const fallback = await searchByQuery(`${cleaned.artist} ${cleaned.track}`, 'query', (t) => isLooseSameTrack(t, query, cleaned));
-	if (!fallback) throw new Error('lyrics not found');
-	return fallback;
+	if (!fallback) throw new LyricsNotFoundError();
+	return { ...fallback, captionStatus: captions.status };
 }
 
 export function lyricsCacheKey(query: string): string {

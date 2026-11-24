@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { pairKoreanLines, parseJson3Captions, pickCaptionTracks } from './youtubeCaptions.ts';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { sharedCache } from '../utils/cache.ts';
+import { outboundPool, ProxyUnavailableError } from '../utils/proxyPool.ts';
+import { captionFailKey, fetchCaptionLyrics, pairKoreanLines, parseJson3Captions, pickCaptionTracks } from './youtubeCaptions.ts';
 
 const track = (language_code: string, kind?: string) => ({ base_url: `https://x/${language_code}`, language_code, kind });
 
@@ -55,5 +57,44 @@ describe('pairKoreanLines', () => {
 			{ startMs: 9000, text: '멀리 떨어진 줄', endMs: null }
 		];
 		expect(pairKoreanLines(original, korean)).toEqual({ Hello: '안녕' });
+	});
+});
+
+describe('fetchCaptionLyrics', () => {
+	afterEach(async () => {
+		vi.restoreAllMocks();
+		await sharedCache.disconnect();
+	});
+
+	it('skips videos that were blocked on every route recently', async () => {
+		const run = vi.spyOn(outboundPool(), 'run');
+		await sharedCache.set(captionFailKey('dQw4w9WgXcQ'), '1', 60);
+		await expect(fetchCaptionLyrics('dQw4w9WgXcQ')).resolves.toEqual({ status: 'error' });
+		expect(run).not.toHaveBeenCalled();
+	});
+
+	it('remembers a video for six hours when every route is blocked', async () => {
+		vi.spyOn(outboundPool(), 'run').mockRejectedValue(new ProxyUnavailableError('captions', 'all routes cooling down'));
+		const set = vi.spyOn(sharedCache, 'set');
+		await expect(fetchCaptionLyrics('aaaaaaaaaaa')).resolves.toEqual({ status: 'error' });
+		expect(set).toHaveBeenCalledWith(captionFailKey('aaaaaaaaaaa'), '1', 6 * 3600);
+	});
+
+	it('does not remember ordinary failures', async () => {
+		vi.spyOn(outboundPool(), 'run').mockRejectedValue(new Error('parse failed'));
+		const set = vi.spyOn(sharedCache, 'set');
+		await expect(fetchCaptionLyrics('bbbbbbbbbbb')).resolves.toEqual({ status: 'error' });
+		expect(set).not.toHaveBeenCalled();
+	});
+
+	it('reports none when the video has no uploader captions', async () => {
+		vi.spyOn(outboundPool(), 'run').mockResolvedValue(null);
+		await expect(fetchCaptionLyrics('ccccccccccc')).resolves.toEqual({ status: 'none' });
+	});
+
+	it('rejects malformed ids without any lookup', async () => {
+		const run = vi.spyOn(outboundPool(), 'run');
+		await expect(fetchCaptionLyrics('bad id')).resolves.toEqual({ status: 'none' });
+		expect(run).not.toHaveBeenCalled();
 	});
 });
