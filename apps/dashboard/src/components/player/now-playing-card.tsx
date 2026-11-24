@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatDuration } from "@sirubot/utils/time";
-import { Check, Heart, ListMusic, Pause, Play, Repeat, Repeat1, SkipBack, SkipForward, Square, Volume2, X } from "lucide-react";
+import { Check, Heart, ListMusic, Pause, Play, Repeat, Repeat1, RepeatOff, SkipBack, SkipForward, Square, Volume2, X } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import { StatusDot } from "@/components/primitives/status-dot";
@@ -429,16 +429,12 @@ export function NowPlaying({
             size="icon-lg"
             className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             icon={
-              displayedRepeat === "track" ? (
+              displayedRepeat === "off" ? (
+                <RepeatOff size={16} className="opacity-70" />
+              ) : displayedRepeat === "track" ? (
                 <Repeat1 size={16} />
               ) : (
-                // 반복 안 함은 아이콘에 사선을 그어 꺼짐을 보여줘요
-                <span className="relative inline-flex">
-                  <Repeat size={16} className={displayedRepeat === "off" ? "opacity-60" : undefined} />
-                  {displayedRepeat === "off" && (
-                    <span aria-hidden className="absolute left-1/2 top-1/2 h-0.5 w-5 -translate-x-1/2 -translate-y-1/2 -rotate-45 rounded-full bg-current" />
-                  )}
-                </span>
+                <Repeat size={16} />
               )
             }
             onClick={handleRepeat}
