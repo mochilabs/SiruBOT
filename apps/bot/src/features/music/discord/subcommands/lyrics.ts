@@ -82,7 +82,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 			const translation = hasTranslation(result) ? 'ready' : result.translation?.status === 'pending' ? 'pending' : 'none';
 			return {
 				components: [
-					lyricsView(result.trackName, result.artistName, buildLyricsText(result, mode), {
+					lyricsView(result.trackName, buildLyricsText(result, mode), {
 						translation,
 						mode,
 						disabled,
@@ -128,7 +128,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 			const lines = liveLines!;
 			const translation = hasTranslation(result) ? result.translation!.lines! : null;
 			const livePayload = (text: string) => ({
-				components: [liveLyricsView(result.trackName, result.artistName, text)],
+				components: [liveLyricsView(result.trackName, text)],
 				flags: [MessageFlags.IsComponentsV2 as const]
 			});
 			await button.update(livePayload(buildLiveLyricsText(lines, -1, translation)));

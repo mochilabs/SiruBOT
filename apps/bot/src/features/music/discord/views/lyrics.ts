@@ -28,10 +28,8 @@ export interface LyricsViewOptions {
 	live?: boolean;
 }
 
-export function lyricsView(trackName: string, artistName: string, lyrics: string, options?: LyricsViewOptions) {
-	const container = createContainer().addTextDisplayComponents((text) =>
-		text.setContent(`### ${emoji('music_notes')} ${trackName} · ${artistName}\n\n${lyrics}`)
-	);
+export function lyricsView(trackName: string, lyrics: string, options?: LyricsViewOptions) {
+	const container = createContainer().addTextDisplayComponents((text) => text.setContent(`### ${emoji('music_notes')} ${trackName}\n\n${lyrics}`));
 	if (!options) return container;
 	const disabled = options.disabled ?? false;
 
@@ -61,9 +59,9 @@ export function lyricsView(trackName: string, artistName: string, lyrics: string
 }
 
 /** 실시간 가사 메시지 — 줄이 넘어갈 때마다 본문만 바뀌고, 누구나 정지할 수 있어요. */
-export function liveLyricsView(trackName: string, artistName: string, liveText: string) {
+export function liveLyricsView(trackName: string, liveText: string) {
 	return createContainer()
-		.addTextDisplayComponents((text) => text.setContent(`### ${emoji('music_notes')} ${trackName} · ${artistName}\n\n${liveText}`))
+		.addTextDisplayComponents((text) => text.setContent(`### ${emoji('music_notes')} ${trackName}\n\n${liveText}`))
 		.addActionRowComponents((row) =>
 			row.addComponents(new ButtonBuilder().setCustomId(LYRICS_BUTTON_IDS.liveStop).setLabel('정지').setStyle(ButtonStyle.Secondary))
 		);
