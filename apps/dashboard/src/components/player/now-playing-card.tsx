@@ -365,15 +365,15 @@ export function NowPlaying({
 
       {/* 실시간 컨트롤러 — 명령은 data-api Redis 브로드캐스트로 봇에 즉시 적용돼요 */}
       <div
-        className="flex flex-col gap-3 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4"
+        className="flex flex-wrap items-center justify-center gap-x-2 gap-y-3 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-4"
         title={controlBlocked ? CONTROL_BLOCKED_HINT : undefined}
       >
         {/* 가운데: 이전 · 재생/일시정지 · 다음 */}
-        <div className="flex items-center justify-center gap-3 sm:order-2">
+        <div className="flex items-center justify-center gap-3 max-sm:contents sm:order-2">
           <Button
             variant="secondary"
             size="icon-lg"
-            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            className="max-sm:order-2 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             icon={<SkipBack size={16} />}
             onClick={handlePrevious}
             loading={pendingAction === "previous"}
@@ -383,7 +383,7 @@ export function NowPlaying({
           <Button
             variant="primary"
             size="icon-lg"
-            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            className="max-sm:order-3 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             icon={displayedPaused ? <Play size={18} /> : <Pause size={18} />}
             onClick={handleTogglePause}
             loading={pendingAction === "pause" || pendingAction === "resume"}
@@ -393,7 +393,7 @@ export function NowPlaying({
           <Button
             variant="secondary"
             size="icon-lg"
-            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            className="max-sm:order-4 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             icon={<SkipForward size={16} />}
             onClick={handleSkip}
             loading={pendingAction === "skip"}
@@ -402,11 +402,11 @@ export function NowPlaying({
           />
         </div>
         {/* 왼쪽: 반복 · 정지 */}
-        <div className="flex items-center justify-center gap-2 sm:order-1 sm:justify-start">
+        <div className="flex items-center justify-center gap-2 max-sm:contents sm:order-1 sm:justify-start">
           <Button
             variant={displayedRepeat === "off" ? "secondary" : "primary"}
             size="icon-lg"
-            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            className="max-sm:order-1 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             icon={
               displayedRepeat === "off" ? (
                 <RepeatOff size={16} className="opacity-70" />
@@ -425,7 +425,7 @@ export function NowPlaying({
           <Button
             variant="secondary"
             size="icon-lg"
-            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            className="max-sm:order-5 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             icon={<Square size={16} />}
             onClick={handleStop}
             loading={pendingAction === "stop"}
@@ -434,7 +434,7 @@ export function NowPlaying({
           />
         </div>
         {/* 오른쪽: 즐겨찾기 · 볼륨 */}
-        <div className="flex min-w-0 items-center gap-2 sm:order-3 sm:max-w-60 sm:justify-self-end sm:w-full">
+        <div className="flex w-full min-w-0 items-center gap-2 max-sm:order-last sm:order-3 sm:max-w-60 sm:justify-self-end">
           <Button
             variant="secondary"
             size="icon-lg"
