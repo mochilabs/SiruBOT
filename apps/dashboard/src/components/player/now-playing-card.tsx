@@ -342,7 +342,7 @@ export function NowPlaying({
         className="flex flex-wrap items-center gap-x-4 gap-y-2"
         title={controlBlocked ? CONTROL_BLOCKED_HINT : undefined}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="primary"
             size="icon-lg"
