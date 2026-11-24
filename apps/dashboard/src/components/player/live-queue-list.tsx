@@ -6,6 +6,7 @@ import { formatDuration } from "@sirubot/utils/time";
 import { ChevronDown, ChevronUp, ListMusic, MoreVertical, Play, Shuffle, Trash2, X } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -82,7 +83,6 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
   ) {
     if (controlsDisabled) return;
     setPendingKey(key);
-    setConfirmClear(false);
     try {
       const result = await sendPlayerCommand(guildId, action, params);
       if (!result.ok) {
@@ -120,38 +120,16 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
             >
               셔플
             </Button>
-            {confirmClear ? (
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  loading={pendingKey === "clear"}
-                  disabled={controlsDisabled}
-                  onClick={() => void runQueueAction("clear", "queue-clear", undefined, "대기열을 비웠어요.")}
-                >
-                  비우기 확인
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={pendingKey !== null}
-                  onClick={() => setConfirmClear(false)}
-                >
-                  취소
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={<Trash2 size={14} />}
-                disabled={controlsDisabled}
-                title={controlBlocked ? CONTROL_BLOCKED_HINT : "대기열 비우기"}
-                onClick={() => setConfirmClear(true)}
-              >
-                비우기
-              </Button>
-            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Trash2 size={14} />}
+              disabled={controlsDisabled}
+              title={controlBlocked ? CONTROL_BLOCKED_HINT : "대기열 비우기"}
+              onClick={() => setConfirmClear(true)}
+            >
+              비우기
+            </Button>
           </div>
         )}
       </div>
@@ -320,6 +298,18 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
           )}
         </ol>
       )}
+      <ConfirmDialog
+        open={confirmClear}
+        title="대기열을 비울까요?"
+        confirmLabel="비우기"
+        loading={pendingKey === "clear"}
+        onClose={() => setConfirmClear(false)}
+        onConfirm={() =>
+          void runQueueAction("clear", "queue-clear", undefined, "대기열을 비웠어요.").then(() => setConfirmClear(false))
+        }
+      >
+        대기 중인 곡 {state.queueLength}곡이 모두 사라져요. 지금 재생 중인 곡은 계속 재생돼요.
+      </ConfirmDialog>
     </section>
   );
 }
