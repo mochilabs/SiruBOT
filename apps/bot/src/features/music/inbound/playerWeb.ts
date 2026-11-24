@@ -83,10 +83,12 @@ export function createPlayerWebResponder(): RedisBinding {
 		if (!member) return { error: MEMBER_NOT_FOUND_MESSAGE };
 		const voiceChannelId = member.voice?.channelId ?? null;
 		const voiceChannel = voiceChannelId ? guild.channels.cache.get(voiceChannelId) : null;
+		const botChannelId = botVoiceChannelId(guild);
 		return {
 			voice: {
 				inVoice: Boolean(voiceChannelId),
 				voiceChannelName: voiceChannel?.name ?? null,
+				botVoiceChannelName: (botChannelId ? guild.channels.cache.get(botChannelId)?.name : null) ?? null,
 				...(await musicCapabilities(guild, member))
 			}
 		};
@@ -223,6 +225,13 @@ async function applyMusicControl(request: PlayerWebControlRequest, member: Guild
 		}
 		case 'skip':
 			await container.music.skipNow(actor);
+			return;
+		case 'previous':
+			await container.music.previous(actor);
+			return;
+		case 'seek':
+			if (typeof request.positionMs !== 'number') throw new Error(`control seek: positionMs 누락 (guild ${request.guildId})`);
+			await container.music.seek(actor, request.positionMs);
 			return;
 		case 'queue-jump':
 			if (typeof request.index !== 'number') throw new Error(`control queue-jump: index 누락 (guild ${request.guildId})`);

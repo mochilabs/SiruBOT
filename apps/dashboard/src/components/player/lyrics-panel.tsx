@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { findActiveLineIndex } from "@sirubot/utils/lrc";
-import { Loader2, Mic2 } from "lucide-react";
+import { ChevronDown, Loader2, Mic2 } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import type { LyricsPayload } from "@/app/api/servers/[id]/lyrics/route";
@@ -53,49 +53,128 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
   });
   const lyrics = useMemo(() => (data ? toKaraokeLyrics(data) : null), [data]);
   const trackKey = lyricsTrackKey(state);
+  const [openOverride, setOpenOverride] = useState<{ trackKey: string; open: boolean } | null>(null);
 
   if (!eligible) return null;
 
   // 응답이 오거나 재시도가 끝나 에러가 확정되면 "없음"으로 보여줘요. 그 전까지는 찾는 중이에요.
   const finished = !isLoading && !isValidating && (data !== undefined || error !== undefined);
 
+  // 가사가 있을 때만 접고 펼 수 있어요. 있으면 기본으로 열려 있고, 사용자가 누른 상태는 곡이 바뀌면 다시 자동 규칙을 따라요.
+  const toggleable = lyrics !== null;
+  const open = toggleable && (openOverride?.trackKey === trackKey ? openOverride.open : true);
+  const bodyId = `lyrics-body-${trackKey}`;
+  const status = lyrics ? null : finished ? "가사를 찾을 수 없어요." : "찾는 중…";
+
   return (
-    <section aria-label="노래방 가사" className="flex flex-col gap-3 rounded-row bg-surface-2 p-3 sm:p-4">
-      {!lyrics && !finished ? (
-        <LyricsFrame>
-          <div role="status" className="flex items-center gap-2 py-6 text-sm text-muted-foreground sm:py-8">
-            <Loader2 size={16} className="animate-spin text-primary-text motion-reduce:animate-none" aria-hidden />
-            가사를 찾는 중이에요
+    <section
+      aria-label="노래방 가사"
+      className={cn("flex flex-col gap-3 rounded-row bg-surface-2", toggleable ? "p-3 sm:p-4" : "px-3 py-2.5 sm:px-4")}
+    >
+      <button
+        type="button"
+        aria-expanded={toggleable ? open : undefined}
+        aria-controls={toggleable ? bodyId : undefined}
+        disabled={!toggleable}
+        onClick={() => setOpenOverride({ trackKey, open: !open })}
+        className={cn(
+          "flex min-h-6 w-full cursor-pointer items-center justify-between gap-2 rounded-control text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default",
+          toggleable && "min-h-7 pointer-coarse:min-h-11",
+        )}
+      >
+        <span className="flex items-center gap-2 text-sm font-bold text-foreground">
+          <Mic2 size={16} className="text-primary-text" aria-hidden />
+          <span className="leading-none">가사</span>
+          {status && (
+            <span role="status" className="flex items-center gap-1.5 text-xs font-medium leading-none text-muted-foreground">
+              {!finished && <Loader2 size={12} className="animate-spin motion-reduce:animate-none" aria-hidden />}
+              {status}
+            </span>
+          )}
+        </span>
+        {toggleable && (
+          <ChevronDown
+            size={16}
+            aria-hidden
+            className={cn("text-muted-foreground transition-transform duration-fast motion-reduce:transition-none", open && "rotate-180")}
+          />
+        )}
+      </button>
+      {lyrics &&
+        (open ? (
+          <div id={bodyId} className="flex flex-col gap-3">
+            <LyricsBody
+              key={trackKey}
+              lyrics={lyrics}
+              translation={data?.translation}
+              state={state}
+              receivedAt={receivedAt}
+              unavailable={unavailable}
+            />
           </div>
-        </LyricsFrame>
-      ) : lyrics ? (
-        <LyricsBody
-          key={trackKey}
-          lyrics={lyrics}
-          translation={data?.translation}
-          state={state}
-          receivedAt={receivedAt}
-          unavailable={unavailable}
-        />
-      ) : (
-        <LyricsFrame>
-          <p className="py-6 text-center text-sm text-muted-foreground sm:py-8">이 곡의 가사를 찾지 못했어요.</p>
-        </LyricsFrame>
-      )}
+        ) : (
+          <CollapsedLine
+            id={bodyId}
+            lyrics={lyrics}
+            translation={data?.translation}
+            state={state}
+            receivedAt={receivedAt}
+            unavailable={unavailable}
+          />
+        ))}
     </section>
+  );
+}
+
+/** 접힌 가사 — 지금 부르는 줄(싱크 없으면 첫 줄) 한 줄만 보여줘요 */
+function CollapsedLine({
+  id,
+  lyrics,
+  translation,
+  state,
+  receivedAt,
+  unavailable,
+}: {
+  id: string;
+  lyrics: KaraokeLyrics;
+  translation: LyricsPayload["translation"];
+  state: LivePlayerState;
+  receivedAt: number;
+  unavailable: boolean;
+}) {
+  const [activeLine, setActiveLine] = useState(-1);
+  const stateRef = useRef({ state, receivedAt, unavailable });
+  stateRef.current = { state, receivedAt, unavailable };
+  useEffect(() => {
+    if (!lyrics.synced) return;
+    let raf = 0;
+    const tick = () => {
+      const current = stateRef.current;
+      const snapshot = current.unavailable ? { ...current.state, stale: true } : current.state;
+      setActiveLine(findActiveLineIndex(lyrics.lines, interpolatedPositionMs(snapshot, current.receivedAt)));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [lyrics]);
+
+  const text = lyrics.synced
+    ? (lyrics.lines[activeLine]?.text ?? "")
+    : (lyrics.plainText.split(/\r?\n/).find((line) => line.trim()) ?? "");
+  const translated = text && translation?.status === "ready" ? translatedLine(translation.lines, text) : null;
+
+  return (
+    <div id={id} aria-live="off" className="min-h-6 rounded-control-inner bg-surface-1 px-3 py-2 text-center">
+      <p className="truncate text-sm font-semibold text-foreground">{text || "♪"}</p>
+      {translated && <p className="truncate text-xs text-muted-foreground">{translated}</p>}
+    </div>
   );
 }
 
 function LyricsFrame({ children, controls }: { children: React.ReactNode; controls?: React.ReactNode }) {
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm font-bold text-foreground">
-          <Mic2 size={16} className="text-primary-text" aria-hidden />
-          가사
-        </div>
-        {controls}
-      </div>
+      {controls && <div className="flex flex-wrap items-center justify-end gap-2">{controls}</div>}
       {children}
     </>
   );
@@ -209,10 +288,10 @@ function LyricsBody({
         ref={containerRef}
         tabIndex={0}
         aria-label="가사 목록"
-        className="relative h-60 overflow-y-auto rounded-control-inner bg-surface-1 px-4 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-72"
+        className="relative h-44 overflow-y-auto rounded-control-inner bg-surface-1 px-4 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-72"
       >
         {lyrics.synced ? (
-          <ol className="space-y-3 py-[6.5rem] text-center sm:py-32">
+          <ol className="space-y-3 py-[4.5rem] text-center sm:py-32">
             {lyrics.lines.map((line, index) => {
               const active = index === activeLine;
               if (!line.text) {

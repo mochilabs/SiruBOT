@@ -26,7 +26,9 @@ export const playerWebControlActionSchema = z.enum([
 	'queue-clear',
 	'queue-remove',
 	'queue-move',
-	'queue-jump'
+	'queue-jump',
+	'seek',
+	'previous'
 ]);
 export type PlayerWebControlAction = z.infer<typeof playerWebControlActionSchema>;
 
@@ -76,6 +78,8 @@ export const playerWebPlayRequestSchema = playerWebRequestBase.extend({
 export type PlayerWebPlayRequest = z.infer<typeof playerWebPlayRequestSchema>;
 
 const QUEUE_INDEX_MAX = 999;
+/** 탐색 위치 상한(ms) — 24시간. 곡 길이 초과는 봇이 다시 검사해요 */
+export const PLAYER_WEB_SEEK_MAX_MS = 86_400_000;
 
 export const playerWebControlRequestSchema = playerWebRequestBase
 	.extend({
@@ -84,7 +88,8 @@ export const playerWebControlRequestSchema = playerWebRequestBase
 		value: z.number().int().min(MUSIC_VOLUME_MIN).max(MUSIC_VOLUME_MAX).optional(),
 		index: z.number().int().min(0).max(QUEUE_INDEX_MAX).optional(),
 		from: z.number().int().min(0).max(QUEUE_INDEX_MAX).optional(),
-		to: z.number().int().min(0).max(QUEUE_INDEX_MAX).optional()
+		to: z.number().int().min(0).max(QUEUE_INDEX_MAX).optional(),
+		positionMs: z.number().int().min(0).max(PLAYER_WEB_SEEK_MAX_MS).optional()
 	})
 	.superRefine((body, ctx) => {
 		if (body.action === 'volume' && typeof body.value !== 'number') {
@@ -97,6 +102,12 @@ export const playerWebControlRequestSchema = playerWebRequestBase
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				message: `${body.action} 제어에는 index(0 이상 정수)가 필요해요.`
+			});
+		}
+		if (body.action === 'seek' && typeof body.positionMs !== 'number') {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: 'seek 제어에는 positionMs(0 이상 정수)가 필요해요.'
 			});
 		}
 		if (body.action === 'queue-move') {
@@ -126,6 +137,8 @@ export type PlayerWebRequestBase = z.infer<typeof playerWebRequestBase>;
 export const playerVoiceContextSchema = z.object({
 	inVoice: z.boolean(),
 	voiceChannelName: z.string().nullable(),
+	/** 봇이 접속한 음성 채널 이름 — 접속 중이 아니면 null. 이 필드가 없는 이전 버전 봇 응답도 받아요 */
+	botVoiceChannelName: z.string().nullable().optional(),
 	/** 재생 제어(일시정지·볼륨·건너뛰기 등) 가능 여부 — 봇이 실제 인가와 같은 정책으로 계산해요 */
 	canControl: z.boolean(),
 	/** 곡 추가 가능 여부 — 봇이 항상 보내요. 이 필드가 없는 이전 버전 봇 응답은 스키마 검증에서 거절돼요 */

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatDuration } from "@sirubot/utils/time";
-import { ListMusic, Pause, Play, Repeat, SkipForward, Square, Volume2 } from "lucide-react";
+import { Check, Heart, ListMusic, Pause, Play, Repeat, Repeat1, RepeatOff, SkipBack, SkipForward, Square, Volume2, X } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import { StatusDot } from "@/components/primitives/status-dot";
@@ -38,7 +38,7 @@ export function NowPlaying({
   const unavailable = state.stale || (mode === "stream" && !connected);
   const positionMs = unavailable ? state.positionMs : interpolatedPositionMs(state, receivedAt);
   const [pendingAction, setPendingAction] = useState<
-    "pause" | "resume" | "skip" | "stop" | "repeat" | null
+    "pause" | "resume" | "skip" | "previous" | "stop" | "repeat" | null
   >(null);
   const [volumeOverride, setVolumeOverride] = useState<number | null>(null);
   const volumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -51,6 +51,7 @@ export function NowPlaying({
     refreshInterval: VOICE_CONTEXT_REFRESH_MS,
   });
   const controlBlocked = voiceData?.voice ? !voiceData.voice.canControl : false;
+  const botChannelName = voiceData?.voice?.botVoiceChannelName ?? null;
   // 명령 응답 뒤에도 새 상태가 도착할 때까지(또는 시간 초과) 잠가 같은 명령 중복을 막아요.
   const stateSignature = `${state.paused}|${state.repeatMode}|${Math.round(state.volume)}|${state.trackUri ?? ""}|${state.playing}`;
   const [settlingSignature, setSettlingSignature] = useState<string | null>(null);
@@ -130,6 +131,17 @@ export function NowPlaying({
     commandPendingRef.current = false;
   }, [controlsDisabled, failCommand, guildId]);
 
+  const handlePrevious = useCallback(async () => {
+    if (commandPendingRef.current || controlsDisabled) return;
+    commandPendingRef.current = true;
+    setPendingAction("previous");
+    const result = await sendPlayerCommand(guildId, "previous");
+    if (!result.ok) failCommand(result, "이전 곡을 재생하지 못했어요.");
+    if (result.ok) setSettlingSignature(stateSignatureRef.current);
+    setPendingAction(null);
+    commandPendingRef.current = false;
+  }, [controlsDisabled, failCommand, guildId]);
+
   const handleStop = useCallback(async () => {
     if (commandPendingRef.current || controlsDisabled) return;
     commandPendingRef.current = true;
@@ -183,6 +195,57 @@ export function NowPlaying({
     pendingAction !== null && !own.includes(pendingAction);
   const commandsOff = controlsDisabled || !hasCurrentTrack;
 
+  // 탐색 — 위치를 고르면 바로 이동하지 않고 확인 단계를 거쳐요
+  const [seekTargetMs, setSeekTargetMs] = useState<number | null>(null);
+  const [seekPending, setSeekPending] = useState(false);
+  const canSeek = !state.isStream && state.durationMs > 0 && !commandsOff;
+  // 곡이 바뀌면 이전 곡 기준으로 고른 위치는 버려요
+  useEffect(() => {
+    setSeekTargetMs(null);
+  }, [state.trackUri]);
+  useEffect(() => {
+    if (!canSeek) setSeekTargetMs(null);
+  }, [canSeek]);
+
+  const handleSeekConfirm = useCallback(async () => {
+    if (seekTargetMs === null || commandPendingRef.current || controlsDisabled) return;
+    commandPendingRef.current = true;
+    setSeekPending(true);
+    const result = await sendPlayerCommand(guildId, "seek", { positionMs: seekTargetMs });
+    if (!result.ok) {
+      failCommand(result, "재생 위치를 옮기지 못했어요.");
+    } else {
+      setSeekTargetMs(null);
+    }
+    setSeekPending(false);
+    commandPendingRef.current = false;
+  }, [controlsDisabled, failCommand, guildId, seekTargetMs]);
+
+  // 즐겨찾기 — 현재 곡을 내 즐겨찾기에 담아요
+  const [favoritePending, setFavoritePending] = useState(false);
+  const handleFavorite = useCallback(async () => {
+    if (favoritePending || !state.trackUri) return;
+    setFavoritePending(true);
+    try {
+      const res = await fetch(`/api/servers/${guildId}/player/favorite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uri: state.trackUri }),
+      });
+      const body = (await res.json().catch(() => null)) as {
+        error?: string;
+        alreadyAdded?: boolean;
+      } | null;
+      if (res.ok) toast.success("즐겨찾기에 추가했어요.");
+      else if (body?.alreadyAdded) toast.info("이미 즐겨찾기에 있는 곡이에요.");
+      else toast.error(body?.error ?? "즐겨찾기에 추가하지 못했어요.");
+    } catch {
+      toast.error("즐겨찾기에 추가하지 못했어요.");
+    } finally {
+      setFavoritePending(false);
+    }
+  }, [favoritePending, guildId, state.trackUri, toast]);
+
   return (
     <section className="flex flex-col gap-3 rounded-row bg-surface-2 p-3 sm:p-4">
       <div className="flex min-w-0 items-center gap-3 sm:gap-4">
@@ -201,11 +264,19 @@ export function NowPlaying({
         )}
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex min-w-0 items-center justify-between gap-2 text-sm">
-            <StatusDot
-              size="sm"
-              status={unavailable ? "disconnected" : state.paused ? "idle" : state.playing ? "ready" : "disconnected"}
-              label={statusLabel}
-            />
+            <div className="flex min-w-0 items-center gap-2">
+              <StatusDot
+                size="sm"
+                status={unavailable ? "disconnected" : state.paused ? "idle" : state.playing ? "ready" : "disconnected"}
+                label={statusLabel}
+              />
+              {botChannelName && (
+                <span className="flex min-w-0 items-center gap-1 text-xs font-medium text-muted-foreground" title={`${botChannelName} 채널에서 재생 중`}>
+                  <Volume2 size={12} className="shrink-0" aria-hidden />
+                  <span className="truncate">{botChannelName}</span>
+                </span>
+              )}
+            </div>
             {state.sourceName && (
               <span className="shrink-0 text-xs font-medium text-muted-foreground">
                 {state.isStream ? "실시간 스트림 · " : ""}
@@ -213,20 +284,35 @@ export function NowPlaying({
               </span>
             )}
           </div>
-          {state.trackTitle && /^https?:\/\//i.test(state.trackUri ?? "") ? (
-            <a
-              href={state.trackUri!}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="line-clamp-1 break-words text-lg font-extrabold tracking-tight text-foreground hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
-            >
-              {state.trackTitle}
-            </a>
-          ) : (
-            <p className="line-clamp-1 break-words text-lg font-extrabold tracking-tight text-foreground">
-              {state.trackTitle ?? "재생 중인 곡이 없어요"}
-            </p>
-          )}
+          <div className="flex min-w-0 items-center gap-1">
+            <div className="min-w-0 flex-1">
+            {state.trackTitle && /^https?:\/\//i.test(state.trackUri ?? "") ? (
+              <a
+                href={state.trackUri!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="line-clamp-1 break-words text-lg font-extrabold tracking-tight text-foreground hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
+              >
+                {state.trackTitle}
+              </a>
+            ) : (
+              <p className="line-clamp-1 break-words text-lg font-extrabold tracking-tight text-foreground">
+                {state.trackTitle ?? "재생 중인 곡이 없어요"}
+              </p>
+            )}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 text-muted-foreground hover:text-primary-text pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+              icon={<Heart size={16} />}
+              onClick={handleFavorite}
+              loading={favoritePending}
+              disabled={favoritePending || !state.trackUri || !hasCurrentTrack}
+              aria-label="즐겨찾기에 추가"
+              title="즐겨찾기에 추가"
+            />
+          </div>
           <p className="truncate text-sm text-muted-foreground">
             {state.trackAuthor ?? "아티스트 정보 없음"}
             {state.requesterName ? ` · 신청: ${state.requesterName}` : ""}
@@ -235,7 +321,66 @@ export function NowPlaying({
       </div>
 
       <div className="space-y-1">
-        <ProgressBar state={unavailable ? { ...state, stale: true } : state} receivedAt={receivedAt} />
+        <div className="relative">
+          <ProgressBar state={unavailable ? { ...state, stale: true } : state} receivedAt={receivedAt} />
+          {canSeek && seekTargetMs !== null && (
+            // 고른 위치 표시 — 고른 위치까지 옅게 채우고 선택 핸들을 올려요
+            <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-2">
+              <div
+                className="absolute inset-y-0 left-0 rounded-full bg-primary-control/30"
+                style={{ width: `${(seekTargetMs / state.durationMs) * 100}%` }}
+              />
+              <div
+                className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface-2 bg-primary-control shadow-md"
+                style={{ left: `${(seekTargetMs / state.durationMs) * 100}%` }}
+              />
+            </div>
+          )}
+          {canSeek && (
+            // 보이지 않는 범위 입력을 진행바 위에 겹쳐 마우스·터치·키보드 탐색을 모두 받아요
+            <input
+              type="range"
+              aria-label="재생 위치 선택"
+              min={0}
+              max={state.durationMs}
+              step={1000}
+              value={seekTargetMs ?? Math.min(positionMs, state.durationMs)}
+              onChange={(event) => setSeekTargetMs(Number(event.target.value))}
+              disabled={seekPending}
+              className="absolute -top-2 left-0 h-5 w-full cursor-pointer opacity-0 pointer-coarse:-top-3 pointer-coarse:h-8"
+            />
+          )}
+        </div>
+        {seekTargetMs !== null && (
+          <div role="group" aria-label="재생 위치 이동 확인" className="flex items-center justify-between gap-2 rounded-control bg-surface-1 py-1 pl-3 pr-1">
+            <p className="min-w-0 truncate text-sm font-medium text-foreground">
+              <span className="font-bold tabular-nums">{formatDuration(seekTargetMs)}</span> 위치로 이동할까요?
+            </p>
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                variant="primary"
+                size="icon-sm"
+                className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+                icon={<Check size={16} />}
+                onClick={handleSeekConfirm}
+                loading={seekPending}
+                disabled={seekPending}
+                aria-label="이 위치로 이동"
+                title="이동"
+              />
+              <Button
+                variant="secondary"
+                size="icon-sm"
+                className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+                icon={<X size={16} />}
+                onClick={() => setSeekTargetMs(null)}
+                disabled={seekPending}
+                aria-label="이동 취소"
+                title="취소"
+              />
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between text-xs font-medium tabular-nums text-muted-foreground">
           <span>{state.isStream ? "스트리밍" : hasCurrentTrack ? formatDuration(positionMs) : "0:00"}</span>
           <span>{state.isStream ? "" : formatDuration(state.durationMs)}</span>
@@ -244,14 +389,25 @@ export function NowPlaying({
 
       {/* 실시간 컨트롤러 — 명령은 data-api Redis 브로드캐스트로 봇에 즉시 적용돼요 */}
       <div
-        className="flex flex-wrap items-center gap-x-4 gap-y-2"
+        className="flex flex-wrap items-center justify-center gap-x-2 gap-y-3 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-4"
         title={controlBlocked ? CONTROL_BLOCKED_HINT : undefined}
       >
-        <div className="flex items-center gap-2">
+        {/* 가운데: 이전 · 재생/일시정지 · 다음 */}
+        <div className="flex items-center justify-center gap-3 max-sm:contents sm:order-2">
+          <Button
+            variant="secondary"
+            size="icon-lg"
+            className="max-sm:order-2 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            icon={<SkipBack size={16} />}
+            onClick={handlePrevious}
+            loading={pendingAction === "previous"}
+            disabled={commandsOff || busy(["previous"])}
+            aria-label="이전 곡"
+          />
           <Button
             variant="primary"
             size="icon-lg"
-            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            className="max-sm:order-3 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             icon={displayedPaused ? <Play size={18} /> : <Pause size={18} />}
             onClick={handleTogglePause}
             loading={pendingAction === "pause" || pendingAction === "resume"}
@@ -261,37 +417,48 @@ export function NowPlaying({
           <Button
             variant="secondary"
             size="icon-lg"
-            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            className="max-sm:order-4 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             icon={<SkipForward size={16} />}
             onClick={handleSkip}
             loading={pendingAction === "skip"}
             disabled={commandsOff || busy(["skip"])}
             aria-label="다음 곡"
           />
+        </div>
+        {/* 왼쪽: 반복 · 정지 */}
+        <div className="flex items-center justify-center gap-2 max-sm:contents sm:order-1 sm:justify-start">
+          <Button
+            variant={displayedRepeat === "off" ? "secondary" : "primary"}
+            size="icon-lg"
+            className="max-sm:order-1 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            icon={
+              displayedRepeat === "off" ? (
+                <RepeatOff size={16} className="opacity-70" />
+              ) : displayedRepeat === "track" ? (
+                <Repeat1 size={16} />
+              ) : (
+                <Repeat size={16} />
+              )
+            }
+            onClick={handleRepeat}
+            loading={pendingAction === "repeat"}
+            disabled={commandsOff || busy(["repeat"])}
+            aria-label={repeatLabel}
+            title={repeatLabel}
+          />
           <Button
             variant="secondary"
             size="icon-lg"
-            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            className="max-sm:order-5 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             icon={<Square size={16} />}
             onClick={handleStop}
             loading={pendingAction === "stop"}
             disabled={commandsOff || busy(["stop"])}
             aria-label="정지"
           />
-          <Button
-            variant="state-toggle"
-            size="sm"
-            className="pointer-coarse:min-h-11"
-            active={displayedRepeat !== "off"}
-            icon={<Repeat size={14} />}
-            onClick={handleRepeat}
-            loading={pendingAction === "repeat"}
-            disabled={commandsOff || busy(["repeat"])}
-          >
-            {repeatLabel}
-          </Button>
         </div>
-        <div className="flex min-w-0 flex-1 basis-48 items-center gap-2 sm:max-w-60 sm:ml-auto">
+        {/* 오른쪽: 볼륨 */}
+        <div className="flex w-full min-w-0 items-center gap-2 max-sm:order-last sm:order-3 sm:max-w-60 sm:justify-self-end">
           <Volume2 size={16} className="shrink-0 text-muted-foreground" aria-hidden />
           <Slider
             className="min-w-0 flex-1"

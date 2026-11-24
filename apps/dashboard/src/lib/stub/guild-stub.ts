@@ -161,7 +161,7 @@ function stubGet(path: string): unknown | undefined {
 		case "/player":
 			return { totalPlays: 128, recent: STUB_TRACKS.map((track, i) => ({ ...track, playedAt: stubIso(i / 4), requestedById: "1" })), top: STUB_TRACKS.map((track, i) => ({ ...track, playCount: 24 - i * 3 })) };
 		case "/player/voice-context":
-			return { voice: { inVoice: true, voiceChannelName: "라운지", canControl: true, canPlay: true } };
+			return { voice: { inVoice: true, voiceChannelName: "라운지", botVoiceChannelName: "라운지", canControl: true, canPlay: true } };
 		case "/player/search":
 			return { tracks: STUB_TRACKS.map((track) => ({ title: track.title, author: track.artist, durationMs: track.duration, artworkUrl: track.thumbnail, uri: track.url, sourceName: "youtube", isStream: false })) };
 		case "/greeting":

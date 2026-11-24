@@ -3,12 +3,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PlayerWebControlAction } from "@sirubot/utils/playerWeb";
 import { formatDuration } from "@sirubot/utils/time";
-import { ChevronDown, ChevronUp, ListMusic, Play, Shuffle, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, ListMusic, MoreVertical, Play, Shuffle, Trash2, X } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/toast";
 
 import {
@@ -75,7 +83,6 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
   ) {
     if (controlsDisabled) return;
     setPendingKey(key);
-    setConfirmClear(false);
     try {
       const result = await sendPlayerCommand(guildId, action, params);
       if (!result.ok) {
@@ -113,38 +120,16 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
             >
               셔플
             </Button>
-            {confirmClear ? (
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  loading={pendingKey === "clear"}
-                  disabled={controlsDisabled}
-                  onClick={() => void runQueueAction("clear", "queue-clear", undefined, "대기열을 비웠어요.")}
-                >
-                  비우기 확인
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={pendingKey !== null}
-                  onClick={() => setConfirmClear(false)}
-                >
-                  취소
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={<Trash2 size={14} />}
-                disabled={controlsDisabled}
-                title={controlBlocked ? CONTROL_BLOCKED_HINT : "대기열 비우기"}
-                onClick={() => setConfirmClear(true)}
-              >
-                비우기
-              </Button>
-            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Trash2 size={14} />}
+              disabled={controlsDisabled}
+              title={controlBlocked ? CONTROL_BLOCKED_HINT : "대기열 비우기"}
+              onClick={() => setConfirmClear(true)}
+            >
+              비우기
+            </Button>
           </div>
         )}
       </div>
@@ -213,7 +198,7 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
               <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:inline">
                 {track.isStream ? "스트림" : formatDuration(track.durationMs)}
               </span>
-              <div className="ml-auto flex shrink-0 items-center gap-0.5">
+              <div className="ml-auto hidden shrink-0 items-center gap-0.5 sm:flex">
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -259,6 +244,53 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
                   onClick={() => void runQueueAction(`remove-${index}`, "queue-remove", { index }, "대기열에서 뺐어요.")}
                 />
               </div>
+              {/* 모바일은 버튼 네 개가 행을 차지해서 더보기 메뉴 하나로 묶어요 */}
+              <div className="ml-auto shrink-0 sm:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+                        icon={<MoreVertical size={16} />}
+                        disabled={controlsDisabled}
+                        title={controlBlocked ? CONTROL_BLOCKED_HINT : undefined}
+                        aria-label={`${track.title} 메뉴`}
+                      />
+                    }
+                  />
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem onClick={() => void runQueueAction(`jump-${index}`, "queue-jump", { index })}>
+                        <Play size={14} />
+                        바로 재생
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={index === 0}
+                        onClick={() => void runQueueAction(`up-${index}`, "queue-move", { from: index, to: index - 1 }, "순서를 바꿨어요.")}
+                      >
+                        <ChevronUp size={14} />
+                        위로 이동
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={index === state.queue.length - 1}
+                        onClick={() => void runQueueAction(`down-${index}`, "queue-move", { from: index, to: index + 1 }, "순서를 바꿨어요.")}
+                      >
+                        <ChevronDown size={14} />
+                        아래로 이동
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => void runQueueAction(`remove-${index}`, "queue-remove", { index }, "대기열에서 뺐어요.")}
+                      >
+                        <X size={14} />
+                        대기열에서 제거
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </li>
           ))}
           {hiddenCount > 0 && (
@@ -266,6 +298,18 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
           )}
         </ol>
       )}
+      <ConfirmDialog
+        open={confirmClear}
+        title="대기열을 비울까요?"
+        confirmLabel="비우기"
+        loading={pendingKey === "clear"}
+        onClose={() => setConfirmClear(false)}
+        onConfirm={() =>
+          void runQueueAction("clear", "queue-clear", undefined, "대기열을 비웠어요.").then(() => setConfirmClear(false))
+        }
+      >
+        대기 중인 곡 {state.queueLength}곡이 모두 사라져요.
+      </ConfirmDialog>
     </section>
   );
 }

@@ -57,7 +57,7 @@ function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
       // 모달류(dialog/sheet/dropdown 등)는 z-(--z-overlay)(=50), 토스트 알림은 항상 그 위 z-(--toast-z)(=100) — 모달이 열려 있어도 알림이 뒤로 가려지지 않게.
       // z-toast처럼 보이는 커스텀 이름은 v4 --z-* 네임스페이스가 없어 규칙이 안 만들어지므로 z-(--var) 문법을 써요.
       className={cn(
-        "pointer-events-none fixed inset-x-4 top-20 z-(--toast-z) mx-auto w-auto max-w-sm outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",
+        "pointer-events-none fixed inset-x-4 bottom-24 z-(--toast-z) mx-auto w-auto max-w-xs sm:bottom-auto sm:top-20 sm:max-w-sm outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",
         className
       )}
       {...props}
@@ -70,7 +70,7 @@ function Toast({ className, ...props }: ToastPrimitive.Root.Props) {
     <ToastPrimitive.Root
       data-slot="toast"
       className={cn(
-        "group/toast pointer-events-auto relative mb-3 w-full overflow-hidden rounded-card border-0 bg-popover text-popover-foreground shadow-lg outline-none select-none focus-visible:ring-2 focus-visible:ring-ring",
+        "group/toast pointer-events-auto relative mb-2 w-full overflow-hidden rounded-card sm:mb-3 border-0 bg-popover text-popover-foreground shadow-lg outline-none select-none focus-visible:ring-2 focus-visible:ring-ring",
         "transition-[opacity,transform] duration-fast [transform:translateX(var(--toast-swipe-movement-x))_translateY(var(--toast-swipe-movement-y))] data-starting-style:opacity-0 data-ending-style:opacity-0 data-limited:hidden",
         className
       )}
@@ -84,7 +84,7 @@ function ToastContent({ className, ...props }: ToastPrimitive.Content.Props) {
     <ToastPrimitive.Content
       data-slot="toast-content"
       className={cn(
-        "flex items-center gap-3 p-4",
+        "flex items-center gap-2 px-3 py-2.5 sm:gap-3 sm:p-4",
         className
       )}
       {...props}
@@ -96,7 +96,7 @@ function ToastTitle({ className, ...props }: ToastPrimitive.Title.Props) {
   return (
     <ToastPrimitive.Title
       data-slot="toast-title"
-      className={cn("text-sm font-semibold text-foreground", className)}
+      className={cn("text-xs font-semibold text-foreground sm:text-sm", className)}
       {...props}
     />
   )
@@ -106,7 +106,7 @@ function ToastDescription({ className, ...props }: ToastPrimitive.Description.Pr
   return (
     <ToastPrimitive.Description
       data-slot="toast-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-xs text-muted-foreground sm:text-sm", className)}
       {...props}
     />
   )
@@ -130,7 +130,7 @@ function ToastAction({
 function ToastClose({
   className,
   children,
-  render = <Button variant="ghost" size="icon-sm" />,
+  render = <Button variant="ghost" size="icon-sm" className="size-6 sm:size-7" />,
   ...props
 }: ToastPrimitive.Close.Props) {
   return (
@@ -161,12 +161,12 @@ function ToastIcon({ type }: { type: string | undefined }) {
     <span
       data-slot="toast-icon"
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-full",
+        "flex size-6 shrink-0 items-center justify-center rounded-full sm:size-8",
         iconBg,
         iconColor
       )}
     >
-      <Icon className="size-4" aria-hidden="true" />
+      <Icon className="size-3.5 sm:size-4" aria-hidden="true" />
     </span>
   )
 }
@@ -179,7 +179,7 @@ function ToastProgress({ type, timeout }: { type: string | undefined; timeout: n
   if (duration <= 0) return null
 
   return (
-    <span aria-hidden="true" data-slot="toast-progress" className="pointer-events-none absolute inset-x-0 bottom-0 h-1 motion-reduce:hidden">
+    <span aria-hidden="true" data-slot="toast-progress" className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 motion-reduce:hidden sm:h-1">
       <span
         className={cn(
           "block h-full origin-left animate-toast-progress group-data-expanded/toast:[animation-play-state:paused]",

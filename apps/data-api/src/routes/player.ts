@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { playerWebControlActionSchema, playerWebPlayUriSchema, redisIdSchema } from '@sirubot/utils';
+import { PLAYER_WEB_SEEK_MAX_MS, playerWebControlActionSchema, playerWebPlayUriSchema, redisIdSchema } from '@sirubot/utils';
 import { metrics } from '../utils/metrics.ts';
 import { sendError, guildIdParams, playerUserIdSchema, replyBotRelayFailure } from './common.ts';
 import { searchLavalinkYoutube } from '../providers/lavalinkSearch.ts';
@@ -133,7 +133,8 @@ export function registerPlayerRoutes(fastify: FastifyInstance, deps: { lavalinkR
 		value: z.number().int().min(0).max(150).optional(),
 		index: z.number().int().min(0).max(999).optional(),
 		from: z.number().int().min(0).max(999).optional(),
-		to: z.number().int().min(0).max(999).optional()
+		to: z.number().int().min(0).max(999).optional(),
+		positionMs: z.number().int().min(0).max(PLAYER_WEB_SEEK_MAX_MS).optional()
 	});
 	const playerVoiceContextQuery = z.object({ userId: playerUserIdSchema });
 
@@ -187,7 +188,7 @@ export function registerPlayerRoutes(fastify: FastifyInstance, deps: { lavalinkR
 
 	fastify.post('/v1/internal/player/control', async (request, reply) => {
 		try {
-			const { guildId, userId, action, value, index, from, to } = playerWebControlSchema.parse(request.body);
+			const { guildId, userId, action, value, index, from, to, positionMs } = playerWebControlSchema.parse(request.body);
 			const result = await requestPlayerWeb({
 				requestId: crypto.randomUUID(),
 				guildId,
@@ -197,7 +198,8 @@ export function registerPlayerRoutes(fastify: FastifyInstance, deps: { lavalinkR
 				...(value !== undefined ? { value } : {}),
 				...(index !== undefined ? { index } : {}),
 				...(from !== undefined ? { from } : {}),
-				...(to !== undefined ? { to } : {})
+				...(to !== undefined ? { to } : {}),
+				...(positionMs !== undefined ? { positionMs } : {})
 			});
 			metrics.request('player-web-control');
 			return replyPlayerWebResult(reply, result);

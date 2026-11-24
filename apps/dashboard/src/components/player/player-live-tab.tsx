@@ -17,18 +17,20 @@ import { LyricsPanel } from "./lyrics-panel";
 import { NowPlaying } from "./now-playing-card";
 
 /** 라이브 탭 공통 셸 — 다른 설정 탭과 같은 패널 카드 + 헤더 */
-function LivePanel({ children }: { children: ReactNode }) {
+function LivePanel({ children, compact = false }: { children: ReactNode; compact?: boolean }) {
   return (
     <Card padding="lg" className="gap-5 p-4 sm:gap-6 sm:p-6 overflow-visible">
-      <PanelHeader icon={<Radio className="h-5 w-5" />} title="라이브" description="지금 재생 중인 곡과 대기열을 실시간으로 확인해요." />
+      {!compact && (
+        <PanelHeader icon={<Radio className="h-5 w-5" />} title="라이브" description="지금 재생 중인 곡과 대기열을 실시간으로 확인해요." />
+      )}
       {children}
     </Card>
   );
 }
 
-function LiveLoading() {
+function LiveLoading({ compact }: { compact: boolean }) {
   return (
-    <LivePanel>
+    <LivePanel compact={compact}>
       <div className="space-y-4">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Radio size={14} /> 라이브 상태 불러오는 중…
@@ -44,9 +46,9 @@ function LiveLoading() {
 }
 
 /** 데이터가 없는 상태 — 길드에 플레이어가 없거나 playerHub 미구독 */
-function LiveEmpty({ detail }: { detail?: string }) {
+function LiveEmpty({ detail, compact }: { detail?: string; compact: boolean }) {
   return (
-    <LivePanel>
+    <LivePanel compact={compact}>
       <EmptyState
         icon={Radio}
         title="지금은 재생 정보가 없어요"
@@ -69,11 +71,18 @@ const liveFetcher = createApiFetcher<LivePayload>("라이브 상태를 불러오
 /** 폴백 폴링 주기 — 2000ms면 READ_RATE(분당 30회) 경계에 딱 붙어 윈도우 지터로 429가 튀니 분당 24회로 낮춰요. */
 const FALLBACK_POLL_INTERVAL_MS = 2500;
 
-export default function PlayerLiveTab({ guildId }: { guildId: string }) {
-  return <LivePlayerSession key={guildId} guildId={guildId} />;
+export default function PlayerLiveTab({
+  guildId,
+  compact = false,
+}: {
+  guildId: string;
+  /** 음악 플레이어 페이지처럼 이미 맥락이 있는 곳에서 "라이브" 헤더와 안내 문구를 숨겨요 */
+  compact?: boolean;
+}) {
+  return <LivePlayerSession key={guildId} guildId={guildId} compact={compact} />;
 }
 
-function LivePlayerSession({ guildId }: { guildId: string }) {
+function LivePlayerSession({ guildId, compact }: { guildId: string; compact: boolean }) {
   /** SSE 실패(미지원/장애) 시 폴백하는 폴링 모드와 상태를 구분해요. */
   const [mode, setMode] = useState<"stream" | "polling">("stream");
   const [liveData, setLiveData] = useState<LivePayload | null>(null);
@@ -149,13 +158,14 @@ function LivePlayerSession({ guildId }: { guildId: string }) {
 
   if (error && (mode === "polling" || !liveData)) {
     const apiError = toError(error, "라이브 상태를 불러오지 못했어요.");
-    return <LivePanel><PanelError error={apiError} onRetry={() => { void mutate(); }} /></LivePanel>;
+    return <LivePanel compact={compact}><PanelError error={apiError} onRetry={() => { void mutate(); }} /></LivePanel>;
   }
-  if (mode === "polling" && isLoading) return <LiveLoading />;
-  if (!data) return <LiveLoading />;
+  if (mode === "polling" && isLoading) return <LiveLoading compact={compact} />;
+  if (!data) return <LiveLoading compact={compact} />;
   if (!data.player) {
     return (
       <LiveEmpty
+        compact={compact}
         detail={
           data.hub.subscribed
             ? undefined
@@ -166,7 +176,7 @@ function LivePlayerSession({ guildId }: { guildId: string }) {
   }
 
   return (
-    <LivePanel>
+    <LivePanel compact={compact}>
       {(data.player.stale || (mode === "stream" && !connected && (connectGraceOver || liveData !== null))) && (
         <p role="status" className="rounded-control bg-warning/5 px-4 py-3 text-sm text-warning">
           마지막으로 확인한 재생 정보예요. 연결을 확인하는 동안 재생 제어는 사용할 수 없어요.
@@ -190,17 +200,19 @@ function LivePlayerSession({ guildId }: { guildId: string }) {
         guildId={guildId}
         unavailable={data.player.stale || (mode === "stream" && !connected)}
       />
-      <p className="text-xs text-muted-foreground">
-        컨트롤러 명령은 봇이 음성 채널 접속 중일 때만 적용돼요. 검색·재생 ·
-        기록은{" "}
-        <Link
-          href={`/player/${guildId}`}
-          className="font-semibold text-primary-text hover:underline"
-        >
-          음악 플레이어 페이지
-        </Link>
-        에서 할 수 있어요.
-      </p>
+      {!compact && (
+        <p className="text-xs text-muted-foreground">
+          컨트롤러 명령은 봇이 음성 채널 접속 중일 때만 적용돼요. 검색·재생 ·
+          기록은{" "}
+          <Link
+            href={`/player/${guildId}`}
+            className="font-semibold text-primary-text hover:underline"
+          >
+            음악 플레이어 페이지
+          </Link>
+          에서 할 수 있어요.
+        </p>
+      )}
     </LivePanel>
   );
 }
