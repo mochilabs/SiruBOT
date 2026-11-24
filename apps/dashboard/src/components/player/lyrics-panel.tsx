@@ -67,14 +67,20 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
   const status = lyrics ? null : finished ? "가사를 찾을 수 없어요." : "찾는 중…";
 
   return (
-    <section aria-label="노래방 가사" className="flex flex-col gap-3 rounded-row bg-surface-2 p-3 sm:p-4">
+    <section
+      aria-label="노래방 가사"
+      className={cn("flex flex-col gap-3 rounded-row bg-surface-2", toggleable ? "p-3 sm:p-4" : "px-3 py-2.5 sm:px-4")}
+    >
       <button
         type="button"
         aria-expanded={toggleable ? open : undefined}
         aria-controls={toggleable ? bodyId : undefined}
         disabled={!toggleable}
         onClick={() => setOpenOverride({ trackKey, open: !open })}
-        className="flex min-h-7 w-full cursor-pointer items-center justify-between gap-2 rounded-control text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default pointer-coarse:min-h-11"
+        className={cn(
+          "flex min-h-6 w-full cursor-pointer items-center justify-between gap-2 rounded-control text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default",
+          toggleable && "min-h-7 pointer-coarse:min-h-11",
+        )}
       >
         <span className="flex items-center gap-2 text-sm font-bold text-foreground">
           <Mic2 size={16} className="text-primary-text" aria-hidden />

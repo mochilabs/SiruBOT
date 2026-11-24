@@ -3,12 +3,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PlayerWebControlAction } from "@sirubot/utils/playerWeb";
 import { formatDuration } from "@sirubot/utils/time";
-import { ChevronDown, ChevronUp, ListMusic, Play, Shuffle, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, ListMusic, MoreVertical, Play, Shuffle, Trash2, X } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/toast";
 
 import {
@@ -213,7 +220,7 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
               <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:inline">
                 {track.isStream ? "스트림" : formatDuration(track.durationMs)}
               </span>
-              <div className="ml-auto flex shrink-0 items-center gap-0.5">
+              <div className="ml-auto hidden shrink-0 items-center gap-0.5 sm:flex">
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -258,6 +265,53 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
                   aria-label={`${track.title} 대기열에서 제거`}
                   onClick={() => void runQueueAction(`remove-${index}`, "queue-remove", { index }, "대기열에서 뺐어요.")}
                 />
+              </div>
+              {/* 모바일은 버튼 네 개가 행을 차지해서 더보기 메뉴 하나로 묶어요 */}
+              <div className="ml-auto shrink-0 sm:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+                        icon={<MoreVertical size={16} />}
+                        disabled={controlsDisabled}
+                        title={controlBlocked ? CONTROL_BLOCKED_HINT : undefined}
+                        aria-label={`${track.title} 메뉴`}
+                      />
+                    }
+                  />
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem onClick={() => void runQueueAction(`jump-${index}`, "queue-jump", { index })}>
+                        <Play size={14} />
+                        바로 재생
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={index === 0}
+                        onClick={() => void runQueueAction(`up-${index}`, "queue-move", { from: index, to: index - 1 }, "순서를 바꿨어요.")}
+                      >
+                        <ChevronUp size={14} />
+                        위로 이동
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={index === state.queue.length - 1}
+                        onClick={() => void runQueueAction(`down-${index}`, "queue-move", { from: index, to: index + 1 }, "순서를 바꿨어요.")}
+                      >
+                        <ChevronDown size={14} />
+                        아래로 이동
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => void runQueueAction(`remove-${index}`, "queue-remove", { index }, "대기열에서 뺐어요.")}
+                      >
+                        <X size={14} />
+                        대기열에서 제거
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </li>
           ))}
