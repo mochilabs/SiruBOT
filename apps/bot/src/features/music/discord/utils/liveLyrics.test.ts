@@ -42,7 +42,7 @@ describe('startLiveLoop', () => {
 		const onEnd = vi.fn();
 		const stop = startLiveLoop({
 			lines: parseLiveLines(LRC)!,
-			translation: null,
+			getTranslation: () => null,
 			getPositionMs: () => position,
 			isSameTrack: () => true,
 			render,
