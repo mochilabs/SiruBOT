@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatDuration } from "@sirubot/utils/time";
-import { Heart, ListMusic, Pause, Play, Repeat, SkipForward, Square, Volume2 } from "lucide-react";
+import { Check, Heart, ListMusic, Pause, Play, Repeat, Repeat1, SkipForward, Square, Volume2, X } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import { StatusDot } from "@/components/primitives/status-dot";
@@ -317,17 +317,32 @@ export function NowPlaying({
           )}
         </div>
         {seekTargetMs !== null && (
-          <div role="group" aria-label="재생 위치 이동 확인" className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-surface-1 px-3 py-2">
-            <p className="text-sm font-medium text-foreground">
+          <div role="group" aria-label="재생 위치 이동 확인" className="flex items-center justify-between gap-2 rounded-control bg-surface-1 py-1 pl-3 pr-1">
+            <p className="min-w-0 truncate text-sm font-medium text-foreground">
               <span className="font-bold tabular-nums">{formatDuration(seekTargetMs)}</span> 위치로 이동할까요?
             </p>
-            <div className="flex items-center gap-2">
-              <Button variant="primary" size="sm" className="pointer-coarse:min-h-11" onClick={handleSeekConfirm} loading={seekPending} disabled={seekPending}>
-                이동
-              </Button>
-              <Button variant="secondary" size="sm" className="pointer-coarse:min-h-11" onClick={() => setSeekTargetMs(null)} disabled={seekPending}>
-                취소
-              </Button>
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                variant="primary"
+                size="icon-sm"
+                className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+                icon={<Check size={16} />}
+                onClick={handleSeekConfirm}
+                loading={seekPending}
+                disabled={seekPending}
+                aria-label="이 위치로 이동"
+                title="이동"
+              />
+              <Button
+                variant="secondary"
+                size="icon-sm"
+                className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+                icon={<X size={16} />}
+                onClick={() => setSeekTargetMs(null)}
+                disabled={seekPending}
+                aria-label="이동 취소"
+                title="취소"
+              />
             </div>
           </div>
         )}
@@ -387,14 +402,16 @@ export function NowPlaying({
           <Button
             variant="state-toggle"
             size="sm"
-            className="pointer-coarse:min-h-11"
+            className="max-sm:w-9 max-sm:px-0 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             active={displayedRepeat !== "off"}
-            icon={<Repeat size={14} />}
+            icon={displayedRepeat === "track" ? <Repeat1 size={14} /> : <Repeat size={14} />}
             onClick={handleRepeat}
             loading={pendingAction === "repeat"}
             disabled={commandsOff || busy(["repeat"])}
+            aria-label={repeatLabel}
+            title={repeatLabel}
           >
-            {repeatLabel}
+            <span className="max-sm:sr-only">{repeatLabel}</span>
           </Button>
         </div>
         <div className="flex min-w-0 flex-1 basis-48 items-center gap-2 sm:max-w-60 sm:ml-auto">
