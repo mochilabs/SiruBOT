@@ -2,9 +2,9 @@ import type { FastifyInstance } from 'fastify';
 import { normalizeTrackingNumber } from '@sirubot/utils/delivery';
 import type { WeatherScope } from '@sirubot/utils/weather';
 import { z } from 'zod';
-import { serveCached } from './serveCached.ts';
+import { DataApiError, serveCached } from './serveCached.ts';
 import { sendDomainError, sendError } from './common.ts';
-import { fetchLyrics, fetchLyricsForTrack, lyricsCacheKey, lyricsTrackCacheKey } from '../providers/lyrics.ts';
+import { fetchLyrics, fetchLyricsForTrack, LyricsNotFoundError, lyricsCacheKey, lyricsTrackCacheKey } from '../providers/lyrics.ts';
 import { fetchWeather, weatherCacheKey } from '../providers/weather.ts';
 import { deliveryTrackCacheKey, searchDeliveryCarriers, trackDelivery } from '../providers/delivery.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
@@ -18,6 +18,8 @@ import { fetchYouTubeSuggestionsFresh, youtubeSuggestionsCacheKey } from '../pro
 /** 캐시형 외부 프로바이더 읽기 — 가사(lrclib)·날씨(Open-Meteo)·택배(tracker.delivery)·유튜브 챕터. TTL은 라우트 단위 상수로 여기에 둬요. */
 
 const LYRICS_TTL_SECONDS = 30 * 24 * 3600;
+/** 가사 없음, 또는 자막이 막혀서 대신 낸 결과 — 짧게만 기억하고 다시 찾아요 */
+const LYRICS_RETRY_TTL_SECONDS = 15 * 60;
 const WEATHER_TTL_SECONDS = 15 * 60;
 
 export function registerCacheProviderRoutes(fastify: FastifyInstance, deps: Pick<RouteDeps, 'translationProvider'>): void {
@@ -49,14 +51,22 @@ export function registerCacheProviderRoutes(fastify: FastifyInstance, deps: Pick
 			const { data, cached } = await serveCached({
 				route: 'lyrics',
 				key: track ? lyricsTrackCacheKey(track) : lyricsCacheKey(q!),
-				ttlSeconds: LYRICS_TTL_SECONDS,
+				ttlSeconds: (d) => (d.captionStatus === 'error' ? LYRICS_RETRY_TTL_SECONDS : LYRICS_TTL_SECONDS),
+				negativeTtlSeconds: LYRICS_RETRY_TTL_SECONDS,
 				provider: 'lrclib',
-				fetchFresh: () => (track ? fetchLyricsForTrack(track) : fetchLyrics(q!)),
+				fetchFresh: async () => {
+					try {
+						return await (track ? fetchLyricsForTrack(track) : fetchLyrics(q!));
+					} catch (error) {
+						if (error instanceof LyricsNotFoundError) throw new DataApiError(404, 'lyrics_not_found', '가사를 찾지 못했어요.');
+						throw error;
+					}
+				},
 				validate: (d) => Boolean(d.plainLyrics || d.syncedLyrics)
 			});
 			// 번역은 캐시된 가사와 따로 붙여요 — 없으면 뒤에서 번역을 시작하고 pending으로 알려요
 			const translation = await lyricsTranslator.lookup(data);
-			const { captionTranslation: _hint, ...body } = data;
+			const { captionTranslation: _hint, captionStatus: _status, ...body } = data;
 			return reply.send({ ...body, translation, _cached: cached });
 		} catch (error) {
 			return sendError(reply, error);

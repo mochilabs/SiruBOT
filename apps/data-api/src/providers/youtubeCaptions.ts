@@ -1,15 +1,21 @@
 import type { LyricLine } from '@sirubot/utils/lrc';
+import { sharedCache } from '../utils/cache.ts';
 import { getLogger } from '../utils/logger.ts';
-import { youtubeClient } from './youtubeClient.ts';
+import { outboundPool, ProxyUnavailableError, type OutboundRoute } from '../utils/proxyPool.ts';
+import { assertNotBotChecked, youtubeClientFor } from './youtubeClient.ts';
 
 const logger = getLogger('youtube-captions');
 
-const FETCH_TIMEOUT_MS = 10_000;
+/** 모든 경로가 막혀 자막을 못 받은 영상은 이만큼 다시 시도하지 않아요 */
+const CAPTION_FAIL_TTL_SECONDS = 6 * 3600;
 const MAX_CAPTION_CHARS = 400_000;
 /** 번역 줄을 원문 줄에 붙일 때 허용하는 시작 시각 차이 */
 const PAIR_TOLERANCE_MS = 1_500;
 const MIN_LINES = 4;
 const CAPTION_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
+
+/** 자막 조회 결과 — `error`는 막혀서 못 받은 것이라 가사 캐시를 짧게 잡아요. */
+export type CaptionOutcome = { status: 'ok'; captions: CaptionLyrics } | { status: 'none' } | { status: 'error' };
 
 export interface CaptionLyrics {
 	/** 원문 자막 줄 (시작 시각 순) */
@@ -97,39 +103,58 @@ export function pickCaptionTracks(tracks: CaptionTrack[]): { original: CaptionTr
 	return { original, korean };
 }
 
-async function fetchTrackLines(track: CaptionTrack): Promise<LyricLine[]> {
+async function fetchTrackLines(route: OutboundRoute, track: CaptionTrack): Promise<LyricLine[]> {
 	const url = new URL(track.base_url);
 	url.searchParams.set('fmt', 'json3');
-	const res = await fetch(url, { headers: { 'user-agent': CAPTION_USER_AGENT }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+	const res = await route.fetch(url, { headers: { 'user-agent': CAPTION_USER_AGENT } });
 	if (!res.ok) throw new Error(`caption fetch failed: ${res.status}`);
 	return parseJson3Captions(await res.text());
 }
 
-/**
- * 영상의 업로더 자막을 가사로 가져와요. 없거나 너무 짧으면 null.
- * 웹 클라이언트의 자막 주소는 빈 응답을 주는 일이 있어 iOS 클라이언트로 조회해요.
- */
-export async function fetchCaptionLyrics(videoId: string): Promise<CaptionLyrics | null> {
-	if (!/^[\w-]{11}$/.test(videoId)) return null;
-	try {
-		const youtube = await youtubeClient();
-		const info = await youtube.getInfo(videoId, { client: 'IOS' });
-		const tracks = (info.captions?.caption_tracks ?? []) as CaptionTrack[];
-		const picked = pickCaptionTracks(tracks);
-		if (!picked) return null;
-		const lines = await fetchTrackLines(picked.original);
-		if (lines.length < MIN_LINES) return null;
-		let koreanByLine: Record<string, string> | null = null;
-		if (picked.korean) {
-			try {
-				koreanByLine = pairKoreanLines(lines, await fetchTrackLines(picked.korean));
-			} catch (error) {
-				logger.debug(`korean caption fetch failed for ${videoId}: ${String(error)}`);
-			}
+export function captionFailKey(videoId: string): string {
+	return `dataapi:v1:caption-fail:${videoId}`;
+}
+
+/** 경로 하나로 자막 작업 전체(영상 정보 + 원문·한국어 자막)를 해요. */
+async function lookupOnRoute(route: OutboundRoute, videoId: string): Promise<CaptionLyrics | null> {
+	const youtube = await youtubeClientFor(route);
+	// 웹 클라이언트의 자막 주소는 빈 응답을 주는 일이 있어 iOS 클라이언트로 조회해요
+	const info = await youtube.getInfo(videoId, { client: 'IOS' });
+	assertNotBotChecked(route, info.playability_status);
+	const tracks = (info.captions?.caption_tracks ?? []) as CaptionTrack[];
+	const picked = pickCaptionTracks(tracks);
+	if (!picked) return null;
+	const lines = await fetchTrackLines(route, picked.original);
+	if (lines.length < MIN_LINES) return null;
+	let koreanByLine: Record<string, string> | null = null;
+	if (picked.korean) {
+		try {
+			koreanByLine = pairKoreanLines(lines, await fetchTrackLines(route, picked.korean));
+		} catch (error) {
+			logger.debug(`korean caption fetch failed for ${videoId}: ${String(error)}`);
 		}
-		return { lines, koreanByLine };
+	}
+	return { lines, koreanByLine };
+}
+
+/**
+ * 영상의 업로더 자막을 가사로 가져와요. 나가는 경로는 `outboundPool()`이 골라요(direct 우선, 막히면 프록시).
+ * 모든 경로가 막히면 그 영상은 6시간 동안 다시 시도하지 않아요.
+ */
+export async function fetchCaptionLyrics(videoId: string): Promise<CaptionOutcome> {
+	if (!/^[\w-]{11}$/.test(videoId)) return { status: 'none' };
+	const failKey = captionFailKey(videoId);
+	if (await sharedCache.get(failKey)) return { status: 'error' };
+	try {
+		const captions = await outboundPool().run('captions', (route) => lookupOnRoute(route, videoId));
+		return captions ? { status: 'ok', captions } : { status: 'none' };
 	} catch (error) {
-		logger.debug(`caption lookup failed for ${videoId}: ${String(error)}`);
-		return null;
+		if (error instanceof ProxyUnavailableError) {
+			logger.debug(`caption lookup blocked for ${videoId}: ${error.message}`);
+			await sharedCache.set(failKey, '1', CAPTION_FAIL_TTL_SECONDS);
+		} else {
+			logger.debug(`caption lookup failed for ${videoId}: ${String(error)}`);
+		}
+		return { status: 'error' };
 	}
 }

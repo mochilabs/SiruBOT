@@ -48,6 +48,8 @@ export interface LyricsResult {
 	matchKind?: 'get' | 'search' | 'query' | 'captions';
 	/** 유튜브 한국어 자막에서 짝지은 번역(원문 줄 → 번역) — 번역 저장에만 쓰고 응답엔 싣지 않아요. */
 	captionTranslation?: Record<string, string> | null;
+	/** 내부용: 업로더 자막 조회가 막혀서(error) 다른 결과를 냈는지 — 캐시 기간만 정하고 응답엔 안 나가요 */
+	captionStatus?: 'ok' | 'none' | 'error' | null;
 	/** 한국어 번역 — `/v1/lyrics` 응답에서 캐시와 따로 붙어요. lines는 원문 줄 → 번역이에요. */
 	translation?: { status: 'ready' | 'pending' | 'none'; lines: Record<string, string> | null };
 }

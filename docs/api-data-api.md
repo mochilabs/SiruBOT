@@ -21,7 +21,7 @@ Routes are registered from `routes/index.ts`, one file per domain.
 | Route | Description | Notes | File |
 |---|---|---|---|
 | GET `/api/health` | Health check | Unauthenticated | `routes/index.ts` |
-| GET `/v1/status` | Operational metrics: cache, circuit breakers, hubs | | `routes/index.ts` |
+| GET `/v1/status` | Operational metrics: cache, circuit breakers, outbound routes (`outbound`: per-route cooldowns and counts), hubs | | `routes/index.ts` |
 | GET `/dashboard` | Built-in monitoring page | Polls every 5 s | `routes/dashboard.ts` |
 
 ### Cached external providers
@@ -29,11 +29,11 @@ Routes are registered from `routes/index.ts`, one file per domain.
 | Route | Description | Cache TTL | File |
 |---|---|---|---|
 | GET `/v1/ohaasa` | Daily horoscope, translated | 7 days | `routes/ohaasa.ts` |
-| GET `/v1/lyrics?q=` or `?title=&artist=&durationMs=&source=` | Lyrics (lrclib). `q` is a free search (first result). `title` looks up the playing track: LRCLIB `/api/get` first, then a field search that keeps only same-track results (not instrumental, title and artist match, length within 3 s), then the `q` search as a last resort. The response keeps `trackName`, `artistName`, `plainLyrics`, `syncedLyrics` and adds `durationSec`, `hasWordSync`, `wordSync` (lines with `startMs`, `text`, `words[].startMs`, from the LRCLIB `lyricsfile`) and `matchKind` (`get`, `search` or `query`), plus `translation` (`{ status: 'ready' | 'pending' | 'none', lines }`, `lines` maps an original line to its Korean translation). The translation is not part of the cached body: each request looks it up in the `LyricsTranslation` table and, when missing, starts a background translation (`pending`; ask again later). Korean lyrics, a missing LLM key or no `DATABASE_URL` give `none` | 30 days (lyrics only) | `routes/cache-providers.ts`, `providers/lyrics.ts`, `services/lyricsTranslation.ts` |
+| GET `/v1/lyrics?q=` or `?title=&artist=&durationMs=&source=` | Lyrics (lrclib). `q` is a free search (first result). `title` looks up the playing track: LRCLIB `/api/get` first, then a field search that keeps only same-track results (not instrumental, title and artist match, length within 3 s), then the `q` search as a last resort. The response keeps `trackName`, `artistName`, `plainLyrics`, `syncedLyrics` and adds `durationSec`, `hasWordSync`, `wordSync` (lines with `startMs`, `text`, `words[].startMs`, from the LRCLIB `lyricsfile`) and `matchKind` (`get`, `search`, `query` or `captions`, the uploader's YouTube captions when a `videoId` is given and LRCLIB has no synced lyrics), plus `translation` (`{ status: 'ready' | 'pending' | 'none', lines }`, `lines` maps an original line to its Korean translation). The translation is not part of the cached body: each request looks it up in the `LyricsTranslation` table and, when missing, starts a background translation (`pending`; ask again later). Korean lyrics, a missing LLM key or no `DATABASE_URL` give `none`. No lyrics anywhere is `404 lyrics_not_found` (not counted against the LRCLIB circuit breaker) | 30 days (lyrics only); 15 minutes for `404` and for a stand-in result served because the captions lookup was blocked | `routes/cache-providers.ts`, `providers/lyrics.ts`, `services/lyricsTranslation.ts` |
 | GET `/v1/weather?location=&scope=` | Geocoding, forecast and air quality (Open-Meteo). `scope` is `now`, `today`, `tomorrow` or `week` | 15 minutes | `routes/cache-providers.ts` |
 | GET `/v1/delivery/track?carrier=&number=` | Parcel tracking | 5 minutes | `routes/cache-providers.ts` |
 | GET `/v1/delivery/carriers?q=` | Carrier list | | `routes/cache-providers.ts` |
-| GET `/v1/chapters?videoId=&durationMs=` | YouTube.js chapters | 12 hours; 1 hour when empty | `routes/cache-providers.ts` |
+| GET `/v1/chapters?videoId=&durationMs=` | YouTube.js chapters, sent through the outbound routes (`OUTBOUND_PROXY_URLS`). `503 upstream_blocked` when every route is cooling down | 12 hours; 1 hour when empty | `routes/cache-providers.ts` |
 | GET `/v1/youtube/suggestions?q=` | YouTube.js search suggestions | 10 minutes | `routes/cache-providers.ts` |
 | GET `/v1/sponsorblock/segments?videoId=` | SponsorBlock skip segments in milliseconds | 24 hours; 1 hour when empty; a positive result is served stale for 7 days on upstream failure | `routes/cache-providers.ts` |
 | POST `/v1/embed-fix/metadata` | Embed-repair metadata for X (fxtwitter), Instagram and BOOTH links | Provider cache | `routes/embed-fix.ts` |
