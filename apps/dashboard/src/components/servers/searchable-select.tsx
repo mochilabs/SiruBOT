@@ -257,6 +257,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
 							size="icon-xs"
 							icon={<X className="size-3" aria-hidden />}
 							aria-label={`${option.label} 제거`}
+							className="rounded-full bg-transparent text-primary-text shadow-none hover:bg-primary-control/20 hover:text-primary-text"
 							disabled={disabled}
 							onClick={() => removeSelectedValue(option.value)}
 						/>
