@@ -1,5 +1,6 @@
 import type { CollectedInteraction, InteractionCollector, Message, MessageComponentInteraction, MessageComponentType } from 'discord.js';
 import type { AppLogger } from './appLogger.ts';
+import { inFreshGuildTheme } from './guildThemeScope.ts';
 import { ownerOnly } from './ownerOnlyFilter.ts';
 
 /** 컴포넌트 컬렉터를 만들 수 있는 곳 — 메시지나 채널이에요. */
@@ -75,9 +76,11 @@ export function createComponentSession<I extends MessageComponentInteraction = M
 		else console.error(message, error);
 	};
 
+	// 컬렉터 콜백은 상호작용 처리와 다른 맥락에서 불려서 서버 색을 잃어요. 그때마다 서버 테마를 새로 싣고 불러요.
+	const guildId = (source as { guildId?: string | null }).guildId ?? null;
 	collector.on('collect', (interaction) => {
 		try {
-			void Promise.resolve(options.onCollect(interaction, session)).catch(report('onCollect'));
+			void inFreshGuildTheme(interaction.guildId ?? guildId, () => options.onCollect(interaction, session)).catch(report('onCollect'));
 		} catch (error) {
 			report('onCollect')(error);
 		}
@@ -86,7 +89,7 @@ export function createComponentSession<I extends MessageComponentInteraction = M
 		if (settled) return;
 		settled = true;
 		try {
-			void Promise.resolve(options.onTimeout?.(session)).catch(report('onTimeout'));
+			void inFreshGuildTheme(guildId, () => options.onTimeout?.(session)).catch(report('onTimeout'));
 		} catch (error) {
 			report('onTimeout')(error);
 		}

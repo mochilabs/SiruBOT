@@ -17,14 +17,17 @@ export function currentGuildTheme(): ThemePreset | null {
 
 /**
  * `guildId` 서버의 테마를 맥락에 싣고 `fn`을 실행해요. 이미 맥락 안이면 새로 조회하지 않고 그대로 재사용해요.
+ * `fresh`면 안쪽 맥락을 무시하고 새로 읽어요: 타이머·컬렉터처럼 오래 사는 콜백은 만들어진 순간의 맥락(옛 색)을 물려받아서,
+ * 서버 색을 바꾼 뒤에도 옛 색으로 그리는 일이 생겨요. 그런 렌더 진입점은 `fresh`로 열어요.
  * 서버 밖(DM)이거나 조회에 실패하면 기본 테마로 진행해요 — 색 때문에 응답이 막히면 안 돼요.
  */
 export async function withGuildTheme<T>(
 	guildId: string | null | undefined,
 	loadTheme: (guildId: string) => Promise<string | null | undefined>,
-	fn: () => Promise<T> | T
+	fn: () => Promise<T> | T,
+	options?: { fresh?: boolean }
 ): Promise<T> {
-	if (store.getStore()) return fn();
+	if (!options?.fresh && store.getStore()) return fn();
 	let preset: ThemePreset = normalizeThemePreset(null);
 	if (guildId) {
 		try {

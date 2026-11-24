@@ -57,7 +57,8 @@ export class PlayerNotifier implements Stoppable {
 		return withGuildTheme(
 			guildId,
 			async (id) => (await this.deps.guildService.getGuild(id)).themePreset,
-			() => pinnedIdleView()
+			() => pinnedIdleView(),
+			{ fresh: true }
 		);
 	}
 

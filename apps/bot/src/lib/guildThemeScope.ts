@@ -11,3 +11,11 @@ import { withGuildTheme } from './guildTheme.ts';
 export function inGuildTheme<T>(guildId: string | null | undefined, fn: () => Promise<T> | T): Promise<T> {
 	return withGuildTheme(guildId, async (id) => (await container.guildService.getGuild(id)).themePreset, fn);
 }
+
+/**
+ * `inGuildTheme`과 같지만 이미 열린 테마 맥락을 재사용하지 않고 서버 설정 캐시에서 다시 읽어요.
+ * 타이머(진행 막대·실시간 가사)와 컴포넌트 컬렉터 콜백처럼 오래 살면서 다시 그리는 곳에 써요.
+ */
+export function inFreshGuildTheme<T>(guildId: string | null | undefined, fn: () => Promise<T> | T): Promise<T> {
+	return withGuildTheme(guildId, async (id) => (await container.guildService.getGuild(id)).themePreset, fn, { fresh: true });
+}

@@ -7,6 +7,7 @@ import { buildLiveLyricsText, parseLiveLines, startLiveLoop } from '../utils/liv
 import { buildLyricsText, hasTranslation, type LyricsViewMode } from '../utils/lyricsText.ts';
 import { type ComponentSession, createComponentSession } from '../../../../lib/componentSession.ts';
 import { errorView } from '../../../../lib/errorView.ts';
+import { inFreshGuildTheme } from '../../../../lib/guildThemeScope.ts';
 
 export const name = 'lyrics';
 export const ko = '가사';
@@ -139,10 +140,11 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 				getPositionMs: () => container.audio.getPlayer(interaction.guildId)?.position ?? null,
 				isSameTrack: () => trackKey(container.audio.getPlayer(interaction.guildId)?.queue.current) === startKey,
 				// 인터랙션 토큰은 15분 뒤 만료되니 메시지를 직접 고쳐요
-				render: async (text) => void (await message.edit(livePayload(text))),
+				// 타이머에서 도는 렌더라 서버 색을 새로 읽어요 (실시간 중에 색을 바꿔도 따라가요)
+				render: (text) => inFreshGuildTheme(interaction.guildId, async () => void (await message.edit(livePayload(text)))),
 				onEnd: async () => {
 					liveSession?.settle('ended');
-					await message.edit(render()).catch(() => null);
+					await inFreshGuildTheme(interaction.guildId, () => message.edit(render())).catch(() => null);
 					startViewSession();
 				}
 			});
