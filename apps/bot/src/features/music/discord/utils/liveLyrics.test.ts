@@ -14,16 +14,17 @@ describe('parseLiveLines', () => {
 describe('buildLiveLyricsText', () => {
 	const lines = parseLiveLines(LRC)!;
 
-	it('marks the current line with the previous and next lines around it', () => {
-		expect(buildLiveLyricsText(lines, 1, null)).toBe('-# one\n**▶ two**\n♪\nthree');
+	it('shows only the previous, current and next line', () => {
+		expect(buildLiveLyricsText(lines, 1, null)).toBe('-# one\n**▶ two**\n♪');
 	});
 
-	it('adds the translation under the current line', () => {
-		expect(buildLiveLyricsText(lines, 1, { two: '둘' })).toBe('-# one\n**▶ two**\n-# 둘\n♪\nthree');
+	it('adds a translation under each line that has one', () => {
+		expect(buildLiveLyricsText(lines, 1, { one: '하나', two: '둘', three: '셋' })).toBe('-# one\n-# 하나\n**▶ two**\n-# 둘\n♪');
+		expect(buildLiveLyricsText(lines, 2, { two: '둘', three: '셋' })).toBe('-# two\n-# 둘\n**▶ ♪**\nthree\n-# 셋');
 	});
 
-	it('previews the first lines before the song reaches them', () => {
-		expect(buildLiveLyricsText(lines, -1, null)).toBe('-# 곧 시작해요\none\ntwo\n♪');
+	it('previews only the first line before the song reaches it', () => {
+		expect(buildLiveLyricsText(lines, -1, { one: '하나' })).toBe('-# 곧 시작해요\none\n-# 하나');
 	});
 
 	it('stops at the end of the lyrics', () => {

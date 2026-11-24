@@ -6,9 +6,6 @@ export const LIVE_LEAD_MS = 700;
 export const LIVE_MIN_EDIT_GAP_MS = 1_500;
 /** 재생 위치를 확인하는 주기 */
 export const LIVE_TICK_MS = 500;
-/** 지난 줄·다음 줄을 몇 줄씩 보여줄지 */
-const LIVE_PREV_LINES = 1;
-const LIVE_NEXT_LINES = 2;
 
 /** 실시간으로 넘길 수 있는 줄 싱크 가사인지 — 가사 줄이 둘 이상이어야 해요. */
 export function parseLiveLines(syncedLyrics: string | null | undefined): LyricLine[] | null {
@@ -20,21 +17,30 @@ export function parseLiveLines(syncedLyrics: string | null | undefined): LyricLi
 const textOf = (line: LyricLine | undefined) => (line ? line.text || '♪' : null);
 
 /**
- * 현재 줄 중심의 실시간 가사 — 지난 줄은 작게, 현재 줄은 굵게(번역이 있으면 아래에 작게), 다음 줄은 그대로 보여줘요.
- * 첫 줄 전(index -1)에는 처음 줄들을 미리 보여줘요.
+ * 이전 줄, 현재 줄, 다음 줄만 보여줘요. 번역이 있으면 줄마다 아래에 작게 붙어요.
+ * 이전 줄은 작게, 현재 줄은 굵게(`▶`)예요. 첫 줄 전(index -1)에는 첫 줄만 미리 보여줘요.
  */
 export function buildLiveLyricsText(lines: ReadonlyArray<LyricLine>, index: number, translation: Record<string, string> | null): string {
 	const parts: string[] = [];
-	if (index < 0) {
-		parts.push('-# 곧 시작해요', ...lines.slice(0, LIVE_NEXT_LINES + 1).map((line) => textOf(line)!));
-		return parts.join('\n');
+	const addTranslation = (line: LyricLine | undefined) => {
+		const translated = line?.text ? translation?.[line.text] : null;
+		if (translated && translated !== line?.text) parts.push(`-# ${translated}`);
+	};
+	const prev = index > 0 ? lines[index - 1] : undefined;
+	if (prev) {
+		parts.push(`-# ${textOf(prev)}`);
+		addTranslation(prev);
 	}
-	for (let i = Math.max(0, index - LIVE_PREV_LINES); i < index; i++) parts.push(`-# ${textOf(lines[i])}`);
-	const current = lines[index];
-	parts.push(`**▶ ${textOf(current)}**`);
-	const translated = current?.text ? translation?.[current.text] : null;
-	if (translated && translated !== current?.text) parts.push(`-# ${translated}`);
-	for (let i = index + 1; i <= index + LIVE_NEXT_LINES && i < lines.length; i++) parts.push(textOf(lines[i])!);
+	if (index < 0) parts.push('-# 곧 시작해요');
+	else {
+		parts.push(`**▶ ${textOf(lines[index])}**`);
+		addTranslation(lines[index]);
+	}
+	const next = lines[index + 1];
+	if (next) {
+		parts.push(textOf(next)!);
+		addTranslation(next);
+	}
 	return parts.join('\n');
 }
 
