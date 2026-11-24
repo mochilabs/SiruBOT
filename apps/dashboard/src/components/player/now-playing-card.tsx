@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatDuration } from "@sirubot/utils/time";
-import { Check, Heart, ListMusic, Pause, Play, Repeat, Repeat1, SkipForward, Square, Volume2, X } from "lucide-react";
+import { Check, Heart, ListMusic, Pause, Play, Repeat, Repeat1, SkipBack, SkipForward, Square, Volume2, X } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import { StatusDot } from "@/components/primitives/status-dot";
@@ -38,7 +38,7 @@ export function NowPlaying({
   const unavailable = state.stale || (mode === "stream" && !connected);
   const positionMs = unavailable ? state.positionMs : interpolatedPositionMs(state, receivedAt);
   const [pendingAction, setPendingAction] = useState<
-    "pause" | "resume" | "skip" | "stop" | "repeat" | null
+    "pause" | "resume" | "skip" | "previous" | "stop" | "repeat" | null
   >(null);
   const [volumeOverride, setVolumeOverride] = useState<number | null>(null);
   const volumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -125,6 +125,17 @@ export function NowPlaying({
     setPendingAction("skip");
     const result = await sendPlayerCommand(guildId, "skip");
     if (!result.ok) failCommand(result, "명령을 전달하지 못했어요.");
+    if (result.ok) setSettlingSignature(stateSignatureRef.current);
+    setPendingAction(null);
+    commandPendingRef.current = false;
+  }, [controlsDisabled, failCommand, guildId]);
+
+  const handlePrevious = useCallback(async () => {
+    if (commandPendingRef.current || controlsDisabled) return;
+    commandPendingRef.current = true;
+    setPendingAction("previous");
+    const result = await sendPlayerCommand(guildId, "previous");
+    if (!result.ok) failCommand(result, "이전 곡을 재생하지 못했어요.");
     if (result.ok) setSettlingSignature(stateSignatureRef.current);
     setPendingAction(null);
     commandPendingRef.current = false;
@@ -354,10 +365,21 @@ export function NowPlaying({
 
       {/* 실시간 컨트롤러 — 명령은 data-api Redis 브로드캐스트로 봇에 즉시 적용돼요 */}
       <div
-        className="flex flex-wrap items-center gap-x-4 gap-y-2"
+        className="flex flex-col gap-3 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4"
         title={controlBlocked ? CONTROL_BLOCKED_HINT : undefined}
       >
-        <div className="flex flex-wrap items-center gap-2">
+        {/* 가운데: 이전 · 재생/일시정지 · 다음 */}
+        <div className="flex items-center justify-center gap-3 sm:order-2">
+          <Button
+            variant="secondary"
+            size="icon-lg"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            icon={<SkipBack size={16} />}
+            onClick={handlePrevious}
+            loading={pendingAction === "previous"}
+            disabled={commandsOff || busy(["previous"])}
+            aria-label="이전 곡"
+          />
           <Button
             variant="primary"
             size="icon-lg"
@@ -378,6 +400,9 @@ export function NowPlaying({
             disabled={commandsOff || busy(["skip"])}
             aria-label="다음 곡"
           />
+        </div>
+        {/* 왼쪽: 정지 · 즐겨찾기 · 반복 */}
+        <div className="flex items-center justify-center gap-2 sm:order-1 sm:justify-start">
           <Button
             variant="secondary"
             size="icon-lg"
@@ -400,21 +425,31 @@ export function NowPlaying({
             title="즐겨찾기에 추가"
           />
           <Button
-            variant="state-toggle"
-            size="sm"
-            className="max-sm:w-9 max-sm:px-0 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
-            active={displayedRepeat !== "off"}
-            icon={displayedRepeat === "track" ? <Repeat1 size={14} /> : <Repeat size={14} />}
+            variant={displayedRepeat === "off" ? "secondary" : "primary"}
+            size="icon-lg"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            icon={
+              displayedRepeat === "track" ? (
+                <Repeat1 size={16} />
+              ) : (
+                // 반복 안 함은 아이콘에 사선을 그어 꺼짐을 보여줘요
+                <span className="relative inline-flex">
+                  <Repeat size={16} className={displayedRepeat === "off" ? "opacity-60" : undefined} />
+                  {displayedRepeat === "off" && (
+                    <span aria-hidden className="absolute left-1/2 top-1/2 h-0.5 w-5 -translate-x-1/2 -translate-y-1/2 -rotate-45 rounded-full bg-current" />
+                  )}
+                </span>
+              )
+            }
             onClick={handleRepeat}
             loading={pendingAction === "repeat"}
             disabled={commandsOff || busy(["repeat"])}
             aria-label={repeatLabel}
             title={repeatLabel}
-          >
-            <span className="max-sm:sr-only">{repeatLabel}</span>
-          </Button>
+          />
         </div>
-        <div className="flex min-w-0 flex-1 basis-48 items-center gap-2 sm:max-w-60 sm:ml-auto">
+        {/* 오른쪽: 볼륨 */}
+        <div className="flex min-w-0 items-center gap-2 sm:order-3 sm:max-w-60 sm:justify-self-end sm:w-full">
           <Volume2 size={16} className="shrink-0 text-muted-foreground" aria-hidden />
           <Slider
             className="min-w-0 flex-1"

@@ -80,7 +80,8 @@ describe('playerWeb request contracts', () => {
 			'queue-remove' as const,
 			'queue-move' as const,
 			'queue-jump' as const,
-			'seek' as const
+			'seek' as const,
+			'previous' as const
 		]) {
 			expect(playerWebControlActionSchema.safeParse(action).success).toBe(true);
 		}

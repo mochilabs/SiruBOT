@@ -68,7 +68,7 @@ function TrackRow({
 }) {
 	const safeUrl = /^https?:\/\//i.test(track.url) ? track.url : null;
 	return (
-		<div className="flex min-w-0 items-center gap-3 rounded-card bg-surface-2 px-3 py-2.5">
+		<div className="group/row flex min-w-0 items-center gap-3 rounded-card bg-surface-2 px-3 py-2.5">
 			<span className="w-4 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">{index + 1}</span>
 			{track.thumbnail ? (
 				<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-control">
@@ -99,6 +99,11 @@ function TrackRow({
 				<Button
 					variant="icon"
 					size="icon-sm"
+					className={cn(
+						// 마우스 환경에서는 행에 올렸을 때만 보여요. 터치·키보드 포커스·재생 요청 중에는 항상 보여요.
+						"transition-opacity duration-fast pointer-fine:opacity-0 pointer-fine:group-hover/row:opacity-100 focus-visible:opacity-100",
+						playingUrl === track.url && "pointer-fine:opacity-100",
+					)}
 					icon={<Play size={13} aria-hidden />}
 					onClick={() => onPlay(track)}
 					loading={playingUrl === track.url}

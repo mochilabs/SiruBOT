@@ -55,6 +55,7 @@ export default async function PlayerPage({
   return (
     <Container>
       <PageHeader
+        className="mb-5 sm:mb-6"
         title="음악 플레이어"
         description="지금 플레이 중인 곡을 실시간으로 보고, 검색해서 바로 재생해요."
       />

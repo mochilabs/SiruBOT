@@ -27,7 +27,8 @@ export const playerWebControlActionSchema = z.enum([
 	'queue-remove',
 	'queue-move',
 	'queue-jump',
-	'seek'
+	'seek',
+	'previous'
 ]);
 export type PlayerWebControlAction = z.infer<typeof playerWebControlActionSchema>;
 

@@ -224,6 +224,9 @@ async function applyMusicControl(request: PlayerWebControlRequest, member: Guild
 		case 'skip':
 			await container.music.skipNow(actor);
 			return;
+		case 'previous':
+			await container.music.previous(actor);
+			return;
 		case 'seek':
 			if (typeof request.positionMs !== 'number') throw new Error(`control seek: positionMs 누락 (guild ${request.guildId})`);
 			await container.music.seek(actor, request.positionMs);
