@@ -69,6 +69,13 @@ export function lyricsTrackKey(state: LivePlayerState): string {
   return `${state.trackUri || state.trackTitle || ""}|${Math.round(state.durationMs / 1000)}`;
 }
 
+/** 유튜브 곡이면 trackUri에서 영상 ID를 뽑아요 — 업로더 자막 폴백에 써요. */
+export function youtubeVideoId(state: Pick<LivePlayerState, "sourceName" | "trackUri">): string | null {
+  if (!state.sourceName?.startsWith("youtube") || !state.trackUri) return null;
+  const match = /(?:[?&]v=|youtu\.be\/|\/shorts\/)([\w-]{11})(?![\w-])/.exec(state.trackUri);
+  return match?.[1] ?? null;
+}
+
 /** 가사 조회 경로 (`/api/servers/:id` 뒤에 붙여요) */
 export function lyricsQueryPath(state: LivePlayerState): string | null {
   if (!lyricsEligible(state)) return null;
@@ -78,5 +85,7 @@ export function lyricsQueryPath(state: LivePlayerState): string | null {
     durationMs: String(Math.max(0, Math.round(state.durationMs))),
   });
   if (state.sourceName) params.set("source", state.sourceName);
+  const videoId = youtubeVideoId(state);
+  if (videoId) params.set("videoId", videoId);
   return `/lyrics?${params}`;
 }

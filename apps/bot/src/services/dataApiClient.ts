@@ -110,6 +110,22 @@ export async function searchLyrics(query: string): Promise<LyricsResult[]> {
 	return results;
 }
 
+/** 재생 중인 곡의 가사 — 제목·아티스트·길이로 찾고, 제목 정리는 서버가 해요. */
+export async function searchLyricsForTrack(track: {
+	title: string;
+	artist: string;
+	durationMs: number;
+	sourceName?: string | null;
+	videoId?: string | null;
+}): Promise<LyricsResult[]> {
+	const params = new URLSearchParams({ title: track.title, artist: track.artist, durationMs: String(Math.max(0, Math.round(track.durationMs))) });
+	if (track.sourceName) params.set('source', track.sourceName);
+	if (track.videoId) params.set('videoId', track.videoId);
+	const data = await gatewayGet<LyricsResult>(`/v1/lyrics?${params}`);
+	if (!data?.trackName) throw new Error('lyrics not found');
+	return [data];
+}
+
 /** 유튜브 챕터 — 게이트웨이 (12시간 캐시). */
 export async function fetchYouTubeChapters(videoId: string, durationMs: number): Promise<YouTubeChapter[]> {
 	if (!videoId || durationMs <= 0) return [];

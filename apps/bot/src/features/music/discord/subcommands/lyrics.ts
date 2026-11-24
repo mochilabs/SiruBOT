@@ -1,7 +1,7 @@
 import { container, UserError } from '@sapphire/framework';
-import { emoji } from '@sirubot/utils';
+import { emoji, resolveYouTubeVideoId } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
-import { searchLyrics } from '../../../../services/dataApiClient.ts';
+import { searchLyrics, searchLyricsForTrack } from '../../../../services/dataApiClient.ts';
 import { LYRICS_BUTTON_IDS, lyricsView } from '../views/lyrics.ts';
 import { buildLyricsText, hasTranslation, type LyricsViewMode } from '../utils/lyricsText.ts';
 import { createComponentSession } from '../../../../lib/componentSession.ts';
@@ -34,12 +34,20 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	await interaction.deferReply();
 
 	let query = interaction.options.getString('query');
+	let current: { title: string; artist: string; durationMs: number; sourceName: string | null; videoId: string | null } | null = null;
 
 	if (!query) {
 		const player = container.audio.getPlayer(interaction.guildId);
 		if (player?.queue.current) {
 			const track = player.queue.current;
 			query = `${track.info.author} ${track.info.title}`.replace(/\(.*?\)|\[.*?\]/g, '').trim();
+			current = {
+				title: track.info.title,
+				artist: track.info.author,
+				durationMs: track.info.duration,
+				sourceName: track.info.sourceName ?? null,
+				videoId: resolveYouTubeVideoId(track)
+			};
 		} else {
 			throw new UserError({
 				identifier: 'lyrics_no_track',
@@ -51,7 +59,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	try {
 		// 게이트웨이(data-api) 우선, 실패 시 lrclib 직접 호출로 폴백해요
-		const results = await searchLyrics(query);
+		const results = current ? await searchLyricsForTrack(current).catch(() => searchLyrics(query)) : await searchLyrics(query);
 
 		if (!results || results.length === 0 || (!results[0].plainLyrics && !results[0].syncedLyrics)) {
 			await interaction.editReply({

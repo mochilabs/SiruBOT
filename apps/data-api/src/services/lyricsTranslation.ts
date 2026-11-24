@@ -162,6 +162,21 @@ export class LyricsTranslator {
 			return none;
 		}
 
+		// 업로더가 올린 한국어 자막이 있으면 AI 번역 대신 그걸 저장해요
+		const hint = result.captionTranslation;
+		if (hint && Object.keys(hint).length > 0) {
+			try {
+				await db.lyricsTranslation.upsert({
+					where: { sourceHash: hash },
+					create: { sourceHash: hash, lines: hint, model: 'youtube-captions' },
+					update: {}
+				});
+				return { status: 'ready', lines: hint };
+			} catch (error) {
+				logger.warn('caption translation store failed:', String(error));
+			}
+		}
+
 		if (this.inflight.has(hash)) return { status: 'pending', lines: null };
 		const failed = this.failedAt.get(hash);
 		if (failed && Date.now() - failed < RETRY_AFTER_MS) return none;
