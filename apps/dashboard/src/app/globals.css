@@ -25,7 +25,7 @@
 	   포커스 링·브랜드 액션(--brand)은 포인트 핑크, 본체(--primary)는 라이트 핑크 서피스.
 	   텍스트는 primary-foreground(마룬) / accent-foreground 계열로 AA를 맞춘다.
 	   서피스 슬롯(card·popover·secondary·muted)은 --surface-* 단일 소스를 참조한다. */
-	--background: #fff9f9;
+	--background: #fff3f4;
 	--foreground: #3a2c30;
 	--card: var(--surface-1);
 	--card-foreground: #3a2c30;
@@ -76,7 +76,7 @@
 
 }
 .dark {
-	--background: #1f1618;
+	--background: #1a1113;
 	--foreground: #fbeeee;
 	--card: var(--surface-1);
 	--card-foreground: #fbeeee;
@@ -96,7 +96,7 @@
 	--secondary-foreground: #fbeeee;
 	--muted: var(--surface-2);
 	--muted-foreground: #b9a4a9;
-	--accent: #4d3b40;
+	--accent: #5b474d;
 	--accent-foreground: #ffdada;
 	--border: #4d3b40;
 	--input: var(--border);
@@ -197,14 +197,14 @@
 	--r-dialog: 1.25rem;
 
 	--surface-1: #ffffff;
-	--surface-2: #fff0f0;
-	--surface-3: #ffe6e8;
+	--surface-2: #fde6e8;
+	--surface-3: #fbd6db;
 }
 
 .dark {
 	--surface-1: #2b2023;
 	--surface-2: #3a2c30;
-	--surface-3: #3a2c30;
+	--surface-3: #4a393e;
 }
 
 @theme inline {
