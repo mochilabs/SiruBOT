@@ -308,7 +308,7 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
           void runQueueAction("clear", "queue-clear", undefined, "대기열을 비웠어요.").then(() => setConfirmClear(false))
         }
       >
-        대기 중인 곡 {state.queueLength}곡이 모두 사라져요. 지금 재생 중인 곡은 계속 재생돼요.
+        대기 중인 곡 {state.queueLength}곡이 모두 사라져요.
       </ConfirmDialog>
     </section>
   );
