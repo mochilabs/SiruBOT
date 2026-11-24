@@ -103,6 +103,7 @@ export function LayerProperties({ layer, selectedCount = layer ? 1 : 0, saving, 
 	const rotationField = (
 		<Field label="회전" description="시계 방향 각도예요. 0이면 회전하지 않아요.">
 			<Slider
+				hideLabel
 				value={layer.type === "avatar" ? 0 : (layer.rotation ?? 0)}
 				min={-180}
 				max={180}
@@ -148,14 +149,14 @@ export function LayerProperties({ layer, selectedCount = layer ? 1 : 0, saving, 
 			{animation ? (
 				<>
 					<Field label="한 번 움직이는 시간" description="레이어마다 달라도 돼요. 가장 긴 값이 카드 한 바퀴 길이고 다른 레이어는 그 길이에 맞춰져요.">
-						<Slider value={animation.durationMs} min={500} max={GREETING_ANIMATION_MAX_MS} step={100} label="움직임 시간" showValue formatValue={(value) => `${(value / 1000).toFixed(1)}초`} disabled={saving} onChange={(durationMs) => patch({ animation: { ...animation, durationMs } })} onCommit={onCommit} />
+						<Slider hideLabel value={animation.durationMs} min={500} max={GREETING_ANIMATION_MAX_MS} step={100} label="움직임 시간" showValue formatValue={(value) => `${(value / 1000).toFixed(1)}초`} disabled={saving} onChange={(durationMs) => patch({ animation: { ...animation, durationMs } })} onCommit={onCommit} />
 					</Field>
 					<Field label="시작 어긋남" description="레이어끼리 같이 움직이지 않게 엇갈리게 해요.">
-						<Slider value={animation.delayMs} min={0} max={GREETING_ANIMATION_MAX_MS} step={100} label="시작 어긋남" showValue formatValue={(value) => `${(value / 1000).toFixed(1)}초`} disabled={saving} onChange={(delayMs) => patch({ animation: { ...animation, delayMs } })} onCommit={onCommit} />
+						<Slider hideLabel value={animation.delayMs} min={0} max={GREETING_ANIMATION_MAX_MS} step={100} label="시작 어긋남" showValue formatValue={(value) => `${(value / 1000).toFixed(1)}초`} disabled={saving} onChange={(delayMs) => patch({ animation: { ...animation, delayMs } })} onCommit={onCommit} />
 					</Field>
 					{animation.type !== "spin" ? (
 						<Field label="세기">
-							<Slider value={animation.intensity} min={0} max={1} step={0.05} label="움직임 세기" showValue formatValue={(value) => `${Math.round(value * 100)}%`} disabled={saving} onChange={(intensity) => patch({ animation: { ...animation, intensity } })} onCommit={onCommit} />
+							<Slider hideLabel value={animation.intensity} min={0} max={1} step={0.05} label="움직임 세기" showValue formatValue={(value) => `${Math.round(value * 100)}%`} disabled={saving} onChange={(intensity) => patch({ animation: { ...animation, intensity } })} onCommit={onCommit} />
 						</Field>
 					) : null}
 				</>
@@ -174,7 +175,7 @@ export function LayerProperties({ layer, selectedCount = layer ? 1 : 0, saving, 
 						<p className="pt-1 text-2xs text-muted-foreground">{layer.text.length}/500</p>
 					</Field>
 					<Field label="글자 크기">
-						<Slider value={layer.size} min={12} max={160} label="글자 크기" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(size) => patch({ size })} onCommit={onCommit} />
+						<Slider hideLabel value={layer.size} min={12} max={160} label="글자 크기" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(size) => patch({ size })} onCommit={onCommit} />
 					</Field>
 					<Field label="글자 색" description="팔레트·프리셋·HEX로 지정해요.">
 						<ColorPicker value={layer.color} disabled={saving} label="글자" onChange={(color) => patch({ color })} onCommit={onCommit} />
@@ -208,7 +209,7 @@ export function LayerProperties({ layer, selectedCount = layer ? 1 : 0, saving, 
 				<div className="space-y-4">
 					{positionFields}
 					<Field label="크기" description="아바타 지름이에요.">
-						<Slider value={layer.size} min={40} max={600} label="아바타 크기" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(size) => patch({ size })} onCommit={onCommit} />
+						<Slider hideLabel value={layer.size} min={40} max={600} label="아바타 크기" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(size) => patch({ size })} onCommit={onCommit} />
 					</Field>
 					<Field label="링 색">
 						<ColorPicker value={layer.ringColor} disabled={saving} label="링" onChange={(color) => patch({ ringColor: color })} onCommit={onCommit} />
@@ -235,7 +236,7 @@ export function LayerProperties({ layer, selectedCount = layer ? 1 : 0, saving, 
 						</div>
 					</Field>
 					<Field label="투명도">
-						<Slider value={layer.opacity} min={0} max={1} step={0.05} label="이미지 투명도" showValue formatValue={(value) => `${Math.round(value * 100)}%`} disabled={saving} onChange={(opacity) => patch({ opacity })} onCommit={onCommit} />
+						<Slider hideLabel value={layer.opacity} min={0} max={1} step={0.05} label="이미지 투명도" showValue formatValue={(value) => `${Math.round(value * 100)}%`} disabled={saving} onChange={(opacity) => patch({ opacity })} onCommit={onCommit} />
 					</Field>
 					{animationFields}
 				</div>
@@ -282,7 +283,7 @@ export function LayerProperties({ layer, selectedCount = layer ? 1 : 0, saving, 
 					</Field>
 					{layer.shape === "rect" ? (
 						<Field label="모서리 둥글기" description="사각형 모서리를 둥글게 해요.">
-							<Slider value={layer.radius ?? 0} min={0} max={300} step={1} label="모서리 둥글기" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(radius) => patch({ radius })} onCommit={onCommit} />
+							<Slider hideLabel value={layer.radius ?? 0} min={0} max={300} step={1} label="모서리 둥글기" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(radius) => patch({ radius })} onCommit={onCommit} />
 						</Field>
 					) : null}
 					<div className="flex flex-wrap items-center gap-4">
@@ -315,7 +316,7 @@ export function LayerProperties({ layer, selectedCount = layer ? 1 : 0, saving, 
 								<ColorPicker value={layer.gradientTo} disabled={saving} label="그라디언트 끝" onChange={(gradientTo) => patch({ gradientTo })} onCommit={onCommit} />
 							</Field>
 							<Field label="그라디언트 방향" description="0°는 왼쪽→오른쪽, 90°는 위→아래예요.">
-								<Slider value={layer.gradientAngle ?? 45} min={0} max={360} step={5} label="그라디언트 방향" showValue formatValue={(value) => `${value}°`} disabled={saving} onChange={(gradientAngle) => patch({ gradientAngle })} onCommit={onCommit} />
+								<Slider hideLabel value={layer.gradientAngle ?? 45} min={0} max={360} step={5} label="그라디언트 방향" showValue formatValue={(value) => `${value}°`} disabled={saving} onChange={(gradientAngle) => patch({ gradientAngle })} onCommit={onCommit} />
 							</Field>
 						</>
 					) : null}
@@ -325,15 +326,15 @@ export function LayerProperties({ layer, selectedCount = layer ? 1 : 0, saving, 
 								<ColorPicker value={layer.strokeColor} disabled={saving} label="테두리" onChange={(strokeColor) => patch({ strokeColor })} onCommit={onCommit} />
 							</Field>
 							<Field label="테두리 두께">
-								<Slider value={layer.strokeWidth ?? 4} min={1} max={40} step={1} label="테두리 두께" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(strokeWidth) => patch({ strokeWidth })} onCommit={onCommit} />
+								<Slider hideLabel value={layer.strokeWidth ?? 4} min={1} max={40} step={1} label="테두리 두께" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(strokeWidth) => patch({ strokeWidth })} onCommit={onCommit} />
 							</Field>
 						</>
 					) : null}
 					<Field label="투명도">
-						<Slider value={layer.opacity} min={0} max={1} step={0.05} label="도형 투명도" showValue formatValue={(value) => `${Math.round(value * 100)}%`} disabled={saving} onChange={(opacity) => patch({ opacity })} onCommit={onCommit} />
+						<Slider hideLabel value={layer.opacity} min={0} max={1} step={0.05} label="도형 투명도" showValue formatValue={(value) => `${Math.round(value * 100)}%`} disabled={saving} onChange={(opacity) => patch({ opacity })} onCommit={onCommit} />
 					</Field>
 					<Field label="흐림 (글로우)" description="도형을 번지게 해서 빛 번짐처럼 써요.">
-						<Slider value={layer.blur ?? 0} min={0} max={120} step={1} label="흐림" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(blur) => patch({ blur })} onCommit={onCommit} />
+						<Slider hideLabel value={layer.blur ?? 0} min={0} max={120} step={1} label="흐림" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(blur) => patch({ blur })} onCommit={onCommit} />
 					</Field>
 					{animationFields}
 				</div>
