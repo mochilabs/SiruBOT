@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { sharedCache } from '../utils/cache.ts';
 import { breaker } from '../utils/breaker.ts';
+import { outboundPool } from '../utils/proxyPool.ts';
 import { inflightCount } from '../utils/dedup.ts';
 import { metrics } from '../utils/metrics.ts';
 import type { OpenAICompatTranslationProvider } from '../providers/translate.ts';
@@ -65,6 +66,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		inflight: inflightCount(),
 		routes: metrics.snapshot(),
 		breakers: breaker.snapshot(),
+		outbound: outboundPool().snapshot(),
 		translation: {
 			provider: deps.translationProvider.name,
 			available: deps.translationProvider.available
