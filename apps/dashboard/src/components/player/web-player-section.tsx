@@ -281,12 +281,11 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 	return (
 		// 데스크톱은 왼쪽에 라이브(지금 곡·대기열), 오른쪽 위에 검색, 아래에 기록을 둬요.
 		// 모바일은 라이브 → 검색 → 기록 순으로 쌓여요.
-		<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-x-8">
-			<div className="min-w-0 lg:row-span-2">
-				<PlayerLiveTab guildId={guildId} />
-			</div>
+		<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-8">
+			<PlayerLiveTab guildId={guildId} />
 
-			<Card padding="lg" className="min-w-0 gap-4 p-4 sm:gap-5 sm:p-6" >
+			<div className="min-w-0 space-y-6">
+			<Card padding="lg" className="min-w-0 gap-4 p-4 sm:gap-5 sm:p-6">
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<h2 className="flex items-center gap-2 text-base font-extrabold tracking-tight text-foreground">
 						<span className="text-primary-text">
@@ -369,8 +368,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 				)}
 			</Card>
 
-			<div className="min-w-0">
-				<PlayerClient guildId={guildId} onPlay={handleHistoryPlay} playingUrl={playingUri} />
+			<PlayerClient guildId={guildId} onPlay={handleHistoryPlay} playingUrl={playingUri} />
 			</div>
 		</div>
 	);
