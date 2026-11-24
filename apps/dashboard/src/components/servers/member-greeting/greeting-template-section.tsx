@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   GREETING_TEMPLATES,
 } from "@sirubot/utils/memberGreeting";
-import { LayoutTemplate } from "lucide-react";
 
-import { SectionLabel } from "@/components/primitives/section-label";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,11 +15,55 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { GreetingCollapsible } from "./greeting-collapsible";
+import { renderGreetingPreviewUrl } from "./greeting-svg";
 
 export type GreetingTemplate = (typeof GREETING_TEMPLATES)[number];
 
+/** 썸네일 배율 — 1200×675 카드를 300×169로 그려요 */
+const THUMB_SCALE = 0.25;
+
+/** 썸네일은 한 번에 하나씩 그려요 (공유 WASM 렌더러에 15장이 한꺼번에 몰리지 않게) */
+let thumbQueue: Promise<unknown> = Promise.resolve();
+const thumbCache = new Map<string, string>();
+
+function renderThumb(template: GreetingTemplate, avatarSrc: string | null, guildName: string): Promise<string> {
+  const key = `${template.id}|${avatarSrc ?? ""}|${guildName}`;
+  const cached = thumbCache.get(key);
+  if (cached) return Promise.resolve(cached);
+  const job = thumbQueue.then(() =>
+    renderGreetingPreviewUrl(template.image, { avatarSrc, guildName, scale: THUMB_SCALE }).then((url) => {
+      thumbCache.set(key, url);
+      return url;
+    }),
+  );
+  thumbQueue = job.catch(() => undefined);
+  return job;
+}
+
+function TemplateThumb({ template, avatarSrc, guildName }: { template: GreetingTemplate; avatarSrc: string | null; guildName: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    renderThumb(template, avatarSrc, guildName).then(
+      (url) => { if (!cancelled) setSrc(url); },
+      () => undefined,
+    );
+    return () => { cancelled = true; };
+  }, [template, avatarSrc, guildName]);
+  return src ? (
+    // eslint-disable-next-line @next/next/no-img-element -- data URL 썸네일이라 next/image 최적화 대상이 아니에요
+    <img src={src} alt="" className="block aspect-video w-full rounded-sm object-cover" />
+  ) : (
+    <div className="aspect-video w-full animate-pulse rounded-sm bg-surface-3" aria-hidden />
+  );
+}
+
 interface GreetingTemplateSectionProps {
   saving: boolean;
+  /** 썸네일에 쓰는 샘플 값 — 에디터 미리보기와 같아요 */
+  avatarSrc: string | null;
+  guildName: string;
   /** 템플릿을 적용하면 배경과 레이어가 모두 바뀌어요 (실행취소로 되돌릴 수 있어요) */
   onApply: (template: GreetingTemplate) => void;
 }
@@ -29,28 +71,32 @@ interface GreetingTemplateSectionProps {
 /** 템플릿 — 미리 조립된 배경·레이어 조합을 적용해요. 적용 전 확인 대화상자를 거쳐요 */
 export function GreetingTemplateSection({
   saving,
+  avatarSrc,
+  guildName,
   onApply,
 }: GreetingTemplateSectionProps) {
   const [pendingTemplate, setPendingTemplate] =
     useState<GreetingTemplate | null>(null);
+  const [open, setOpen] = useState(false);
 
   return (
     <>
-      <SectionLabel as="p">템플릿</SectionLabel>
-      <div className="flex flex-wrap gap-2">
-        {GREETING_TEMPLATES.map((template) => (
-          <Button
-            key={template.id}
-            variant="secondary"
-            size="sm"
-            icon={<LayoutTemplate size={14} />}
-            disabled={saving}
-            onClick={() => setPendingTemplate(template)}
-          >
-            {template.name}
-          </Button>
-        ))}
-      </div>
+      <GreetingCollapsible title="템플릿" summary={`${GREETING_TEMPLATES.length}개`} open={open} onOpenChange={setOpen}>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {GREETING_TEMPLATES.map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              disabled={saving}
+              onClick={() => setPendingTemplate(template)}
+              className="cursor-pointer rounded-control p-1 text-left transition-colors hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+            >
+              <TemplateThumb template={template} avatarSrc={avatarSrc} guildName={guildName} />
+              <span className="block pt-1 text-2xs font-medium text-foreground">{template.name}</span>
+            </button>
+          ))}
+        </div>
+      </GreetingCollapsible>
       <Dialog
         open={pendingTemplate !== null}
         onOpenChange={(open) => {
