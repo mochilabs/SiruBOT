@@ -7,9 +7,11 @@
 			"runtimeArgs": [
 				"workspace",
 				"@sirubot/dashboard",
-				"dev"
+				"dev",
+				"-p",
+				"3001"
 			],
-			"port": 3000
+			"port": 3001
 		}
 	]
 }

@@ -288,6 +288,19 @@ export function NowPlaying({
       <div className="space-y-1">
         <div className="relative">
           <ProgressBar state={unavailable ? { ...state, stale: true } : state} receivedAt={receivedAt} />
+          {canSeek && seekTargetMs !== null && (
+            // 고른 위치 표시 — 고른 위치까지 옅게 채우고 선택 핸들을 올려요
+            <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-2">
+              <div
+                className="absolute inset-y-0 left-0 rounded-full bg-primary-control/30"
+                style={{ width: `${(seekTargetMs / state.durationMs) * 100}%` }}
+              />
+              <div
+                className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface-2 bg-primary-control shadow-md"
+                style={{ left: `${(seekTargetMs / state.durationMs) * 100}%` }}
+              />
+            </div>
+          )}
           {canSeek && (
             // 보이지 않는 범위 입력을 진행바 위에 겹쳐 마우스·터치·키보드 탐색을 모두 받아요
             <input

@@ -59,7 +59,7 @@ export function ProgressBar({
 
   // 라이브 스트림은 길이가 정해지지 않아 진행률을 그리지 않아요.
   if (isIndeterminate) {
-    return <div className="h-1.5 w-full rounded-full bg-muted" />;
+    return <div className="h-2 w-full rounded-full bg-surface-1" />;
   }
 
   return (
@@ -69,7 +69,7 @@ export function ProgressBar({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(positionRatio(state, receivedAt) * 100)}
-      className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+      className="h-2 w-full overflow-hidden rounded-full bg-surface-1"
     >
       <div
         ref={barRef}
