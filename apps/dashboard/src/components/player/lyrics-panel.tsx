@@ -64,7 +64,7 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
   const toggleable = lyrics !== null;
   const open = toggleable && (openOverride?.trackKey === trackKey ? openOverride.open : true);
   const bodyId = `lyrics-body-${trackKey}`;
-  const status = lyrics ? null : finished ? "가사가 없어요." : "찾는 중…";
+  const status = lyrics ? null : finished ? "가사를 찾을 수 없어요." : "찾는 중…";
 
   return (
     <section aria-label="노래방 가사" className="flex flex-col gap-3 rounded-row bg-surface-2 p-3 sm:p-4">
@@ -78,9 +78,9 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
       >
         <span className="flex items-center gap-2 text-sm font-bold text-foreground">
           <Mic2 size={16} className="text-primary-text" aria-hidden />
-          가사
+          <span className="leading-none">가사</span>
           {status && (
-            <span role="status" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <span role="status" className="flex items-center gap-1.5 text-xs font-medium leading-none text-muted-foreground">
               {!finished && <Loader2 size={12} className="animate-spin motion-reduce:animate-none" aria-hidden />}
               {status}
             </span>
