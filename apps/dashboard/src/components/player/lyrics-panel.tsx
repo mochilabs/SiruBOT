@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { findActiveLineIndex } from "@sirubot/utils/lrc";
-import { Loader2, Mic2 } from "lucide-react";
+import { ChevronDown, Loader2, Mic2 } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import type { LyricsPayload } from "@/app/api/servers/[id]/lyrics/route";
@@ -53,41 +53,59 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
   });
   const lyrics = useMemo(() => (data ? toKaraokeLyrics(data) : null), [data]);
   const trackKey = lyricsTrackKey(state);
+  const [openOverride, setOpenOverride] = useState<{ trackKey: string; open: boolean } | null>(null);
 
   if (!eligible) return null;
 
   // 응답이 오거나 재시도가 끝나 에러가 확정되면 "없음"으로 보여줘요. 그 전까지는 찾는 중이에요.
   const finished = !isLoading && !isValidating && (data !== undefined || error !== undefined);
 
-  // 가사가 없으면 패널을 접어 한 줄로만 알려요. 가사가 있는 곡으로 바뀌면 이 분기를 벗어나 다시 펼쳐져요.
-  if (!lyrics && finished) {
-    return (
-      <p role="status" aria-label="노래방 가사" className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
-        <Mic2 size={14} aria-hidden />
-        이 곡은 가사가 없어서 가사 패널을 접어 두었어요.
-      </p>
-    );
-  }
+  // 탭은 가사가 있으면 열리고, 없으면 닫혀 있어요. 사용자가 누른 상태는 곡이 바뀌면 다시 자동 규칙을 따라요.
+  const open = openOverride?.trackKey === trackKey ? openOverride.open : Boolean(lyrics);
+  const bodyId = `lyrics-body-${trackKey}`;
+  const status = lyrics ? null : finished ? "가사 없음" : "찾는 중…";
 
   return (
     <section aria-label="노래방 가사" className="flex flex-col gap-3 rounded-row bg-surface-2 p-3 sm:p-4">
-      {!lyrics && !finished ? (
-        <LyricsFrame>
-          <div role="status" className="flex items-center gap-2 py-6 text-sm text-muted-foreground sm:py-8">
-            <Loader2 size={16} className="animate-spin text-primary-text motion-reduce:animate-none" aria-hidden />
-            가사를 찾는 중이에요
-          </div>
-        </LyricsFrame>
-      ) : lyrics ? (
-        <LyricsBody
-          key={trackKey}
-          lyrics={lyrics}
-          translation={data?.translation}
-          state={state}
-          receivedAt={receivedAt}
-          unavailable={unavailable}
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={bodyId}
+        onClick={() => setOpenOverride({ trackKey, open: !open })}
+        className="flex min-h-7 w-full cursor-pointer items-center justify-between gap-2 rounded-control text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
+      >
+        <span className="flex items-center gap-2 text-sm font-bold text-foreground">
+          <Mic2 size={16} className="text-primary-text" aria-hidden />
+          가사
+          {status && <span className="text-xs font-medium text-muted-foreground">{status}</span>}
+        </span>
+        <ChevronDown
+          size={16}
+          aria-hidden
+          className={cn("text-muted-foreground transition-transform duration-fast motion-reduce:transition-none", open && "rotate-180")}
         />
-      ) : null}
+      </button>
+      {open && (
+        <div id={bodyId} className="flex flex-col gap-3">
+          {lyrics ? (
+            <LyricsBody
+              key={trackKey}
+              lyrics={lyrics}
+              translation={data?.translation}
+              state={state}
+              receivedAt={receivedAt}
+              unavailable={unavailable}
+            />
+          ) : !finished ? (
+            <div role="status" className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+              <Loader2 size={16} className="animate-spin text-primary-text motion-reduce:animate-none" aria-hidden />
+              가사를 찾는 중이에요
+            </div>
+          ) : (
+            <p className="py-4 text-center text-sm text-muted-foreground">이 곡의 가사를 찾지 못했어요.</p>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -95,13 +113,7 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
 function LyricsFrame({ children, controls }: { children: React.ReactNode; controls?: React.ReactNode }) {
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm font-bold text-foreground">
-          <Mic2 size={16} className="text-primary-text" aria-hidden />
-          가사
-        </div>
-        {controls}
-      </div>
+      {controls && <div className="flex flex-wrap items-center justify-end gap-2">{controls}</div>}
       {children}
     </>
   );
