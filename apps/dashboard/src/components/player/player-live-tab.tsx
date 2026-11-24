@@ -69,11 +69,18 @@ const liveFetcher = createApiFetcher<LivePayload>("라이브 상태를 불러오
 /** 폴백 폴링 주기 — 2000ms면 READ_RATE(분당 30회) 경계에 딱 붙어 윈도우 지터로 429가 튀니 분당 24회로 낮춰요. */
 const FALLBACK_POLL_INTERVAL_MS = 2500;
 
-export default function PlayerLiveTab({ guildId }: { guildId: string }) {
-  return <LivePlayerSession key={guildId} guildId={guildId} />;
+export default function PlayerLiveTab({
+  guildId,
+  hideFooter = false,
+}: {
+  guildId: string;
+  /** 음악 플레이어 페이지처럼 안내 문구가 필요 없는 곳에서 숨겨요 */
+  hideFooter?: boolean;
+}) {
+  return <LivePlayerSession key={guildId} guildId={guildId} hideFooter={hideFooter} />;
 }
 
-function LivePlayerSession({ guildId }: { guildId: string }) {
+function LivePlayerSession({ guildId, hideFooter }: { guildId: string; hideFooter: boolean }) {
   /** SSE 실패(미지원/장애) 시 폴백하는 폴링 모드와 상태를 구분해요. */
   const [mode, setMode] = useState<"stream" | "polling">("stream");
   const [liveData, setLiveData] = useState<LivePayload | null>(null);
@@ -190,17 +197,19 @@ function LivePlayerSession({ guildId }: { guildId: string }) {
         guildId={guildId}
         unavailable={data.player.stale || (mode === "stream" && !connected)}
       />
-      <p className="text-xs text-muted-foreground">
-        컨트롤러 명령은 봇이 음성 채널 접속 중일 때만 적용돼요. 검색·재생 ·
-        기록은{" "}
-        <Link
-          href={`/player/${guildId}`}
-          className="font-semibold text-primary-text hover:underline"
-        >
-          음악 플레이어 페이지
-        </Link>
-        에서 할 수 있어요.
-      </p>
+      {!hideFooter && (
+        <p className="text-xs text-muted-foreground">
+          컨트롤러 명령은 봇이 음성 채널 접속 중일 때만 적용돼요. 검색·재생 ·
+          기록은{" "}
+          <Link
+            href={`/player/${guildId}`}
+            className="font-semibold text-primary-text hover:underline"
+          >
+            음악 플레이어 페이지
+          </Link>
+          에서 할 수 있어요.
+        </p>
+      )}
     </LivePanel>
   );
 }
