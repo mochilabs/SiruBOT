@@ -275,20 +275,35 @@ export function NowPlaying({
               </span>
             )}
           </div>
-          {state.trackTitle && /^https?:\/\//i.test(state.trackUri ?? "") ? (
-            <a
-              href={state.trackUri!}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="line-clamp-1 break-words text-lg font-extrabold tracking-tight text-foreground hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
-            >
-              {state.trackTitle}
-            </a>
-          ) : (
-            <p className="line-clamp-1 break-words text-lg font-extrabold tracking-tight text-foreground">
-              {state.trackTitle ?? "재생 중인 곡이 없어요"}
-            </p>
-          )}
+          <div className="flex min-w-0 items-center gap-1">
+            <div className="min-w-0 flex-1">
+            {state.trackTitle && /^https?:\/\//i.test(state.trackUri ?? "") ? (
+              <a
+                href={state.trackUri!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="line-clamp-1 break-words text-lg font-extrabold tracking-tight text-foreground hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
+              >
+                {state.trackTitle}
+              </a>
+            ) : (
+              <p className="line-clamp-1 break-words text-lg font-extrabold tracking-tight text-foreground">
+                {state.trackTitle ?? "재생 중인 곡이 없어요"}
+              </p>
+            )}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 text-muted-foreground hover:text-primary-text pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+              icon={<Heart size={16} />}
+              onClick={handleFavorite}
+              loading={favoritePending}
+              disabled={favoritePending || !state.trackUri || !hasCurrentTrack}
+              aria-label="즐겨찾기에 추가"
+              title="즐겨찾기에 추가"
+            />
+          </div>
           <p className="truncate text-sm text-muted-foreground">
             {state.trackAuthor ?? "아티스트 정보 없음"}
             {state.requesterName ? ` · 신청: ${state.requesterName}` : ""}
@@ -433,19 +448,8 @@ export function NowPlaying({
             aria-label="정지"
           />
         </div>
-        {/* 오른쪽: 즐겨찾기 · 볼륨 */}
+        {/* 오른쪽: 볼륨 */}
         <div className="flex w-full min-w-0 items-center gap-2 max-sm:order-last sm:order-3 sm:max-w-60 sm:justify-self-end">
-          <Button
-            variant="secondary"
-            size="icon-lg"
-            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
-            icon={<Heart size={16} />}
-            onClick={handleFavorite}
-            loading={favoritePending}
-            disabled={favoritePending || !state.trackUri || !hasCurrentTrack}
-            aria-label="즐겨찾기에 추가"
-            title="즐겨찾기에 추가"
-          />
           <Volume2 size={16} className="shrink-0 text-muted-foreground" aria-hidden />
           <Slider
             className="min-w-0 flex-1"
