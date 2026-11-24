@@ -1,16 +1,16 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   type GreetingImage,
   PRESET_BACKGROUNDS,
 } from "@sirubot/utils/memberGreeting";
 import { ImagePlus } from "lucide-react";
 
-import { SectionLabel } from "@/components/primitives/section-label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import { GreetingCollapsible } from "./greeting-collapsible";
 import { PresetSwatch } from "./preset-swatch";
 import { ACCEPTED_BACKGROUND_TYPES } from "./use-greeting-upload";
 
@@ -35,10 +35,13 @@ export function GreetingBackgroundSection({
   onReset,
 }: GreetingBackgroundSectionProps) {
   const backgroundFileInputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const summary = background.dataUri
+    ? "커스텀 이미지"
+    : (PRESET_BACKGROUNDS.find((preset) => preset.id === background.presetId)?.name ?? "");
 
   return (
-    <>
-      <SectionLabel as="p">배경</SectionLabel>
+    <GreetingCollapsible title="배경" summary={summary} open={open} onOpenChange={setOpen}>
       <div
         className="flex flex-wrap gap-2"
         role="radiogroup"
@@ -103,6 +106,6 @@ export function GreetingBackgroundSection({
       <p className="px-3 text-sm text-muted-foreground">
         3MB 이하 PNG·JPEG·WebP는 JPEG(긴 변 1600px)로 줄여 저장돼요. GIF는 움직이는 배경으로 쓸 수 있어요. 최대 5초까지, 너무 크면 크기와 프레임을 줄여 저장해요.
       </p>
-    </>
+    </GreetingCollapsible>
   );
 }

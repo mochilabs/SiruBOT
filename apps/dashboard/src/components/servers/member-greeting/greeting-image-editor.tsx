@@ -334,7 +334,7 @@ export function GreetingImageEditor({
 
   return (
     <div className="min-w-0 rounded-card bg-surface-2 p-4">
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+      <div className="grid grid-cols-1 gap-5 lg:h-[calc(90dvh-11rem)] lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_minmax(0,1fr)]">
         {/* 미리보기 — 모바일은 맨 위, 데스크톱은 좌상단 */}
         <GreetingPreviewSection
           canvasRef={canvasRef}
@@ -359,8 +359,8 @@ export function GreetingImageEditor({
           onToggleSnap={() => setSnapEnabled((prev) => !prev)}
         />
 
-        {/* 레이어 + 속성 — 모바일은 캔버스 바로 뒤, 데스크톱은 우측 스티키 패널(독립 스크롤) */}
-        <div className="min-w-0 space-y-4 lg:sticky lg:top-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-h-[calc(90dvh-11rem)] lg:overflow-y-auto lg:overscroll-contain">
+        {/* 레이어 + 속성 — 모바일은 캔버스 바로 뒤, 데스크톱은 우측 전체 높이 패널(독립 스크롤) */}
+        <div className="min-w-0 space-y-4 lg:-mx-1.5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:px-1.5 lg:py-1.5">
           <SectionLabel as="p">레이어</SectionLabel>
           <LayerPanel
             layers={image.layers}
@@ -383,8 +383,8 @@ export function GreetingImageEditor({
           />
         </div>
 
-        {/* 배경 · 템플릿 · 요소 추가 — 모바일은 사이드 패널 뒤, 데스크톱은 캔버스 아래 */}
-        <div className="min-w-0 space-y-3 lg:col-start-1 lg:row-start-2">
+        {/* 배경 · 템플릿 · 요소 추가 — 모바일은 사이드 패널 뒤, 데스크톱은 캔버스 아래(미리보기는 고정, 이 영역만 스크롤) */}
+        <div className="min-w-0 space-y-3 lg:-mx-1.5 lg:col-start-1 lg:row-start-2 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:px-1.5 lg:py-1">
           <GreetingBackgroundSection
             background={image.background}
             saving={saving}
@@ -393,7 +393,7 @@ export function GreetingImageEditor({
             onUpload={handleBackgroundUpload}
             onReset={resetBackground}
           />
-          <GreetingTemplateSection saving={saving} onApply={applyTemplate} />
+          <GreetingTemplateSection saving={saving} avatarSrc={avatarSrc} guildName={guildName ?? ""} onApply={applyTemplate} />
           <GreetingElementSection
             saving={saving}
             uploading={uploading}

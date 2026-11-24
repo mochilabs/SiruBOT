@@ -95,10 +95,10 @@ function ShadowEditor({
         <ColorPicker value={shadow.color} disabled={saving} label={label} onChange={(color) => onChange({ ...shadow, color })} onCommit={onCommit} />
       </Field>
       <Field label={`${label} 진하기`}>
-        <Slider value={shadow.opacity} min={0} max={1} step={0.05} label={`${label} 진하기`} showValue formatValue={(value) => `${Math.round(value * 100)}%`} disabled={saving} onChange={(opacity) => onChange({ ...shadow, opacity })} onCommit={onCommit} />
+        <Slider hideLabel value={shadow.opacity} min={0} max={1} step={0.05} label={`${label} 진하기`} showValue formatValue={(value) => `${Math.round(value * 100)}%`} disabled={saving} onChange={(opacity) => onChange({ ...shadow, opacity })} onCommit={onCommit} />
       </Field>
       <Field label={`${label} 흐림`}>
-        <Slider value={shadow.blur} min={0} max={40} step={1} label={`${label} 흐림`} showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(blur) => onChange({ ...shadow, blur })} onCommit={onCommit} />
+        <Slider hideLabel value={shadow.blur} min={0} max={40} step={1} label={`${label} 흐림`} showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(blur) => onChange({ ...shadow, blur })} onCommit={onCommit} />
       </Field>
       <Field label={`${label} 위치`} description="오른쪽·아래쪽이 +예요.">
         <div className="space-y-2">
@@ -143,10 +143,10 @@ export function TextEffectFields({ layer, saving, patch, patchAndCommit, onCommi
         />
       </Field>
       <Field label="글자 간격">
-        <Slider value={layer.letterSpacing ?? 0} min={-10} max={60} step={1} label="글자 간격" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(letterSpacing) => patch({ letterSpacing })} onCommit={onCommit} />
+        <Slider hideLabel value={layer.letterSpacing ?? 0} min={-10} max={60} step={1} label="글자 간격" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(letterSpacing) => patch({ letterSpacing })} onCommit={onCommit} />
       </Field>
       <Field label="줄 간격" description="여러 줄일 때 줄 사이 간격이에요. 기본 1.25배예요.">
-        <Slider value={layer.lineHeight ?? 1.25} min={0.8} max={3} step={0.05} label="줄 간격" showValue formatValue={(value) => `${value.toFixed(2)}배`} disabled={saving} onChange={(lineHeight) => patch({ lineHeight })} onCommit={onCommit} />
+        <Slider hideLabel value={layer.lineHeight ?? 1.25} min={0.8} max={3} step={0.05} label="줄 간격" showValue formatValue={(value) => `${value.toFixed(2)}배`} disabled={saving} onChange={(lineHeight) => patch({ lineHeight })} onCommit={onCommit} />
       </Field>
       <div className="flex flex-wrap items-center gap-3">
         <Button
@@ -162,11 +162,11 @@ export function TextEffectFields({ layer, saving, patch, patchAndCommit, onCommi
       {hasMaxWidth ? (
         <>
           <Field label="최대 폭" description="이 폭을 넘으면 줄바꿈하거나 …으로 잘라요.">
-            <Slider value={layer.maxWidth ?? 500} min={40} max={1200} step={10} label="최대 폭" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(maxWidth) => patch({ maxWidth })} onCommit={onCommit} />
+            <Slider hideLabel value={layer.maxWidth ?? 500} min={40} max={1200} step={10} label="최대 폭" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(maxWidth) => patch({ maxWidth })} onCommit={onCommit} />
           </Field>
           {(layer.overflow ?? "wrap") === "wrap" ? (
             <Field label="최대 줄 수" description="0이면 제한이 없어요. 넘치는 줄은 잘려요.">
-              <Slider value={layer.maxLines ?? 0} min={0} max={10} step={1} label="최대 줄 수" showValue formatValue={(value) => (value === 0 ? "제한 없음" : `${value}줄`)} disabled={saving} onChange={(maxLines) => patch({ maxLines: maxLines === 0 ? undefined : maxLines })} onCommit={onCommit} />
+              <Slider hideLabel value={layer.maxLines ?? 0} min={0} max={10} step={1} label="최대 줄 수" showValue formatValue={(value) => (value === 0 ? "제한 없음" : `${value}줄`)} disabled={saving} onChange={(maxLines) => patch({ maxLines: maxLines === 0 ? undefined : maxLines })} onCommit={onCommit} />
             </Field>
           ) : null}
         </>
@@ -200,7 +200,7 @@ export function TextEffectFields({ layer, saving, patch, patchAndCommit, onCommi
             <ColorPicker value={stroke.color} disabled={saving} label="외곽선" onChange={(color) => patch({ stroke: { ...stroke, color } })} onCommit={onCommit} />
           </Field>
           <Field label="외곽선 두께">
-            <Slider value={stroke.width} min={0} max={16} step={1} label="외곽선 두께" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(width) => patch({ stroke: { ...stroke, width } })} onCommit={onCommit} />
+            <Slider hideLabel value={stroke.width} min={0} max={16} step={1} label="외곽선 두께" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(width) => patch({ stroke: { ...stroke, width } })} onCommit={onCommit} />
           </Field>
         </>
       ) : null}
@@ -210,7 +210,7 @@ export function TextEffectFields({ layer, saving, patch, patchAndCommit, onCommi
             <ColorPicker value={gradient.to} disabled={saving} label="그라디언트 끝" onChange={(to) => patch({ gradient: { ...gradient, to } })} onCommit={onCommit} />
           </Field>
           <Field label="그라디언트 방향" description="0°는 왼쪽→오른쪽, 90°는 위→아래예요.">
-            <Slider value={gradient.angle ?? 0} min={0} max={360} step={5} label="글자 그라디언트 방향" showValue formatValue={(value) => `${value}°`} disabled={saving} onChange={(angle) => patch({ gradient: { ...gradient, angle } })} onCommit={onCommit} />
+            <Slider hideLabel value={gradient.angle ?? 0} min={0} max={360} step={5} label="글자 그라디언트 방향" showValue formatValue={(value) => `${value}°`} disabled={saving} onChange={(angle) => patch({ gradient: { ...gradient, angle } })} onCommit={onCommit} />
           </Field>
         </>
       ) : null}
@@ -234,11 +234,11 @@ export function AvatarEffectFields({ layer, saving, patch, patchAndCommit, onCom
       </Field>
       {shape === "rounded" ? (
         <Field label="모서리 둥글기" description="기본은 크기의 22%예요.">
-          <Slider value={layer.cornerRadius ?? Math.round(layer.size * 0.22)} min={0} max={300} step={1} label="아바타 모서리 둥글기" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(cornerRadius) => patch({ cornerRadius })} onCommit={onCommit} />
+          <Slider hideLabel value={layer.cornerRadius ?? Math.round(layer.size * 0.22)} min={0} max={300} step={1} label="아바타 모서리 둥글기" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(cornerRadius) => patch({ cornerRadius })} onCommit={onCommit} />
         </Field>
       ) : null}
       <Field label="링 두께" description="0이면 링이 없어요.">
-        <Slider value={layer.ringWidth ?? 6} min={0} max={40} step={1} label="링 두께" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(ringWidth) => patch({ ringWidth })} onCommit={onCommit} />
+        <Slider hideLabel value={layer.ringWidth ?? 6} min={0} max={40} step={1} label="링 두께" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(ringWidth) => patch({ ringWidth })} onCommit={onCommit} />
       </Field>
       <div className="flex flex-wrap items-center gap-4">
         <Button variant="state-toggle" active={Boolean(layer.shadow)} disabled={saving} onClick={() => patchAndCommit({ shadow: layer.shadow ? null : DEFAULT_SHADOW })}>
@@ -255,13 +255,13 @@ export function AvatarEffectFields({ layer, saving, patch, patchAndCommit, onCom
             <ColorPicker value={layer.glow.color} disabled={saving} label="글로우" onChange={(color) => patch({ glow: { ...layer.glow!, color } })} onCommit={onCommit} />
           </Field>
           <Field label="글로우 진하기">
-            <Slider value={layer.glow.opacity} min={0} max={1} step={0.05} label="글로우 진하기" showValue formatValue={(value) => `${Math.round(value * 100)}%`} disabled={saving} onChange={(opacity) => patch({ glow: { ...layer.glow!, opacity } })} onCommit={onCommit} />
+            <Slider hideLabel value={layer.glow.opacity} min={0} max={1} step={0.05} label="글로우 진하기" showValue formatValue={(value) => `${Math.round(value * 100)}%`} disabled={saving} onChange={(opacity) => patch({ glow: { ...layer.glow!, opacity } })} onCommit={onCommit} />
           </Field>
           <Field label="글로우 번짐">
-            <Slider value={layer.glow.blur} min={0} max={80} step={1} label="글로우 번짐" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(blur) => patch({ glow: { ...layer.glow!, blur } })} onCommit={onCommit} />
+            <Slider hideLabel value={layer.glow.blur} min={0} max={80} step={1} label="글로우 번짐" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(blur) => patch({ glow: { ...layer.glow!, blur } })} onCommit={onCommit} />
           </Field>
           <Field label="글로우 크기">
-            <Slider value={layer.glow.spread} min={0} max={40} step={1} label="글로우 크기" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(spread) => patch({ glow: { ...layer.glow!, spread } })} onCommit={onCommit} />
+            <Slider hideLabel value={layer.glow.spread} min={0} max={40} step={1} label="글로우 크기" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(spread) => patch({ glow: { ...layer.glow!, spread } })} onCommit={onCommit} />
           </Field>
         </>
       ) : null}
