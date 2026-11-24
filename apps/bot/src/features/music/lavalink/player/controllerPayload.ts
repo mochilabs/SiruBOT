@@ -71,7 +71,8 @@ export async function buildControllerCardPayload(
 						}
 					}
 				)
-			})
+			}),
+		{ fresh: true }
 	);
 
 	const cardNeedsUpload = card !== null && options.previousTrackKey !== undefined && options.previousTrackKey !== card.trackKey;

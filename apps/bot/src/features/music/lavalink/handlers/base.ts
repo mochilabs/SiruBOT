@@ -21,7 +21,8 @@ export abstract class BaseLavalinkHandler {
 				const result = await withGuildTheme(
 					extractGuildId(args),
 					async (guildId) => (await this.deps.guildService.getGuild(guildId)).themePreset,
-					() => handler(...args)
+					() => handler(...args),
+					{ fresh: true }
 				);
 				return result;
 			} catch (error) {

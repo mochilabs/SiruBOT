@@ -45,3 +45,18 @@ describe('withGuildTheme', () => {
 		expect(load).toHaveBeenCalledTimes(1);
 	});
 });
+
+describe('withGuildTheme fresh', () => {
+	it('이미 열린 맥락이 있어도 fresh면 서버 테마를 새로 읽어요', async () => {
+		const load = vi.fn().mockResolvedValueOnce('pink').mockResolvedValueOnce('blue');
+		const seen: Array<string | null> = [];
+		await withGuildTheme('1', load, async () => {
+			seen.push(currentGuildTheme());
+			await withGuildTheme('1', load, () => void seen.push(currentGuildTheme()));
+			await withGuildTheme('1', load, () => void seen.push(currentGuildTheme()), { fresh: true });
+		});
+		expect(load).toHaveBeenCalledTimes(2);
+		expect(seen[0]).toBe(seen[1]);
+		expect(seen[2]).not.toBe(seen[0]);
+	});
+});
