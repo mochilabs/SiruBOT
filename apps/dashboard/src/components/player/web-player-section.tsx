@@ -280,13 +280,13 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 
 	return (
 		// 데스크톱은 왼쪽에 라이브(지금 곡·대기열), 오른쪽 위에 검색, 아래에 기록을 둬요.
-		// 모바일은 검색을 맨 위로 올려 긴 라이브 패널 아래로 밀리지 않게 하고, 라이브 → 기록 순으로 이어져요.
+		// 모바일은 라이브 → 검색 → 기록 순으로 쌓여요.
 		<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-x-8">
-			<div className="order-2 min-w-0 lg:order-none lg:row-span-2">
+			<div className="min-w-0 lg:row-span-2">
 				<PlayerLiveTab guildId={guildId} />
 			</div>
 
-			<Card padding="lg" className="order-1 min-w-0 gap-4 p-4 sm:gap-5 sm:p-6 lg:order-none" >
+			<Card padding="lg" className="min-w-0 gap-4 p-4 sm:gap-5 sm:p-6" >
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<h2 className="flex items-center gap-2 text-base font-extrabold tracking-tight text-foreground">
 						<span className="text-primary-text">
@@ -329,10 +329,6 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 					)}
 				</form>
 
-				{!query && !results && canPlay && (
-					<p className="text-sm text-muted-foreground">곡 이름을 입력하면 자동으로 검색돼요.</p>
-				)}
-
 				{!canPlay && (
 					<p className="rounded-row bg-surface-2 px-4 py-3 text-sm text-muted-foreground">
 						봇과 같은 음성 채널에 접속하면 검색 결과에서 바로 재생할 수 있어요.
@@ -373,7 +369,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 				)}
 			</Card>
 
-			<div className="order-3 min-w-0 lg:order-none">
+			<div className="min-w-0">
 				<PlayerClient guildId={guildId} onPlay={handleHistoryPlay} playingUrl={playingUri} />
 			</div>
 		</div>
