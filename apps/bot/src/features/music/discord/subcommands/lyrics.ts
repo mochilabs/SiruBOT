@@ -1,10 +1,11 @@
 import { container, UserError } from '@sapphire/framework';
 import { emoji, resolveYouTubeVideoId } from '@sirubot/utils';
-import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, MessageComponentInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { searchLyrics, searchLyricsForTrack } from '../../../../services/dataApiClient.ts';
-import { LYRICS_BUTTON_IDS, lyricsView } from '../views/lyrics.ts';
+import { LYRICS_BUTTON_IDS, liveLyricsView, lyricsView } from '../views/lyrics.ts';
+import { buildLiveLyricsText, parseLiveLines, startLiveLoop } from '../utils/liveLyrics.ts';
 import { buildLyricsText, hasTranslation, type LyricsViewMode } from '../utils/lyricsText.ts';
-import { createComponentSession } from '../../../../lib/componentSession.ts';
+import { type ComponentSession, createComponentSession } from '../../../../lib/componentSession.ts';
 import { errorView } from '../../../../lib/errorView.ts';
 
 export const name = 'lyrics';
@@ -71,36 +72,94 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 		let result = results[0];
 		let mode: LyricsViewMode = hasTranslation(result) ? 'both' : 'original';
+		// 재생 중인 곡을 찾은 경우에만 실시간 보기를 보여줘요 (검색어로 찾은 곡은 재생 위치를 알 수 없어요)
+		const liveLines = current ? parseLiveLines(result.syncedLyrics) : null;
+		const trackKey = (t: { info: { identifier: string; uri?: string | null } } | null | undefined) =>
+			t ? `${t.info.identifier}|${t.info.uri ?? ''}` : null;
+		const startKey = trackKey(container.audio.getPlayer(interaction.guildId)?.queue.current);
 		const render = (disabled = false) => {
 			const translation = hasTranslation(result) ? 'ready' : result.translation?.status === 'pending' ? 'pending' : 'none';
 			return {
-				components: [lyricsView(result.trackName, result.artistName, buildLyricsText(result, mode), { translation, mode, disabled })],
+				components: [
+					lyricsView(result.trackName, result.artistName, buildLyricsText(result, mode), {
+						translation,
+						mode,
+						disabled,
+						live: liveLines !== null
+					})
+				],
 				flags: [MessageFlags.IsComponentsV2 as const]
 			};
 		};
 
 		const message = await interaction.editReply(render());
-		if (!hasTranslation(result) && result.translation?.status !== 'pending') return;
+		const needsSession = hasTranslation(result) || result.translation?.status === 'pending' || liveLines !== null;
+		if (!needsSession) return;
 
-		// 번역 보기 방식을 바꾸거나(ready), 준비 중인 번역을 다시 불러와요(pending)
-		createComponentSession(message, {
-			time: 10 * 60 * 1000,
-			owner: { userId: interaction.user.id },
-			logger: container.logger,
-			onCollect: async (button) => {
-				if (button.customId === LYRICS_BUTTON_IDS.refresh) {
-					const refreshed = await searchLyrics(query!).catch(() => null);
-					if (refreshed?.[0]) result = refreshed[0];
-					if (hasTranslation(result)) mode = 'both';
-				} else if (button.customId === LYRICS_BUTTON_IDS.original) mode = 'original';
-				else if (button.customId === LYRICS_BUTTON_IDS.translation) mode = 'translation';
-				else if (button.customId === LYRICS_BUTTON_IDS.both) mode = 'both';
-				await button.update(render());
-			},
-			onTimeout: async () => {
-				await interaction.editReply(render(true)).catch(() => null);
-			}
-		});
+		const startViewSession = (): void => {
+			// 번역 보기 방식을 바꾸거나(ready), 준비 중인 번역을 다시 불러오거나(pending), 실시간 보기를 시작해요
+			createComponentSession(message, {
+				time: 10 * 60 * 1000,
+				owner: { userId: interaction.user.id },
+				logger: container.logger,
+				onCollect: async (button, session) => {
+					if (button.customId === LYRICS_BUTTON_IDS.live && liveLines) {
+						session.settle('live');
+						await startLive(button);
+						return;
+					}
+					if (button.customId === LYRICS_BUTTON_IDS.refresh) {
+						const refreshed = await searchLyrics(query!).catch(() => null);
+						if (refreshed?.[0]) result = refreshed[0];
+						if (hasTranslation(result)) mode = 'both';
+					} else if (button.customId === LYRICS_BUTTON_IDS.original) mode = 'original';
+					else if (button.customId === LYRICS_BUTTON_IDS.translation) mode = 'translation';
+					else if (button.customId === LYRICS_BUTTON_IDS.both) mode = 'both';
+					await button.update(render());
+				},
+				onTimeout: async () => {
+					await interaction.editReply(render(true)).catch(() => null);
+				}
+			});
+		};
+
+		const startLive = async (button: MessageComponentInteraction): Promise<void> => {
+			const lines = liveLines!;
+			const translation = hasTranslation(result) ? result.translation!.lines! : null;
+			const livePayload = (text: string) => ({
+				components: [liveLyricsView(result.trackName, result.artistName, text)],
+				flags: [MessageFlags.IsComponentsV2 as const]
+			});
+			await button.update(livePayload(buildLiveLyricsText(lines, -1, translation)));
+
+			let liveSession: ComponentSession | undefined;
+			const stop = startLiveLoop({
+				lines,
+				translation,
+				getPositionMs: () => container.audio.getPlayer(interaction.guildId)?.position ?? null,
+				isSameTrack: () => trackKey(container.audio.getPlayer(interaction.guildId)?.queue.current) === startKey,
+				// 인터랙션 토큰은 15분 뒤 만료되니 메시지를 직접 고쳐요
+				render: async (text) => void (await message.edit(livePayload(text))),
+				onEnd: async () => {
+					liveSession?.settle('ended');
+					await message.edit(render()).catch(() => null);
+					startViewSession();
+				}
+			});
+			liveSession = createComponentSession(message, {
+				// 곡이 끝나면 루프가 먼저 멈춰요. 이건 루프가 멈추지 못했을 때를 위한 안전장치예요.
+				time: 6 * 60 * 60 * 1000,
+				filter: (i) => i.customId === LYRICS_BUTTON_IDS.liveStop,
+				logger: container.logger,
+				onCollect: async (stopButton) => {
+					await stopButton.deferUpdate();
+					stop('user');
+				},
+				onTimeout: () => stop('error')
+			});
+		};
+
+		startViewSession();
 	} catch (error) {
 		container.logger.error(`[lyrics] lyrics search failed (guild ${interaction.guildId}): ${error}`);
 		throw new UserError({
