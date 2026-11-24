@@ -83,10 +83,12 @@ export function createPlayerWebResponder(): RedisBinding {
 		if (!member) return { error: MEMBER_NOT_FOUND_MESSAGE };
 		const voiceChannelId = member.voice?.channelId ?? null;
 		const voiceChannel = voiceChannelId ? guild.channels.cache.get(voiceChannelId) : null;
+		const botChannelId = botVoiceChannelId(guild);
 		return {
 			voice: {
 				inVoice: Boolean(voiceChannelId),
 				voiceChannelName: voiceChannel?.name ?? null,
+				botVoiceChannelName: (botChannelId ? guild.channels.cache.get(botChannelId)?.name : null) ?? null,
 				...(await musicCapabilities(guild, member))
 			}
 		};

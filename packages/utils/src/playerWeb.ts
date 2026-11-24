@@ -137,6 +137,8 @@ export type PlayerWebRequestBase = z.infer<typeof playerWebRequestBase>;
 export const playerVoiceContextSchema = z.object({
 	inVoice: z.boolean(),
 	voiceChannelName: z.string().nullable(),
+	/** 봇이 접속한 음성 채널 이름 — 접속 중이 아니면 null. 이 필드가 없는 이전 버전 봇 응답도 받아요 */
+	botVoiceChannelName: z.string().nullable().optional(),
 	/** 재생 제어(일시정지·볼륨·건너뛰기 등) 가능 여부 — 봇이 실제 인가와 같은 정책으로 계산해요 */
 	canControl: z.boolean(),
 	/** 곡 추가 가능 여부 — 봇이 항상 보내요. 이 필드가 없는 이전 버전 봇 응답은 스키마 검증에서 거절돼요 */

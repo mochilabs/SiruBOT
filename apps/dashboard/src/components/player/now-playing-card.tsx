@@ -51,6 +51,7 @@ export function NowPlaying({
     refreshInterval: VOICE_CONTEXT_REFRESH_MS,
   });
   const controlBlocked = voiceData?.voice ? !voiceData.voice.canControl : false;
+  const botChannelName = voiceData?.voice?.botVoiceChannelName ?? null;
   // 명령 응답 뒤에도 새 상태가 도착할 때까지(또는 시간 초과) 잠가 같은 명령 중복을 막아요.
   const stateSignature = `${state.paused}|${state.repeatMode}|${Math.round(state.volume)}|${state.trackUri ?? ""}|${state.playing}`;
   const [settlingSignature, setSettlingSignature] = useState<string | null>(null);
@@ -263,11 +264,19 @@ export function NowPlaying({
         )}
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex min-w-0 items-center justify-between gap-2 text-sm">
-            <StatusDot
-              size="sm"
-              status={unavailable ? "disconnected" : state.paused ? "idle" : state.playing ? "ready" : "disconnected"}
-              label={statusLabel}
-            />
+            <div className="flex min-w-0 items-center gap-2">
+              <StatusDot
+                size="sm"
+                status={unavailable ? "disconnected" : state.paused ? "idle" : state.playing ? "ready" : "disconnected"}
+                label={statusLabel}
+              />
+              {botChannelName && (
+                <span className="flex min-w-0 items-center gap-1 text-xs font-medium text-muted-foreground" title={`${botChannelName} 채널에서 재생 중`}>
+                  <Volume2 size={12} className="shrink-0" aria-hidden />
+                  <span className="truncate">{botChannelName}</span>
+                </span>
+              )}
+            </div>
             {state.sourceName && (
               <span className="shrink-0 text-xs font-medium text-muted-foreground">
                 {state.isStream ? "실시간 스트림 · " : ""}

@@ -85,6 +85,8 @@ export interface PlayerWebTrackSummary {
 export interface PlayerVoiceContextData {
   inVoice: boolean;
   voiceChannelName: string | null;
+  /** 봇이 접속한 음성 채널 이름 — 접속 중이 아니면 null, 이전 버전 봇이면 없어요 */
+  botVoiceChannelName?: string | null;
   /** 재생 제어(일시정지·볼륨·건너뛰기 등) 가능 여부 */
   canControl: boolean;
   /** 곡 추가 가능 여부 */
