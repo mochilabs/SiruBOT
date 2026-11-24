@@ -282,10 +282,10 @@ function LyricsBody({
         ref={containerRef}
         tabIndex={0}
         aria-label="가사 목록"
-        className="relative h-60 overflow-y-auto rounded-control-inner bg-surface-1 px-4 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-72"
+        className="relative h-44 overflow-y-auto rounded-control-inner bg-surface-1 px-4 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-72"
       >
         {lyrics.synced ? (
-          <ol className="space-y-3 py-[6.5rem] text-center sm:py-32">
+          <ol className="space-y-3 py-[4.5rem] text-center sm:py-32">
             {lyrics.lines.map((line, index) => {
               const active = index === activeLine;
               if (!line.text) {
