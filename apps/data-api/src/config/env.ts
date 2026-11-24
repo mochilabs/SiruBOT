@@ -38,6 +38,8 @@ const envSchema = z
 		STORAGE_URL: z.string().url().default('http://localhost:3003'),
 		STORAGE_AUTH_KEY: z.string().optional(),
 		// siru_tts 주소 — 대시보드 음성 목록 프록시용. 봇의 SIRU_TTS_URL과 같은 값이에요 (미설정이면 목록 API가 503)
+		// 유튜브 자막·챕터 요청이 나가는 경로. 'direct'와 HTTP 프록시 주소를 쉼표로 적어요(앞에 적은 direct가 우선, 프록시끼리는 번갈아 써요)
+		OUTBOUND_PROXY_URLS: z.string().default('direct'),
 		SIRU_TTS_URL: z.union([z.string().url(), z.literal('').transform(() => undefined)]).optional()
 	})
 	// 폴백 체인(DATA_API_AUTH_KEY ?? AUTH_KEY)을 스키마 안에서 정규화해요.

@@ -21,6 +21,7 @@ import { startJtcSetupHub, stopJtcSetupHub } from './services/jtcSetupHub.ts';
 import { startBotAdminHub, stopBotAdminHub } from './services/botAdminHub.ts';
 import { startGiveawayHub, stopGiveawayHub } from './services/giveawayHub.ts';
 import { startPanelHub, stopPanelHub } from './services/panelHub.ts';
+import { configureOutboundPool } from './utils/proxyPool.ts';
 
 /** Redis 허브 — start와 stop 모두 이 배열 순서대로 불러요 (기존 server.ts의 start·stop 순서와 같아요) */
 const HUBS: { start: (redisUrl: string | undefined) => Promise<void>; stop: () => Promise<void> }[] = [
@@ -39,6 +40,7 @@ export async function buildServer(env: Env) {
 	const logger = getLogger('server');
 
 	await sharedCache.connect(env.REDIS_URL);
+	configureOutboundPool(env.OUTBOUND_PROXY_URLS);
 	for (const hub of HUBS) await hub.start(env.REDIS_URL);
 
 	// 이미지 렌더 폰트는 부팅 시 1회 로드 — 첫 카드 요청이 폰트 로드에 막히지 않아요.

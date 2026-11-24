@@ -1,6 +1,7 @@
 import { Innertube, Utils, YTNodes } from 'youtubei.js';
 import { getLogger } from '../utils/logger.ts';
-import { youtubeClient } from './youtubeClient.ts';
+import { outboundPool, RouteBlockedError, type OutboundRoute } from '../utils/proxyPool.ts';
+import { assertNotBotChecked, youtubeClientFor } from './youtubeClient.ts';
 
 const logger = getLogger('chapters');
 
@@ -56,41 +57,47 @@ async function fetchSearchChapters(youtube: Innertube, videoId: string): Promise
 		}));
 }
 
+/** 경로 하나로 챕터 작업 전체(영상 정보, 필요하면 검색)를 해요. 막히면 `outboundPool()`이 다음 경로로 다시 해요. */
+async function lookupOnRoute(route: OutboundRoute, videoId: string, durationMs: number): Promise<YouTubeChapter[]> {
+	const youtube = await youtubeClientFor(route);
+	let infoFailed = false;
+	try {
+		const info = await youtube.getInfo(videoId);
+		assertNotBotChecked(route, info.playability_status);
+		const markers = info.player_overlays?.decorated_player_bar?.player_bar?.markers_map;
+		// Creator-written chapters win; YouTube's auto-generated chapters are the fallback.
+		const chapters =
+			markers?.find((marker) => marker.marker_key === 'DESCRIPTION_CHAPTERS')?.value.chapters ??
+			markers?.find((marker) => marker.marker_key === 'AUTO_CHAPTERS')?.value.chapters ??
+			[];
+		if (chapters.length > 0) {
+			return toChapters(
+				chapters.map((chapter) => ({ name: chapter.title.toString(), startMs: chapter.time_range_start_millis })),
+				durationMs
+			);
+		}
+	} catch (error) {
+		// 경로가 막힌 거면 검색으로 넘어가지 않고 바로 다음 경로로 가요
+		if (error instanceof RouteBlockedError) throw error;
+		infoFailed = true;
+		logger.debug(`video info lookup failed for ${videoId}: ${String(error)}`);
+	}
+
+	if (durationMs >= SEARCH_FALLBACK_MIN_DURATION_MS) {
+		try {
+			return toChapters(await fetchSearchChapters(youtube, videoId), durationMs);
+		} catch (error) {
+			logger.debug(`search chapter lookup failed for ${videoId}: ${String(error)}`);
+			throw new Error('YouTube chapter lookup failed');
+		}
+	}
+	if (infoFailed) throw new Error('YouTube chapter lookup failed');
+	return [];
+}
+
 export async function fetchYouTubeChaptersFresh(videoId: string, durationMs: number): Promise<YouTubeChapter[]> {
 	if (!videoId || durationMs <= 0) return [];
-	return limitedLookup(async () => {
-		const youtube = await youtubeClient();
-		let infoFailed = false;
-		try {
-			const info = await youtube.getInfo(videoId);
-			const markers = info.player_overlays?.decorated_player_bar?.player_bar?.markers_map;
-			// Creator-written chapters win; YouTube's auto-generated chapters are the fallback.
-			const chapters =
-				markers?.find((marker) => marker.marker_key === 'DESCRIPTION_CHAPTERS')?.value.chapters ??
-				markers?.find((marker) => marker.marker_key === 'AUTO_CHAPTERS')?.value.chapters ??
-				[];
-			if (chapters.length > 0) {
-				return toChapters(
-					chapters.map((chapter) => ({ name: chapter.title.toString(), startMs: chapter.time_range_start_millis })),
-					durationMs
-				);
-			}
-		} catch (error) {
-			infoFailed = true;
-			logger.debug(`video info lookup failed for ${videoId}: ${String(error)}`);
-		}
-
-		if (durationMs >= SEARCH_FALLBACK_MIN_DURATION_MS) {
-			try {
-				return toChapters(await fetchSearchChapters(youtube, videoId), durationMs);
-			} catch (error) {
-				logger.debug(`search chapter lookup failed for ${videoId}: ${String(error)}`);
-				throw new Error('YouTube chapter lookup failed');
-			}
-		}
-		if (infoFailed) throw new Error('YouTube chapter lookup failed');
-		return [];
-	});
+	return limitedLookup(() => outboundPool().run('chapters', (route) => lookupOnRoute(route, videoId, durationMs)));
 }
 
 export function chaptersCacheKey(videoId: string, durationMs: number): string {

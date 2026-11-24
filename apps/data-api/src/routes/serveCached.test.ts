@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DataApiError, serveCached } from './serveCached.ts';
 import { sharedCache } from '../utils/cache.ts';
+import { breaker } from '../utils/breaker.ts';
+import { ProxyUnavailableError } from '../utils/proxyPool.ts';
 
 describe('serveCached', () => {
 	afterEach(async () => {
@@ -156,5 +158,57 @@ describe('serveCached', () => {
 			code: 'provider_circuit_open'
 		});
 		expect(fetchFresh).toHaveBeenCalledTimes(5);
+	});
+
+	it('결과 없음(404)은 회로를 열지 않고 negativeTtlSeconds 동안 upstream 없이 404를 돌려준다', async () => {
+		const fetchFresh = vi.fn(async () => {
+			throw new DataApiError(404, 'lyrics_not_found', '가사를 찾지 못했어요.');
+		});
+		const base = { route: 'test-miss404', ttlSeconds: 60, provider: 'provider-miss404', fetchFresh, negativeTtlSeconds: 900 };
+
+		for (let i = 0; i < 6; i++) {
+			await expect(serveCached({ ...base, key: `miss404-${i}` })).rejects.toMatchObject({ status: 404, code: 'lyrics_not_found' });
+		}
+		expect(breaker.snapshot()['provider-miss404']).toBeUndefined();
+		expect(fetchFresh).toHaveBeenCalledTimes(6);
+
+		// 같은 키는 기억해 둔 404를 바로 돌려줘요
+		await expect(serveCached({ ...base, key: 'miss404-0' })).rejects.toMatchObject({ status: 404, code: 'lyrics_not_found' });
+		expect(fetchFresh).toHaveBeenCalledTimes(6);
+	});
+
+	it('negativeTtlSeconds가 없으면 404를 기억하지 않는다', async () => {
+		const fetchFresh = vi.fn(async () => {
+			throw new DataApiError(404, 'not_found', 'x');
+		});
+		const base = { route: 'test-nomiss', key: 'nomiss', ttlSeconds: 60, provider: 'provider-nomiss', fetchFresh };
+		await expect(serveCached(base)).rejects.toMatchObject({ status: 404 });
+		await expect(serveCached(base)).rejects.toMatchObject({ status: 404 });
+		expect(fetchFresh).toHaveBeenCalledTimes(2);
+	});
+
+	it('나갈 경로가 모두 막히면(ProxyUnavailableError) 503을 던지고 회로엔 기록하지 않는다', async () => {
+		const fetchFresh = vi.fn(async () => {
+			throw new ProxyUnavailableError('chapters', 'all routes cooling down');
+		});
+		for (let i = 0; i < 6; i++) {
+			await expect(
+				serveCached({ route: 'test-blocked', key: `blocked-${i}`, ttlSeconds: 60, provider: 'provider-blocked', fetchFresh })
+			).rejects.toMatchObject({ status: 503, code: 'upstream_blocked' });
+		}
+		expect(breaker.snapshot()['provider-blocked']).toBeUndefined();
+	});
+
+	it('ttlSeconds 함수로 결과마다 캐시 기간을 정한다', async () => {
+		const setSpy = vi.spyOn(sharedCache, 'set');
+		await serveCached({
+			route: 'test-ttlfn',
+			key: 'ttlfn',
+			ttlSeconds: (d: { captionStatus: string }) => (d.captionStatus === 'error' ? 900 : 2_592_000),
+			provider: 'provider-ttlfn',
+			fetchFresh: async () => ({ captionStatus: 'error' })
+		});
+		expect(setSpy).toHaveBeenCalledWith('ttlfn', JSON.stringify({ captionStatus: 'error' }), 900);
+		setSpy.mockRestore();
 	});
 });
