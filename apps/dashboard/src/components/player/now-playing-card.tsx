@@ -401,29 +401,8 @@ export function NowPlaying({
             aria-label="다음 곡"
           />
         </div>
-        {/* 왼쪽: 정지 · 즐겨찾기 · 반복 */}
+        {/* 왼쪽: 반복 · 정지 */}
         <div className="flex items-center justify-center gap-2 sm:order-1 sm:justify-start">
-          <Button
-            variant="secondary"
-            size="icon-lg"
-            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
-            icon={<Square size={16} />}
-            onClick={handleStop}
-            loading={pendingAction === "stop"}
-            disabled={commandsOff || busy(["stop"])}
-            aria-label="정지"
-          />
-          <Button
-            variant="secondary"
-            size="icon-lg"
-            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
-            icon={<Heart size={16} />}
-            onClick={handleFavorite}
-            loading={favoritePending}
-            disabled={favoritePending || !state.trackUri || !hasCurrentTrack}
-            aria-label="즐겨찾기에 추가"
-            title="즐겨찾기에 추가"
-          />
           <Button
             variant={displayedRepeat === "off" ? "secondary" : "primary"}
             size="icon-lg"
@@ -443,9 +422,30 @@ export function NowPlaying({
             aria-label={repeatLabel}
             title={repeatLabel}
           />
+          <Button
+            variant="secondary"
+            size="icon-lg"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            icon={<Square size={16} />}
+            onClick={handleStop}
+            loading={pendingAction === "stop"}
+            disabled={commandsOff || busy(["stop"])}
+            aria-label="정지"
+          />
         </div>
-        {/* 오른쪽: 볼륨 */}
+        {/* 오른쪽: 즐겨찾기 · 볼륨 */}
         <div className="flex min-w-0 items-center gap-2 sm:order-3 sm:max-w-60 sm:justify-self-end sm:w-full">
+          <Button
+            variant="secondary"
+            size="icon-lg"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            icon={<Heart size={16} />}
+            onClick={handleFavorite}
+            loading={favoritePending}
+            disabled={favoritePending || !state.trackUri || !hasCurrentTrack}
+            aria-label="즐겨찾기에 추가"
+            title="즐겨찾기에 추가"
+          />
           <Volume2 size={16} className="shrink-0 text-muted-foreground" aria-hidden />
           <Slider
             className="min-w-0 flex-1"
