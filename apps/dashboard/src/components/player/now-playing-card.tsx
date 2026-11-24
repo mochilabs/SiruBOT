@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatDuration } from "@sirubot/utils/time";
-import { ListMusic, Pause, Play, Repeat, SkipForward, Square, Volume2 } from "lucide-react";
+import { Heart, ListMusic, Pause, Play, Repeat, SkipForward, Square, Volume2 } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import { StatusDot } from "@/components/primitives/status-dot";
@@ -183,6 +183,57 @@ export function NowPlaying({
     pendingAction !== null && !own.includes(pendingAction);
   const commandsOff = controlsDisabled || !hasCurrentTrack;
 
+  // 탐색 — 위치를 고르면 바로 이동하지 않고 확인 단계를 거쳐요
+  const [seekTargetMs, setSeekTargetMs] = useState<number | null>(null);
+  const [seekPending, setSeekPending] = useState(false);
+  const canSeek = !state.isStream && state.durationMs > 0 && !commandsOff;
+  // 곡이 바뀌면 이전 곡 기준으로 고른 위치는 버려요
+  useEffect(() => {
+    setSeekTargetMs(null);
+  }, [state.trackUri]);
+  useEffect(() => {
+    if (!canSeek) setSeekTargetMs(null);
+  }, [canSeek]);
+
+  const handleSeekConfirm = useCallback(async () => {
+    if (seekTargetMs === null || commandPendingRef.current || controlsDisabled) return;
+    commandPendingRef.current = true;
+    setSeekPending(true);
+    const result = await sendPlayerCommand(guildId, "seek", { positionMs: seekTargetMs });
+    if (!result.ok) {
+      failCommand(result, "재생 위치를 옮기지 못했어요.");
+    } else {
+      setSeekTargetMs(null);
+    }
+    setSeekPending(false);
+    commandPendingRef.current = false;
+  }, [controlsDisabled, failCommand, guildId, seekTargetMs]);
+
+  // 즐겨찾기 — 현재 곡을 내 즐겨찾기에 담아요
+  const [favoritePending, setFavoritePending] = useState(false);
+  const handleFavorite = useCallback(async () => {
+    if (favoritePending || !state.trackUri) return;
+    setFavoritePending(true);
+    try {
+      const res = await fetch(`/api/servers/${guildId}/player/favorite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uri: state.trackUri }),
+      });
+      const body = (await res.json().catch(() => null)) as {
+        error?: string;
+        alreadyAdded?: boolean;
+      } | null;
+      if (res.ok) toast.success("즐겨찾기에 추가했어요.");
+      else if (body?.alreadyAdded) toast.info("이미 즐겨찾기에 있는 곡이에요.");
+      else toast.error(body?.error ?? "즐겨찾기에 추가하지 못했어요.");
+    } catch {
+      toast.error("즐겨찾기에 추가하지 못했어요.");
+    } finally {
+      setFavoritePending(false);
+    }
+  }, [favoritePending, guildId, state.trackUri, toast]);
+
   return (
     <section className="flex flex-col gap-3 rounded-row bg-surface-2 p-3 sm:p-4">
       <div className="flex min-w-0 items-center gap-3 sm:gap-4">
@@ -235,7 +286,38 @@ export function NowPlaying({
       </div>
 
       <div className="space-y-1">
-        <ProgressBar state={unavailable ? { ...state, stale: true } : state} receivedAt={receivedAt} />
+        <div className="relative">
+          <ProgressBar state={unavailable ? { ...state, stale: true } : state} receivedAt={receivedAt} />
+          {canSeek && (
+            // 보이지 않는 범위 입력을 진행바 위에 겹쳐 마우스·터치·키보드 탐색을 모두 받아요
+            <input
+              type="range"
+              aria-label="재생 위치 선택"
+              min={0}
+              max={state.durationMs}
+              step={1000}
+              value={seekTargetMs ?? Math.min(positionMs, state.durationMs)}
+              onChange={(event) => setSeekTargetMs(Number(event.target.value))}
+              disabled={seekPending}
+              className="absolute -top-2 left-0 h-5 w-full cursor-pointer opacity-0 pointer-coarse:-top-3 pointer-coarse:h-8"
+            />
+          )}
+        </div>
+        {seekTargetMs !== null && (
+          <div role="group" aria-label="재생 위치 이동 확인" className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-surface-1 px-3 py-2">
+            <p className="text-sm font-medium text-foreground">
+              <span className="font-bold tabular-nums">{formatDuration(seekTargetMs)}</span> 위치로 이동할까요?
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="primary" size="sm" className="pointer-coarse:min-h-11" onClick={handleSeekConfirm} loading={seekPending} disabled={seekPending}>
+                이동
+              </Button>
+              <Button variant="secondary" size="sm" className="pointer-coarse:min-h-11" onClick={() => setSeekTargetMs(null)} disabled={seekPending}>
+                취소
+              </Button>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between text-xs font-medium tabular-nums text-muted-foreground">
           <span>{state.isStream ? "스트리밍" : hasCurrentTrack ? formatDuration(positionMs) : "0:00"}</span>
           <span>{state.isStream ? "" : formatDuration(state.durationMs)}</span>
@@ -277,6 +359,17 @@ export function NowPlaying({
             loading={pendingAction === "stop"}
             disabled={commandsOff || busy(["stop"])}
             aria-label="정지"
+          />
+          <Button
+            variant="secondary"
+            size="icon-lg"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            icon={<Heart size={16} />}
+            onClick={handleFavorite}
+            loading={favoritePending}
+            disabled={favoritePending || !state.trackUri || !hasCurrentTrack}
+            aria-label="즐겨찾기에 추가"
+            title="즐겨찾기에 추가"
           />
           <Button
             variant="state-toggle"

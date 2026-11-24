@@ -14,6 +14,7 @@ export interface PlayerCommandParams {
   index?: number;
   from?: number;
   to?: number;
+  positionMs?: number;
 }
 
 /** 봇 검증 실패 시 안내 문구도 전달해요 — "명령 실패" 대신 실제 이유를 토스트로 보여줘요 */
@@ -35,6 +36,9 @@ export async function sendPlayerCommand(
         ...(extra.index !== undefined ? { index: extra.index } : {}),
         ...(extra.from !== undefined ? { from: extra.from } : {}),
         ...(extra.to !== undefined ? { to: extra.to } : {}),
+        ...(extra.positionMs !== undefined
+          ? { positionMs: extra.positionMs }
+          : {}),
       }),
     });
     if (res.ok) return { ok: true };

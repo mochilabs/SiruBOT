@@ -79,7 +79,8 @@ describe('playerWeb request contracts', () => {
 			'queue-clear' as const,
 			'queue-remove' as const,
 			'queue-move' as const,
-			'queue-jump' as const
+			'queue-jump' as const,
+			'seek' as const
 		]) {
 			expect(playerWebControlActionSchema.safeParse(action).success).toBe(true);
 		}
@@ -91,6 +92,9 @@ describe('playerWeb request contracts', () => {
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'queue-remove', index: 0 }).success).toBe(true);
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'queue-jump', index: 2 }).success).toBe(true);
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'queue-move', from: 1, to: 0 }).success).toBe(true);
+		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'seek', positionMs: 90_000 }).success).toBe(true);
+		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'seek' }).success).toBe(false);
+		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'seek', positionMs: -1 }).success).toBe(false);
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'volume' }).success).toBe(false);
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'volume', value: 151 }).success).toBe(false);
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'queue-remove' }).success).toBe(false);

@@ -44,7 +44,7 @@ All paths are under `/api`. `[id]` is the guild id.
 | Join-to-create (1) | `servers/[id]/jtc/setup` | manage | data-api → bot (creating the marker channel needs the bot token) |
 | Live state (2) | `servers/[id]/live`, `live/stream` | manage | data-api; `live/stream` relays SSE |
 | Lyrics (1) | `servers/[id]/lyrics?title=&artist=&durationMs=&source=` | member | data-api `GET /v1/lyrics`; 404 when no lyrics are found. Returns plain, synced (LRC) and word-synced lines (the panel uses line timing only), plus the Korean `translation` (`ready`, `pending` while data-api translates in the background, or `none`) |
-| Player (5) | `servers/[id]/player`, `player/command`, `player/play`, `player/search`, `player/voice-context` | member | data-api request/reply |
+| Player (6) | `servers/[id]/player`, `player/command`, `player/favorite`, `player/play`, `player/search`, `player/voice-context` | member | data-api request/reply |
 | TTS (1) | `servers/[id]/tts` | member | Database: the caller's own voice for that guild |
 | Assets (2) | `servers/[id]/assets`, `assets/[assetId]` | manage | The dashboard uploads to and deletes from the storage public bucket directly |
 | Social alerts (6) | `servers/[id]/social/subscriptions`, `subscriptions/[subId]`, `social/youtube/resolve`, `social/twitch/resolve`, `social/chzzk/profile`, `social/chzzk/search` | manage | data-api, which proxies to notifier |

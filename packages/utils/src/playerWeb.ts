@@ -26,7 +26,8 @@ export const playerWebControlActionSchema = z.enum([
 	'queue-clear',
 	'queue-remove',
 	'queue-move',
-	'queue-jump'
+	'queue-jump',
+	'seek'
 ]);
 export type PlayerWebControlAction = z.infer<typeof playerWebControlActionSchema>;
 
@@ -76,6 +77,8 @@ export const playerWebPlayRequestSchema = playerWebRequestBase.extend({
 export type PlayerWebPlayRequest = z.infer<typeof playerWebPlayRequestSchema>;
 
 const QUEUE_INDEX_MAX = 999;
+/** 탐색 위치 상한(ms) — 24시간. 곡 길이 초과는 봇이 다시 검사해요 */
+export const PLAYER_WEB_SEEK_MAX_MS = 86_400_000;
 
 export const playerWebControlRequestSchema = playerWebRequestBase
 	.extend({
@@ -84,7 +87,8 @@ export const playerWebControlRequestSchema = playerWebRequestBase
 		value: z.number().int().min(MUSIC_VOLUME_MIN).max(MUSIC_VOLUME_MAX).optional(),
 		index: z.number().int().min(0).max(QUEUE_INDEX_MAX).optional(),
 		from: z.number().int().min(0).max(QUEUE_INDEX_MAX).optional(),
-		to: z.number().int().min(0).max(QUEUE_INDEX_MAX).optional()
+		to: z.number().int().min(0).max(QUEUE_INDEX_MAX).optional(),
+		positionMs: z.number().int().min(0).max(PLAYER_WEB_SEEK_MAX_MS).optional()
 	})
 	.superRefine((body, ctx) => {
 		if (body.action === 'volume' && typeof body.value !== 'number') {
@@ -97,6 +101,12 @@ export const playerWebControlRequestSchema = playerWebRequestBase
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				message: `${body.action} 제어에는 index(0 이상 정수)가 필요해요.`
+			});
+		}
+		if (body.action === 'seek' && typeof body.positionMs !== 'number') {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: 'seek 제어에는 positionMs(0 이상 정수)가 필요해요.'
 			});
 		}
 		if (body.action === 'queue-move') {

@@ -65,6 +65,7 @@ export interface PlayerControlParams {
   index?: number;
   from?: number;
   to?: number;
+  positionMs?: number;
 }
 
 /** 라이브 제어 — 재생 제어(volume·pause·resume·skip·stop·repeat) 및 대기열 조작 */
@@ -84,6 +85,7 @@ export function requestPlayerControl(
     ...(extra.index !== undefined ? { index: extra.index } : {}),
     ...(extra.from !== undefined ? { from: extra.from } : {}),
     ...(extra.to !== undefined ? { to: extra.to } : {}),
+    ...(extra.positionMs !== undefined ? { positionMs: extra.positionMs } : {}),
   });
 }
 

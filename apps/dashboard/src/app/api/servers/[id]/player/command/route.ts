@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { playerWebControlActionSchema } from "@sirubot/utils/playerWeb";
+import {
+  PLAYER_WEB_SEEK_MAX_MS,
+  playerWebControlActionSchema,
+} from "@sirubot/utils/playerWeb";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
@@ -18,6 +21,7 @@ const commandSchema = z
     index: z.number().int().min(0).max(999).optional(),
     from: z.number().int().min(0).max(999).optional(),
     to: z.number().int().min(0).max(999).optional(),
+    positionMs: z.number().int().min(0).max(PLAYER_WEB_SEEK_MAX_MS).optional(),
   })
   .superRefine((body, ctx) => {
     if (body.action === "volume" && typeof body.value !== "number") {
@@ -33,6 +37,12 @@ const commandSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: `${body.action} 제어에는 index가 필요해요.`,
+      });
+    }
+    if (body.action === "seek" && typeof body.positionMs !== "number") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "seek 제어에는 positionMs가 필요해요.",
       });
     }
     if (body.action === "queue-move") {
@@ -62,6 +72,7 @@ export const POST = createGuildApiHandler({
       index: data.index,
       from: data.from,
       to: data.to,
+      positionMs: data.positionMs,
     });
     if (!result.ok) {
       return NextResponse.json(

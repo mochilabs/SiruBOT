@@ -59,6 +59,16 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
   // 응답이 오거나 재시도가 끝나 에러가 확정되면 "없음"으로 보여줘요. 그 전까지는 찾는 중이에요.
   const finished = !isLoading && !isValidating && (data !== undefined || error !== undefined);
 
+  // 가사가 없으면 패널을 접어 한 줄로만 알려요. 가사가 있는 곡으로 바뀌면 이 분기를 벗어나 다시 펼쳐져요.
+  if (!lyrics && finished) {
+    return (
+      <p role="status" aria-label="노래방 가사" className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+        <Mic2 size={14} aria-hidden />
+        이 곡은 가사가 없어서 가사 패널을 접어 두었어요.
+      </p>
+    );
+  }
+
   return (
     <section aria-label="노래방 가사" className="flex flex-col gap-3 rounded-row bg-surface-2 p-3 sm:p-4">
       {!lyrics && !finished ? (
@@ -77,11 +87,7 @@ export function LyricsPanel({ state, receivedAt, guildId, unavailable }: LyricsP
           receivedAt={receivedAt}
           unavailable={unavailable}
         />
-      ) : (
-        <LyricsFrame>
-          <p className="py-6 text-center text-sm text-muted-foreground sm:py-8">이 곡의 가사를 찾지 못했어요.</p>
-        </LyricsFrame>
-      )}
+      ) : null}
     </section>
   );
 }

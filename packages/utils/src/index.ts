@@ -155,6 +155,7 @@ export { type PanelPostResponse, panelPostRequestSchema, panelPostResponseSchema
 export {
 	PLAYER_WEB_CODE_SEARCH_EMPTY,
 	type PlayerVoiceContext,
+	PLAYER_WEB_SEEK_MAX_MS,
 	playerWebControlActionSchema,
 	type PlayerWebControlRequest,
 	playerWebControlRequestSchema,
