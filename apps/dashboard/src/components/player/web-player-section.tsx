@@ -32,7 +32,7 @@ interface TrackSummary {
 
 const isPlayableUrl = (value: string) => /^https?:\/\//i.test(value.trim());
 
-function VoiceStatusBadge({ guildId }: { guildId: string }) {
+function VoiceStatusBadge({ guildId, compact = false }: { guildId: string; compact?: boolean }) {
 	const { data, error, isLoading } = useVoiceContext(guildId);
 
 	if (isLoading) return <SkeletonLine width="72px" height="h-6" />;
@@ -57,7 +57,7 @@ function VoiceStatusBadge({ guildId }: { guildId: string }) {
 					음성 채널 미접속
 				</Badge>
 			)}
-			{!voice.canControl && (
+			{!voice.canControl && !compact && (
 				<Badge variant="warning">제어는 봇과 같은 음성 채널에서 할 수 있어요</Badge>
 			)}
 		</span>
@@ -286,7 +286,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 
 			<div className="min-w-0 space-y-6 lg:sticky lg:top-24 lg:z-10 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:scrollbar-none">
 			<Card padding="lg" className="min-w-0 gap-4 p-4 sm:gap-5 sm:p-6">
-				<div className="flex flex-wrap items-center justify-between gap-3">
+				<div className="hidden flex-wrap items-center justify-between gap-3 sm:flex">
 					<h2 className="flex items-center gap-2 text-base font-extrabold tracking-tight text-foreground">
 						<span className="text-primary-text">
 							<Search size={15} aria-hidden />
@@ -297,6 +297,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 				</div>
 
 				<form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+					<div className="flex min-w-0 flex-1 items-center gap-2">
 					<InputGroup className="h-9 min-w-0 flex-1 pointer-coarse:h-11">
 						<InputGroupAddon>
 							<Search size={16} aria-hidden />
@@ -321,6 +322,11 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 							) : null}
 						</InputGroupAddon>
 					</InputGroup>
+					{/* 모바일은 제목 줄 없이 입력창 옆에 접속 상태만 붙여요 */}
+					<span className="shrink-0 sm:hidden">
+						<VoiceStatusBadge guildId={guildId} compact />
+					</span>
+					</div>
 					{isUrl && (
 						<Button type="submit" className="pointer-coarse:min-h-11" loading={playingUri !== null} disabled={playingUri !== null}>
 							바로 재생
