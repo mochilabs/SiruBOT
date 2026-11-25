@@ -51,7 +51,7 @@ function parsePayload(message: string): GreetingTestResult | null {
 const results = new Map<string, Entry>();
 
 /**
- * Pub/Sub 메시지 처리 — 서명 검증(SEC-006) 후 결과를 길드별로 보관해요.
+ * Pub/Sub 메시지 처리 — 서명 검증 후 결과를 길드별로 보관해요.
  * 유닛 테스트가 직접 호출할 수 있게 내보내요 (다루는 게 모듈 results 맵뿐이라 Redis 연결 없이도 검증돼요).
  */
 export function handleMemberGreetingStateMessage(message: string, channel: string): void {
@@ -60,7 +60,7 @@ export function handleMemberGreetingStateMessage(message: string, channel: strin
 	if (!guildId) return;
 
 	// 서명 키는 REDIS_AUTH_KEY ?? AUTH_KEY (봇과 공유). 매 메시지마다 읽어 테스트에서 환경을 스왑할 수 있게 해요.
-	// 키가 있는 환경에서는 서명 봉투를 검증해 무서명 위조 프레임을 거부해요 (SEC-006, guildDataHub와 동일 계약).
+	// 키가 있는 환경에서는 서명 봉투를 검증해 무서명 위조 프레임을 거부해요 (guildDataHub와 동일 계약).
 	const body = unwrapRedisMessage(resolveRedisSigningKey(process.env), message);
 	if (body === null) {
 		logger.warn(`Rejected member greeting state from ${channel} with invalid signature`);

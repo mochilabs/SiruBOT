@@ -1,17 +1,13 @@
 /**
- * 인사 카드 레이어 움직임 — 프리셋(`GreetingAnimation`)을 CSS `@keyframes`와 `animation` 값으로 바꾸는 순수 함수예요 (node·브라우저 공용).
- *
- * 규칙:
- * - 모든 키프레임은 0% = 100%로 닫혀서 반복해도 끊기지 않아요.
- * - 회전은 항상 0%/50%/100% 3분할이에요 — 0°→360° 두 키프레임은 변환 행렬이 같아서 Takumi가 정지 프레임으로 그려요.
- * - 움직임은 레이어 바깥 래퍼에 입혀요(`greetingCard.ts`의 `withAnimation`). 레이어 자체의 회전·투명도와 곱해져요(대체하지 않아요).
- * - 카드 한 바퀴 길이 L(`greetingAnimationDurationMs`)이 정해지면 각 레이어 주기를 L의 약수(L / n)로 맞춰서 WebP가 끊김 없이 반복돼요.
+ * Invariants:
+ * - Every keyframe set closes (0% = 100%) so loops don't jump.
+ * - Rotation always uses 0%/50%/100%: a 0°→360° pair has identical matrices and Takumi would draw a still frame.
+ * - Each layer period is L / n for the card loop length L, so the WebP repeats seamlessly.
  */
 import { greetingAnimationDurationMs, type GreetingAnimation, type GreetingAnimationKind, type GreetingImage } from '@sirubot/utils/memberGreeting';
 
 const round = (value: number): number => Math.round(value * 100) / 100;
 
-/** intensity(0~1) → 종류별 키프레임 본문. 값은 px/deg/배율이에요. */
 function keyframeStops(kind: GreetingAnimationKind, intensity: number): [string, string][] {
 	const i = Math.min(1, Math.max(0, intensity));
 	switch (kind) {
@@ -65,23 +61,20 @@ function keyframeStops(kind: GreetingAnimationKind, intensity: number): [string,
 	}
 }
 
-/** 키프레임 이름 — (종류, 세기)가 같으면 같은 이름이라 CSS에 한 번만 들어가요. spin은 세기와 무관해요. */
+/** Same (kind, intensity) gives the same name so the CSS includes it once; spin ignores intensity. */
 export function animationName(animation: GreetingAnimation): string {
 	const intensity = animation.type === 'spin' ? 0 : Math.round(animation.intensity * 100);
 	return `ga-${animation.type}-${intensity}`;
 }
 
-/**
- * 한 바퀴 길이 loopMs 안에서 이 레이어의 주기 — 가장 가까운 약수(loopMs / n)로 맞춰요.
- * 예: 한 바퀴 4000ms에서 주기 1500ms → 4000 / round(4000 / 1500) = 4000 / 3 ≈ 1333ms.
- */
+/** Snaps the period to the nearest divisor of loopMs: 1500ms in a 4000ms loop becomes 4000 / round(4000 / 1500) ≈ 1333ms. */
 export function animationPeriodMs(animation: GreetingAnimation, loopMs: number): number {
 	if (loopMs <= 0) return animation.durationMs;
 	const n = Math.max(1, Math.round(loopMs / animation.durationMs));
 	return round(loopMs / n);
 }
 
-/** CSS `animation` 값 — 시작 지연은 음수 지연(위상 어긋남)으로 줘서 처음 프레임부터 움직이는 상태이고 반복 경계가 끊기지 않아요. */
+/** A negative delay offsets the phase so the first frame is already in motion and the loop boundary stays seamless. */
 export function animationDeclaration(animation: GreetingAnimation, loopMs: number): string {
 	const period = animationPeriodMs(animation, loopMs);
 	const phase = round(animation.delayMs % period);
@@ -89,7 +82,6 @@ export function animationDeclaration(animation: GreetingAnimation, loopMs: numbe
 	return `${animationName(animation)} ${period}ms ${timing} ${-phase}ms infinite`;
 }
 
-/** 카드에서 쓰는 움직임의 `@keyframes` 전부 — Takumi `css` 옵션에 그대로 넘겨요. 움직임이 없으면 빈 문자열이에요. */
 export function greetingAnimationCss(image: GreetingImage): string {
 	const seen = new Map<string, string>();
 	for (const layer of image.layers) {

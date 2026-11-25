@@ -101,7 +101,7 @@ export default async function routes(fastify: FastifyInstance) {
 
 		function handleIdentify(id: string, ws: WebSocket, payload: IdentifyPayload) {
 			// 같은 소켓에서의 재-IDENTIFY는 정당한 흐름이 아니에요. 이전 등록을 갱신하면
-			// 이전 샤드 ID가 할당 집합에 남아 영구히 유출됩니다(할당 고갈 DoS 방지, SEC-003).
+			// 이전 샤드 ID가 할당 집합에 남아 영구히 유출됩니다(할당 고갈 DoS 방지).
 			if (registry.getProcess(id)) {
 				logger.warn(`[${id}] IDENTIFY rejected: socket is already identified`);
 				return;

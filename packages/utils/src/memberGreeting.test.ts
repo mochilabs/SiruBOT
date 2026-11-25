@@ -282,7 +282,7 @@ describe('GIF 배경', () => {
 	});
 });
 
-describe('텍스트 효과·아바타 옵션 (P-17)', () => {
+describe('텍스트 효과·아바타 옵션', () => {
 	const withLayers = (layers: unknown[]) => ({ ...DEFAULT_GREETINGS.welcome, image: { background: { presetId: 'rose', dataUri: null }, layers } });
 	const text = { id: 't', type: 'text', x: 50, y: 50, size: 30, color: '#ffffff', bold: false, align: 'center', text: 'a' };
 	const avatar = { id: 'a', type: 'avatar', x: 50, y: 50, size: 180, ringColor: '#ffffff' };

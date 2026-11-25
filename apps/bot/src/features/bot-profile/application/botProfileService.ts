@@ -194,7 +194,7 @@ export class BotProfileService {
 				updatedAt: Date.now()
 			};
 
-			// SEC-006: data-api 허브가 fail-closed 검증을 하므로 publisher가 서명 봉투로 감싸 보내요.
+			// data-api 허브가 fail-closed 검증을 하므로 publisher가 서명 봉투로 감싸 보내요.
 			this.deps.publisher.publish(botProfileStateEvent.channel(guild.id), state, `Bot profile state (guild ${guild.id})`);
 		} catch (error) {
 			this.deps.logger.debug(`봇 프로필 상태 퍼블리시 실패 (guild ${guild.id}): ${error}`);

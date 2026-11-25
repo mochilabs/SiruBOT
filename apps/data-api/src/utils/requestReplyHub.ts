@@ -101,7 +101,7 @@ export function createRequestReplyHub<TContract extends HubContract, TMeta, TRes
 	const subscriber = new HubSubscriber({
 		name,
 		channel: contract.responseChannel,
-		// 응답은 서명 검증을 통과한 본문만 상관해요 — Redis에 쓸 수 있는 사람이 보내는 위조 응답을 거부해요 (SEC-006).
+		// 응답은 서명 검증을 통과한 본문만 상관해요 — Redis에 쓸 수 있는 사람이 보내는 위조 응답을 거부해요.
 		onMessage: (message) => {
 			const body = unwrapRedisMessage(redisSigningKey, message);
 			if (body === null) {

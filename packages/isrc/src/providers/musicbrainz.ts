@@ -5,7 +5,7 @@ import type { IsrcCandidate, IsrcProvider, IsrcSearchTerms, ProviderContext } fr
 
 const NAME = 'musicbrainz';
 const BASE = 'https://musicbrainz.org/ws/2';
-/** MusicBrainz는 초당 1회 제한이라 1.1초 간격으로 직렬화해요. */
+// MusicBrainz allows 1 request per second.
 const MIN_INTERVAL_MS = 1_100;
 export const DEFAULT_MUSICBRAINZ_USER_AGENT = 'SiruBOT/0.1 ( https://github.com/mochilabs/SiruBOT )';
 
@@ -27,7 +27,7 @@ const searchSchema = z.object({
 		.default([])
 });
 
-/** Lucene 구문 — 따옴표 안에서는 `\`와 `"`만 이스케이프하면 돼요. */
+// Lucene phrase: only `\` and `"` need escaping inside quotes.
 function phrase(value: string): string {
 	return `"${value.replace(/[\\"]/g, (c) => `\\${c}`)}"`;
 }
@@ -66,7 +66,7 @@ export function createMusicBrainzProvider(options: MusicBrainzProviderOptions = 
 						durationMs: recording.length,
 						provider: NAME,
 						externalId: recording.id,
-						// 쿼리에 artist 필드를 걸었으니 별칭으로 찾은 결과도 아티스트 근거가 돼요.
+						// the query constrains the artist field, so alias hits count as artist evidence
 						artistFieldMatched: true
 					}
 				];

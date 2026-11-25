@@ -92,7 +92,7 @@ export function rateKey(...parts: (string | null | undefined)[]): string {
 /**
  * 공개(무인증) 엔드포인트의 레이트리밋 결정 — 로그인 사용자는 userId 버킷, 나머지는 전역 공용 버킷이에요.
  * 요청 헤더(X-Forwarded-For 등)로 주체를 만들지 않는 것이 핵심이에요: 클라이언트가 헤더를 위조하면
- * 요청마다 새 버킷이 생겨 한도가 우회됩니다(SEC-002). 신뢰할 프록시가 도입되면 그때 IP 주체를 추가해요.
+ * 요청마다 새 버킷이 생겨 한도가 우회됩니다. 신뢰할 프록시가 도입되면 그때 IP 주체를 추가해요.
  */
 export function publicReadLimit(
   userId: string | undefined,

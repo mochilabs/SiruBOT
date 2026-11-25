@@ -2,19 +2,10 @@ import { z } from 'zod';
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from './playerLimits.js';
 import { redisIdSchema } from './redisChannels.js';
 
-/**
- * 웹 플레이어 request/reply 공용 계약 — bot과 data-api가 함께 쓴다.
- * 대시보드의 곡 검색·재생·라이브 제어·음성 상태 조회는 요청자의 음성 채널과 관리자/DJ 권한을
- * 봇 캐시로만 해석할 수 있으므로 guildData 조회와 같은 request/reply로 우회한다:
- * data-api(playerWebHub)가 REQUEST 채널(`sirubot:player-web:request`)로 요청을 퍼블리시하면
- * 해당 길드를 보유한 봇 프로세스(playerWebResponder)가 RESPONSE 채널(`sirubot:player-web:response`)로
- * 응답하고, hub가 requestId로 상관해 dashboard에 내려준다. 응답은 성공 형태 외에 한국어 error 메시지를
- * 실어 실패 이유를 그대로 사용자에게 보여줄 수 있게 해요.
- */
+// Channels: PLAYER_WEB_REQUEST_CHANNEL / PLAYER_WEB_RESPONSE_CHANNEL (see redisChannels.ts). Failures carry a Korean `error` shown to the user as-is.
 export const playerWebKindSchema = z.enum(['search', 'play', 'control', 'voice-context']);
 export type PlayerWebKind = z.infer<typeof playerWebKindSchema>;
 
-/** 라이브 제어 액션 — 슬래시 커맨드(/volume·/stop·/queue 등)와 같은 동작을 웹에서 수행해요 */
 export const playerWebControlActionSchema = z.enum([
 	'volume',
 	'pause',
@@ -32,10 +23,9 @@ export const playerWebControlActionSchema = z.enum([
 ]);
 export type PlayerWebControlAction = z.infer<typeof playerWebControlActionSchema>;
 
-/** 응답 `code` — 문구가 아니라 이 값으로 실패 종류를 가려요. 검색은 됐지만 결과가 없을 때 봇이 실어요 */
+/** Branch on `code`, not on message text. */
 export const PLAYER_WEB_CODE_SEARCH_EMPTY = 'search_empty';
 
-/** 검색 결과 요약 — 봇이 Lavalink SearchResult에서 뽑아 응답에 실어요 */
 export const playerWebTrackSchema = z.object({
 	title: z.string(),
 	author: z.string(),
@@ -47,7 +37,7 @@ export const playerWebTrackSchema = z.object({
 });
 export type PlayerWebTrack = z.infer<typeof playerWebTrackSchema>;
 
-/** 요청 공통부 + kind별 페이로드. 요청자(userId)까지 전달해 봇이 멤버·음성 채널·권한을 해석해요 */
+/** Carries userId so the bot can resolve the member, voice channel and permissions. */
 const playerWebRequestBase = z.object({
 	requestId: z.string().uuid(),
 	guildId: redisIdSchema,
@@ -61,10 +51,7 @@ export const playerWebSearchRequestSchema = playerWebRequestBase.extend({
 });
 export type PlayerWebSearchRequest = z.infer<typeof playerWebSearchRequestSchema>;
 
-/**
- * 재생 요청 주소 — http/https만 허용해요. 다른 스킴(file:, data: 등)은 봇을 거쳐 Lavalink가
- * 내부 네트워크에서 가져올 수 있어(SSRF) 계약 단계에서 막아요. data-api·dashboard가 같은 스키마를 써요.
- */
+/** http/https only: other schemes (file:, data:) could make Lavalink fetch from the internal network (SSRF). */
 export const playerWebPlayUriSchema = z
 	.string()
 	.max(500)
@@ -78,7 +65,7 @@ export const playerWebPlayRequestSchema = playerWebRequestBase.extend({
 export type PlayerWebPlayRequest = z.infer<typeof playerWebPlayRequestSchema>;
 
 const QUEUE_INDEX_MAX = 999;
-/** 탐색 위치 상한(ms) — 24시간. 곡 길이 초과는 봇이 다시 검사해요 */
+/** 24 hours; the bot re-checks against the track length. */
 export const PLAYER_WEB_SEEK_MAX_MS = 86_400_000;
 
 export const playerWebControlRequestSchema = playerWebRequestBase
@@ -129,33 +116,29 @@ export type PlayerWebControlRequest = z.infer<typeof playerWebControlRequestSche
 export const playerWebVoiceContextRequestSchema = playerWebRequestBase.extend({ kind: z.literal('voice-context') });
 export type PlayerWebVoiceContextRequest = z.infer<typeof playerWebVoiceContextRequestSchema>;
 
-/** 요청 초기 파싱용 — requestId·guildId·userId·kind만 검증하고 kind별 상세는 각 스키마로 좁혀요 */
+/** Loose first-pass parse; kind-specific schemas narrow it later. */
 export const playerWebRequestBaseSchema = playerWebRequestBase;
 export type PlayerWebRequestBase = z.infer<typeof playerWebRequestBase>;
 
-/** 요청자의 음성·권한 상태 — voice-context 응답. 페이지에서 배지와 재생 UI를 이 값으로 그려요 */
 export const playerVoiceContextSchema = z.object({
 	inVoice: z.boolean(),
 	voiceChannelName: z.string().nullable(),
-	/** 봇이 접속한 음성 채널 이름 — 접속 중이 아니면 null. 이 필드가 없는 이전 버전 봇 응답도 받아요 */
+	/** Null when not connected. Older bot replies without this field are accepted. */
 	botVoiceChannelName: z.string().nullable().optional(),
-	/** 재생 제어(일시정지·볼륨·건너뛰기 등) 가능 여부 — 봇이 실제 인가와 같은 정책으로 계산해요 */
+	/** Computed with the same policy as actual authorization. */
 	canControl: z.boolean(),
-	/** 곡 추가 가능 여부 — 봇이 항상 보내요. 이 필드가 없는 이전 버전 봇 응답은 스키마 검증에서 거절돼요 */
+	/** Always sent; replies without it fail validation. */
 	canPlay: z.boolean()
 });
 export type PlayerVoiceContext = z.infer<typeof playerVoiceContextSchema>;
 
-/**
- * 응답 — 성공이면 kind별 필드를 채우고, 실패면 error에 한국어 안내를 실어요.
- * 스키마는 loose하게 두어(미사용 필드 허용) 새 kind/필드 추가가 이전 읽기를 깨지 않게 해요.
- */
+/** Loose on purpose so new kinds and fields don't break older readers. */
 export const playerWebResponseSchema = z.object({
 	requestId: z.string().uuid(),
 	guildId: redisIdSchema,
 	kind: playerWebKindSchema,
 	error: z.string().optional(),
-	/** 실패 종류를 가리는 기계용 코드 — 문구가 바뀌어도 판별이 깨지지 않게 해요. 모르는 값은 무시해요 */
+	/** Machine-readable failure kind; unknown values are ignored. */
 	code: z.string().optional(),
 	tracks: z.array(playerWebTrackSchema).max(5).optional(),
 	voice: playerVoiceContextSchema.optional()

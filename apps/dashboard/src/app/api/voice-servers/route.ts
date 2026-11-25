@@ -6,7 +6,7 @@ import { fetchVoiceServerStats, toPublicVoiceServerSummary } from "@/lib/voice-s
 
 // 음성 서버(Lavalink) 스트리밍 개수 공개 API — 로그인 없이 허용해요.
 // host(노드 주소)·name·CPU·메모리 등 인프라 텔레메트리는 공격 표면이라 서버에서 제거하고
-// 플레이어(스트리밍) 합계만 내려줘요(toPublicVoiceServerSummary). 비로그인은 전역 공용 버킷(SEC-002).
+// 플레이어(스트리밍) 합계만 내려줘요(toPublicVoiceServerSummary). 비로그인은 전역 공용 버킷.
 export async function GET() {
 	const session = await auth();
 	const limit = publicReadLimit(session?.user?.id);

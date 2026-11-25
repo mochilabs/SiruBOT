@@ -1,14 +1,7 @@
-/**
- * 봇 ↔ data-api ↔ 대시보드가 공유하는 Redis Pub/Sub 채널명 모음.
- * 채널명은 여러 서비스가 동시에 바꿔야 하므로 한 곳에서 관리해요.
- */
+// Channel names change across services at once, so they live only here.
 import { z } from 'zod';
 
-/**
- * Redis 키/채널 페이로드에 들어가는 ID(guildId·userId·roleId 등) — 공백·구분자(:)가 섞여
- * 키가 엉키거나 다른 키 네임스페이스로 주입되지 않게 영문·숫자·_·- 만 허용해요
- * (디스코드 스노플레이크를 그대로 포함해요). Redis 키 빌더의 입력 검증 계약이에요.
- */
+/** Allowlist for IDs embedded in Redis keys and channels: blocks `:` and whitespace from tangling keys or injecting into another namespace. */
 export const redisIdSchema = z
 	.string()
 	.trim()
@@ -16,180 +9,83 @@ export const redisIdSchema = z
 	.max(32)
 	.regex(/^[A-Za-z0-9_-]+$/, 'ID 형식이 올바르지 않아요.');
 
-/**
- * 길드 설정 캐시 무효화 브로드캐스트.
- * 대시보드가 설정을 저장하면 data-api가 이 채널로 퍼블리시하고, 모든 봇 프로세스가
- * 구독해 자기 GuildService 캐시와 커스텀 명령어 캐시에서 해당 길드를 비워요
- * (다음 조회가 DB에서 다시 읽어요). 커스텀 명령어 저장·접두사 변경도 같은 채널을 써요.
- *
- * 페이로드: {"guildId":"<길드 ID>"} — 무효화는 guildId만 전달해 봇이 DB에서 다시 읽게 해요.
- */
+/** Payload `{"guildId"}` only: bots drop the guild from their caches and re-read the DB. */
 export const GUILD_SETTINGS_INVALIDATE_CHANNEL = 'sirubot:guild-settings:invalidate';
 
-/**
- * 장애 공지 키 — 운영자가 대시보드 `/admin`에서 올리면 data-api가 서명 봉투(`wrapRedisMessage`)로 감싼 JSON
- * (`@sirubot/utils/incidentNotice`의 `IncidentNotice`)을 이 키에 기록하고, TTL은 만료 시각까지 남은 초예요.
- * 봇은 이 키를 읽기만 해요 (30초 캐시). 길드와 무관한 전역 키 하나예요.
- */
+/** Global key. data-api writes a signed envelope (`IncidentNotice`) with a TTL up to expiry; the bot only reads it (30s cache). */
 export const INCIDENT_NOTICE_KEY = 'sirubot:incident-notice';
 
-/**
- * 봇 프로필(길드 닉네임·아바타) 적용 요청 브로드캐스트.
- * 대시보드 저장 → data-api가 Redis에 pending 페이로드를 적어 두고 이 채널로 guildId를
- * 퍼블리시하면, 해당 길드를 보유한 봇 프로세스가 pending 키를 읽어 discord.js
- * `guild.members.editMe()`로 적용해요. 아바타 데이터 URI가 클 수 있어 큰 본문은
- * 브로드캐스트하지 않고 pending 키로 전달해요 (레플리카마다 복제되지 않아요).
- *
- * 페이로드: {"guildId":"<길드 ID>"} — 본문은 botProfilePendingKey(guildId)에서 읽어요.
- */
+/** Payload `{"guildId"}`; the body is in `botProfilePendingKey` because an avatar data URI can be large and broadcasts reach every replica. */
 export const BOT_PROFILE_SET_CHANNEL = 'sirubot:bot-profile:set';
 
-/** 봇 프로필 최신 상태 요청 — data-api가 화면 조회/재시도 시 요청하고 해당 길드 봇만 현재 상태를 퍼블리시해요. */
 export const BOT_PROFILE_REFRESH_CHANNEL = 'sirubot:bot-profile:refresh';
 
-/** 봇 프로필 상태 퍼블리시 채널 접두사 — 봇이 `sirubot:bot-profile:state:{guildId}`로 현재 상태를 알려요 */
 export const BOT_PROFILE_STATE_CHANNEL_PREFIX = 'sirubot:bot-profile:state:';
 
-/**
- * 봇 프로필 적용 대기 키 — data-api가 본문(JSON: {nickname?, avatar?})을 기록해요.
- * TTL은 data-api에서 붙여요; 봇은 읽고 즉시 지워요 (소유 프로세스만 읽어요).
- */
+/** Body `{nickname?, avatar?}`. The owning bot reads it and deletes it immediately. */
 export function botProfilePendingKey(guildId: string): string {
 	return `sirubot:bot-profile:pending:${guildId}`;
 }
 
-/**
- * 멤버 인사 테스트 전송 요청 브로드캐스트.
- * 대시보드 테스트 버튼 → data-api가 pending 키에 요청 본문({kind, userId, requestId})을
- * 기록하고 이 채널로 guildId를 퍼블리시하면, 해당 길드를 보유한 봇 프로세스만 읽어
- * 실제 멤버 정보로 카드를 렌더링해 대상 채널에 전송해요.
- *
- * 페이로드: {"guildId":"<길드 ID>","requestId":"<요청 식별자>"} — 본문은 memberGreetingPendingKey(guildId)
- */
+/** Payload `{"guildId","requestId"}`; the body is in `memberGreetingPendingKey`. */
 export const MEMBER_GREETING_SEND_CHANNEL = 'sirubot:member-greeting:send';
 
-/** 멤버 인사 테스트 전송 대기 키 — data-api가 본문({kind, userId, requestId})을 기록, 봇이 읽고 즉시 지워요 */
+/** Body `{kind, userId, requestId}`. The owning bot reads it and deletes it immediately. */
 export function memberGreetingPendingKey(guildId: string): string {
 	return `sirubot:member-greeting:pending:${guildId}`;
 }
 
-/** 멤버 인사 테스트 전송 결과 상태 채널 접두사 — 봇이 `sirubot:member-greeting:state:{guildId}`로 결과를 알려요 */
 export const MEMBER_GREETING_STATE_CHANNEL_PREFIX = 'sirubot:member-greeting:state:';
 
-/** 인사 테스트 결과 상태 채널명 — `sirubot:member-greeting:state:{guildId}` */
 export function memberGreetingStateChannel(guildId: string): string {
 	return `${MEMBER_GREETING_STATE_CHANNEL_PREFIX}${guildId}`;
 }
 
-/**
- * 플레이어 실시간 상태 채널 접두사 — 봇이 `sirubot:player:{guildId}`로 스냅샷을 퍼블리시해요.
- * 구독자는 data-api playerHub가 유일해요. (schema: playerState.ts)
- */
+/** The only subscriber is data-api `playerHub` (schema: `playerState.ts`). */
 export const PLAYER_STATE_CHANNEL_PREFIX = 'sirubot:player:';
 
-/** 패턴 구독용 — `sirubot:player:*` */
 export const PLAYER_STATE_CHANNEL_PATTERN = `${PLAYER_STATE_CHANNEL_PREFIX}*`;
 
-/** 상태 퍼블리시 채널명 — `sirubot:player:{guildId}` */
 export function playerStateChannel(guildId: string): string {
 	return `${PLAYER_STATE_CHANNEL_PREFIX}${guildId}`;
 }
 
-/** 채널명에서 guildId를 뽑아요 — 이 채널 계열이 아니면 null */
 export function guildIdFromPlayerStateChannel(channel: string): string | null {
 	return channel.startsWith(PLAYER_STATE_CHANNEL_PREFIX) ? channel.slice(PLAYER_STATE_CHANNEL_PREFIX.length) : null;
 }
 
-/**
- * 길드 데이터(채널/역할 목록) 조회 요청 브로드캐스트.
- * 대시보드가 사용자 토큰으로 Discord API를 직접 호출하면 401이 나므로 data-api가 이 채널로
- * 요청을 퍼블리시하고, 모든 봇 프로세스가 구독해 자기 길드를 보유한 프로세스만 응답해요.
- *
- * 페이로드: guildDataRequestSchema (guildData.ts) — {"requestId":..,"guildId":..,"kind":"channels"|"roles"}
- */
-export const GUILD_DATA_REQUEST_CHANNEL = 'sirubot:guild-data:request';
+// Request/reply pairs. The dashboard's user token can't call these Discord APIs, and voice state and
+// permissions exist only in the bot cache, so data-api publishes REQUEST and only the bot owning the guild
+// answers on RESPONSE. Hubs correlate by `requestId`.
 
-/**
- * 길드 데이터 조회 응답 채널 — 해당 길드를 보유한 봇만 퍼블리시하고,
- * data-api guildDataHub가 requestId 상관(correlation)으로 이 채널을 구독해요.
- *
- * 페이로드: guildDataResponseSchema (guildData.ts) — 요청한 kind의 배열 또는 error를 실어요.
- */
+/** Schemas: `guildData.ts` */
+export const GUILD_DATA_REQUEST_CHANNEL = 'sirubot:guild-data:request';
 export const GUILD_DATA_RESPONSE_CHANNEL = 'sirubot:guild-data:response';
 
-/**
- * 웹 플레이어 request/reply 브로드캐스트 — 대시보드의 곡 검색·재생·라이브 제어·음성 상태 조회.
- * 요청자의 음성 채널과 관리자/DJ 권한은 봇 캐시로만 해석할 수 있으므로 guildData 조회와 같은
- * request/reply로 우회해요: 대시보드가 data-api `/v1/internal/player/*`에 요청하면 data-api가
- * REQUEST 채널로 퍼블리시하고, 해당 길드를 보유한 봇 프로세스만 RESPONSE 채널로 응답해요.
- * data-api playerWebHub가 requestId로 상관(타임아웃 포함)해 대시보드에 내려줘요.
- *
- * 페이로드: playerWebRequestSchema / playerWebResponseSchema (playerWeb.ts)
- * kind: 'search' | 'play' | 'control' | 'voice-context'
- */
+/** Schemas: `playerWeb.ts` */
 export const PLAYER_WEB_REQUEST_CHANNEL = 'sirubot:player-web:request';
 export const PLAYER_WEB_RESPONSE_CHANNEL = 'sirubot:player-web:response';
 
-/**
- * 임시 방(JTC) 마커 채널 셋업 request/reply 브로드캐스트 — 대시보드 설정 화면의 마커 채널 생성·이동.
- * 채널 생성·이동은 유저 OAuth 토큰으로 불가(Discord 규격상 봇 토큰 필요) — 대시보드가 data-api
- * `/v1/internal/jtc/setup`에 요청하면 data-api가 REQUEST 채널로 퍼블리시하고, 해당 길드를 보유한
- * 봇 프로세스가 tempVoiceService.setupMarkerChannel로 수행한 뒤 RESPONSE 채널로 응답해요.
- * data-api jtcSetupHub가 requestId로 상관(타임아웃 포함)해 대시보드에 내려줘요.
- *
- * 페이로드: jtcSetupRequestSchema / jtcSetupResponseSchema (jtcSetup.ts)
- */
+/** Schemas: `jtcSetup.ts`. Creating or moving the marker channel needs the bot token. */
 export const JTC_SETUP_REQUEST_CHANNEL = 'sirubot:jtc-setup:request';
 export const JTC_SETUP_RESPONSE_CHANNEL = 'sirubot:jtc-setup:response';
 
-/**
- * 소셜 알림 웹훅 생성 request/reply 브로드캐스트 — 대시보드 구독 추가 시점에만 일어나요.
- * 웹훅 생성은 Manage Webhooks 권한이 필요한데 봇만 갖고 있어요 (유저 OAuth 토큰으로는 불가).
- * notifier가 구독 생성 중 REQUEST 채널로 퍼블리시하면 해당 길드를 보유한 봇 프로세스가
- * guild.channels.createWebhook()으로 만들어 RESPONSE 채널로 응답하고, notifier 웹훅 생성 허브가
- * requestId로 상관(타임아웃 포함)해 구독 저장을 마저 해요.
- *
- * 페이로드: socialWebhookCreateRequestSchema / socialWebhookCreateResponseSchema (social.ts)
- */
+/** Schemas: `social.ts`. Published by notifier; creating a webhook needs Manage Webhooks, which only the bot has. */
 export const SOCIAL_WEBHOOK_CREATE_REQUEST_CHANNEL = 'sirubot:social:webhook-create:request';
 export const SOCIAL_WEBHOOK_CREATE_RESPONSE_CHANNEL = 'sirubot:social:webhook-create:response';
 
-/**
- * 봇 관리자(운영자) 제어 request/reply 브로드캐스트 — 대시보드 관리자 패널(/admin)에서
- * Lavalink 노드 상태 조회·재연결·앱 이모지 동기화·스토어 리로드를 요청할 때 사용해요.
- *
- * 페이로드: botAdminRequestSchema / botAdminResponseSchema (botAdmin.ts)
- */
+/** Schemas: `botAdmin.ts` */
 export const BOT_ADMIN_REQUEST_CHANNEL = 'sirubot:bot-admin:request';
 export const BOT_ADMIN_RESPONSE_CHANNEL = 'sirubot:bot-admin:response';
 
-/**
- * 패널 메시지(티켓·역할 패널) 게시 request/reply 브로드캐스트 — 대시보드가 직접 패널을 게시할 때.
- * 패널 메시지(커스텀 ID 버튼 포함)는 봇 토큰으로만 보낼 수 있어요. data-api panelPostHub가 REQUEST
- * 채널로 퍼블리시하면 해당 길드를 보유한 봇 프로세스가 메시지를 게시하고 RESPONSE 채널로 messageId를
- * 응답해요.
- *
- * 페이로드: panelPostRequestSchema / panelPostResponseSchema (panelPost.ts)
- */
+/** Schemas: `panelPost.ts`. Panel messages with custom-ID buttons can only be sent with the bot token. */
 export const PANEL_POST_REQUEST_CHANNEL = 'sirubot:panel-post:request';
 export const PANEL_POST_RESPONSE_CHANNEL = 'sirubot:panel-post:response';
 
-/**
- * 나눔 관리(시작·종료·취소·다시 뽑기) request/reply — 대시보드가 나눔을 직접 관리할 때.
- * data-api giveawayHub가 REQUEST 채널로 퍼블리시하면 해당 길드를 보유한 봇이 GiveawayService로 처리하고
- * RESPONSE 채널로 결과를 응답해요.
- *
- * 페이로드: giveawayManageRequestSchema / giveawayManageResponseSchema (giveawayManage.ts)
- */
+/** Schemas: `giveawayManage.ts` */
 export const GIVEAWAY_MANAGE_REQUEST_CHANNEL = 'sirubot:giveaway-manage:request';
 export const GIVEAWAY_MANAGE_RESPONSE_CHANNEL = 'sirubot:giveaway-manage:response';
 
-/**
- * 역할 패널 부여 가능 여부 검증 request/reply 브로드캐스트 — 대시보드가 패널 저장 전에 roleIds를
- * 봇에 보내 부여 가능한 역할인지(관리형·위계 초과·@everyone 제외) 확인해요. rolePanelResponder가
- * REQUEST 채널로 받아 RESPONSE 채널로 invalidRoleIds를 응답해요.
- *
- * 페이로드: roleValidationRequestSchema / roleValidationResponseSchema (rolePanel.ts)
- */
+/** Schemas: `rolePanel.ts`. Replies with `invalidRoleIds` (managed, above the bot's hierarchy, @everyone). */
 export const ROLE_VALIDATION_REQUEST_CHANNEL = 'sirubot:role-validation:request';
 export const ROLE_VALIDATION_RESPONSE_CHANNEL = 'sirubot:role-validation:response';

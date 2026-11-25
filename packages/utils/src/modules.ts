@@ -1,17 +1,14 @@
 /**
- * 봇 기능 모듈 정의 — 도움말 카테고리, 사용 지표 집계, (2단계) 서버별 모듈 켜기/끄기가 같은 표를 써요.
- * 봇과 대시보드가 함께 쓰는 계약이라 여기 한 곳에만 둬요. 대시보드는 `@sirubot/utils/modules` 서브패스로 import해요.
- *
- * - `commands`: 슬래시 명령 piece의 `name`(영어 이름). 봇 테스트가 실제 command piece와 대조해요.
- * - `componentNamespaces`: `defineCustomId`의 namespace. 버튼·셀렉트 사용량을 모듈로 묶을 때 써요.
- * - `messageFeatures`: 명령 없이 메시지·이벤트로 동작하는 기능. 지표 키는 `msg:{id}`예요.
+ * One table for help categories, usage metrics and per-server module toggling. The dashboard imports it via the `@sirubot/utils/modules` subpath.
+ * - `commands`: slash command piece `name`s (English); a bot test checks them against the real pieces.
+ * - `componentNamespaces`: `defineCustomId` namespaces, used to group button/select usage by module.
+ * - `messageFeatures`: features driven by messages or events rather than commands; metric key `msg:{id}`.
  */
 
 export type BotModuleId = 'music' | 'community' | 'ai' | 'fun' | 'utility' | 'admin';
 
 export interface MessageFeature {
 	readonly id: string;
-	/** 도움말 카테고리 화면에 보여줄 한 줄 설명 */
 	readonly summary: string;
 }
 
@@ -19,14 +16,14 @@ export interface BotModule {
 	readonly id: BotModuleId;
 	readonly label: string;
 	readonly emoji: string;
-	/** 디스코드 안에서 보여줄 앱 이모지 이름 (`emoji(name, fallback)`). 대시보드는 `emoji`(유니코드)를 써요. */
+	/** App emoji name inside Discord (`emoji(name, fallback)`); the dashboard uses the unicode `emoji`. */
 	readonly appEmoji: string;
-	/** 도움말 셀렉트 설명 (100자 이하) */
+	/** Help select description, 100 characters max. */
 	readonly description: string;
 	readonly commands: readonly string[];
 	readonly componentNamespaces: readonly string[];
 	readonly messageFeatures: readonly MessageFeature[];
-	/** 서버 관리자가 끌 수 있는 모듈인지 (2단계 P-06). 관리 모듈은 끌 수 없어요. */
+	/** The management module can't be turned off. */
 	readonly toggleable: boolean;
 }
 
@@ -128,60 +125,51 @@ export function commandModule(commandName: string): BotModuleId | null {
 	return MODULE_BY_COMMAND.get(commandName) ?? null;
 }
 
-/* ---------------------------------------------------------------- 서버별 모듈 켜기/끄기 (P-06) */
-
 /** 모듈이 꺼져 있어도 항상 실행되는 슬래시 명령 — 도움말은 끈 뒤에도 켜는 방법을 알려줘야 하고, 개인정보 삭제는 막을 수 없어요. */
 export const ALWAYS_ALLOWED_COMMANDS: readonly string[] = ['help', 'privacy'];
-/** 모듈이 꺼져 있어도 항상 동작하는 컴포넌트 namespace (도움말 셀렉트, 온보딩 버튼) */
 export const ALWAYS_ALLOWED_NAMESPACES: readonly string[] = ['help', 'onboarding'];
 
-/** 저장된 꺼진 모듈 목록을 정리해요: 모르는 id와 끌 수 없는 모듈(관리)을 버리고, 중복을 없애고, 모듈 표 순서로 정렬해요. */
+/** Drops unknown ids and non-disableable modules, dedupes, and orders by the module table. */
 export function sanitizeDisabledModules(input: readonly string[] | null | undefined): BotModuleId[] {
 	const wanted = new Set(input ?? []);
 	return BOT_MODULES.filter((m) => m.toggleable && wanted.has(m.id)).map((m) => m.id);
 }
 
-/** 이 서버에서 모듈이 꺼져 있는지. 끌 수 없는 모듈은 목록에 있어도 켜진 것으로 봐요. */
+/** A non-disableable module counts as on even if listed. */
 export function isModuleDisabled(disabledModules: readonly string[] | null | undefined, moduleId: BotModuleId): boolean {
 	return getBotModule(moduleId).toggleable && (disabledModules ?? []).includes(moduleId);
 }
 
-/** 슬래시 명령 이름이 꺼짐 검사 대상 모듈이면 그 모듈, 아니면(항상 허용·모르는 명령) null */
 export function gatedModuleForCommand(commandName: string): BotModuleId | null {
 	if (ALWAYS_ALLOWED_COMMANDS.includes(commandName)) return null;
 	return MODULE_BY_COMMAND.get(commandName) ?? null;
 }
 
-/** 컴포넌트 namespace가 꺼짐 검사 대상 모듈이면 그 모듈, 아니면 null */
 export function gatedModuleForNamespace(namespace: string): BotModuleId | null {
 	if (ALWAYS_ALLOWED_NAMESPACES.includes(namespace)) return null;
 	return MODULE_BY_NAMESPACE.get(namespace) ?? null;
 }
 
-/** 메시지 기능 id(`greeting`, `temp-voice` …)의 모듈. 모르는 id는 null */
 export function messageFeatureModule(featureId: string): BotModuleId | null {
 	return MODULE_BY_MESSAGE_FEATURE.get(featureId) ?? null;
 }
 
-/** 꺼진 모듈을 쓰려 할 때 보여주는 안내 문구 */
 export function moduleDisabledMessage(moduleId: BotModuleId): string {
 	return `이 서버에서는 ${getBotModule(moduleId).label} 기능이 꺼져 있어요. 관리자는 /설정에서 켤 수 있어요.`;
 }
-
-/* ---------------------------------------------------------------- 사용 지표 키 */
 
 /** 사용 지표 feature 키 접두어. `cmd:music.play`, `ns:controller`, `msg:greeting`, `playback:track_error`, `onboarding:sent` */
 export const USAGE_FEATURE_PREFIXES = ['cmd', 'ns', 'msg', 'playback', 'onboarding'] as const;
 export type UsageFeaturePrefix = (typeof USAGE_FEATURE_PREFIXES)[number];
 
-/** DB 컬럼 길이 안에 들어가도록 feature 키는 64자로 잘라요 */
+/** Fits the DB column. */
 export const USAGE_FEATURE_MAX_LENGTH = 64;
 
 export function usageFeatureKey(prefix: UsageFeaturePrefix, name: string): string {
 	return `${prefix}:${name}`.slice(0, USAGE_FEATURE_MAX_LENGTH);
 }
 
-/** 지표 feature 키를 모듈로 바꿔요. 재생 실패는 음악, 온보딩은 유틸로 묶어요. 모르는 키는 null. */
+/** Playback failures group under music, onboarding under util; null for unknown keys. */
 export function featureModule(feature: string): BotModuleId | null {
 	const sep = feature.indexOf(':');
 	if (sep < 0) return null;

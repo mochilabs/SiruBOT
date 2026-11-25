@@ -584,7 +584,7 @@ model StarboardSettings {
   updatedAt         DateTime @updatedAt
 }
 
-// 스타보드에 올라간 원문 메시지 — 원문 하나당 스타보드 글 하나. 별 수가 기준 아래로 떨어져도 글은 남기고 count만 갱신해요(D-16).
+// 스타보드에 올라간 원문 메시지 — 원문 하나당 스타보드 글 하나. 별 수가 기준 아래로 떨어져도 글은 남기고 count만 갱신해요.
 model StarboardEntry {
   sourceMessageId    String   @id
   guildId            String
@@ -618,7 +618,7 @@ model BirthdaySettings {
   updatedAt        DateTime @updatedAt
 }
 
-// 서버별 생일 축하 동의 — 본인이 켠 사람만 그 서버에서 축하해요 (D-17). 생일(월/일)은 User에 있어요.
+// 서버별 생일 축하 동의 — 본인이 켠 사람만 그 서버에서 축하해요. 생일(월/일)은 User에 있어요.
 model BirthdayOptIn {
   guildId   String
   guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)

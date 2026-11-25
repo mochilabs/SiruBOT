@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { authKeyChain, parseEnvOrExit } from '@sirubot/app-kit';
+import { authKeyChain, parseEnv } from '@sirubot/app-kit';
 
 const envSchema = z
 	.object({
@@ -53,5 +53,5 @@ const envSchema = z
 export type Env = z.infer<typeof envSchema>;
 
 export function validateEnv(): Env {
-	return parseEnvOrExit(envSchema);
+	return parseEnv(envSchema);
 }

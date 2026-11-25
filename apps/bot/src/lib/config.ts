@@ -5,7 +5,7 @@ import { resolveRedisSigningKey } from '@sirubot/utils/redisEnvelope';
  * 봇 설정 — 환경 변수를 한 번 검증하고, 모든 기본값·클램프·파싱을 이 파일 하나에 모은 타입드 Config예요.
  *
  * 계약:
- * - 필수 키 누락/공백은 기동 차단(fail-closed) — data-api 등 Fastify 4앱의 parseEnvOrExit과 같은 방향이에요.
+ * - 필수 키 누락/공백은 기동 차단(fail-closed) — data-api 등 Fastify 4앱의 parseEnv과 같은 방향이에요.
  *   (라이브러리 버전은 packages/app-kit/src/env.ts예요. bot에는 app-kit을 도입할 수 없어요 — app-kit이 fastify를
  *   prod deps로 들고 있어서 `yarn workspaces focus @sirubot/bot --production` 이미지에 fastify가 통째로 들어가기
  *   때문이에요. 그래서 safeParse+throw 로직만 로컬로 옮겨 왔고, throw는 진입점(index.ts)의 exit(1)으로 이어져요.)

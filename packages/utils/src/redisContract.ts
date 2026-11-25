@@ -1,12 +1,5 @@
-/**
- * Redis pub/sub 계약 정의 — 채널 문자열·요청/응답 스키마를 한 객체로 묶어 봇(응답자)과 data-api(허브)가
- * 같은 계약을 임포트하게 해요. 채널 문자열은 롤링 배포 중 구·신 프로세스가 함께 돌기 때문에 기존
- * redisChannels.ts 상수에서 그대로 가져오고, 여기서 새로 만들지 않아요 (redisContract.test.ts가 고정해요).
- *
- * - RPC(request/reply): 요청 채널 + 응답 채널 + 두 스키마. 응답자는 requestId(+guildId·kind)로 상관해요.
- * - 이벤트(one-way): 채널 하나(또는 길드별 접두사) + 페이로드 스키마. 응답이 없어요.
- * - `signed`는 메시지가 서명 봉투(redisEnvelope)로 오가는지예요 — 설정 무효화 브로드캐스트만 서명 없이 흘러요.
- */
+// Channel strings come from redisChannels.ts and are never minted here: old and new processes run together during a rolling deploy
+// (redisContract.test.ts pins them). `signed` means messages travel in a signed envelope (redisEnvelope); only the settings invalidation broadcast is unsigned.
 import { z } from 'zod';
 import { botAdminRequestSchema, botAdminResponseSchema } from './botAdmin.js';
 import { guildDataRequestSchema, guildDataResponseSchema } from './guildData.js';
@@ -41,9 +34,8 @@ import {
 import { roleValidationRequestSchema, roleValidationResponseSchema } from './rolePanel.js';
 import { socialWebhookCreateRequestSchema, socialWebhookCreateResponseSchema } from './social.js';
 
-/** request/reply 계약 — 응답자(봇)와 허브(data-api)가 같은 객체를 써요. */
 export interface RedisRpcContract<TRequest extends z.ZodType = z.ZodType, TResponse extends z.ZodType = z.ZodType> {
-	/** 로그 접두사 — 예: '길드 데이터' */
+	/** Log prefix, e.g. '길드 데이터' */
 	readonly name: string;
 	readonly requestChannel: string;
 	readonly responseChannel: string;
@@ -51,11 +43,8 @@ export interface RedisRpcContract<TRequest extends z.ZodType = z.ZodType, TRespo
 	readonly responseSchema: TResponse;
 }
 
-/** 계약에서 요청 본문 타입(검증 후)을 꺼내요 */
 export type RedisRpcRequest<TContract extends RedisRpcContract> = z.output<TContract['requestSchema']>;
-/** 계약에서 요청 본문 타입(검증 전, 퍼블리셔가 보내는 형태)을 꺼내요 */
 export type RedisRpcRequestInput<TContract extends RedisRpcContract> = z.input<TContract['requestSchema']>;
-/** 계약에서 응답 본문 타입을 꺼내요 */
 export type RedisRpcResponse<TContract extends RedisRpcContract> = z.output<TContract['responseSchema']>;
 
 export function defineRedisRpc<TRequest extends z.ZodType, TResponse extends z.ZodType>(
@@ -64,10 +53,7 @@ export function defineRedisRpc<TRequest extends z.ZodType, TResponse extends z.Z
 	return Object.freeze({ ...contract });
 }
 
-/**
- * 요청에서 응답 상관 필드(requestId·guildId·kind)를 뽑아요 — 응답자가 성공/오류 응답에 공통으로 실어요.
- * 요청에 없는 필드는 응답에도 넣지 않아요 (botAdmin 요청에는 guildId가 없어요).
- */
+/** Fields absent from the request stay absent from the reply (botAdmin requests have no guildId). */
 export function pickRpcCorrelation(request: unknown): { requestId: string; guildId?: string; kind?: string } {
 	const source = (typeof request === 'object' && request !== null ? request : {}) as Record<string, unknown>;
 	const correlation: { requestId: string; guildId?: string; kind?: string } = { requestId: String(source.requestId ?? '') };
@@ -76,12 +62,10 @@ export function pickRpcCorrelation(request: unknown): { requestId: string; guild
 	return correlation;
 }
 
-/** 단방향 이벤트 계약 — 채널 하나. */
 export interface RedisEventContract<TSchema extends z.ZodType = z.ZodType> {
 	readonly name: string;
 	readonly channel: string;
 	readonly schema: TSchema;
-	/** 서명 봉투로 오가는지 — 기본 true */
 	readonly signed: boolean;
 }
 
@@ -94,17 +78,13 @@ export function defineRedisEvent<TSchema extends z.ZodType>(contract: {
 	return Object.freeze({ name: contract.name, channel: contract.channel, schema: contract.schema, signed: contract.signed ?? true });
 }
 
-/** 길드별 채널(`{prefix}{guildId}`) 이벤트 계약 — 상태 퍼블리시용이에요. */
 export interface RedisGuildEventContract<TSchema extends z.ZodType = z.ZodType> {
 	readonly name: string;
 	readonly channelPrefix: string;
-	/** 패턴 구독용 — `{prefix}*` */
 	readonly pattern: string;
 	readonly schema: TSchema;
 	readonly signed: boolean;
-	/** 퍼블리시 채널명 — `{prefix}{guildId}` */
 	channel(guildId: string): string;
-	/** 채널명에서 guildId를 뽑아요 — 이 계열이 아니면 null */
 	guildIdFromChannel(channel: string): string | null;
 }
 

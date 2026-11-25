@@ -1,27 +1,18 @@
 import { z } from 'zod';
 import { redisIdSchema } from './redisChannels.js';
 
-/**
- * 소셜 알림 도메인의 공유 계약 — notifier(감지·전송), bot(웹훅 생성), dashboard(구독 관리·템플릿 편집)이 함께 써요.
- * Prisma SocialSubscription/SocialEventLog 모델과 1:1 대응이에요.
- */
+// Mirrors the Prisma SocialSubscription / SocialEventLog models.
 
-/** 알림 플랫폼 — Prisma SocialSubscription.platform 값과 같아요 */
 export const socialPlatformSchema = z.union([z.literal('youtube'), z.literal('chzzk'), z.literal('twitch')]);
 export type SocialPlatform = z.infer<typeof socialPlatformSchema>;
 
-/** 대시보드·안내 문구에 쓰는 플랫폼 표시 이름 */
 export const SOCIAL_PLATFORM_LABELS: Record<SocialPlatform, string> = {
 	youtube: '유튜브',
 	chzzk: '치지직',
 	twitch: '트위치'
 };
 
-/**
- * 정규화 이벤트 — 감지 어댑터(YT WebSub / TW EventSub / 치지직 폴링)가 플랫폼 페이로드를
- * 이 모양으로 바꾸고 디스패처가 소비해요. SocialEventLog.payload 스냅샷과도 같은 모양이에요.
- * (platform, contentId)가 dedup 키, sourceId가 구독 팬아웃 매칭 키예요.
- */
+/** (platform, contentId) is the dedup key; sourceId matches subscriptions for fan-out. */
 export const socialEventSchema = z.object({
 	platform: socialPlatformSchema,
 	/** 이벤트를 일으킨 채널의 플랫폼 식별자 — SocialSubscription.sourcePlatformId와 매칭돼요 */
@@ -37,35 +28,23 @@ export const socialEventSchema = z.object({
 });
 export type SocialEvent = z.infer<typeof socialEventSchema>;
 
-/**
- * content 커스텀 템플릿 계약 — 임베드는 커스텀하지 않아요 (플랫폼 기본 + 고정 accent color, 2차 후보).
- * 변수 {title} {url} {author}는 감지 시점 이벤트로 치환하고, 멘션은 <#채널ID> <@&역할ID> 토큰만
- * raw로 저장해요 (렌더링은 Discord가 함). 임베드 안의 멘션은 핑이 안 되는 Discord 스펙 때문에
- * 멘션은 무조건 content에만 둬요.
- */
+// Only `content` is customizable, never the embed. Mentions stay raw `<#channelId>` / `<@&roleId>` tokens (Discord renders them)
+// and live in `content` only, because mentions inside embeds don't ping.
 
-/** 템플릿 변수 목록 — 이것 외의 {변수}는 저장 단계에서 거부해요 */
+/** Any other {variable} is rejected on save. */
 export const SOCIAL_TEMPLATE_VARIABLES = ['title', 'url', 'author'] as const;
 
-/** 템플릿 최대 길이 — 렌더 결과는 Discord content 한도(2000자) 안으로 잘려요 */
 export const SOCIAL_TEMPLATE_MAX_LENGTH = 1000;
-/** Discord 웹훅 content 상한 — 렌더 결과가 길면 이 길이로 잘라요 */
 export const DISCORD_CONTENT_MAX_LENGTH = 2000;
 
 const CHANNEL_MENTION_PATTERN = /<#(\d{17,20})>/;
 const ROLE_MENTION_PATTERN = /<@&(\d{17,20})>/;
 const ROLE_MENTION_GLOBAL_PATTERN = /<@&(\d{17,20})>/g;
-/** 완성된 중괄호 토큰({title} 등) 전체 — 시작 중괄호만 있는 경우(리터럴)는 여기 안 걸려요 */
+/** Complete tokens only; a lone `{` is a literal. */
 const CURLY_TOKEN_PATTERN = /\{([^{}]*)\}/g;
-/** 멘션처럼 보이는 여는 토큰 — 형식이 틀리면 안내하고, 멘션이 아니면 그냥 지나쳐요 */
 const MENTION_LIKE_PATTERN = /<[#@:][^<>]*>?/g;
 
-/**
- * 템플릿 문제 점검 — null이면 통과, 문제가 있으면 한국어 안내를 돌려줘요.
- * - {변수}는 허용 목록에 없으면 거부 (오타 변수 방지)
- * - 멘션은 <#채널ID> <@&역할ID>만 허용 — @everyone/@here·사용자 멘션·커스텀 이모지는 거부해요.
- *   웹훅 전송 시 allowed_mentions이 어차피 대부분 막지만, 저장 단계에서 거절해 실수를 줄여요.
- */
+/** Null passes. Only `<#channelId>` / `<@&roleId>` mentions are allowed; allowed_mentions would mostly block the rest at send time, but rejecting on save catches mistakes early. */
 export function socialTemplateIssue(template: string): string | null {
 	if (template.length > SOCIAL_TEMPLATE_MAX_LENGTH) return `템플릿은 ${SOCIAL_TEMPLATE_MAX_LENGTH}자 이하여야 해요.`;
 	const variables = SOCIAL_TEMPLATE_VARIABLES.map((variable) => `{${variable}}`).join(' ');
@@ -91,27 +70,17 @@ export function socialTemplateIssue(template: string): string | null {
 	return null;
 }
 
-/**
- * 템플릿을 content 문자열로 렌더링해요 — {title} {url} {author}를 이벤트 값으로 치환하고
- * 멘션 토큰은 그대로 둬요 (Discord가 렌더링해요). 결과는 Discord content 한도를 넘지 않게 잘라요.
- */
 export function renderSocialContent(template: string, event: SocialEvent): string {
 	const rendered = template.replaceAll('{title}', event.title).replaceAll('{url}', event.url).replaceAll('{author}', event.author);
 	return rendered.length > DISCORD_CONTENT_MAX_LENGTH ? `${rendered.slice(0, DISCORD_CONTENT_MAX_LENGTH - 1)}…` : rendered;
 }
 
-/**
- * 템플릿에 들어간 역할 멘션 ID만 추출해요 — 웹훅 전송 시 allowed_mentions.roles 화이트리스트로 써요.
- * 템플릿에 없는 역할은 실수로도 핑되지 않고, 채널 멘션은 화이트리스트 없이도 링크로 렌더링돼요.
- */
+/** Feeds the `allowed_mentions.roles` allowlist so only roles named in the template can ping; channel mentions render as links without one. */
 export function extractSocialTemplateRoleIds(template: string): string[] {
 	return [...new Set([...template.matchAll(ROLE_MENTION_GLOBAL_PATTERN)].map((match) => match[1]))];
 }
 
-/**
- * 구독 메시지 템플릿 — SocialSubscription.messageTemplate. null이면 임베드만 전송해요.
- * 대시보드 저장 시 이 스키마로 검증하고, 편집기 미리보기는 renderSocialContent로 그려요.
- */
+/** Null sends the embed only. */
 export const socialMessageTemplateSchema = z
 	.string()
 	.trim()
@@ -122,14 +91,11 @@ export const socialMessageTemplateSchema = z
 		if (issue) ctx.addIssue({ code: 'custom', message: issue });
 	});
 
-/** 구독 배달 상태 — 연속 5회 실패 또는 웹훅 404/410이면 failed, 관리자가 끄면 disabled */
+/** failed after 5 consecutive failures or a webhook 404/410; disabled when an admin turns it off. */
 export const socialSubscriptionStatusSchema = z.union([z.literal('active'), z.literal('failed'), z.literal('disabled')]);
 export type SocialSubscriptionStatus = z.infer<typeof socialSubscriptionStatusSchema>;
 
-/**
- * 웹훅 표시명 오버라이드 — 전송 payload의 username으로 쓰고, 구독 생성 시엔 봇이 만드는 웹훅 이름으로도 지정해요.
- * Discord 규칙: 1~80자, 'discord'·'clyde' 부분문자열 금지 (위반하면 Discord가 400으로 거부해요).
- */
+/** Discord rejects with 400 names outside 1~80 characters or containing 'discord' or 'clyde'. */
 export const socialWebhookNameSchema = z
 	.string()
 	.trim()
@@ -137,7 +103,7 @@ export const socialWebhookNameSchema = z
 	.max(80, '웹훅 표시명은 80자 이하여야 해요.')
 	.refine((name) => !/discord|clyde/i.test(name), { message: '웹훅 표시명에는 discord·clyde를 쓸 수 없어요 (Discord 규칙).' });
 
-/** 웹훅 프로필 사진 오버라이드 — Discord가 전송 시점에 fetch하는 이미지 URL이에요 (http/https). */
+/** Discord fetches this image URL at send time. */
 export const socialWebhookAvatarUrlSchema = z
 	.string()
 	.trim()
@@ -145,10 +111,6 @@ export const socialWebhookAvatarUrlSchema = z
 	.max(2048, '프로필 사진 URL은 2048자 이하여야 해요.')
 	.refine((url) => /^https?:\/\//i.test(url), { message: '프로필 사진 URL은 http 또는 https 주소여야 해요.' });
 
-/**
- * 구독 생성 요청 본문 — 대시보드가 data-api 프록시로 보내고 notifier가 검증·저장해요.
- * 웹훅은 이 요청 처리 중에 socialWebhookCreateRequestSchema 요청으로 봇에 만들어 달라고 해요.
- */
 export const socialSubscriptionCreateSchema = z.object({
 	guildId: redisIdSchema,
 	platform: socialPlatformSchema,
@@ -167,7 +129,7 @@ export const socialSubscriptionCreateSchema = z.object({
 	showThumbnail: z.boolean().optional().default(true)
 });
 
-/** 구독 수정 본문 — 템플릿·웹훅 표시·상태만 바꿔요 (채널·웹훅 재생성은 삭제 후 다시 만들어요) */
+/** Channel and webhook can't change; delete and recreate instead. */
 export const socialSubscriptionUpdateSchema = z
 	.object({
 		messageTemplate: socialMessageTemplateSchema.nullable().optional(),
@@ -189,11 +151,6 @@ export const socialSubscriptionUpdateSchema = z
 		{ message: '수정할 항목이 없어요.' }
 	);
 
-/**
- * 웹훅 생성 요청 — notifier가 구독 생성 시점에 REQUEST 채널(sirubot:social:webhook-create:request)로
- * 퍼블리시하면, 해당 길드를 보유한 봇 프로세스가 createWebhook() 후 RESPONSE 채널로 응답해요.
- * 웹훅 생성은 Manage Webhooks 권한이 필요한데 봇만 갖고 있어요 (유저 OAuth 토큰으로는 불가).
- */
 export const socialWebhookCreateRequestSchema = z.object({
 	requestId: z.string().uuid(),
 	guildId: redisIdSchema,
@@ -204,10 +161,7 @@ export const socialWebhookCreateRequestSchema = z.object({
 });
 export type SocialWebhookCreateRequest = z.infer<typeof socialWebhookCreateRequestSchema>;
 
-/**
- * 웹훅 생성 응답 — 성공이면 webhookId·webhookToken을 채우고, 실패(권한 없음·채널 없음·봇 미보유)면
- * error에 한국어 안내를 실어요. 스키마는 loose하게 두어(미사용 필드 허용) 필드 추가가 이전 읽기를 깨지 않게 해요.
- */
+/** Loose on purpose so added fields don't break older readers. Failures (no permission, no channel, guild not owned) set a Korean `error`. */
 export const socialWebhookCreateResponseSchema = z.object({
 	requestId: z.string().uuid(),
 	guildId: redisIdSchema,

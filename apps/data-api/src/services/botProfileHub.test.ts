@@ -71,7 +71,7 @@ describe('handleBotProfileStateMessage', () => {
 	});
 });
 
-describe('서명 검증 (SEC-006)', () => {
+describe('서명 검증', () => {
 	beforeEach(() => {
 		vi.stubEnv('AUTH_KEY', SIGNING_KEY);
 	});

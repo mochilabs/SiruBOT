@@ -4,14 +4,20 @@ import { ShardWebSocket } from './core/ws.ts';
 import { NoShardsAvailableError } from './errors/NoShardsAvailableError.ts';
 import { WsOp, type HelloPayload, type IdentifyAckPayload, type ShardStatsPayload, type ShardStatusPayload } from './ws-types/index.ts';
 
-/** HELLO를 받기 전에 쓰는 하트비트 주기(ms) — 서버 기본값과 같아요 */
 const DEFAULT_HEARTBEAT_MS = 30_000;
+const STATS_INTERVAL_MS = 60_000;
+const IDENTIFY_ACK_TIMEOUT_MS = 10_000;
+const IDENTIFY_RETRY_DELAY_MS = 5_000;
+const RECONNECT_MAX_DELAY_MS = 30_000;
+const RECONNECT_BASE_DELAY_MS = 1_000;
 
 export type ShardClientOptions = {
 	logger: ILogger;
 	serverURL: string;
-	authToken?: string; // Discord token for IDENTIFY payload
-	authKey?: string; // Auth key for Shard Manager connection (Authorization header)
+	/** Discord token sent in IDENTIFY */
+	authToken?: string;
+	/** Sent as the Authorization header when connecting to the shard manager */
+	authKey?: string;
 };
 
 export interface ShardIdentity {
@@ -24,14 +30,12 @@ export class ShardClient {
 	private readonly ws: ShardWebSocket;
 	private readonly authToken: string;
 	private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
-	/** HELLO가 알려 준 하트비트 주기(ms) — HELLO 전에는 기본값을 써요 */
 	private heartbeatMs = DEFAULT_HEARTBEAT_MS;
 	private statsInterval: ReturnType<typeof setInterval> | null = null;
 	private identity: ShardIdentity | null = null;
 	private statsCallback: (() => Omit<ShardStatsPayload, 'shardIds'>) | null = null;
 	private isReconnecting = false;
 	private isDestroyed = false;
-	/** 직전 HEARTBEAT에 대한 ACK를 아직 못 받았는지: 다음 틱까지 못 받으면 소켓이 반쯤 끊긴 거예요 */
 	private awaitingHeartbeatAck = false;
 
 	constructor(options: ShardClientOptions) {
@@ -44,9 +48,6 @@ export class ShardClient {
 		});
 	}
 
-	/**
-	 * Connect to shard manager and receive shard assignment
-	 */
 	public async identify(): Promise<ShardIdentity> {
 		while (!this.isDestroyed) {
 			try {
@@ -55,33 +56,28 @@ export class ShardClient {
 
 				return await this.sendIdentify({ withShardIds: false });
 			} catch (error) {
-				// Fatal: no shards available. Do not retry, let the process exit
 				if (error instanceof NoShardsAvailableError) {
 					throw error;
 				}
 
 				this.logger.error(
-					`Failed to identify with shard manager: ${error instanceof Error ? error.message : String(error)}. Retrying in 5s...`
+					`Failed to identify with shard manager: ${error instanceof Error ? error.message : String(error)}. Retrying in ${IDENTIFY_RETRY_DELAY_MS / 1000}s...`
 				);
-				await new Promise((resolve) => setTimeout(resolve, 5_000));
+				await new Promise((resolve) => setTimeout(resolve, IDENTIFY_RETRY_DELAY_MS));
 			}
 		}
 		throw new Error('ShardClient is destroyed');
 	}
 
-	/**
-	 * Reconnect to shard manager and re-identify with current shard IDs
-	 */
 	private async reconnect(): Promise<void> {
 		if (this.isReconnecting) return;
 		this.isReconnecting = true;
 
 		let attempt = 0;
-		const maxDelay = 30_000;
 
 		while (this.isReconnecting) {
 			attempt++;
-			const delay = Math.min(1000 * Math.pow(2, attempt - 1), maxDelay);
+			const delay = Math.min(RECONNECT_BASE_DELAY_MS * 2 ** (attempt - 1), RECONNECT_MAX_DELAY_MS);
 			this.logger.info(`Reconnecting to shard manager in ${delay}ms (attempt ${attempt})...`);
 			await new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -93,7 +89,7 @@ export class ShardClient {
 				this.logger.info('Successfully re-identified with shard manager');
 				return;
 			} catch (error) {
-				// 재식별 거부(다른 프로세스가 점유 중이거나 ID가 유효하지 않음)도 계속 재시도하되, 원인을 구분해서 남겨요.
+				// A rejected claim is retried like any other failure; only the logged cause differs.
 				const cause =
 					error instanceof NoShardsAvailableError
 						? 'shard manager rejected the shard claim (still held by another process, or invalid IDs)'
@@ -105,15 +101,11 @@ export class ShardClient {
 		}
 	}
 
-	/**
-	 * Shared IDENTIFY handshake: wait for HELLO, send IDENTIFY (optionally with
-	 * the current shard IDs for re-identification), then await IDENTIFY_ACK.
-	 */
 	private sendIdentify(options: { withShardIds: boolean }): Promise<ShardIdentity> {
 		return new Promise<ShardIdentity>((resolve, reject) => {
 			const timeout = setTimeout(() => {
 				reject(new Error('IDENTIFY_ACK timeout (10s)'));
-			}, 10_000);
+			}, IDENTIFY_ACK_TIMEOUT_MS);
 
 			this.ws.on(WsOp.HELLO, (msg) => {
 				const hello = msg.payload as HelloPayload;
@@ -152,7 +144,6 @@ export class ShardClient {
 
 				this.startHeartbeat();
 
-				// After successful identification, reconnect on disconnect
 				this.ws.onClose((_code, reason) => {
 					this.logger.warn(`Shard manager disconnected (${reason}). Will reconnect...`);
 					this.stopHeartbeat();
@@ -189,9 +180,8 @@ export class ShardClient {
 		this.stopHeartbeat();
 		this.awaitingHeartbeatAck = false;
 		this.heartbeatInterval = setInterval(() => {
-			// 직전 HEARTBEAT의 ACK가 한 주기 동안 오지 않았다면 연결이 반쯤 끊긴 거예요.
-			// 그대로 두면 서버는 하트비트 타임아웃으로 샤드를 회수해 다른 프로세스에 줄 수 있는데
-			// 이쪽은 계속 샤드를 가진 줄 알아요(이중 점유). 소켓을 끊어 close 콜백의 재연결로 보내요.
+			// A missed ACK means the socket is half-open: the server may reclaim our shards and hand
+			// them to another process while we still think we own them. Force the close -> reconnect path.
 			if (this.awaitingHeartbeatAck) {
 				this.logger.warn('HEARTBEAT_ACK not received within one interval. Terminating connection to force reconnect...');
 				this.awaitingHeartbeatAck = false;
@@ -213,12 +203,15 @@ export class ShardClient {
 		}
 	}
 
-	private startStatsReporter(): void {
-		// onStats가 다시 불리면 이전 인터벌이 영구 누수되지 않게 먼저 정리해요 (startHeartbeat와 같은 규율).
+	private stopStatsReporter(): void {
 		if (this.statsInterval) {
 			clearInterval(this.statsInterval);
 			this.statsInterval = null;
 		}
+	}
+
+	private startStatsReporter(): void {
+		this.stopStatsReporter();
 		this.statsInterval = setInterval(() => {
 			if (!this.identity || !this.statsCallback) return;
 
@@ -230,14 +223,14 @@ export class ShardClient {
 					...stats
 				}
 			});
-		}, 60_000);
+		}, STATS_INTERVAL_MS);
 	}
 
 	public destroy(): void {
 		this.isDestroyed = true;
 		this.isReconnecting = false;
 		this.stopHeartbeat();
-		if (this.statsInterval) clearInterval(this.statsInterval);
+		this.stopStatsReporter();
 		this.ws.destroy();
 	}
 }

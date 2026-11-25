@@ -117,7 +117,7 @@ describe('web player permissions', () => {
 		expect(publish.mock.calls[0][1].error).not.toContain('처리 중 오류가 발생');
 		expect(logger.error).not.toHaveBeenCalled();
 	});
-	it('rejects unsigned requests and accepts signed ones when the signing key is set (SEC-006)', async () => {
+	it('rejects unsigned requests and accepts signed ones when the signing key is set', async () => {
 		const publish = vi.fn();
 		const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
 		const member = { ...memberBase, permissions: new PermissionsBitField(PermissionsBitField.Flags.ManageGuild) };

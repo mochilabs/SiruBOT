@@ -221,7 +221,7 @@ describe('now-playing source', () => {
 	});
 });
 
-describe('SEC-006 서명 봉투', () => {
+describe('서명 봉투', () => {
 	afterEach(() => {
 		setConfigForTesting(null);
 		store.publishRawPlayerState.mockClear();

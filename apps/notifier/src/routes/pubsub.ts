@@ -5,7 +5,7 @@ import { parseYouTubeAtomFeed, verifyWebSubSignature } from '../services/youtube
 /**
  * 소셜 플랫폼 공개 콜백 라우트: 무인증이에요.
  * 인증은 프로토콜 자체가 대신해요. WebSub은 challenge echo + X-Hub-Signature HMAC, EventSub은 challenge + HMAC.
- * (data-api의 SEC-010 원칙: 무인증 표면은 이 라우트와 /health뿐)
+ * (무인증 표면은 이 라우트와 /health뿐)
  */
 export default async function pubsubRoutes(fastify: FastifyInstance, options: { dispatcher: SocialDispatcher; hubSecret: string }): Promise<void> {
 	// 유튜브 WebSub: hub가 구독 검증용 challenge를 보내면 그대로 echo해요 (스펙).

@@ -227,7 +227,7 @@ describe('greetingCard — 모든 템플릿', () => {
 	});
 });
 
-describe('greetingCard — 텍스트 효과 (P-17)', () => {
+describe('greetingCard — 텍스트 효과', () => {
 	const text = (extra: Partial<Extract<GreetingLayer, { type: 'text' }>> = {}): GreetingLayer => ({
 		id: 't',
 		type: 'text',
@@ -307,7 +307,7 @@ describe('greetingCard — 텍스트 효과 (P-17)', () => {
 	});
 });
 
-describe('greetingCard — 아바타 옵션 (P-17)', () => {
+describe('greetingCard — 아바타 옵션', () => {
 	const avatar = (extra: Partial<Extract<GreetingLayer, { type: 'avatar' }>> = {}): GreetingLayer => ({
 		id: 'a',
 		type: 'avatar',

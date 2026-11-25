@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { getPlayerState, handlePlayerStateMessage, subscribeSse } from './playerHub.ts';
 
-/** 서명 계약(SEC-006)의 키 — 서명 케이스만 다시 스터브해요 */
+/** 서명 계약의 키 — 서명 케이스만 다시 스터브해요 */
 const SIGNING_KEY = 'player-hub-test-key';
 
 // 서명 키가 없는 구버전 모드를 보장해요 — 로컬/CI 환경의 AUTH_KEY 유무에 테스트 결과가 달라지지 않게.
@@ -91,7 +91,7 @@ describe('handlePlayerStateMessage', () => {
 	});
 });
 
-describe('서명 검증 (SEC-006)', () => {
+describe('서명 검증', () => {
 	beforeEach(() => {
 		vi.stubEnv('REDIS_AUTH_KEY', '');
 		vi.stubEnv('AUTH_KEY', SIGNING_KEY);

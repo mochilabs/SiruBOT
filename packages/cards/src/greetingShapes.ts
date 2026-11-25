@@ -1,7 +1,4 @@
-/**
- * 인사 카드 도형 기하 — 도형 종류를 SVG 요소 목록으로 바꾸는 순수 함수예요 (node·브라우저 공용).
- * 좌표는 도형 박스(width×height) 안의 px이고, 테두리가 박스 밖으로 나가지 않게 두께의 절반만큼 안쪽으로 줄여서 그려요.
- */
+// Shapes are inset by half the stroke width so borders stay inside the box.
 import type { GreetingShapeKind, GreetingShapeLayer } from '@sirubot/utils/memberGreeting';
 import type { CardElement } from './kit.js';
 
@@ -9,7 +6,6 @@ type Attrs = Record<string, string | number>;
 
 const round = (value: number): number => Math.round(value * 100) / 100;
 
-/** SVG 요소 — Takumi `fromJsx`가 `{ type, props }` 객체를 그대로 받아요. */
 function svgEl(type: string, attrs: Attrs, children?: CardElement[]): CardElement {
 	return { type, props: { ...attrs, ...(children ? { children } : {}) } } as unknown as CardElement;
 }
@@ -18,7 +14,7 @@ function polygon(points: [number, number][]): string {
 	return points.map(([x, y]) => `${round(x)},${round(y)}`).join(' ');
 }
 
-/** 5각 별 꼭짓점 — 바깥 반지름 = 박스 절반, 안쪽 반지름 = 0.45배. 위쪽 꼭짓점에서 시작해요. */
+/** Inner radius is 0.45× the outer; starts at the top point. */
 function starPoints(x: number, y: number, w: number, h: number): [number, number][] {
 	const cx = x + w / 2;
 	const cy = y + h / 2;
@@ -31,7 +27,7 @@ function starPoints(x: number, y: number, w: number, h: number): [number, number
 	return points;
 }
 
-/** 하트 경로 — 0~100 정규화 곡선을 박스 크기로 늘려요 (좌표를 직접 곱해서 테두리 두께가 일정해요). */
+/** Coordinates are scaled directly (not via a transform) so the stroke width stays constant. */
 function heartPath(x: number, y: number, w: number, h: number): string {
 	const sx = (n: number) => round(x + (n / 100) * w);
 	const sy = (n: number) => round(y + (n / 100) * h);
@@ -43,7 +39,6 @@ function heartPath(x: number, y: number, w: number, h: number): string {
 	);
 }
 
-/** 도형 종류별 SVG 요소 — 칠·테두리 속성(paint)은 호출자가 넘겨요. */
 function shapeElement(kind: GreetingShapeKind, w: number, h: number, inset: number, radius: number, paint: Attrs): CardElement {
 	const x = inset;
 	const y = inset;
@@ -97,10 +92,6 @@ function shapeElement(kind: GreetingShapeKind, w: number, h: number, inset: numb
 	}
 }
 
-/**
- * 도형 레이어 → `<svg>` 요소 (박스 = width×height). 그라디언트는 같은 svg 안의 `<linearGradient>`로 정의해요.
- * 회전·위치·투명도·흐림은 호출자가 svg 바깥 스타일로 입혀요.
- */
 export function shapeSvg(layer: GreetingShapeLayer): CardElement {
 	const w = layer.width;
 	const h = layer.height;

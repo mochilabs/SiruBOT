@@ -116,7 +116,7 @@ describe('ws IDENTIFY route', () => {
 		expect((await client.waitForClose()).code).toBe(4008);
 	});
 
-	it('allocates shards on IDENTIFY and refuses re-identification on the same socket (SEC-003)', async () => {
+	it('allocates shards on IDENTIFY and refuses re-identification on the same socket', async () => {
 		const { port } = await startServer();
 		const client = await TestClient.connect(port);
 		client.send(WsOp.IDENTIFY, { token: AUTH_KEY, hostname: 'host-a' });

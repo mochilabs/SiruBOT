@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { authKeyChain, parseEnvOrExit } from '@sirubot/app-kit';
+import { authKeyChain, parseEnv } from '@sirubot/app-kit';
 
 const envSchema = z
 	.object({
@@ -38,7 +38,7 @@ const envSchema = z
 export type Env = z.infer<typeof envSchema>;
 
 export function validateEnv(): Env {
-	const env = parseEnvOrExit(envSchema);
+	const env = parseEnv(envSchema);
 	// 키가 없으면 fail-closed: 인증 없는 notifier로 기동하지 않아요. 무인증 표면은 공개 콜백(+health)뿐이에요.
 	if (!env.notifierAuthKey) {
 		console.error('NOTIFIER_AUTH_KEY 또는 AUTH_KEY 중 하나는 반드시 설정해야 해요.');

@@ -147,7 +147,7 @@ export function registerGuildDataRoutes(fastify: FastifyInstance): void {
 		.refine((body) => 'nickname' in body || 'avatar' in body || 'banner' in body, { message: '변경할 프로필 항목이 없어요.' });
 	const BOT_PROFILE_PENDING_TTL_SECONDS = 120;
 
-	// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (봇과 공유). pending 값·트리거 메시지 모두 서명해요 (SEC-006).
+	// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (봇과 공유). pending 값·트리거 메시지 모두 서명해요.
 	const redisSigningKey = resolveRedisSigningKey(process.env);
 
 	fastify.post('/v1/internal/bot-profile/set', { bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {

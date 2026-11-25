@@ -226,7 +226,7 @@ export class MemberGreetingService {
 			sentAt: Date.now()
 		};
 		if (result.error) state.error = result.error;
-		// SEC-006: data-api 허브가 fail-closed 검증을 하므로 publisher가 서명 봉투로 감싸 보내요.
+		// data-api 허브가 fail-closed 검증을 하므로 publisher가 서명 봉투로 감싸 보내요.
 		this.deps.publisher.publish(memberGreetingStateEvent.channel(guildId), state, `Member greeting state (guild ${guildId})`);
 		this.logger.debug(`멤버 인사 테스트 결과 퍼블리시 (guild ${guildId}, kind ${kind}, ok ${result.ok})`);
 	}

@@ -4,7 +4,7 @@ import { resolveRedisSigningKey, unwrapRedisMessage, wrapRedisMessage } from './
 const KEY = 'test-redis-signing-key';
 const PAYLOAD = { requestId: 'ecbbfba6-987c-46fa-b7b2-49f517db1c1e', guildId: 'guild-1', userId: 'user-1', kind: 'voice-context' };
 
-describe('redisEnvelope — 서비스 간 메시지 서명 (SEC-006)', () => {
+describe('redisEnvelope — 서비스 간 메시지 서명', () => {
 	it('서명한 메시지는 같은 키로 원본을 되돌려 받아요', () => {
 		const raw = wrapRedisMessage(KEY, PAYLOAD);
 		expect(JSON.parse(raw)).toHaveProperty('sig');

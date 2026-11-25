@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { parseEnvOrExit } from '@sirubot/app-kit';
+import { parseEnv } from '@sirubot/app-kit';
 
 const shardCountSchema = z.preprocess(
 	(val) => {
@@ -29,5 +29,5 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function validateEnv(): Env {
-	return parseEnvOrExit(envSchema);
+	return parseEnv(envSchema);
 }

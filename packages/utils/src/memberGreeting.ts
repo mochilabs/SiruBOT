@@ -2,37 +2,21 @@ import { z } from 'zod';
 
 import { type GifTiming, parseGifDataUriTiming } from './gifTiming.js';
 
-/**
- * 멤버 인사(환영/작별) 공용 계약 v2 — bot 리스너, data-api 렌더러, dashboard 에디터가 함께 쓴다.
- * Prisma Guild.welcome / goodbye 컬럼(Json?)에 이 구조 그대로 저장한다.
- *
- * v2 변경점: 고정 레이아웃(배경+아바타+제목/부제) → 자유 레이어 배열(image.layers)로 진화.
- * 아바타·제목·부제는 이제 각각 레이어 한 개이고, 텍스트/아바타/이미지/도형을 순서대로 쌓는다.
- * 이후 추가: layout(컨테이너/컴포넌트 목록)과 accentColor(컨테이너 강조색) — 둘 다 기본값이 있어
- * 예전에 저장된 v2 값도 그대로 검증을 통과한다.
- * 템플릿 변수: {유저} {유저이름} {서버} {멤버수} — GREETING_TEMPLATE_VARIABLES 참고.
- */
+// Stored as-is in the Prisma Guild.welcome / goodbye Json? columns. Fields added later carry defaults so older stored values still validate.
 
-/**
- * 카드 논리 좌표계 — 렌더러/에디터 미러 공용 계약 (1200×675, 16:9 기준 캔버스).
- * x/y는 카드 너비·높이 대비 %(0~100), 중앙 앵커(요소 중심이 그 점에 놓인다).
- * size/width/height는 카드 실좌표(1200×675) 기준 px.
- */
+// Card coordinate contract shared by renderer and editor: layer x/y are % of the card with a center anchor; size/width/height are px on the 1200×675 canvas.
 export const GREETING_CARD_W = 1200;
 export const GREETING_CARD_H = 675;
-/**
- * 출력 PNG 축소 배율 — 저장 좌표계는 1200×675를 그대로 두고, 렌더 출력 PNG만 800×450로 균일 축소한다.
- * 레이어 x/y가 % 기반이라 저장 데이터 마이그레이션·재그리기가 필요 없다. 카드 크기 튜닝용 상수.
- */
+/** Only the rendered PNG shrinks (to 800×450); stored coordinates are % based, so no data migration is needed. */
 export const GREETING_RENDER_SCALE = 2 / 3;
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const SNOWFLAKE = /^\d{17,20}$/;
-// jpeg 표기 허용 (image/jpeg). base64 본문은 URL-safe가 아닌 표준 알파벳만 허용.
+// Standard base64 alphabet only (not URL-safe).
 const DATA_URI = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
-/** 배경은 움직이는 GIF도 받아요 (이미지 레이어는 GIF를 받지 않아요) */
+/** Backgrounds accept animated GIF; image layers don't. */
 const BACKGROUND_DATA_URI = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/;
-const DATA_URI_MAX_LENGTH = 1_500_000; // prefix 포함 문자 길이 ≈ 1.1MB 바이너리 상한
+const DATA_URI_MAX_LENGTH = 1_500_000; // characters including the prefix, about 1.1MB binary
 
 /** 텍스트 레이어 — 템플릿 변수를 포함할 수 있는 문자열 1개 */
 export type GreetingTextLayer = {
@@ -222,17 +206,16 @@ function backgroundGifTiming(image: GreetingImage): GifTiming | null {
 	return timing && timing.frames > 1 ? timing : null;
 }
 
-/** 숨기지 않은 레이어 중 움직임이 있거나, 배경이 움직이는 GIF면 true — true면 카드를 애니메이션 WebP로 그려요 */
+/** True means the card renders as animated WebP. */
 export function hasGreetingAnimation(image: GreetingImage): boolean {
 	return backgroundGifTiming(image) !== null || image.layers.some((layer) => !layer.hidden && layer.animation !== undefined);
 }
 
 /**
- * 애니메이션 카드 한 바퀴 길이(ms) — WebP가 끊김 없이 반복되도록 렌더러가 레이어 주기를 이 값의 약수(L / n)로 맞춰요.
- * - 레이어 움직임만 있으면: 가장 긴 주기(durationMs), 상한 5초.
- * - 배경이 GIF면: GIF 한 바퀴의 정수배예요. 가장 긴 레이어 주기에 가장 가까운 배수로 잡되 5초를 넘기지 않아요.
- *   GIF 한 바퀴가 5초 이상이면 5초에서 잘라요 (반복 지점에서 GIF가 한 번 튀어요).
- * - 둘 다 없으면 0이에요.
+ * Loop length L; the renderer snaps each layer period to L / n so the WebP repeats seamlessly.
+ * - Layers only: longest period, capped at 5s.
+ * - GIF background: a whole multiple of the GIF loop nearest the longest layer period, capped at 5s. A GIF loop of 5s or more is cut at 5s (the GIF jumps at the repeat).
+ * - Neither: 0.
  */
 export function greetingAnimationDurationMs(image: GreetingImage): number {
 	let layersMs = 0;
@@ -248,17 +231,11 @@ export function greetingAnimationDurationMs(image: GreetingImage): number {
 	return gif.durationMs * loops;
 }
 
-/**
- * 메시지 레이아웃 — Discord에 보내는 최상위 구조를 선택해요.
- * 'container'는 컨테이너 1개에 담아 보내는 방식이고, 'components'는 컨테이너 없이
- * 컴포넌트 목록(TextDisplay·Separator·Section·MediaGallery)을 그대로 보내는 방식이에요.
- * 강조색(accent color)은 컨테이너 전용 속성이라 'components'에서는 쓸 수 없어요.
- */
+/** 'components' sends the component list without a container, so the accent color (a container-only property) can't apply. */
 export type GreetingLayout = 'container' | 'components';
 
 export const GREETING_LAYOUTS = ['container', 'components'] as const;
 
-/** Guild.welcome / goodbye에 저장되는 값. version은 스키마 진화용 리터럴. */
 export type GreetingConfig = {
 	version: 2;
 	enabled: boolean;
@@ -373,7 +350,7 @@ const shapeLayerSchema = z.object({
 
 const greetingLayerSchema = z.discriminatedUnion('type', [textLayerSchema, avatarLayerSchema, imageLayerSchema, shapeLayerSchema]);
 
-// presetId는 프리셋 목록(id + 이름) 안에서만 유효 — 렌더러가 프리셋을 코드로 직접 그리기 때문.
+// The renderer draws presets in code, so presetId must be a known preset.
 const greetingImageSchema = z.object({
 	background: z.strictObject({
 		presetId: z
@@ -393,7 +370,7 @@ export const greetingConfigSchema = z
 		template: z.string().max(500),
 		useImage: z.boolean(),
 		image: greetingImageSchema.nullable(),
-		// layout·accentColor는 뒤에 추가된 필드예요 — 저장된 v2 값에 없으면 기본값을 채워 하위 호환을 지켜요.
+		// defaults keep previously stored values valid
 		layout: z.enum(GREETING_LAYOUTS).default('container'),
 		accentColor: z.string().regex(HEX_COLOR).nullable().default(null)
 	})
@@ -401,14 +378,13 @@ export const greetingConfigSchema = z
 		error: 'useImage가 true일 때 image는 필수예요.'
 	});
 
-/** Prisma Json? 컬럼에서 읽은 값 검증 — 유효하면 타입 있는 설정, 아니면 null (호출부는 기본값으로 폴백). */
+/** Null when invalid; callers fall back to defaults. */
 export function validateGreetingConfig(value: unknown): GreetingConfig | null {
 	const result = greetingConfigSchema.safeParse(value);
 	return result.success ? result.data : null;
 }
 
-// 기본값 (v2)
-/** classic-center 카드의 기본 레이어 3종, 기본 환영 설정과 프리셋이 같은 데이터를 써요 */
+/** Shared by the default welcome config and the classic-center preset. */
 const CLASSIC_CENTER_LAYERS: GreetingLayer[] = [
 	{ id: 'avatar', type: 'avatar', x: 50, y: 20, size: 180, ringColor: '#ffffff' },
 	{ id: 'title', type: 'text', x: 50, y: 44, size: 44, color: '#ffffff', bold: true, align: 'center', text: '{유저이름} 님 반가워요!' },
@@ -452,15 +428,12 @@ export const DEFAULT_GREETINGS: Record<GreetingKind, GreetingConfig> = {
 	goodbye: DEFAULT_GOODBYE_GREETING
 };
 
-// 카드 템플릿 (프리셋 레이아웃)
-/** 완성형 카드 디자인 프리셋 — 에디터가 골라 시작한 뒤 자유 수정한다. */
 export type GreetingTemplate = {
 	id: string;
 	name: string;
 	image: GreetingImage;
 };
 
-/** 템플릿 데이터를 짧게 쓰기 위한 도형 레이어 생성 헬퍼 — 저장되는 값은 일반 GreetingShapeLayer 그대로예요. */
 function shapeLayer(
 	id: string,
 	shape: GreetingShapeKind,
@@ -475,7 +448,6 @@ function shapeLayer(
 	return { id, type: 'shape', shape, x, y, width, height, color, opacity, ...extra };
 }
 
-/** 텍스트 레이어 생성 헬퍼 */
 function textLayer(
 	id: string,
 	x: number,
@@ -870,10 +842,7 @@ const STATIC_TEMPLATES: readonly GreetingTemplate[] = [
 	}
 ];
 
-/**
- * 템플릿 기본 움직임 — 레이어 id 접두사별로 (같은 접두사 안에서 몇 번째인지)를 받아 움직임을 돌려줘요.
- * 주기는 전부 카드 한 바퀴 길이(4초)의 약수(4000·2000)라 WebP가 끊김 없이 반복돼요. 시작 어긋남은 레이어끼리 엇갈리게 해요.
- */
+/** Periods (4000, 2000) divide the 4s card loop so the WebP repeats seamlessly; delays stagger the layers. */
 type AnimationRule = (index: number) => GreetingAnimation;
 const anim = (type: GreetingAnimationKind, durationMs: number, delayMs = 0, intensity = 0.5): GreetingAnimation => ({
 	type,
@@ -908,7 +877,6 @@ const TEMPLATE_ANIMATIONS: Record<string, Record<string, AnimationRule>> = {
 	}
 };
 
-/** 기본 움직임을 입힌 템플릿 — 움직임이 정의된 템플릿만 레이어에 animation이 들어가요 */
 function withTemplateAnimations(template: GreetingTemplate): GreetingTemplate {
 	const rules = TEMPLATE_ANIMATIONS[template.id];
 	if (!rules) return template;
@@ -925,7 +893,6 @@ function withTemplateAnimations(template: GreetingTemplate): GreetingTemplate {
 
 export const GREETING_TEMPLATES: readonly GreetingTemplate[] = STATIC_TEMPLATES.map(withTemplateAnimations);
 
-/** 템플릿 변수 메타데이터 — dashboard 에디터의 변수 삽입 칩과 bot 치환기가 함께 참조 */
 export type GreetingTemplateVariable = { token: string; description: string; usableInImage: boolean };
 
 export const GREETING_TEMPLATE_VARIABLES: readonly GreetingTemplateVariable[] = [
@@ -935,7 +902,6 @@ export const GREETING_TEMPLATE_VARIABLES: readonly GreetingTemplateVariable[] = 
 	{ token: '{멤버수}', description: '서버 멤버 수', usableInImage: true }
 ];
 
-/** 커스텀 배경 프리셋 — 렌더러가 코드로 그린다 (아이디+이름 메타데이터) */
 export type PresetBackground = { id: string; name: string };
 
 export const PRESET_BACKGROUNDS: readonly PresetBackground[] = [
@@ -952,11 +918,7 @@ export const PRESET_BACKGROUNDS: readonly PresetBackground[] = [
 
 const PRESET_BACKGROUND_IDS: readonly string[] = PRESET_BACKGROUNDS.map((preset) => preset.id);
 
-/**
- * 템플릿 치환기 — 봇 메시지와 이미지 카드 텍스트가 같은 토큰 체계를 공유해요.
- * {유저}는 봇 메시지에서만 멘션으로 치환되고, 이미지 렌더러는 멘션을 못 그리니
- * 표시 이름으로 폴백해요 (GREETING_TEMPLATE_VARIABLES.usableInImage 기준).
- */
+/** {유저} becomes a mention only in bot messages; image cards can't draw mentions and fall back to the display name (`usableInImage`). */
 export function renderGreetingTemplate(
 	template: string,
 	vars: { mention?: string | null; displayName: string; guildName: string; memberCount: number }
