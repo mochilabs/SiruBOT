@@ -45,7 +45,7 @@ export async function buildControllerCardPayload(
 	player: CustomPlayer,
 	options: ControllerCardPayloadOptions
 ): Promise<ControllerCardPayload> {
-	const panelChannelId = await guildChannels.getDefaultTextChannel(deps.guildService, player.guildId).catch(() => null);
+	const panelChannelId = await guildChannels.getPanelChannel(deps.guildService, player.guildId).catch(() => null);
 	const pinned = Boolean(options.textChannelId) && options.textChannelId === panelChannelId;
 	const card = pinned ? getDisplayNowPlayingCard(deps, player) : null;
 

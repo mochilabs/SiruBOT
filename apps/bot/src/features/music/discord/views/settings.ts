@@ -53,7 +53,7 @@ const SCREEN_PARTS: Record<SettingsScreen, Part[]> = {
 		SEPARATOR,
 		TEXT(
 			() =>
-				`${emoji('pin')} 기본 텍스트 채널에는 플레이어 패널이 **메시지 1개로 고정**돼요. 채팅 입력 재생을 켜면 이 채널에 곡 제목이나 링크를 입력해 바로 재생할 수 있어요.`
+				`${emoji('pin')} 채팅 입력 재생을 켜면 기본 채널에 곡 제목이나 링크를 입력해 바로 재생할 수 있어요. **입력 메시지 삭제**까지 켜면 플레이어 패널이 메시지 1개로 고정돼요.`
 		),
 		{ row: 'inputMode' },
 		{ row: 'actions', back: true }
@@ -176,7 +176,7 @@ function djText(guild: Guild): string {
 function channelText(guild: Guild): string {
 	return [
 		`### ${emoji('scroll')} 채널 설정`,
-		`기본 텍스트 채널을 설정하면 해당 채널에서만 명령어를 사용할 수 있고, 플레이어 패널이 그 채널에 메시지 1개로 고정돼요.`,
+		`기본 텍스트 채널을 설정하면 해당 채널에서만 명령어를 사용할 수 있어요.`,
 		``,
 		`${emoji('scroll')} **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
 		`${emoji('music_note')} **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,

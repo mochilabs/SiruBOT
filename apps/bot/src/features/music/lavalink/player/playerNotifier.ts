@@ -426,7 +426,7 @@ export class PlayerNotifier implements Stoppable {
 		try {
 			if (!player.textChannelId) return null;
 			const [channelId, messageId] = await Promise.all([
-				guildChannels.getDefaultTextChannel(this.deps.guildService, player.guildId),
+				guildChannels.getPanelChannel(this.deps.guildService, player.guildId),
 				guildChannels.getTextMessage(this.deps.guildService, player.guildId)
 			]);
 			if (!channelId || !messageId || channelId !== player.textChannelId) return null;
@@ -440,14 +440,15 @@ export class PlayerNotifier implements Stoppable {
 	}
 
 	/**
-	 * 기본 채널 상시 패널을 맞춘다 — 채널 설정/해제 직후 호출한다.
+	 * 기본 채널 상시 패널을 맞춘다 — 채널·입력 재생·입력 삭제 설정 변경 직후 호출한다. 패널 모드가 꺼졌으면 패널 메시지를 지운다.
 	 * 이전 패널은 지우고, 새 기본 채널에는 대기 화면(재생 중이면 컨트롤러)을 올려 메시지 ID를 저장한다.
 	 */
 	public async syncPanel(guildId: string, previousChannelId: string | null): Promise<void> {
 		await this.enqueueControllerOperation(guildId, async () => {
 			try {
 				const oldMessageId = await guildChannels.getTextMessage(this.deps.guildService, guildId);
-				const channelId = await guildChannels.getDefaultTextChannel(this.deps.guildService, guildId);
+				// 패널 모드(기본 채널 + 입력 재생 + 보낸 후 삭제)일 때만 패널 채널이 있다.
+				const channelId = await guildChannels.getPanelChannel(this.deps.guildService, guildId);
 				const player = this.deps.audio?.getPlayer?.(guildId);
 				const playing = Boolean(player?.queue.current);
 
@@ -472,14 +473,18 @@ export class PlayerNotifier implements Stoppable {
 
 				// 봇이 직접 지우는 메시지가 messageDelete 이벤트로 다시 패널을 만들지 않게, 먼저 ID를 비운 뒤 지운다.
 				await guildChannels.setTextMessage(this.deps.guildService, guildId, null);
-				const oldChannelId = previousChannelId ?? channelId;
+				const oldChannelId = previousChannelId ?? channelId ?? (await guildChannels.getDefaultTextChannel(this.deps.guildService, guildId));
 				if (oldMessageId && oldChannelId) {
 					const oldChannel = this.deps.client.channels.cache.get(oldChannelId);
 					if (oldChannel?.isTextBased() && 'messages' in oldChannel) {
 						await oldChannel.messages.delete(oldMessageId).catch(() => null);
 					}
 				}
-				if (!channelId) return;
+				if (!channelId) {
+					// 패널 모드가 꺼졌는데 재생 중이면 일반 컨트롤러로 다시 보낸다.
+					if (player && playing) await this.sendControllerNow(player);
+					return;
+				}
 				const channel = this.deps.client.channels.cache.get(channelId);
 				if (!channel?.isSendable()) return;
 				if (player && playing) {
@@ -599,7 +604,7 @@ export class PlayerNotifier implements Stoppable {
 	/** 컨트롤러가 떠 있는 채널이 길드의 기본 채널(패널)인지 — 맞으면 핀 모드(edit 유지)로 다룬다. */
 	private async isPanelChannel(guildId: string, textChannelId: string): Promise<boolean> {
 		try {
-			const pinned = await guildChannels.getDefaultTextChannel(this.deps.guildService, guildId);
+			const pinned = await guildChannels.getPanelChannel(this.deps.guildService, guildId);
 			return Boolean(pinned) && pinned === textChannelId;
 		} catch {
 			return false;

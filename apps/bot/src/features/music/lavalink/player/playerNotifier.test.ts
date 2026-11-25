@@ -7,7 +7,7 @@ import { PlayerNotifier } from './playerNotifier.ts';
 import { CurrentBpmCache } from './currentBpm.ts';
 vi.mock('../../../../services/guildSettings/channels.ts', async (orig) => ({
 	...(await orig<Record<string, unknown>>()),
-	...{ getDefaultTextChannel: mocks.pinned }
+	...{ getPanelChannel: mocks.pinned }
 }));
 
 const mocks = vi.hoisted(() => ({

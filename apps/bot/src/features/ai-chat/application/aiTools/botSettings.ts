@@ -337,6 +337,7 @@ export function createBotSettingsTools(
 			if (args.text_input_play !== undefined && args.text_input_play !== null) {
 				const enabled = Boolean(args.text_input_play);
 				await guildChannels.setTextChannelInputPlay(deps.guildService, guildId, enabled);
+				await deps.syncTextChannelPanel?.(guildId, await guildChannels.getDefaultTextChannel(deps.guildService, guildId));
 				updated.text_input_play = enabled;
 			}
 
@@ -352,6 +353,7 @@ export function createBotSettingsTools(
 			if (args.text_delete_input !== undefined && args.text_delete_input !== null) {
 				const deleteInput = Boolean(args.text_delete_input);
 				await guildChannels.setTextChannelDeleteInput(deps.guildService, guildId, deleteInput);
+				await deps.syncTextChannelPanel?.(guildId, await guildChannels.getDefaultTextChannel(deps.guildService, guildId));
 				updated.text_delete_input = deleteInput;
 			}
 

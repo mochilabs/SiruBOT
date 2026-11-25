@@ -85,7 +85,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
       panel={panel}
       icon={<Hash className="h-5 w-5" />}
       title="채널·권한 설정"
-      description="기본 채널(명령어 허용·고정 패널), 채팅 입력 재생, DJ 역할을 관리해요."
+      description="기본 채널(명령어 허용), 채팅 입력 재생, DJ 역할을 관리해요."
       notice={
         <InfoBox>
           <p>목록이 비어 있으면 새로고침해 주세요.</p>
@@ -112,7 +112,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
         <Field
           htmlFor="channel-default-text"
           label="기본 텍스트 채널"
-          description="설정하면 이 채널에서만 명령어를 쓸 수 있고, 플레이어 패널이 메시지 1개로 고정돼요. 미설정이면 입력이 온 채널을 그대로 사용해요."
+          description="설정하면 이 채널에서만 명령어를 쓸 수 있어요. 미설정이면 입력이 온 채널을 그대로 사용해요."
         >
           <ChannelSelect
             id="channel-default-text"
@@ -178,7 +178,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 
       <SettingsToggleRow
           title="입력 메시지 자동 삭제"
-          description="봇이 재생을 시작한 뒤 입력 메시지를 지워요. 봇에게 메시지 관리 권한이 필요해요."
+          description="봇이 재생을 시작한 뒤 입력 메시지를 지워요. 켜면 플레이어 패널이 메시지 1개로 고정돼요. 봇에게 메시지 관리 권한이 필요해요."
           control={<Switch checked={form.textChannelDeleteInput} onChange={(checked: boolean) => patch({ textChannelDeleteInput: checked })} disabled={saving || !form.textChannelId || !form.textChannelInputPlay} aria-label="입력 메시지 자동 삭제" />}
         />
 

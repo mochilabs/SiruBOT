@@ -13,6 +13,7 @@ vi.mock('@sirubot/utils', async () => {
 
 import {
 	getDefaultTextChannel,
+	getPanelChannel,
 	getTextChannelInputPlay,
 	getTextChannelDeleteInput,
 	getTextChannelMode,
@@ -79,5 +80,20 @@ describe('channels 도메인 CRUD', () => {
 		const store = new GuildSettingsStore({ db });
 		await expect(setTextChannelMode(store, 'guild', 'select')).resolves.toBe('select');
 		expect(upsert.mock.calls[0][0].update).toEqual({ textChannelMode: 'select' });
+	});
+
+	it('패널 채널은 기본 채널 + 입력 재생 + 입력 삭제가 모두 켜졌을 때만 돌려줘요', async () => {
+		const cases: [Partial<Guild>, string | null][] = [
+			[{ textChannelId: 'c', textChannelInputPlay: true, textChannelDeleteInput: true }, 'c'],
+			[{ textChannelId: 'c', textChannelInputPlay: true, textChannelDeleteInput: false }, null],
+			[{ textChannelId: 'c', textChannelInputPlay: false, textChannelDeleteInput: true }, null],
+			[{ textChannelId: null, textChannelInputPlay: true, textChannelDeleteInput: true }, null]
+		];
+		for (const [overrides, expected] of cases) {
+			upsert.mockResolvedValueOnce(guild('guild', overrides));
+			const store = new GuildSettingsStore({ db });
+			await setDefaultVoiceChannel(store, 'guild', null);
+			await expect(getPanelChannel(store, 'guild')).resolves.toBe(expected);
+		}
 	});
 });

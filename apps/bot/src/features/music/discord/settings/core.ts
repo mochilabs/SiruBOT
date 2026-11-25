@@ -193,6 +193,7 @@ export const coreActions = {
 		apply: async ({ guildId, services }) => {
 			const guild = await services.guildService.getGuild(guildId);
 			await guildChannels.setTextChannelDeleteInput(services.guildService, guildId, !guild.textChannelDeleteInput);
+			await services.lavalink.playerNotifier.syncPanel(guildId, guild.textChannelId);
 		},
 		control: {
 			screen: 'channel',
@@ -209,6 +210,7 @@ export const coreActions = {
 		apply: async ({ guildId, services }) => {
 			const guild = await services.guildService.getGuild(guildId);
 			await guildChannels.setTextChannelInputPlay(services.guildService, guildId, !guild.textChannelInputPlay);
+			await services.lavalink.playerNotifier.syncPanel(guildId, guild.textChannelId);
 		},
 		control: {
 			screen: 'channel',
