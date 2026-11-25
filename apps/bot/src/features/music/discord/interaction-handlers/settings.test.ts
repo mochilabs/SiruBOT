@@ -52,13 +52,13 @@ function makeInteraction(kind: Kind, values: string[] = []) {
 	};
 }
 
-const GUILD = { enableController: true, related: false, repeat: 'off', pinnedChannelDeleteInput: false };
+const GUILD = { enableController: true, related: false, repeat: 'off', textChannelDeleteInput: false };
 
 function setup(guild: Record<string, unknown> = GUILD) {
 	const player = { playing: true, queue: { current: { info: {} }, tracks: [] as unknown[] }, setRepeatMode: vi.fn() };
 	const services = {
 		guildService: { getGuild: vi.fn().mockResolvedValue(guild) },
-		lavalink: { marker: 'lavalink', playerNotifier: { syncPinnedPanel: vi.fn().mockResolvedValue(undefined) } },
+		lavalink: { marker: 'lavalink', playerNotifier: { syncPanel: vi.fn().mockResolvedValue(undefined) } },
 		audio: { getPlayer: vi.fn(() => player), players: { get: vi.fn(() => player) } },
 		mixerService: {
 			clearNext: vi.fn().mockResolvedValue(undefined),
@@ -99,7 +99,7 @@ describe('settings 액션 표', () => {
 
 	it('표의 모든 항목이 settingsId 액션과 일치해요 (모달 ID 제외)', () => {
 		const actions = Object.keys(SETTINGS_ACTIONS).sort();
-		expect(actions).toHaveLength(35);
+		expect(actions).toHaveLength(34);
 		for (const action of actions) expect(settingsId.decode(settingsId.encode(action as 'back'))?.action).toBe(action);
 	});
 
@@ -202,9 +202,9 @@ describe('settings 액션 표', () => {
 		}
 	});
 
-	it('togglePinDelete는 입력 삭제 설정을 뒤집어요', async () => {
-		const { services } = await run('togglePinDelete', makeInteraction('button'));
-		expect(guildChannels.setPinnedChannelDeleteInput).toHaveBeenCalledWith(services.guildService, 'g1', true);
+	it('toggleDeleteInput는 입력 삭제 설정을 뒤집어요', async () => {
+		const { services } = await run('toggleDeleteInput', makeInteraction('button'));
+		expect(guildChannels.setTextChannelDeleteInput).toHaveBeenCalledWith(services.guildService, 'g1', true);
 		expect(lastMode()).toBe('channel');
 	});
 
@@ -256,26 +256,23 @@ describe('settings 액션 표', () => {
 
 	it('채널 선택과 제거가 각 설정에 닿아요', async () => {
 		const g = expect.anything();
-		await run('selectText', makeInteraction('channel', ['t']));
+		const text = await run('selectText', makeInteraction('channel', ['t']));
 		expect(guildChannels.setDefaultTextChannel).toHaveBeenLastCalledWith(g, 'g1', 't');
+		expect(text.services.lavalink.playerNotifier.syncPanel).toHaveBeenCalledTimes(1);
 		await run('selectVoice', makeInteraction('channel', ['v']));
 		expect(guildChannels.setDefaultVoiceChannel).toHaveBeenLastCalledWith(g, 'g1', 'v');
-		const pin = await run('selectPin', makeInteraction('channel', ['p']));
-		expect(guildChannels.setPinnedChannel).toHaveBeenLastCalledWith(g, 'g1', 'p');
-		expect(pin.services.lavalink.playerNotifier.syncPinnedPanel).toHaveBeenCalledTimes(1);
-		await run('removeText', makeInteraction('button'));
+		const removed = await run('removeText', makeInteraction('button'));
 		expect(guildChannels.setDefaultTextChannel).toHaveBeenLastCalledWith(g, 'g1', null);
+		expect(removed.services.lavalink.playerNotifier.syncPanel).toHaveBeenCalledTimes(1);
 		await run('removeVoice', makeInteraction('button'));
 		expect(guildChannels.setDefaultVoiceChannel).toHaveBeenLastCalledWith(g, 'g1', null);
-		await run('removePin', makeInteraction('button'));
-		expect(guildChannels.setPinnedChannel).toHaveBeenLastCalledWith(g, 'g1', null);
 	});
 
-	it('selectPinMode는 select일 때만 select, 그 외는 play예요', async () => {
-		await run('selectPinMode', makeInteraction('string', ['select']));
-		expect(guildChannels.setPinnedChannelMode).toHaveBeenLastCalledWith(expect.anything(), 'g1', 'select');
-		await run('selectPinMode', makeInteraction('string', ['whatever']));
-		expect(guildChannels.setPinnedChannelMode).toHaveBeenLastCalledWith(expect.anything(), 'g1', 'play');
+	it('selectInputMode는 select일 때만 select, 그 외는 play예요', async () => {
+		await run('selectInputMode', makeInteraction('string', ['select']));
+		expect(guildChannels.setTextChannelMode).toHaveBeenLastCalledWith(expect.anything(), 'g1', 'select');
+		await run('selectInputMode', makeInteraction('string', ['whatever']));
+		expect(guildChannels.setTextChannelMode).toHaveBeenLastCalledWith(expect.anything(), 'g1', 'play');
 	});
 
 	it('컴포넌트 종류가 맞지 않으면 아무것도 바꾸지 않고 화면만 다시 그려요', async () => {
@@ -283,8 +280,7 @@ describe('settings 액션 표', () => {
 			['selectDj', 'channel'],
 			['selectText', 'role'],
 			['selectVoice', 'string'],
-			['selectPin', 'button'],
-			['selectPinMode', 'channel'],
+			['selectInputMode', 'channel'],
 			['selectJtcCategory', 'string'],
 			['selectJtcLimit', 'channel'],
 			['selectSponsorblock', 'role']
@@ -295,8 +291,7 @@ describe('settings 액션 표', () => {
 			const { services } = await run(action, interaction);
 			expect(guildChannels.setDefaultTextChannel, action).not.toHaveBeenCalled();
 			expect(guildChannels.setDefaultVoiceChannel, action).not.toHaveBeenCalled();
-			expect(guildChannels.setPinnedChannel, action).not.toHaveBeenCalled();
-			expect(guildChannels.setPinnedChannelMode, action).not.toHaveBeenCalled();
+			expect(guildChannels.setTextChannelMode, action).not.toHaveBeenCalled();
 			expect(guildJtc.setJtcUserLimit, action).not.toHaveBeenCalled();
 			expect(guildPlayback.setDJRole, action).not.toHaveBeenCalled();
 			expect(guildPlayback.setSponsorBlockSegments, action).not.toHaveBeenCalled();

@@ -30,9 +30,9 @@ interface AdminGuildDetail {
 	djRoleId: string | null;
 	textChannelId: string | null;
 	voiceChannelId: string | null;
-	pinnedChannelId: string | null;
-	pinnedChannelMode: "play" | "select";
-	pinnedChannelDeleteInput: boolean;
+	textChannelInputPlay: boolean;
+	textChannelMode: "play" | "select";
+	textChannelDeleteInput: boolean;
 	jtcEnabled: boolean;
 	jtcCategoryId: string | null;
 	jtcMarkerChannelId: string | null;
@@ -152,7 +152,7 @@ export function GuildEditDialog({
 				djRoleId: current.djRoleId?.trim() || null,
 				textChannelId: current.textChannelId?.trim() || null,
 				voiceChannelId: current.voiceChannelId?.trim() || null,
-				pinnedChannelId: current.pinnedChannelId?.trim() || null,
+				textChannelInputPlay: current.textChannelInputPlay,
 				countingChannelId: current.countingChannelId?.trim() || null,
 			};
 
@@ -415,15 +415,7 @@ export function GuildEditDialog({
 									className="font-mono text-xs"
 								/>
 							</Field>
-							<Field label="고정 음악 채널 ID (비우면 해제)">
-								<Input
-									value={current.pinnedChannelId ?? ""}
-									onChange={(e) => setDraft((prev) => ({ ...prev, pinnedChannelId: e.target.value || null }))}
-									placeholder="Discord 텍스트 채널 Snowflake ID"
-									className="font-mono text-xs"
-								/>
-							</Field>
-							<Field label="명령어 허용 텍스트 채널 ID">
+							<Field label="기본 텍스트 채널 ID (명령어 허용·상시 패널)">
 								<Input
 									value={current.textChannelId ?? ""}
 									onChange={(e) => setDraft((prev) => ({ ...prev, textChannelId: e.target.value || null }))}

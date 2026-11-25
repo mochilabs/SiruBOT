@@ -81,13 +81,13 @@ export function isRepeatMode(value: string): value is RepeatModeSetting {
 /* ── 고정 채널 입력 동작 ─────────────────────────────────── */
 
 /** 고정 채널 입력 동작 — play: 첫 결과 즉시 재생 / select: 결과 5개 중 선택 */
-export const PINNED_CHANNEL_MODES = ['play', 'select'] as const;
-export type PinnedChannelModeSetting = (typeof PINNED_CHANNEL_MODES)[number];
-export const PINNED_CHANNEL_MODE_DEFAULT: PinnedChannelModeSetting = 'play';
+export const TEXT_CHANNEL_MODES = ['play', 'select'] as const;
+export type TextChannelModeSetting = (typeof TEXT_CHANNEL_MODES)[number];
+export const TEXT_CHANNEL_MODE_DEFAULT: TextChannelModeSetting = 'play';
 
-/** 고정 채널 입력 동작 정규화 — 알 수 없는 값은 PINNED_CHANNEL_MODE_DEFAULT로 되돌려요 */
-export function normalizePinnedChannelMode(value: string | null | undefined): PinnedChannelModeSetting {
-	return value && (PINNED_CHANNEL_MODES as readonly string[]).includes(value) ? (value as PinnedChannelModeSetting) : PINNED_CHANNEL_MODE_DEFAULT;
+/** 고정 채널 입력 동작 정규화 — 알 수 없는 값은 TEXT_CHANNEL_MODE_DEFAULT로 되돌려요 */
+export function normalizeTextChannelMode(value: string | null | undefined): TextChannelModeSetting {
+	return value && (TEXT_CHANNEL_MODES as readonly string[]).includes(value) ? (value as TextChannelModeSetting) : TEXT_CHANNEL_MODE_DEFAULT;
 }
 
 /* ── TTS 안내 방식 ───────────────────────────────────────── */

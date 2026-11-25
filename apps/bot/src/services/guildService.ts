@@ -22,7 +22,7 @@ export type {
 	ChatToolName,
 	ChatToolSettings,
 	MixerSettings,
-	PinnedChannelMode,
+	TextChannelMode,
 	TtsMode,
 	TtsSettings
 } from './guildSettings/types.ts';

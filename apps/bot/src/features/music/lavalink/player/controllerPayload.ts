@@ -1,5 +1,5 @@
 /**
- * 컨트롤러 페이로드 공용 빌더 — now-playing 카드를 고정 채널에서만 붙이고
+ * 컨트롤러 페이로드 공용 빌더 — now-playing 카드를 기본 채널(상시 패널)에서만 붙이고
  * 카드 첨부 유지/재업로드 정책을 한 곳에서 다룬다.
  * playerNotifier(전송/수정)와 controllerButton(버튼 갱신)이 공유한다.
  */
@@ -15,7 +15,7 @@ import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 export interface ControllerCardPayloadOptions {
 	/** 컨트롤러에 표시할 볼륨 */
 	volume: number;
-	/** 카드를 붙일 채널 — 길드 고정 채널과 일치할 때만 카드가 붙는다 */
+	/** 카드를 붙일 채널 — 길드 기본 채널과 일치할 때만 카드가 붙는다 */
 	textChannelId: string | null | undefined;
 	/** 갱신 중인 기존 컨트롤러 메시지 — 없으면(새 전송) 카드를 항상 업로드한다 */
 	message?: Message | null;
@@ -28,9 +28,9 @@ export interface ControllerCardPayloadOptions {
 }
 
 export interface ControllerCardPayload {
-	/** textChannelId가 길드 고정 채널이었는지 — 카드 리프레시 트리거 판정에도 쓴다 */
+	/** textChannelId가 길드 기본 채널(패널)이었는지 — 카드 리프레시 트리거 판정에도 쓴다 */
 	pinned: boolean;
-	/** 현재 곡 카드 (고정 채널이 아니면 null) */
+	/** 현재 곡 카드 (기본 채널이 아니면 null) */
 	card: NowPlayingCardAttachment | null;
 	components: ContainerBuilder;
 	/** 유지할 기존 첨부(같은 파일명) — 새 전송이거나 재업로드 시 빈 배열 */
@@ -39,14 +39,14 @@ export interface ControllerCardPayload {
 	files: AttachmentBuilder[];
 }
 
-/** 고정 채널 판정 → 카드 해석 → 컨트롤러 컴포넌트/첨부 조립까지 한 번에. */
+/** 기본 채널 판정 → 카드 해석 → 컨트롤러 컴포넌트/첨부 조립까지 한 번에. */
 export async function buildControllerCardPayload(
 	deps: LavalinkDeps,
 	player: CustomPlayer,
 	options: ControllerCardPayloadOptions
 ): Promise<ControllerCardPayload> {
-	const pinnedChannelId = await guildChannels.getPinnedChannel(deps.guildService, player.guildId).catch(() => null);
-	const pinned = Boolean(options.textChannelId) && options.textChannelId === pinnedChannelId;
+	const panelChannelId = await guildChannels.getDefaultTextChannel(deps.guildService, player.guildId).catch(() => null);
+	const pinned = Boolean(options.textChannelId) && options.textChannelId === panelChannelId;
 	const card = pinned ? getDisplayNowPlayingCard(deps, player) : null;
 
 	const currentIdentifier = nowPlayingTrack(player)?.info.identifier;
@@ -60,6 +60,7 @@ export async function buildControllerCardPayload(
 				player,
 				volume: options.volume,
 				nowPlayingCardUrl: card?.url,
+				panel: pinned,
 				currentBpm: deps.currentBpm.read(
 					player,
 					currentNode,

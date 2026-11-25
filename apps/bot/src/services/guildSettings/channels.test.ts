@@ -13,13 +13,13 @@ vi.mock('@sirubot/utils', async () => {
 
 import {
 	getDefaultTextChannel,
-	getPinnedChannel,
-	getPinnedChannelDeleteInput,
-	getPinnedChannelMode,
+	getTextChannelInputPlay,
+	getTextChannelDeleteInput,
+	getTextChannelMode,
 	setDefaultVoiceChannel,
-	setPinnedChannel,
-	setPinnedChannelDeleteInput,
-	setPinnedChannelMode
+	setTextChannelInputPlay,
+	setTextChannelDeleteInput,
+	setTextChannelMode
 } from './channels.ts';
 import { GuildSettingsStore } from './store.ts';
 
@@ -28,9 +28,9 @@ function guild(id = 'guild', overrides: Partial<Guild> = {}): Guild {
 		id,
 		textChannelId: null,
 		voiceChannelId: null,
-		pinnedChannelId: null,
-		pinnedChannelMode: 'play',
-		pinnedChannelDeleteInput: false,
+		textChannelInputPlay: false,
+		textChannelMode: 'play',
+		textChannelDeleteInput: false,
 		...overrides
 	} as Guild;
 }
@@ -51,33 +51,33 @@ describe('channels 도메인 CRUD', () => {
 	});
 
 	it('고정 채널 입력 동작은 select만 select로 읽고 그 외는 play로 폴백해요', async () => {
-		upsert.mockResolvedValueOnce(guild('guild', { pinnedChannelMode: 'select' }));
+		upsert.mockResolvedValueOnce(guild('guild', { textChannelMode: 'select' }));
 		const store = new GuildSettingsStore({ db });
-		await expect(getPinnedChannelMode(store, 'guild')).resolves.toBe('select');
+		await expect(getTextChannelMode(store, 'guild')).resolves.toBe('select');
 
-		upsert.mockResolvedValueOnce(guild('guild', { pinnedChannelMode: 'bogus' as never }));
+		upsert.mockResolvedValueOnce(guild('guild', { textChannelMode: 'bogus' as never }));
 		const broken = new GuildSettingsStore({ db });
-		await expect(getPinnedChannelMode(broken, 'guild')).resolves.toBe('play');
+		await expect(getTextChannelMode(broken, 'guild')).resolves.toBe('play');
 	});
 
-	it('고정 채널과 입력 메시지 삭제 여부를 저장해요', async () => {
-		upsert.mockResolvedValueOnce(guild('guild', { pinnedChannelId: 'pin-1' }));
+	it('채팅 입력 재생과 입력 메시지 삭제 여부를 저장해요', async () => {
+		upsert.mockResolvedValueOnce(guild('guild', { textChannelInputPlay: true }));
 		const store = new GuildSettingsStore({ db });
-		await expect(setPinnedChannel(store, 'guild', 'pin-1')).resolves.toBe('pin-1');
-		expect(upsert.mock.calls[0][0].update).toEqual({ pinnedChannelId: 'pin-1' });
+		await expect(setTextChannelInputPlay(store, 'guild', true)).resolves.toBe(true);
+		expect(upsert.mock.calls[0][0].update).toEqual({ textChannelInputPlay: true });
 
-		upsert.mockResolvedValueOnce(guild('guild', { pinnedChannelDeleteInput: true }));
-		await expect(setPinnedChannelDeleteInput(store, 'guild', true)).resolves.toBe(true);
-		expect(upsert.mock.calls[1][0].update).toEqual({ pinnedChannelDeleteInput: true });
+		upsert.mockResolvedValueOnce(guild('guild', { textChannelInputPlay: true, textChannelDeleteInput: true }));
+		await expect(setTextChannelDeleteInput(store, 'guild', true)).resolves.toBe(true);
+		expect(upsert.mock.calls[1][0].update).toEqual({ textChannelDeleteInput: true });
 
-		await expect(getPinnedChannel(store, 'guild')).resolves.toBeNull();
-		await expect(getPinnedChannelDeleteInput(store, 'guild')).resolves.toBe(true);
+		await expect(getTextChannelInputPlay(store, 'guild')).resolves.toBe(true);
+		await expect(getTextChannelDeleteInput(store, 'guild')).resolves.toBe(true);
 	});
 
-	it('고정 채널 모드를 저장해요', async () => {
-		upsert.mockResolvedValueOnce(guild('guild', { pinnedChannelMode: 'select' }));
+	it('채팅 입력 재생 모드를 저장해요', async () => {
+		upsert.mockResolvedValueOnce(guild('guild', { textChannelMode: 'select' }));
 		const store = new GuildSettingsStore({ db });
-		await expect(setPinnedChannelMode(store, 'guild', 'select')).resolves.toBe('select');
-		expect(upsert.mock.calls[0][0].update).toEqual({ pinnedChannelMode: 'select' });
+		await expect(setTextChannelMode(store, 'guild', 'select')).resolves.toBe('select');
+		expect(upsert.mock.calls[0][0].update).toEqual({ textChannelMode: 'select' });
 	});
 });

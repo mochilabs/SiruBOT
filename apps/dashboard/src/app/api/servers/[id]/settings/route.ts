@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { Guild as PrismaGuild } from "@sirubot/prisma";
 import { normalizeChatToolMode, normalizeEmbedFixSites, normalizeEmbedFixTranslateLang } from "@sirubot/utils/chatTools";
 import {
-  normalizePinnedChannelMode,
+  normalizeTextChannelMode,
   normalizeRepeatMode,
   normalizeSponsorBlockSegments,
   normalizeThemePreset,
@@ -14,6 +14,7 @@ import { createGuildApiHandler } from "@/lib/api-handler";
 import { notifyGuildSettingsChanged } from "@/lib/data-api/client";
 import { db } from "@/lib/db";
 import { MIXER_SETTING_KEYS, normalizeMixerToggles } from "@/lib/mixer-settings";
+import { PANEL_SETTING_KEYS } from "@/lib/panel-settings";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 import {
   GUILD_SETTING_KEYS,
@@ -39,9 +40,9 @@ function toSettings(guild: PrismaGuild | null): GuildSettings {
     djRoleId: guild.djRoleId,
     textChannelId: guild.textChannelId,
     voiceChannelId: guild.voiceChannelId,
-    pinnedChannelId: guild.pinnedChannelId,
-    pinnedChannelMode: normalizePinnedChannelMode(guild.pinnedChannelMode),
-    pinnedChannelDeleteInput: guild.pinnedChannelDeleteInput,
+    textChannelInputPlay: guild.textChannelInputPlay,
+    textChannelMode: normalizeTextChannelMode(guild.textChannelMode),
+    textChannelDeleteInput: guild.textChannelDeleteInput,
     jtcEnabled: guild.jtcEnabled,
     jtcCategoryId: guild.jtcCategoryId,
     jtcMarkerChannelId: guild.jtcMarkerChannelId,
@@ -115,7 +116,8 @@ export const PUT = createGuildApiHandler({
       // 실패해도 봇은 60초 TTL 폴백으로 결국 최신 설정을 읽으므로 응답을 막지 않아요.
       // 믹서(갭리스·크로스페이드) 저장이면 reason을 실어 봇이 재생 중인 플레이어에 바로 적용하게 해요.
       const touchesMixer = MIXER_SETTING_KEYS.some((key) => key in data);
-      notifyGuildSettingsChanged(guildId, touchesMixer ? "mixer" : undefined).catch((error) => {
+      const touchesPanel = PANEL_SETTING_KEYS.some((key) => key in data);
+      notifyGuildSettingsChanged(guildId, touchesMixer ? "mixer" : touchesPanel ? "panel" : undefined).catch((error) => {
         console.warn(`Failed to notify guild settings change (guild ${guildId}):`, error);
       });
 

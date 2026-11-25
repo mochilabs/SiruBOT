@@ -14,8 +14,8 @@ vi.mock("@/hooks/use-session-redirect", () => ({ useSessionExpiredRedirect: () =
 const saved: GuildSettings = {
   volume: 100, ttsVolume: 100, ttsDuckLevel: 0.2, repeat: "off", related: false, enableController: true,
   sponsorBlockSegments: ["sponsor", "intro"], djRoleId: null, textChannelId: null,
-  voiceChannelId: null, pinnedChannelId: null, pinnedChannelMode: "play",
-  pinnedChannelDeleteInput: false, jtcEnabled: false, jtcCategoryId: null,
+  voiceChannelId: null, textChannelInputPlay: false, textChannelMode: "play",
+  textChannelDeleteInput: false, jtcEnabled: false, jtcCategoryId: null,
   jtcMarkerChannelId: null, jtcTemplate: "{user}의 방", jtcUserLimit: 0,
   gaplessEnabled: false, crossfadeEnabled: false, automixEnabled: false, automixMaxTempoChange: 0.06, automixMinConfidence: 0.30, crossfadeMs: 500,
   normalizationEnabled: false, ttsAnnounceMode: "sequential",

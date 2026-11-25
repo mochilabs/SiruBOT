@@ -53,10 +53,9 @@ const SCREEN_PARTS: Record<SettingsScreen, Part[]> = {
 		SEPARATOR,
 		TEXT(
 			() =>
-				`${emoji('pin')} **고정 채널**: 이 채널에 메시지를 입력하면 검색어로 재생해요. 권한 제한 없이 사용할 수 있으며, 재생 시 컨트롤러 메시지는 고정 유지돼요.`
+				`${emoji('pin')} 기본 텍스트 채널에는 플레이어 패널이 **메시지 1개로 고정**돼요. 채팅 입력 재생을 켜면 이 채널에 곡 제목이나 링크를 입력해 바로 재생할 수 있어요.`
 		),
-		{ row: 'pin' },
-		{ row: 'pinMode' },
+		{ row: 'inputMode' },
 		{ row: 'actions', back: true }
 	],
 	jtc: [
@@ -126,7 +125,6 @@ function mainText(guild: Guild): string {
 		`${emoji('cd')} **DJ 역할**: ${guild.djRoleId ? `<@&${guild.djRoleId}>` : '없음 (모든 사용자)'}`,
 		`${emoji('scroll')} **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
 		`${emoji('music_note')} **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,
-		`${emoji('pin')} **고정 채널**: ${guild.pinnedChannelId ? `<#${guild.pinnedChannelId}>` : '설정 안 됨'}`,
 		`${emoji('volume_up')} **임시 음성 채널**: ${onOff(guild.jtcEnabled)}`,
 		`${emoji('robot')} **AI 채팅**: ${AI_MODE_LABELS[normalizeAiMode(guild.aiMode)]}`,
 		`${emoji('tools')} **기능 모듈**: ${moduleSummary(guild)}`
@@ -178,12 +176,11 @@ function djText(guild: Guild): string {
 function channelText(guild: Guild): string {
 	return [
 		`### ${emoji('scroll')} 채널 설정`,
-		`기본 채널을 설정하면, 해당 채널에서만 명령어를 사용하거나 음악을 들을 수 있어요.`,
+		`기본 텍스트 채널을 설정하면 해당 채널에서만 명령어를 사용할 수 있고, 플레이어 패널이 그 채널에 메시지 1개로 고정돼요.`,
 		``,
 		`${emoji('scroll')} **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
 		`${emoji('music_note')} **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,
-		`${emoji('pin')} **고정 채널**: ${guild.pinnedChannelId ? `<#${guild.pinnedChannelId}>` : '설정 안 됨'}`,
-		`${emoji('inbox_tray')} **고정 채널 입력 동작**: ${guild.pinnedChannelMode === 'select' ? '선택 재생 (5개 중 선택)' : '즉시 재생 (첫 결과)'} · **입력 메시지 삭제**: ${guild.pinnedChannelDeleteInput ? '삭제함' : '보존'}`
+		`${emoji('inbox_tray')} **채팅 입력 재생**: ${guild.textChannelInputPlay ? (guild.textChannelMode === 'select' ? '켜짐 · 선택 재생 (5개 중 선택)' : '켜짐 · 즉시 재생 (첫 결과)') : '꺼짐'} · **입력 메시지 삭제**: ${guild.textChannelDeleteInput ? '삭제함' : '보존'}`
 	].join('\n');
 }
 

@@ -65,6 +65,8 @@ const EXPECTED_PIECES: string[] = [
 	'interaction-handlers:games',
 	'interaction-handlers:giveawayButton',
 	'interaction-handlers:onboardingButton',
+	'interaction-handlers:panelIdleButton',
+	'interaction-handlers:panelIdleSelect',
 	'interaction-handlers:queueViewButton',
 	'interaction-handlers:rolePanelButton',
 	'interaction-handlers:settings',

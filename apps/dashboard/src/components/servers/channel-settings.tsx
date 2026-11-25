@@ -18,7 +18,7 @@ import { SettingsPanel, useSettingsPanel } from "./settings-panel";
 import { SettingsSection, SettingsToggleRow } from "./settings-section";
 import { InfoBox, RetryLink, WarningBox } from "./settings-shared";
 
-const PINNED_MODE_OPTIONS: SearchableOption[] = [
+const INPUT_MODE_OPTIONS: SearchableOption[] = [
   {
     value: "play",
     label: "즉시 재생 (첫 결과 바로 재생)",
@@ -36,18 +36,18 @@ const NO_SELECTION = { value: "", label: "사용 안 함" };
 interface ChannelForm {
   textChannelId: string | null;
   voiceChannelId: string | null;
-  pinnedChannelId: string | null;
-  pinnedChannelMode: GuildSettings["pinnedChannelMode"];
-  pinnedChannelDeleteInput: boolean;
+  textChannelInputPlay: boolean;
+  textChannelMode: GuildSettings["textChannelMode"];
+  textChannelDeleteInput: boolean;
   djRoleId: string | null;
 }
 
 const toChannelForm = (settings: GuildSettings): ChannelForm => ({
   textChannelId: settings.textChannelId,
   voiceChannelId: settings.voiceChannelId,
-  pinnedChannelId: settings.pinnedChannelId,
-  pinnedChannelMode: settings.pinnedChannelMode,
-  pinnedChannelDeleteInput: settings.pinnedChannelDeleteInput,
+  textChannelInputPlay: settings.textChannelInputPlay,
+  textChannelMode: settings.textChannelMode,
+  textChannelDeleteInput: settings.textChannelDeleteInput,
   djRoleId: settings.djRoleId,
 });
 
@@ -85,7 +85,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
       panel={panel}
       icon={<Hash className="h-5 w-5" />}
       title="채널·권한 설정"
-      description="기본 채널, 고정 채널 동작, DJ 역할을 관리해요."
+      description="기본 채널(명령어 허용·고정 패널), 채팅 입력 재생, DJ 역할을 관리해요."
       notice={
         <InfoBox>
           <p>목록이 비어 있으면 새로고침해 주세요.</p>
@@ -112,7 +112,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
         <Field
           htmlFor="channel-default-text"
           label="기본 텍스트 채널"
-          description="미설정이면 입력이 온 채널을 그대로 사용해요."
+          description="설정하면 이 채널에서만 명령어를 쓸 수 있고, 플레이어 패널이 메시지 1개로 고정돼요. 미설정이면 입력이 온 채널을 그대로 사용해요."
         >
           <ChannelSelect
             id="channel-default-text"
@@ -144,48 +144,42 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
         </Field>
         </SettingsSection>
 
-        <SettingsSection title="고정 채널" summary={form.pinnedChannelId ? nameOf(form.pinnedChannelId) : "사용 안 함"}>
-      <Field
-        htmlFor="channel-pinned"
-        label="고정 채널"
-        description="이 채널에 입력한 텍스트를 검색어로 재생해요. 전체 채널에서 고정 채널을 하나만 지정할 수 있어요."
-      >
-        <ChannelSelect
-          id="channel-pinned"
-          channels={channels}
-          types={CHANNEL_TYPE_GROUP.chat}
-          noneLabel={NO_SELECTION.label}
-          value={form.pinnedChannelId ?? ""}
-          onChange={(value: string) => patch({ pinnedChannelId: value || null })}
-          placeholder="사용 안 함"
-          disabled={saving || listUnavailable}
+        <SettingsSection
+          title="채팅 입력 재생"
+          summary={form.textChannelId && form.textChannelInputPlay ? "켜짐" : "꺼짐"}
+        >
+      <SettingsToggleRow
+          title="채팅 입력으로 재생"
+          description="기본 텍스트 채널에 입력한 곡 제목·링크를 검색어로 재생해요. 기본 텍스트 채널을 지정하면 쓸 수 있어요."
+          control={<Switch checked={form.textChannelInputPlay} onChange={(checked: boolean) => patch({ textChannelInputPlay: checked })} disabled={saving || !form.textChannelId} aria-label="채팅 입력으로 재생" />}
         />
-      </Field>
 
       <Field
-        htmlFor="channel-pinned-mode"
-        label="고정 채널 입력 동작"
+        htmlFor="channel-input-mode"
+        label="입력 동작"
         description={
-          form.pinnedChannelId ? undefined : "고정 채널을 지정하면 적용돼요."
+          form.textChannelId && form.textChannelInputPlay
+            ? undefined
+            : "채팅 입력 재생을 켜면 적용돼요."
         }
       >
         <SearchableSelect
-          id="channel-pinned-mode"
-          options={PINNED_MODE_OPTIONS}
-          value={form.pinnedChannelMode}
+          id="channel-input-mode"
+          options={INPUT_MODE_OPTIONS}
+          value={form.textChannelMode}
           onChange={(value: string) =>
             patch({
-              pinnedChannelMode: value as ChannelForm["pinnedChannelMode"],
+              textChannelMode: value as ChannelForm["textChannelMode"],
             })
           }
-          disabled={saving || !form.pinnedChannelId}
+          disabled={saving || !form.textChannelId || !form.textChannelInputPlay}
         />
       </Field>
 
       <SettingsToggleRow
           title="입력 메시지 자동 삭제"
           description="봇이 재생을 시작한 뒤 입력 메시지를 지워요. 봇에게 메시지 관리 권한이 필요해요."
-          control={<Switch checked={form.pinnedChannelDeleteInput} onChange={(checked: boolean) => patch({ pinnedChannelDeleteInput: checked })} disabled={saving || !form.pinnedChannelId} aria-label="입력 메시지 자동 삭제" />}
+          control={<Switch checked={form.textChannelDeleteInput} onChange={(checked: boolean) => patch({ textChannelDeleteInput: checked })} disabled={saving || !form.textChannelId || !form.textChannelInputPlay} aria-label="입력 메시지 자동 삭제" />}
         />
 
         </SettingsSection>

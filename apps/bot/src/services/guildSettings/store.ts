@@ -69,6 +69,11 @@ export class GuildSettingsStore {
 	 * "이후"에 끝나는 in-flight 조회(loadGuild)가 stale 값을 캐시에 다시 심지 않게 해요.
 	 * 그런 조회는 세대 불일치로 감지되어 캐시 미스로 남겨 다음 조회가 DB에서 다시 읽어요.
 	 */
+	/** 캐시에 있는 값만 돌려줘요 (DB 조회 없음) — 무효화 직전 이전 값을 볼 때 써요 */
+	public peekCached(guildId: string): Guild | undefined {
+		return this.cache.get(guildId);
+	}
+
 	public invalidate(guildId: string): void {
 		this.cache.delete(guildId);
 		this.invalidationGeneration.set(guildId, (this.invalidationGeneration.get(guildId) ?? 0) + 1);

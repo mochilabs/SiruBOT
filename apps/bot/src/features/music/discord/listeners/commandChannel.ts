@@ -24,7 +24,7 @@ const COOLDOWN_MS = 2500;
 /** 선택 모드에서 보여줄 최대 결과 수 */
 
 /**
- * 고정 채널 리스너 — 설정된 채널의 텍스트 메시지를 검색어로 받아 재생한다.
+ * 기본 채널 입력 재생 리스너 — 설정된 채널의 텍스트 메시지를 검색어로 받아 재생한다.
  * 음성 채널 정책(봇과 같은 채널, 원격 권한자 예외)은 음악 유스케이스가 판정하고, 여기서는 노드·도배 방지와 응답 화면만 맡는다.
  */
 @ApplyOptions<Listener.Options>({
@@ -59,8 +59,9 @@ export class CommandChannelListener extends Listener {
 
 		const guildId = message.guildId;
 		if (!(await isMessageFeatureEnabled(this.container.guildService, guildId, 'music-channel'))) return;
-		const pinned = await guildChannels.getPinnedChannel(this.container.guildService, guildId);
+		const pinned = await guildChannels.getDefaultTextChannel(this.container.guildService, guildId);
 		if (!pinned || pinned !== message.channelId) return;
+		if (!(await guildChannels.getTextChannelInputPlay(this.container.guildService, guildId))) return;
 
 		if (content.length > MAX_QUERY_LENGTH) {
 			await message
@@ -102,13 +103,13 @@ export class CommandChannelListener extends Listener {
 				query: content,
 				platform: 'ytsearch' as const,
 				requester: { id: message.author.id, username: message.author.username },
-				// 텍스트 채널은 고정 채널로 고정한다 — 컨트롤러도 거기서 갱신된다.
+				// 텍스트 채널은 기본 채널로 고정한다 — 컨트롤러도 거기서 갱신된다.
 				textChannelId: pinned,
 				pinTextChannel: true
 			};
 
 			this.container.usageRecorder?.record(guildId, usageFeatureKey('msg', 'music-channel'), message.author.id);
-			const mode = await guildChannels.getPinnedChannelMode(this.container.guildService, guildId);
+			const mode = await guildChannels.getTextChannelMode(this.container.guildService, guildId);
 			if (mode === 'select') {
 				const found = await this.container.musicPlay.search(actor, input);
 				await this.runSelect(message, found.player, content, found.tracks.slice(0, RESULT_LIMIT));
@@ -133,10 +134,10 @@ export class CommandChannelListener extends Listener {
 		}
 	}
 
-	/** 고정 채널 입력 메시지 삭제 설정 — 켜져 있으면 봇이 처리를 마친 뒤 입력 메시지를 지운다 (Manage Messages 권한 필요). */
+	/** 기본 채널 입력 메시지 삭제 설정 — 켜져 있으면 봇이 처리를 마친 뒤 입력 메시지를 지운다 (Manage Messages 권한 필요). */
 	private async resolveInputMessage(message: Message, guildId: string): Promise<void> {
 		try {
-			if (!(await guildChannels.getPinnedChannelDeleteInput(this.container.guildService, guildId))) return;
+			if (!(await guildChannels.getTextChannelDeleteInput(this.container.guildService, guildId))) return;
 			if (message.deletable) await message.delete().catch(() => null);
 		} catch (error) {
 			this.container.logger.warn(`[commandChannel] failed to delete input message (guild ${guildId}): ${error}`);

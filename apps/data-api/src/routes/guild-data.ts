@@ -76,7 +76,7 @@ export function registerGuildDataRoutes(fastify: FastifyInstance): void {
 	// reason이 'mixer'면 봇이 재생 중인 플레이어에 갭리스·크로스페이드 설정을 바로 밀어 넣어요.
 	const invalidateSchema = z.object({
 		guildId: redisIdSchema,
-		reason: z.enum(['mixer']).optional()
+		reason: z.enum(['mixer', 'panel']).optional()
 	});
 	fastify.post('/v1/internal/guild-settings/invalidate', async (request, reply) => {
 		try {

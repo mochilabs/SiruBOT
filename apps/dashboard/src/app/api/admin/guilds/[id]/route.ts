@@ -8,6 +8,7 @@ import { createGuildApiHandler } from "@/lib/api-handler";
 import { notifyGuildSettingsChanged } from "@/lib/data-api/client";
 import { db } from "@/lib/db";
 import { MIXER_SETTING_KEYS, normalizeMixerToggles } from "@/lib/mixer-settings";
+import { PANEL_SETTING_KEYS } from "@/lib/panel-settings";
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 import { guildSettingsSchema, parseSettingBody } from "@/lib/schemas";
@@ -25,9 +26,9 @@ const adminGuildPatchSchema = z.object({
 	djRoleId: nullableSnowflake.optional(),
 	textChannelId: nullableSnowflake.optional(),
 	voiceChannelId: nullableSnowflake.optional(),
-	pinnedChannelId: nullableSnowflake.optional(),
-	pinnedChannelMode: z.enum(["play", "select"]).optional(),
-	pinnedChannelDeleteInput: z.boolean().optional(),
+	textChannelInputPlay: z.boolean().optional(),
+	textChannelMode: z.enum(["play", "select"]).optional(),
+	textChannelDeleteInput: z.boolean().optional(),
 	jtcEnabled: z.boolean().optional(),
 	jtcCategoryId: nullableSnowflake.optional(),
 	jtcMarkerChannelId: nullableSnowflake.optional(),
@@ -96,9 +97,9 @@ async function loadGuildDetail(guildId: string) {
 		djRoleId: guild.djRoleId,
 		textChannelId: guild.textChannelId,
 		voiceChannelId: guild.voiceChannelId,
-		pinnedChannelId: guild.pinnedChannelId,
-		pinnedChannelMode: ["play", "select"].includes(guild.pinnedChannelMode) ? guild.pinnedChannelMode : "play",
-		pinnedChannelDeleteInput: guild.pinnedChannelDeleteInput,
+		textChannelInputPlay: guild.textChannelInputPlay,
+		textChannelMode: ["play", "select"].includes(guild.textChannelMode) ? guild.textChannelMode : "play",
+		textChannelDeleteInput: guild.textChannelDeleteInput,
 		jtcEnabled: guild.jtcEnabled,
 		jtcCategoryId: guild.jtcCategoryId,
 		jtcMarkerChannelId: guild.jtcMarkerChannelId,
@@ -196,7 +197,8 @@ export const PATCH = createGuildApiHandler({
 			const touchesMixer = MIXER_SETTING_KEYS.some(
 				(key) => key in updateData,
 			);
-			notifyGuildSettingsChanged(guildId, touchesMixer ? "mixer" : undefined).catch((error) => {
+			const touchesPanel = PANEL_SETTING_KEYS.some((key) => key in updateData);
+			notifyGuildSettingsChanged(guildId, touchesMixer ? "mixer" : touchesPanel ? "panel" : undefined).catch((error) => {
 				console.warn(`Failed to notify guild settings change from admin (guild ${guildId}):`, error);
 			});
 

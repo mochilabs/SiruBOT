@@ -184,7 +184,7 @@ export type GreetingTestResult = z.infer<typeof memberGreetingTestStateSchema>;
 /** 길드 ID — 기존 수신 측 검증(1~32자 문자열)을 그대로 유지해요 */
 const triggerGuildIdSchema = z.string().min(1).max(32);
 
-/** 설정 무효화 — reason은 알려진 값('mixer')만 의미가 있고 모르는 값은 무시해요 (거부하지 않아요) */
+/** 설정 무효화 — reason은 알려진 값('mixer'·'panel')만 의미가 있고 모르는 값은 무시해요 (거부하지 않아요) */
 export const guildSettingsInvalidateSchema = z.object({ guildId: triggerGuildIdSchema, reason: z.unknown().optional() });
 export const botProfileTriggerSchema = z.object({ guildId: triggerGuildIdSchema });
 /** 멤버 인사 전송 트리거 — requestId가 형식에 어긋나면 값만 버리고 트리거는 처리해요 */

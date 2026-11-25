@@ -5,7 +5,8 @@
  * data-api의 내부 엔드포인트가 Redis 채널(`sirubot:guild-settings:invalidate`)로
  * guildId를 브로드캐스트하면, 각 봇 프로세스(샤드 replica마다 1개)가 이 리스너로
  * 자기 캐시만 무효화해요. 무효화는 guildId만 전달하고 봇이 DB에서 다시 읽어요.
- * 대시보드에서 믹서(갭리스·크로스페이드)를 저장하면 reason: 'mixer'가 함께 와서,
+ * 대시보드에서 기본 채널 설정을 저장하면 reason: 'panel'이 와서 상시 패널을 맞추고,
+ * 믹서(갭리스·크로스페이드)를 저장하면 reason: 'mixer'가 함께 와서,
  * 이 길드를 보유한 봇이 재생 중인 플레이어에 설정을 바로 밀어 넣어요 (/설정 오디오 페이지와 같은 동작).
  *
  * - 이 채널은 대시보드 저장 흐름이 서명 없이 퍼블리시해요 (계약의 signed: false).
@@ -43,6 +44,8 @@ async function applyMixerToPlayer(guildId: string, logger: RedisLogger): Promise
 export function createGuildSettingsInvalidationListener(): RedisBinding {
 	return createRedisEventListener(guildSettingsInvalidateEvent, ({ event, logger }) => {
 		const { guildId } = event;
+		// 기본 채널 패널 동기화에 쓸 이전 채널 — 무효화 전에 캐시에서 본다 (캐시에 없으면 null).
+		const previousTextChannelId = container.guildService.peekCached(guildId)?.textChannelId ?? null;
 		container.guildService.invalidate(guildId);
 		// 스타보드 설정(기준·이모지·채널)도 같은 저장 흐름으로 바뀌어요
 		container.starboardService.invalidateSettings(guildId);
@@ -52,5 +55,9 @@ export function createGuildSettingsInvalidationListener(): RedisBinding {
 		void container.customSlashRegistry.syncGuildSlashCommands(guildId, logger);
 		logger.debug(`길드 설정 캐시 무효화: ${guildId}`);
 		if (event.reason === 'mixer') void applyMixerToPlayer(guildId, logger);
+		// 기본 채널·입력 재생 설정을 저장하면 이 길드를 보유한 봇이 상시 패널을 맞춘다.
+		if (event.reason === 'panel' && container.client.guilds.cache.has(guildId)) {
+			void container.lavalink.playerNotifier.syncPanel(guildId, previousTextChannelId);
+		}
 	});
 }

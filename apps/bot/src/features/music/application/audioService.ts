@@ -23,6 +23,8 @@ export interface AudioServiceDeps {
 	getClient: () => Client;
 	/** mixerService는 audioService 뒤에 만들어지고 서로 얽혀 있어서 호출 시점에 읽어요 */
 	getMixerService: () => MixerService;
+	/** 서버의 기본 텍스트 채널 — 설정돼 있으면 모든 진입점의 플레이어가 이 채널(상시 패널)을 쓴다 */
+	getDefaultTextChannel?: (guildId: string) => Promise<string | null>;
 	/** 큐 관측·선두 교체 헬퍼가 쓰는 lavalink 의존성 (container.lavalink) */
 	lavalink: LavalinkDeps;
 }
@@ -68,6 +70,12 @@ export class AudioService {
 	): Promise<Player> {
 		const audio = this.deps.getAudio();
 		const existing = audio.getPlayer(guildId);
+		// 기본 텍스트 채널이 설정돼 있으면 어떤 진입점(슬래시·AI·웹)이든 패널이 있는 그 채널을 플레이어 채널로 쓴다.
+		const defaultChannel = await this.deps.getDefaultTextChannel?.(guildId).catch(() => null);
+		if (defaultChannel) {
+			textChannelId = defaultChannel;
+			options = { ...options, pinText: true };
+		}
 		if (existing) {
 			if (options.pinText && textChannelId) existing.textChannelId = textChannelId;
 			return existing;

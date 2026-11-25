@@ -89,6 +89,7 @@ import type { AppLogger } from '../lib/appLogger.ts';
 import { RedisPublisher } from '../lib/redisPublisher.ts';
 import type { RedisBinding, RedisRuntime } from '../lib/redisResponder.ts';
 import { createSharedRedisSubscriber, type RedisSubscriberEntry } from './redisSubscribers.ts';
+import * as guildChannels from '../services/guildSettings/channels.ts';
 import * as guildPlayback from '../services/guildSettings/playback.ts';
 import * as guildJtc from '../services/guildSettings/jtc.ts';
 import { isMessageFeatureEnabled } from '../services/guildSettings/modules.ts';
@@ -242,7 +243,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			// audio는 setupAudio 뒤에, client는 로그인 뒤에, mixerService는 이 서비스 뒤에 만들어져서 호출 시점에 읽어요
 			getAudio: () => container.audio,
 			getClient: () => container.client,
-			getMixerService: () => container.mixerService
+			getMixerService: () => container.mixerService,
+			getDefaultTextChannel: (guildId) => guildChannels.getDefaultTextChannel(container.guildService, guildId)
 		});
 		container.mixerService = new MixerService({
 			logger: appLogger,
@@ -337,7 +339,9 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			getClient: () => container.client,
 			getCommands: () => container.stores.get('commands'),
 			fetchCommandIndex,
-			getSearchConfig: () => getConfig().search
+			getSearchConfig: () => getConfig().search,
+			// playerNotifier는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
+			syncTextChannelPanel: (guildId, previousChannelId) => container.playerNotifier.syncPanel(guildId, previousChannelId)
 		});
 		container.aiChat = createAiChat({
 			logger: appLogger,

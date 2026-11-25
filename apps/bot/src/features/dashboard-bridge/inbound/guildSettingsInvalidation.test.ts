@@ -10,7 +10,9 @@ const { clearGuildCustomCommandsCache, syncGuildSlashCommands, containerStub } =
 			customCommandStore: { clearGuildCustomCommandsCache },
 			customSlashRegistry: { syncGuildSlashCommands },
 			audio: { getPlayer: vi.fn() },
-			guildService: { invalidate: vi.fn() },
+			guildService: { invalidate: vi.fn(), peekCached: vi.fn() },
+			client: { guilds: { cache: { has: vi.fn().mockReturnValue(false) } } },
+			lavalink: { playerNotifier: { syncPanel: vi.fn() } },
 			starboardService: { invalidateSettings: vi.fn() },
 			guildMixer: { getMixerSettings: vi.fn() },
 			mixerService: { pushCrossfadeConfig: vi.fn(), preloadUpcoming: vi.fn(), clearNext: vi.fn() }

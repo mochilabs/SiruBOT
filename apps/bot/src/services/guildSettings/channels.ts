@@ -1,9 +1,9 @@
-import { normalizePinnedChannelMode } from '@sirubot/utils/guildSettingsContract';
+import { normalizeTextChannelMode } from '@sirubot/utils/guildSettingsContract';
 import type { GuildSettingsStore } from './store.ts';
-import type { PinnedChannelMode } from './types.ts';
+import type { TextChannelMode } from './types.ts';
 
 /**
- * 기본 채널·고정 채널(스마트 큐) 설정 CRUD — 읽기는 store.getGuild 캐시를,
+ * 기본 채널(명령어 허용·상시 패널·입력 재생) 설정 CRUD — 읽기는 store.getGuild 캐시를,
  * 쓰기는 store.upsertField 공용 헬퍼를 써요.
  */
 
@@ -22,44 +22,45 @@ export async function setDefaultVoiceChannel(store: GuildSettingsStore, guildId:
 	return guild.voiceChannelId;
 }
 
-export async function getPinnedChannel(store: GuildSettingsStore, guildId: string): Promise<string | null> {
+/** 기본 채널 상시 패널 메시지 ID — 채널이 바뀌면 의미가 없어지므로 호출부가 함께 비워요. */
+export async function getTextMessage(store: GuildSettingsStore, guildId: string): Promise<string | null> {
 	const guild = await store.getGuild(guildId);
-	return guild.pinnedChannelId;
+	return guild.textMessageId ?? null;
 }
 
-export async function setPinnedChannel(store: GuildSettingsStore, guildId: string, channelId: string | null) {
-	const guild = await store.upsertField(guildId, 'pinnedChannelId', channelId);
-	return guild.pinnedChannelId;
+export async function setTextMessage(store: GuildSettingsStore, guildId: string, messageId: string | null) {
+	const guild = await store.upsertField(guildId, 'textMessageId', messageId);
+	return guild.textMessageId ?? null;
 }
 
-/** 고정 채널 상시 패널 메시지 ID — 채널이 바뀌면 의미가 없어지므로 호출부가 함께 비워요. */
-export async function getPinnedMessage(store: GuildSettingsStore, guildId: string): Promise<string | null> {
+export async function getTextChannelMode(store: GuildSettingsStore, guildId: string): Promise<TextChannelMode> {
 	const guild = await store.getGuild(guildId);
-	return guild.pinnedMessageId ?? null;
+	return normalizeTextChannelMode(guild.textChannelMode);
 }
 
-export async function setPinnedMessage(store: GuildSettingsStore, guildId: string, messageId: string | null) {
-	const guild = await store.upsertField(guildId, 'pinnedMessageId', messageId);
-	return guild.pinnedMessageId ?? null;
+export async function setTextChannelMode(store: GuildSettingsStore, guildId: string, mode: TextChannelMode) {
+	const guild = await store.upsertField(guildId, 'textChannelMode', mode);
+	return guild.textChannelMode as TextChannelMode;
 }
 
-export async function getPinnedChannelMode(store: GuildSettingsStore, guildId: string): Promise<PinnedChannelMode> {
+/** 기본 채널 입력 메시지 삭제 여부 — 봇 처리 후 사용자 메시지를 지운다 (Manage Messages 권한 필요) */
+export async function getTextChannelDeleteInput(store: GuildSettingsStore, guildId: string): Promise<boolean> {
 	const guild = await store.getGuild(guildId);
-	return normalizePinnedChannelMode(guild.pinnedChannelMode);
+	return guild.textChannelDeleteInput;
 }
 
-export async function setPinnedChannelMode(store: GuildSettingsStore, guildId: string, mode: PinnedChannelMode) {
-	const guild = await store.upsertField(guildId, 'pinnedChannelMode', mode);
-	return guild.pinnedChannelMode as PinnedChannelMode;
+export async function setTextChannelDeleteInput(store: GuildSettingsStore, guildId: string, deleteInput: boolean) {
+	const guild = await store.upsertField(guildId, 'textChannelDeleteInput', deleteInput);
+	return guild.textChannelDeleteInput;
 }
 
-/** 고정 채널 입력 메시지 삭제 여부 — 봇 처리 후 사용자 메시지를 지운다 (Manage Messages 권한 필요) */
-export async function getPinnedChannelDeleteInput(store: GuildSettingsStore, guildId: string): Promise<boolean> {
+/** 기본 채널에서 입력한 텍스트를 검색어로 재생할지 */
+export async function getTextChannelInputPlay(store: GuildSettingsStore, guildId: string): Promise<boolean> {
 	const guild = await store.getGuild(guildId);
-	return guild.pinnedChannelDeleteInput;
+	return guild.textChannelInputPlay;
 }
 
-export async function setPinnedChannelDeleteInput(store: GuildSettingsStore, guildId: string, deleteInput: boolean) {
-	const guild = await store.upsertField(guildId, 'pinnedChannelDeleteInput', deleteInput);
-	return guild.pinnedChannelDeleteInput;
+export async function setTextChannelInputPlay(store: GuildSettingsStore, guildId: string, enabled: boolean) {
+	const guild = await store.upsertField(guildId, 'textChannelInputPlay', enabled);
+	return guild.textChannelInputPlay;
 }
