@@ -141,12 +141,16 @@ export function createPlayerWebResponder(): RedisBinding {
 
 			const track = result.playlist?.selectedTrack ?? result.queued[0];
 			if (!track) throw new Error(`web play: 검색 결과 트랙이 없어요 (guild ${guildId}, uri ${request.uri})`);
-			await sendFeedbackMessage(
-				logger,
-				guildId,
-				result.player.textChannelId,
-				await trackPlayFeedback(result.player, track, request.userId, result.wasIdle)
-			);
+			// 패널 모드에서는 패널이 결과를 보여주므로 채널에 피드백 메시지를 따로 올리지 않아요.
+			const panelChannelId = await guildChannels.getPanelChannel(container.guildService, guildId);
+			if (!panelChannelId || panelChannelId !== result.player.textChannelId) {
+				await sendFeedbackMessage(
+					logger,
+					guildId,
+					result.player.textChannelId,
+					await trackPlayFeedback(result.player, track, request.userId, result.wasIdle)
+				);
+			}
 			return {};
 		} finally {
 			inFlight.delete(guildId);

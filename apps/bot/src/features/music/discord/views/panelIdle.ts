@@ -23,7 +23,7 @@ export interface PanelIdleOptions {
 	inputPlay: boolean;
 	/** 입력 재생 모드 */
 	inputMode: 'play' | 'select';
-	/** 입력 메시지 삭제 여부 */
+	/** 패널 모드 여부 */
 	deleteInput: boolean;
 	djRoleId: string | null;
 	/** 서버에서 최근 재생된 곡 (최신순, 최대 5곡) */
@@ -39,7 +39,7 @@ export function panelIdleView(options: PanelIdleOptions) {
 		: '`/재생`으로 곡을 틀어 보세요. 채널 설정에서 **채팅 입력 재생**을 켜면 곡 제목만 입력해도 재생해요.';
 	const settings = [
 		`${emoji('cd')} DJ 역할: ${options.djRoleId ? `<@&${options.djRoleId}>` : '없음'}`,
-		`${emoji('inbox_tray')} 입력 재생: ${options.inputPlay ? `켜짐 (${options.inputMode === 'select' ? '선택' : '즉시'}${options.deleteInput ? ' · 입력 삭제' : ''})` : '꺼짐'}`
+		`${emoji('inbox_tray')} 입력 재생: ${options.inputPlay ? `켜짐 (${options.inputMode === 'select' ? '선택' : '즉시'}${options.deleteInput ? ' · 패널 모드' : ''})` : '꺼짐'}`
 	].join(' · ');
 
 	const container = createContainer().addTextDisplayComponents(

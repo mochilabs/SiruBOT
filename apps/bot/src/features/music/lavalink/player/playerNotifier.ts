@@ -447,7 +447,7 @@ export class PlayerNotifier implements Stoppable {
 		await this.enqueueControllerOperation(guildId, async () => {
 			try {
 				const oldMessageId = await guildChannels.getTextMessage(this.deps.guildService, guildId);
-				// 패널 모드(기본 채널 + 입력 재생 + 보낸 후 삭제)일 때만 패널 채널이 있다.
+				// 패널 모드(기본 채널 + 입력 재생 + 패널 모드)일 때만 패널 채널이 있다.
 				const channelId = await guildChannels.getPanelChannel(this.deps.guildService, guildId);
 				const player = this.deps.audio?.getPlayer?.(guildId);
 				const playing = Boolean(player?.queue.current);

@@ -23,7 +23,7 @@ export async function setDefaultVoiceChannel(store: GuildSettingsStore, guildId:
 }
 
 /**
- * 상시 패널을 쓰는 채널 — 기본 텍스트 채널 + 채팅 입력 재생 + 입력 메시지 삭제(보낸 후 삭제)가 모두 켜졌을 때만 돌려줘요.
+ * 상시 패널을 쓰는 채널 — 기본 텍스트 채널 + 채팅 입력 재생 + 패널 모드(textChannelDeleteInput)가 모두 켜졌을 때만 돌려줘요.
  * 기본 채널만 설정한 경우는 명령어 제한만 하고 패널 메시지는 고정하지 않아요.
  */
 export async function getPanelChannel(store: GuildSettingsStore, guildId: string): Promise<string | null> {
@@ -52,7 +52,7 @@ export async function setTextChannelMode(store: GuildSettingsStore, guildId: str
 	return guild.textChannelMode as TextChannelMode;
 }
 
-/** 기본 채널 입력 메시지 삭제 여부 — 봇 처리 후 사용자 메시지를 지운다 (Manage Messages 권한 필요) */
+/** 패널 모드 여부 (textChannelDeleteInput 컬럼) — — 봇 처리 후 사용자 메시지를 지운다 (Manage Messages 권한 필요) */
 export async function getTextChannelDeleteInput(store: GuildSettingsStore, guildId: string): Promise<boolean> {
 	const guild = await store.getGuild(guildId);
 	return guild.textChannelDeleteInput;

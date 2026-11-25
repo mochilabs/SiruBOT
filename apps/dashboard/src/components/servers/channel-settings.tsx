@@ -177,9 +177,9 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
       </Field>
 
       <SettingsToggleRow
-          title="입력 메시지 자동 삭제"
-          description="봇이 재생을 시작한 뒤 입력 메시지를 지워요. 켜면 플레이어 패널이 메시지 1개로 고정돼요. 봇에게 메시지 관리 권한이 필요해요."
-          control={<Switch checked={form.textChannelDeleteInput} onChange={(checked: boolean) => patch({ textChannelDeleteInput: checked })} disabled={saving || !form.textChannelId || !form.textChannelInputPlay} aria-label="입력 메시지 자동 삭제" />}
+          title="패널 모드"
+          description="플레이어 패널을 메시지 1개로 고정하고, 입력한 메시지는 처리 후 지워요. 봇에게 메시지 관리 권한이 필요해요."
+          control={<Switch checked={form.textChannelDeleteInput} onChange={(checked: boolean) => patch({ textChannelDeleteInput: checked })} disabled={saving || !form.textChannelId || !form.textChannelInputPlay} aria-label="패널 모드" />}
         />
 
         </SettingsSection>

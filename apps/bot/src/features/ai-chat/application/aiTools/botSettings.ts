@@ -106,7 +106,7 @@ const BOT_SETTING_LABELS: Record<string, string> = {
 	default_voice_channel: '기본 음성 채널',
 	text_input_play: '기본 채널 채팅 입력 재생',
 	text_input_mode: '채팅 입력 재생 모드',
-	text_delete_input: '채팅 입력 메시지 삭제',
+	text_delete_input: '패널 모드',
 	dj_role: 'DJ 역할',
 	jtc_enabled: '임시 음성방',
 	jtc_category: '임시 음성방 카테고리',
@@ -232,7 +232,8 @@ export function createBotSettingsTools(
 			},
 			text_delete_input: {
 				type: 'boolean',
-				description: '기본 채널에서 사용자가 입력한 메시지를 처리 후 자동 삭제할지 여부'
+				description:
+					'패널 모드 여부 — 켜면 기본 채널에 플레이어 패널을 메시지 1개로 고정하고, 사용자가 입력한 메시지는 처리 후 삭제해요 (채팅 입력 재생이 켜져 있어야 해요)'
 			},
 			dj_role: {
 				type: 'string',

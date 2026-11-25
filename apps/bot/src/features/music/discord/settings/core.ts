@@ -200,7 +200,7 @@ export const coreActions = {
 			row: 'actions',
 			build: (guild) =>
 				new ButtonBuilder()
-					.setLabel(guild.textChannelDeleteInput ? '입력 메시지 보존' : '입력 메시지 삭제')
+					.setLabel(guild.textChannelDeleteInput ? '패널 모드 끄기' : '패널 모드 켜기')
 					.setStyle(ButtonStyle.Secondary)
 					.setDisabled(!guild.textChannelId || !guild.textChannelInputPlay)
 		}

@@ -53,7 +53,7 @@ const SCREEN_PARTS: Record<SettingsScreen, Part[]> = {
 		SEPARATOR,
 		TEXT(
 			() =>
-				`${emoji('pin')} 채팅 입력 재생을 켜면 기본 채널에 곡 제목이나 링크를 입력해 바로 재생할 수 있어요. **입력 메시지 삭제**까지 켜면 플레이어 패널이 메시지 1개로 고정돼요.`
+				`${emoji('pin')} 채팅 입력 재생을 켜면 기본 채널에 곡 제목이나 링크를 입력해 바로 재생할 수 있어요. **패널 모드**까지 켜면 플레이어 패널이 메시지 1개로 고정되고, 입력한 메시지는 지워져요.`
 		),
 		{ row: 'inputMode' },
 		{ row: 'actions', back: true }
@@ -180,7 +180,7 @@ function channelText(guild: Guild): string {
 		``,
 		`${emoji('scroll')} **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
 		`${emoji('music_note')} **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,
-		`${emoji('inbox_tray')} **채팅 입력 재생**: ${guild.textChannelInputPlay ? (guild.textChannelMode === 'select' ? '켜짐 · 선택 재생 (5개 중 선택)' : '켜짐 · 즉시 재생 (첫 결과)') : '꺼짐'} · **입력 메시지 삭제**: ${guild.textChannelDeleteInput ? '삭제함' : '보존'}`
+		`${emoji('inbox_tray')} **채팅 입력 재생**: ${guild.textChannelInputPlay ? (guild.textChannelMode === 'select' ? '켜짐 · 선택 재생 (5개 중 선택)' : '켜짐 · 즉시 재생 (첫 결과)') : '꺼짐'} · **패널 모드**: ${guild.textChannelDeleteInput ? '켜짐' : '꺼짐'}`
 	].join('\n');
 }
 
