@@ -12,6 +12,10 @@ const MAX_CAPTION_CHARS = 400_000;
 /** 번역 줄을 원문 줄에 붙일 때 허용하는 시작 시각 차이 */
 const PAIR_TOLERANCE_MS = 1_500;
 const MIN_LINES = 4;
+const SPAM_MIN_TOKENS = 8;
+const SPAM_MAX_DISTINCT_RATIO = 4;
+const SPAM_MIN_UNIT_REPEATS = 6;
+const SPAM_MAX_UNIT_LENGTH = 12;
 const CAPTION_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 
 /** 자막 조회 결과 — `error`는 막혀서 못 받은 것이라 가사 캐시를 짧게 잡아요. */
@@ -45,7 +49,17 @@ function isNoiseLine(text: string): boolean {
 	return /^[[(（【].*[\])）】]$/u.test(stripped);
 }
 
-/** 업로더 자막(json3)을 줄 목록으로 바꿔요 — 잡음 줄은 버리고 줄바꿈은 공백으로 합쳐요. */
+const EDGE_SYMBOLS = /^[\s\p{S}\p{Pd}~〜…·*_#]+|[\s\p{S}\p{Pd}~〜…·*_#]+$/gu;
+const REPEATED_UNIT = new RegExp(`^(.{1,${SPAM_MAX_UNIT_LENGTH}}?)\\1{${SPAM_MIN_UNIT_REPEATS - 1},}$`, 'u');
+
+/** 같은 말을 도배한 줄 — 단어가 거의 다 같거나(`yeah yeah yeah …`), 짧은 조각이 붙어서 반복돼요(`아아아아아아`). */
+function isRepeatSpam(text: string): boolean {
+	const tokens = text.split(/\s+/);
+	if (tokens.length >= SPAM_MIN_TOKENS && new Set(tokens).size * SPAM_MAX_DISTINCT_RATIO <= tokens.length) return true;
+	return REPEATED_UNIT.test(text.replace(/\s+/g, ''));
+}
+
+/** 업로더 자막(json3)을 줄 목록으로 바꿔요 — 잡음·도배 줄은 버리고 줄바꿈은 공백으로 합쳐요. 앞뒤 기호는 잘라내요. */
 export function parseJson3Captions(raw: string): LyricLine[] {
 	if (raw.length > MAX_CAPTION_CHARS) return [];
 	let doc: { events?: Json3Event[] };
@@ -61,9 +75,8 @@ export function parseJson3Captions(raw: string): LyricLine[] {
 			.map((seg) => seg.utf8 ?? '')
 			.join('')
 			.replace(/\s*\n\s*/g, ' ')
-			.replace(/^[♪♫♬\s]+|[♪♫♬\s]+$/gu, '')
-			.trim();
-		if (!text || isNoiseLine(text)) continue;
+			.replace(EDGE_SYMBOLS, '');
+		if (!text || isNoiseLine(text) || isRepeatSpam(text)) continue;
 		lines.push({ startMs: event.tStartMs, text, endMs: typeof event.dDurationMs === 'number' ? event.tStartMs + event.dDurationMs : null });
 	}
 	return lines.sort((a, b) => a.startMs - b.startMs);
