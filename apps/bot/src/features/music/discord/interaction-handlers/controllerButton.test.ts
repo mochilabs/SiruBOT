@@ -5,7 +5,7 @@ import ControllerButtonHandler from './controllerButton.ts';
 import { controllerId } from '../customIds.ts';
 vi.mock('../../../../services/guildSettings/channels.ts', async (orig) => ({
 	...(await orig<Record<string, unknown>>()),
-	...{ getPinnedChannel: mocks.pinned }
+	...{ getPanelChannel: mocks.pinned }
 }));
 vi.mock('../../application/actor.ts', () => ({ actorFromMember: () => actor }));
 

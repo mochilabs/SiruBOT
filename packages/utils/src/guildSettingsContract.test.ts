@@ -7,14 +7,14 @@ import {
 	JTC_TEMPLATE_MAX_LENGTH,
 	JTC_USER_LIMIT_RANGE,
 	MUSIC_VOLUME_RANGE,
-	PINNED_CHANNEL_MODES,
+	TEXT_CHANNEL_MODES,
 	REPEAT_MODES,
 	SPONSORBLOCK_SEGMENTS,
 	TTS_ANNOUNCE_MODES,
 	TTS_DUCK_LEVEL_RANGE,
 	TTS_VOLUME_RANGE,
 	normalizeAiMode,
-	normalizePinnedChannelMode,
+	normalizeTextChannelMode,
 	normalizeRepeatMode,
 	normalizeSponsorBlockSegments,
 	normalizeTtsAnnounceMode
@@ -26,7 +26,7 @@ describe('guildSettingsContract 열거값', () => {
 	it('열거값과 순서를 고정해요', () => {
 		expect(AI_MODES).toEqual(['all', 'channels', 'off']);
 		expect(REPEAT_MODES).toEqual(['off', 'track', 'queue']);
-		expect(PINNED_CHANNEL_MODES).toEqual(['play', 'select']);
+		expect(TEXT_CHANNEL_MODES).toEqual(['play', 'select']);
 		expect(TTS_ANNOUNCE_MODES).toEqual(['sequential', 'parallel', 'interrupt']);
 		expect(SPONSORBLOCK_SEGMENTS).toEqual(['sponsor', 'selfpromo', 'interaction', 'intro', 'outro', 'preview', 'music_offtopic', 'filler']);
 	});
@@ -37,8 +37,8 @@ describe('guildSettingsContract 열거값', () => {
 		expect(normalizeAiMode(null)).toBe('all');
 		expect(normalizeRepeatMode('queue')).toBe('queue');
 		expect(normalizeRepeatMode('bogus')).toBe('off');
-		expect(normalizePinnedChannelMode('select')).toBe('select');
-		expect(normalizePinnedChannelMode(undefined)).toBe('play');
+		expect(normalizeTextChannelMode('select')).toBe('select');
+		expect(normalizeTextChannelMode(undefined)).toBe('play');
 		expect(normalizeTtsAnnounceMode('interrupt')).toBe('interrupt');
 		expect(normalizeTtsAnnounceMode('bogus')).toBe('sequential');
 	});

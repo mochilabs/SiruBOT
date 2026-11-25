@@ -229,7 +229,7 @@ export async function forwardDataApiImage(
  */
 export async function notifyGuildSettingsChanged(
   guildId: string,
-  reason?: "mixer",
+  reason?: "mixer" | "panel",
 ): Promise<boolean> {
   const result = await postDataApi<GuildSettingsInvalidateResult>(
     "/v1/internal/guild-settings/invalidate",

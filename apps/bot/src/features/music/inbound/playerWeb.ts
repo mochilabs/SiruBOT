@@ -45,7 +45,7 @@ type Payload = RedisRpcPayload<typeof playerWebRpc>;
 
 /** 검색 결과로 돌려줄 최대 트랙 수 — 웹 선택 UI 목록 크기 */
 const MAX_TRACKS = 5;
-/** 같은 유저의 재생 요청 쿨다운(ms) — commandChannel 고정 채널 리스너와 같은 도배 방지 */
+/** 같은 유저의 재생 요청 쿨다운(ms) — commandChannel 입력 재생 리스너와 같은 도배 방지 */
 const PLAY_COOLDOWN_MS = 2_500;
 
 /** 검색 결과를 웹 응답 요약으로 변환 — info 필드만 노출해요 (raw Track 객체는 스키마에 안 맞아요) */
@@ -134,19 +134,23 @@ export function createPlayerWebResponder(): RedisBinding {
 					platform: 'ytsearch',
 					requester: playback.requester,
 					textChannelId: playback.textChannelId,
-					pinTextChannel: playback.textChannelId !== null
+					pinTextChannel: playback.pinTextChannel
 				},
 				{ kind: 'all' }
 			);
 
 			const track = result.playlist?.selectedTrack ?? result.queued[0];
 			if (!track) throw new Error(`web play: 검색 결과 트랙이 없어요 (guild ${guildId}, uri ${request.uri})`);
-			await sendFeedbackMessage(
-				logger,
-				guildId,
-				result.player.textChannelId,
-				await trackPlayFeedback(result.player, track, request.userId, result.wasIdle)
-			);
+			// 패널 모드에서는 패널이 결과를 보여주므로 채널에 피드백 메시지를 따로 올리지 않아요.
+			const panelChannelId = await guildChannels.getPanelChannel(container.guildService, guildId);
+			if (!panelChannelId || panelChannelId !== result.player.textChannelId) {
+				await sendFeedbackMessage(
+					logger,
+					guildId,
+					result.player.textChannelId,
+					await trackPlayFeedback(result.player, track, request.userId, result.wasIdle)
+				);
+			}
 			return {};
 		} finally {
 			inFlight.delete(guildId);
@@ -304,20 +308,24 @@ async function applyQueueControl(request: PlayerWebControlRequest, guild: Guild,
 }
 
 /**
- * 재생 계열(search/play) 요청자 해석 — 서버 멤버, 행위자 정보, 피드백을 보낼 텍스트 채널(고정 채널 우선, 없으면 시스템 채널)을 만들어요.
+ * 재생 계열(search/play) 요청자 해석 — 서버 멤버, 행위자 정보, 피드백을 보낼 텍스트 채널(기본 채널 우선, 없으면 기존 플레이어 채널·시스템 채널)을 만들어요.
  * 음성 채널 정책(누가 어디에 넣을 수 있는지)은 유스케이스가 판정하므로 여기서는 하지 않아요.
  */
 async function resolvePlaybackMember(
 	guild: Guild,
 	userId: string
-): Promise<{ error: string } | { actor: Actor; requester: MusicRequester; textChannelId: string | null }> {
+): Promise<{ error: string } | { actor: Actor; requester: MusicRequester; textChannelId: string | null; pinTextChannel: boolean }> {
 	const member = await fetchMember(guild, userId);
 	if (!member) return { error: MEMBER_NOT_FOUND_MESSAGE };
-	const pinned = await guildChannels.getPinnedChannel(container.guildService, guild.id);
+	const defaultChannel = await guildChannels.getDefaultTextChannel(container.guildService, guild.id);
+	// 이미 컨트롤러가 떠 있는 플레이어의 채널은 덮어쓰지 않아요 — 덮어쓰면 컨트롤러 메시지와 채널이 어긋나 갱신이 멈춰요.
+	const existingChannel = container.audio.getPlayer(guild.id)?.textChannelId ?? null;
 	return {
 		actor: actorFromMember(member),
 		requester: { id: userId, username: member.displayName },
-		textChannelId: pinned ?? guild.systemChannelId ?? null
+		textChannelId: defaultChannel ?? existingChannel ?? guild.systemChannelId ?? null,
+		// 기본 채널이 설정돼 있을 때만 플레이어 채널을 그쪽으로 맞춰요.
+		pinTextChannel: defaultChannel !== null
 	};
 }
 
@@ -344,7 +352,7 @@ async function musicCapabilities(guild: Guild, member: GuildMember): Promise<{ c
 	};
 }
 
-/** 고정 채널(또는 시스템 채널)에 재생 피드백을 보내요 — Discord 참여자가 웹에서의 재생을 볼 수 있게 해요 */
+/** 기본 채널(또는 플레이어 채널)에 재생 피드백을 보내요 — Discord 참여자가 웹에서의 재생을 볼 수 있게 해요 */
 async function sendFeedbackMessage(
 	logger: RedisLogger,
 	guildId: string,

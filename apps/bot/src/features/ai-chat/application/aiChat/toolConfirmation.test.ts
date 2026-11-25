@@ -211,11 +211,8 @@ describe('AI 도구 effect 표', () => {
 
 	it('설정 변경 요약은 항목 이름과 해제를 사람이 읽는 말로 풀어줘요', () => {
 		const registry = createAiTools(STUB_DEPS);
-		const summary = registry.describeCall(
-			'bot_settings_set',
-			JSON.stringify({ pinned_channel: '음악', dj_role: 'none', counting_enabled: true })
-		);
-		expect(summary).toContain('- 고정 채널 → `음악`');
+		const summary = registry.describeCall('bot_settings_set', JSON.stringify({ text_input_play: true, dj_role: 'none', counting_enabled: true }));
+		expect(summary).toContain('- 기본 채널 채팅 입력 재생 → 켜기');
 		expect(summary).toContain('- DJ 역할 → 해제');
 		expect(summary).toContain('- 숫자 세기 → 켜기');
 	});

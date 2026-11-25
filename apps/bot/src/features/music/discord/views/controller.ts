@@ -32,12 +32,14 @@ type controllerViewProps = {
 	volume?: number;
 	nowPlayingCardUrl?: string;
 	currentBpm?: CurrentBpm | null;
+	/** 기본 채널의 상시 패널 — 카드 이미지 아래에 대기 큐·재생 상태 요약을 텍스트로 더 보여준다 */
+	panel?: boolean;
 };
 
 /** 컨트롤러 미리보기 아래 '대기열 보기' 버튼 — controllerButton 핸들러의 queueView 액션으로 파싱한다. */
 const queueViewCustomId = controllerId.encode('queueView');
 
-export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm }: controllerViewProps) {
+export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm, panel = false }: controllerViewProps) {
 	const containerComponent = createContainer();
 
 	// NOWPLAYING 표시는 trackStart 확정 트랙을 본다 (queue.current는 전이 기계가 덮어쓴다).
@@ -129,7 +131,8 @@ export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm }
 		containerComponent.addActionRowComponents(utilityRow);
 	}
 
-	if (!nowPlayingCardUrl) {
+	// 카드 이미지가 있어도 패널이면 큐·상태 요약을 함께 보여준다.
+	if (!nowPlayingCardUrl || panel) {
 		// 대기열 요약 → divider → 컨텐츠 → footer 순서. footer에는 대기열 개수를 두지 않는다.
 		if (queueCount > 0) {
 			containerComponent.addTextDisplayComponents(
@@ -164,6 +167,7 @@ export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm }
 			}
 		}
 		const footerSegments = buildFooterSegments(player, volume);
+		if (panel) footerSegments.push(...buildPanelStatusSegments(player));
 		if (currentBpm && currentBpm.identifier === current?.info.identifier && Number.isFinite(currentBpm.bpm) && currentBpm.bpm > 0) {
 			footerSegments.push(`${Number(currentBpm.bpm.toFixed(1))} BPM`);
 		}
@@ -240,5 +244,15 @@ export function buildFooterSegments(player: Player, volume?: number): string[] {
 	} else if (player.volume !== undefined) {
 		segments.push(`${volumeToEmoji(player.volume)} ${player.volume}%`);
 	}
+	return segments;
+}
+
+/** 패널 전용 재생 상태 요약 — 반복 모드·일시정지·큐 길이를 footer에 덧붙인다. */
+export function buildPanelStatusSegments(player: Player): string[] {
+	const segments: string[] = [];
+	if (player.repeatMode && player.repeatMode !== 'off') {
+		segments.push(`${repeatEmoji(player.repeatMode)} ${player.repeatMode === 'track' ? '한 곡 반복' : '전체 반복'}`);
+	}
+	if (player.paused) segments.push(`${emoji('pause')} 일시정지`);
 	return segments;
 }

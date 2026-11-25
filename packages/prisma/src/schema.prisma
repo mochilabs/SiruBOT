@@ -20,12 +20,15 @@ model Guild {
   djRoleId      String?
   repeat        String   @default("off")
   related       Boolean  @default(false)
-  // 고정 채널: 이 채널의 입력 텍스트를 검색어로 재생. mode: "play"(즉시 재생) | "select"(5개 선택)
-  pinnedChannelId   String?
-  pinnedMessageId   String?
-  pinnedChannelMode String  @default("play")
-  // 고정 채널 입력 메시지를 봇이 처리한 뒤 삭제할지 (Manage Messages 권한 필요)
-  pinnedChannelDeleteInput Boolean @default(false)
+  // 기본 텍스트 채널(textChannelId): 명령어 허용 채널이자 상시 패널 채널. 패널은 메시지 1개를 edit로 유지한다.
+  // 상시 패널 메시지 ID (채널이 바뀌면 의미가 없어지므로 호출부가 함께 비운다)
+  textMessageId   String?
+  // 기본 채널에서 입력한 텍스트를 검색어로 재생할지
+  textChannelInputPlay Boolean @default(false)
+  // 입력 재생 모드: "play"(즉시 재생) | "select"(5개 선택)
+  textChannelMode String  @default("play")
+  // 입력 메시지를 봇이 처리한 뒤 삭제할지 (Manage Messages 권한 필요)
+  textChannelDeleteInput Boolean @default(false)
   // 임시 음성채널(JTC): 마커 채널 입장 시 방 생성. template의 {user}는 방장 이름으로 치환
   jtcEnabled         Boolean @default(false)
   jtcCategoryId      String?

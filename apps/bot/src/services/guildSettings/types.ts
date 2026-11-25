@@ -6,9 +6,9 @@ export { normalizeChatToolMode, type ChatToolMode } from '@sirubot/utils';
 /** AI 채팅 모드·고정 채널 입력 동작 — 대시보드와 같은 길드 설정 계약(@sirubot/utils/guildSettingsContract)을 재수출해요 */
 export {
 	normalizeAiMode,
-	normalizePinnedChannelMode,
+	normalizeTextChannelMode,
 	type AiMode,
-	type PinnedChannelModeSetting as PinnedChannelMode
+	type TextChannelModeSetting as TextChannelMode
 } from '@sirubot/utils/guildSettingsContract';
 
 /** 채팅 TTS 모드 — all: 모든 채널 / channels: 특정 채널만 / off: 끄기(기본). TTS는 명시적으로 켜야 해요 */

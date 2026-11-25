@@ -25,6 +25,25 @@ export interface TrackServiceDeps {
 export class TrackService {
 	constructor(private readonly deps: TrackServiceDeps) {}
 
+	/** 서버에서 최근 재생된 곡(중복 제거, 최신순) — 기본 채널 패널 대기 화면의 '최근 곡'에 써요 */
+	public async getRecentGuildTracks(guildId: string, limit: number) {
+		const rows = await this.deps.db.guildTrackHistory.findMany({
+			where: { guildId },
+			orderBy: { createdAt: 'desc' },
+			take: limit * 4,
+			include: { track: true }
+		});
+		const seen = new Set<string>();
+		const recent: { id: string; title: string; artist: string; url: string }[] = [];
+		for (const row of rows) {
+			if (seen.has(row.trackId)) continue;
+			seen.add(row.trackId);
+			recent.push({ id: row.track.id, title: row.track.title, artist: row.track.artist, url: row.track.url });
+			if (recent.length >= limit) break;
+		}
+		return recent;
+	}
+
 	public async increasePlays(track: Track) {
 		const data = extractTrackData(track);
 		// 식별자도 uri도 없는 곡은 랭킹·히스토리 모두 기록할 수 없다 — 조용히 건너뛴다.

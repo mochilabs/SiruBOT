@@ -11,8 +11,8 @@ const mocks = vi.hoisted(() => ({
 	setDefaultTextChannel: vi.fn(),
 	setDefaultVoiceChannel: vi.fn(),
 	setPinnedChannel: vi.fn(),
-	setPinnedChannelMode: vi.fn(),
-	setPinnedChannelDeleteInput: vi.fn(),
+	setTextChannelMode: vi.fn(),
+	setTextChannelDeleteInput: vi.fn(),
 	setDJRole: vi.fn(),
 	setJtcEnabled: vi.fn(),
 	setJtcTemplate: vi.fn(),
@@ -88,8 +88,8 @@ vi.mock('../../../../services/guildSettings/channels.ts', async (orig) => ({
 	setDefaultTextChannel: mocks.setDefaultTextChannel,
 	setDefaultVoiceChannel: mocks.setDefaultVoiceChannel,
 	setPinnedChannel: mocks.setPinnedChannel,
-	setPinnedChannelMode: mocks.setPinnedChannelMode,
-	setPinnedChannelDeleteInput: mocks.setPinnedChannelDeleteInput
+	setTextChannelMode: mocks.setTextChannelMode,
+	setTextChannelDeleteInput: mocks.setTextChannelDeleteInput
 }));
 vi.mock('../../../../services/guildSettings/playback.ts', async (orig) => ({
 	...(await orig()),
@@ -130,8 +130,8 @@ describe('botSettingsGetTool', () => {
 			textChannelId: 'c-text-1',
 			voiceChannelId: null,
 			pinnedChannelId: null,
-			pinnedChannelMode: 'play',
-			pinnedChannelDeleteInput: false,
+			textChannelMode: 'play',
+			textChannelDeleteInput: false,
 			djRoleId: 'r-dj-1',
 			ttsVolume: 100,
 			ttsDuckLevel: 30

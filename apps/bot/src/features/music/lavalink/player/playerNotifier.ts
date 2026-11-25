@@ -12,7 +12,7 @@ import { clearNowPlayingCard, getCachedNowPlayingCard, getNowPlayingCardKey, res
 import type { LavalinkDeps } from '../deps.ts';
 import { normalizeTrackEncoded } from '../trackEncoded.ts';
 import { Guild } from '@sirubot/prisma';
-import { pinnedIdleView } from '../../discord/views/pinnedIdle.ts';
+import { panelIdleView } from '../../discord/views/panelIdle.ts';
 import { withGuildTheme } from '../../../../lib/guildTheme.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 
@@ -52,14 +52,35 @@ export class PlayerNotifier implements Stoppable {
 		this.logger = deps.logger.getSubLogger({ name: 'playerNotifier' });
 	}
 
-	/** 고정 채널 대기 화면 — 플레이어 이벤트에서 그려져 상호작용 맥락이 없으므로 서버 테마를 직접 싣는다. */
-	private idleView(guildId: string) {
+	/** 패널 대기 화면 — 플레이어 이벤트에서 그려져 상호작용 맥락이 없으므로 서버 테마를 직접 싣는다. */
+	private async idleView(guildId: string) {
+		const guild = await this.deps.guildService.getGuild(guildId);
+		const recent = await this.fetchRecentTracks(guildId);
 		return withGuildTheme(
 			guildId,
-			async (id) => (await this.deps.guildService.getGuild(id)).themePreset,
-			() => pinnedIdleView(),
+			async () => guild.themePreset,
+			() =>
+				panelIdleView({
+					inputPlay: guild.textChannelInputPlay,
+					inputMode: guild.textChannelMode === 'select' ? 'select' : 'play',
+					deleteInput: guild.textChannelDeleteInput,
+					djRoleId: guild.djRoleId,
+					recent,
+					dashboardUrl: getConfig().links.dashboardUrl,
+					guildId
+				}),
 			{ fresh: true }
 		);
+	}
+
+	/** 서버에서 최근 재생된 곡(중복 제거, 최대 5곡) — 대기 화면의 '최근 곡 다시 재생'에 쓴다. */
+	private async fetchRecentTracks(guildId: string) {
+		try {
+			return await this.deps.trackService.getRecentGuildTracks(guildId, 5);
+		} catch (error) {
+			this.logger.warn(`Failed to load recent tracks for guild ${guildId}:`, error);
+			return [];
+		}
 	}
 
 	public sendController(player: CustomPlayer, interaction?: ChatInputCommandInteraction): Promise<void> {
@@ -103,8 +124,8 @@ export class PlayerNotifier implements Stoppable {
 			if (!options.enableController && !interaction) return;
 			if (!this.canSend(player, version, interaction)) return;
 
-			// 고정 채널이면 상시 패널 메시지를 그대로 이어 쓴다 (없거나 지워졌으면 새로 보낸다).
-			const pinnedPanel = interaction ? null : await this.fetchPinnedPanel(player);
+			// 기본 채널이면 상시 패널 메시지를 그대로 이어 쓴다 (없거나 지워졌으면 새로 보낸다).
+			const pinnedPanel = interaction ? null : await this.fetchPanelMessage(player);
 			if (pinnedPanel) {
 				if (player.controller && player.controller.id !== pinnedPanel.id) await this.removeController(player);
 				else this.resetControllerState(player);
@@ -115,7 +136,7 @@ export class PlayerNotifier implements Stoppable {
 			if (!this.canSend(player, version, interaction)) return;
 
 			const textChannelId = interaction?.channelId ?? player.textChannelId;
-			// 큰 카드 이미지는 고정 채널 컨트롤러에서만 사용한다.
+			// 큰 카드 이미지는 기본 채널 패널에서만 사용한다.
 			const {
 				pinned: pinnedChannel,
 				card,
@@ -164,7 +185,7 @@ export class PlayerNotifier implements Stoppable {
 						flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 						allowedMentions: { roles: [], users: [] }
 					});
-					if (pinnedChannel) await guildChannels.setPinnedMessage(this.deps.guildService, player.guildId, message.id).catch(() => null);
+					if (pinnedChannel) await guildChannels.setTextMessage(this.deps.guildService, player.guildId, message.id).catch(() => null);
 				}
 			}
 
@@ -309,7 +330,7 @@ export class PlayerNotifier implements Stoppable {
 			this.logger.debug(`Unknown message error ignored while updating controller for guild ${player.guildId}`);
 			if (
 				player.textChannelId &&
-				(await this.isPinnedChannel(player.guildId, player.textChannelId)) &&
+				(await this.isPanelChannel(player.guildId, player.textChannelId)) &&
 				this.canSend(player, version) &&
 				player.messageId === message.id
 			) {
@@ -400,13 +421,13 @@ export class PlayerNotifier implements Stoppable {
 		return { controllerMessage, messageId };
 	}
 
-	/** 길드 고정 채널에 저장된 상시 패널 메시지 — 플레이어의 텍스트 채널이 고정 채널일 때만, 편집 가능하면 돌려준다. */
-	private async fetchPinnedPanel(player: CustomPlayer): Promise<Message | null> {
+	/** 기본 채널에 저장된 상시 패널 메시지 — 플레이어의 텍스트 채널이 기본 채널일 때만, 편집 가능하면 돌려준다. */
+	private async fetchPanelMessage(player: CustomPlayer): Promise<Message | null> {
 		try {
 			if (!player.textChannelId) return null;
 			const [channelId, messageId] = await Promise.all([
-				guildChannels.getPinnedChannel(this.deps.guildService, player.guildId),
-				guildChannels.getPinnedMessage(this.deps.guildService, player.guildId)
+				guildChannels.getPanelChannel(this.deps.guildService, player.guildId),
+				guildChannels.getTextMessage(this.deps.guildService, player.guildId)
 			]);
 			if (!channelId || !messageId || channelId !== player.textChannelId) return null;
 			const channel = this.deps.client.channels.cache.get(channelId);
@@ -419,35 +440,67 @@ export class PlayerNotifier implements Stoppable {
 	}
 
 	/**
-	 * 고정 채널 상시 패널을 맞춘다 — 채널 설정/해제 직후 호출한다.
-	 * 이전 패널은 지우고, 새 고정 채널에는 대기 화면을 올려 메시지 ID를 저장한다.
+	 * 기본 채널 상시 패널을 맞춘다 — 채널·입력 재생·입력 삭제 설정 변경 직후 호출한다. 패널 모드가 꺼졌으면 패널 메시지를 지운다.
+	 * 이전 패널은 지우고, 새 기본 채널에는 대기 화면(재생 중이면 컨트롤러)을 올려 메시지 ID를 저장한다.
 	 */
-	public async syncPinnedPanel(guildId: string, previousChannelId: string | null): Promise<void> {
+	public async syncPanel(guildId: string, previousChannelId: string | null): Promise<void> {
 		await this.enqueueControllerOperation(guildId, async () => {
 			try {
-				const oldMessageId = await guildChannels.getPinnedMessage(this.deps.guildService, guildId);
-				if (oldMessageId && previousChannelId) {
-					const oldChannel = this.deps.client.channels.cache.get(previousChannelId);
+				const oldMessageId = await guildChannels.getTextMessage(this.deps.guildService, guildId);
+				// 패널 모드(기본 채널 + 입력 재생 + 패널 모드)일 때만 패널 채널이 있다.
+				const channelId = await guildChannels.getPanelChannel(this.deps.guildService, guildId);
+				const player = this.deps.audio?.getPlayer?.(guildId);
+				const playing = Boolean(player?.queue.current);
+
+				// 채널이 그대로면 패널 메시지를 새로 만들지 않는다 — 재생 중이면 컨트롤러가, 대기 중이면 대기 화면 편집이 맡는다.
+				if (channelId && oldMessageId && (previousChannelId === null || previousChannelId === channelId)) {
+					if (playing) return;
+					const channel = this.deps.client.channels.cache.get(channelId);
+					if (channel?.isTextBased() && 'messages' in channel) {
+						const existing = await channel.messages.fetch(oldMessageId).catch(() => null);
+						if (existing?.editable) {
+							await existing.edit({
+								components: [await this.idleView(guildId)],
+								attachments: [],
+								files: [],
+								flags: [MessageFlags.IsComponentsV2],
+								allowedMentions: { roles: [], users: [] }
+							});
+							return;
+						}
+					}
+				}
+
+				// 봇이 직접 지우는 메시지가 messageDelete 이벤트로 다시 패널을 만들지 않게, 먼저 ID를 비운 뒤 지운다.
+				await guildChannels.setTextMessage(this.deps.guildService, guildId, null);
+				const oldChannelId = previousChannelId ?? channelId ?? (await guildChannels.getDefaultTextChannel(this.deps.guildService, guildId));
+				if (oldMessageId && oldChannelId) {
+					const oldChannel = this.deps.client.channels.cache.get(oldChannelId);
 					if (oldChannel?.isTextBased() && 'messages' in oldChannel) {
 						await oldChannel.messages.delete(oldMessageId).catch(() => null);
 					}
 				}
-				await guildChannels.setPinnedMessage(this.deps.guildService, guildId, null);
-				const channelId = await guildChannels.getPinnedChannel(this.deps.guildService, guildId);
-				if (!channelId) return;
+				if (!channelId) {
+					// 패널 모드가 꺼졌는데 재생 중이면 일반 컨트롤러로 다시 보낸다.
+					if (player && playing) await this.sendControllerNow(player);
+					return;
+				}
 				const channel = this.deps.client.channels.cache.get(channelId);
 				if (!channel?.isSendable()) return;
-				const player = this.deps.audio?.getPlayer?.(guildId);
-				// 이미 재생 중이면 곧 컨트롤러가 이 채널로 오므로 대기 화면을 올리지 않는다.
-				if (player?.queue.current) return;
+				if (player && playing) {
+					// 이미 재생 중이면 패널 채널로 컨트롤러를 옮겨 새 패널 메시지로 만든다.
+					player.textChannelId = channelId;
+					await this.sendControllerNow(player);
+					return;
+				}
 				const message = await channel.send({
 					components: [await this.idleView(guildId)],
 					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 					allowedMentions: { roles: [], users: [] }
 				});
-				await guildChannels.setPinnedMessage(this.deps.guildService, guildId, message.id);
+				await guildChannels.setTextMessage(this.deps.guildService, guildId, message.id);
 			} catch (error) {
-				this.logger.warn(`Failed to sync pinned panel for guild ${guildId}:`, error);
+				this.logger.warn(`Failed to sync panel for guild ${guildId}:`, error);
 			}
 		});
 	}
@@ -485,8 +538,8 @@ export class PlayerNotifier implements Stoppable {
 		this.logger.debug(`Track started in guild: ${player.guildId}`);
 
 		if (player.textChannelId && player.messageId) {
-			// 고정 채널 모드: 채팅에 밀려도 항상 같은 메시지를 edit로 유지한다.
-			if (await this.isPinnedChannel(player.guildId, player.textChannelId)) {
+			// 패널 모드: 채팅에 밀려도 항상 같은 메시지를 edit로 유지한다.
+			if (await this.isPanelChannel(player.guildId, player.textChannelId)) {
 				this.updateController(player);
 				return;
 			}
@@ -520,9 +573,9 @@ export class PlayerNotifier implements Stoppable {
 		this.logger.debug(`Player destroyed in guild: ${player.guildId}`);
 		this.destroyedPlayers.add(player);
 		clearNowPlayingCard(this.deps, player.guildId);
-		// 고정 채널 패널은 지우지 않고 대기 화면으로 되돌린다.
+		// 기본 채널 패널은 지우지 않고 대기 화면으로 되돌린다.
 		const panel = player.controller as Message | null;
-		if (panel && player.textChannelId && panel.editable && (await this.isPinnedChannel(player.guildId, player.textChannelId))) {
+		if (panel && player.textChannelId && panel.editable && (await this.isPanelChannel(player.guildId, player.textChannelId))) {
 			this.controllerVersions.set(player, (this.controllerVersions.get(player) ?? 0) + 1);
 			this.resetControllerState(player);
 			// 진행 중인 편집과 겹쳐도 파괴 경로가 막히지 않게 기다리지 않는다.
@@ -530,7 +583,7 @@ export class PlayerNotifier implements Stoppable {
 			void panel
 				.edit({ components: [idleView], attachments: [], files: [], flags: [MessageFlags.IsComponentsV2] })
 				.catch((error: { code?: number }) => {
-					if (error.code !== 10008) this.logger.warn(`Failed to reset pinned panel for guild ${player.guildId}:`, error);
+					if (error.code !== 10008) this.logger.warn(`Failed to reset panel for guild ${player.guildId}:`, error);
 				});
 			return;
 		}
@@ -548,10 +601,10 @@ export class PlayerNotifier implements Stoppable {
 		}
 	}
 
-	/** 컨트롤러가 떠 있는 채널이 길드의 고정 채널인지 — 맞으면 핀 모드(edit 유지)로 다룬다. */
-	private async isPinnedChannel(guildId: string, textChannelId: string): Promise<boolean> {
+	/** 컨트롤러가 떠 있는 채널이 길드의 기본 채널(패널)인지 — 맞으면 핀 모드(edit 유지)로 다룬다. */
+	private async isPanelChannel(guildId: string, textChannelId: string): Promise<boolean> {
 		try {
-			const pinned = await guildChannels.getPinnedChannel(this.deps.guildService, guildId);
+			const pinned = await guildChannels.getPanelChannel(this.deps.guildService, guildId);
 			return Boolean(pinned) && pinned === textChannelId;
 		} catch {
 			return false;

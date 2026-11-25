@@ -77,8 +77,8 @@ export function ServerOverviewTab({ guildId, onSelectTab }: ServerOverviewTabPro
 							<button type="button" onClick={() => onSelectTab("channels")} className={quickRowClass}>
 								<Hash size={18} aria-hidden className="shrink-0 text-primary-text" />
 								<span className="min-w-0 flex-1">
-									<span className="block text-sm font-semibold text-foreground">고정 채널 설정</span>
-									<span className="block text-xs text-muted-foreground">음악·카운팅·TTS 전용 채널 지정</span>
+									<span className="block text-sm font-semibold text-foreground">기본 채널 설정</span>
+									<span className="block text-xs text-muted-foreground">명령어 채널·고정 패널·입력 재생 설정</span>
 								</span>
 								<ArrowRight size={16} aria-hidden className="shrink-0 text-muted-foreground transition-transform duration-fast group-hover:translate-x-0.5" />
 							</button>

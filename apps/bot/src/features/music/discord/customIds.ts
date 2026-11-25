@@ -23,6 +23,20 @@ export const controllerId = defineCustomId({
 	}
 });
 
+/** 기본 채널 패널 대기 화면의 빠른 동작 — `views/panelIdle.ts` ↔ `interaction-handlers/panelIdle.ts` */
+export const panelId = defineCustomId({
+	namespace: 'panel',
+	version: 1,
+	actions: {
+		/** 최근 재생한 곡 셀렉트 — 고른 곡을 바로 재생 */
+		recent: {},
+		/** '내 플레이리스트 불러오기' 버튼 — 본인에게만 보이는 선택 메뉴를 연다 */
+		playlist: {},
+		/** 플레이리스트 선택 메뉴 — 고른 목록을 대기열에 넣는다 */
+		playlistPick: {}
+	}
+});
+
 /** 필터 패널 — `views/filter.ts` ↔ `filterSelectMenu.ts`(select) · `filterButton.ts`(reset) */
 export const filterId = defineCustomId({
 	namespace: 'filter',
@@ -45,7 +59,8 @@ export const settingsId = defineCustomId({
 		toggleController: {},
 		toggleRelated: {},
 		toggleRepeat: {},
-		togglePinDelete: {},
+		toggleDeleteInput: {},
+		toggleInputPlay: {},
 		toggleJtc: {},
 		selectSponsorblock: {},
 		resetSponsorblock: {},
@@ -53,11 +68,9 @@ export const settingsId = defineCustomId({
 		removeDj: {},
 		selectText: {},
 		selectVoice: {},
-		selectPin: {},
-		selectPinMode: {},
+		selectInputMode: {},
 		removeText: {},
 		removeVoice: {},
-		removePin: {},
 		jtcTemplate: {},
 		selectJtcCategory: {},
 		selectJtcLimit: {},

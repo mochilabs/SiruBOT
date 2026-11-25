@@ -1,5 +1,5 @@
 import { ChannelType, type Guild, type GuildBasedChannel, type Role } from 'discord.js';
-import type { AiMode, PinnedChannelMode } from '../../../../services/guildSettings/types.ts';
+import type { AiMode, TextChannelMode } from '../../../../services/guildSettings/types.ts';
 import type { MusicToolPort } from '../../../music/index.ts';
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext } from './types.ts';
@@ -104,9 +104,9 @@ function resolveRole(guild: Guild, input: string): Role {
 const BOT_SETTING_LABELS: Record<string, string> = {
 	default_text_channel: '기본 텍스트 채널',
 	default_voice_channel: '기본 음성 채널',
-	pinned_channel: '고정 채널',
-	pinned_mode: '고정 채널 재생 모드',
-	pinned_delete_input: '고정 채널 입력 메시지 삭제',
+	text_input_play: '기본 채널 채팅 입력 재생',
+	text_input_mode: '채팅 입력 재생 모드',
+	text_delete_input: '패널 모드',
 	dj_role: 'DJ 역할',
 	jtc_enabled: '임시 음성방',
 	jtc_category: '임시 음성방 카테고리',
@@ -122,12 +122,14 @@ const BOT_SETTING_LABELS: Record<string, string> = {
 };
 
 /** 봇 설정 도구를 만들어요 — 의존성은 deps로 받아요 */
-export function createBotSettingsTools(deps: Pick<AiToolDeps, 'guildService' | 'tempVoice' | 'getClient' | 'musicPort'>): AiTool[] {
+export function createBotSettingsTools(
+	deps: Pick<AiToolDeps, 'guildService' | 'tempVoice' | 'getClient' | 'musicPort' | 'syncTextChannelPanel'>
+): AiTool[] {
 	const botSettingsGetTool: AiTool = {
 		name: 'bot_settings_get',
 		effect: 'read',
 		description:
-			'현재 서버의 봇 설정(기본 텍스트/음성 채널, 음악 고정 채널 및 모드, DJ 역할, 임시 음성방(JTC), AI 채팅 모드, 채팅 TTS, 숫자 세기 채널 등)을 조회해요. 모든 사용자가 조회할 수 있어요.',
+			'현재 서버의 봇 설정(기본 텍스트/음성 채널, 기본 채널 채팅 입력 재생 설정, DJ 역할, 임시 음성방(JTC), AI 채팅 모드, 채팅 TTS, 숫자 세기 채널 등)을 조회해요. 모든 사용자가 조회할 수 있어요.',
 		properties: {},
 		required: [],
 		status: '시루가 봇 설정을 확인하는 중..',
@@ -145,7 +147,6 @@ export function createBotSettingsTools(deps: Pick<AiToolDeps, 'guildService' | '
 
 			const defaultText = guildConfig.textChannelId ? guild?.channels?.cache?.get(guildConfig.textChannelId) : null;
 			const defaultVoice = guildConfig.voiceChannelId ? guild?.channels?.cache?.get(guildConfig.voiceChannelId) : null;
-			const pinnedChannel = guildConfig.pinnedChannelId ? guild?.channels?.cache?.get(guildConfig.pinnedChannelId) : null;
 			const djRole = guildConfig.djRoleId ? guild?.roles?.cache?.get(guildConfig.djRoleId) : null;
 			const jtcCategory = jtcSettings.categoryId ? guild?.channels?.cache?.get(jtcSettings.categoryId) : null;
 			const countingChannel = chatToolSettings.countingChannelId ? guild?.channels?.cache?.get(chatToolSettings.countingChannelId) : null;
@@ -162,22 +163,12 @@ export function createBotSettingsTools(deps: Pick<AiToolDeps, 'guildService' | '
 						? { id: defaultVoice.id, name: defaultVoice.name }
 						: guildConfig.voiceChannelId
 							? { id: guildConfig.voiceChannelId, name: null }
-							: null,
-					pinned: pinnedChannel
-						? {
-								id: pinnedChannel.id,
-								name: pinnedChannel.name,
-								mode: guildConfig.pinnedChannelMode,
-								delete_input: guildConfig.pinnedChannelDeleteInput
-							}
-						: guildConfig.pinnedChannelId
-							? {
-									id: guildConfig.pinnedChannelId,
-									name: null,
-									mode: guildConfig.pinnedChannelMode,
-									delete_input: guildConfig.pinnedChannelDeleteInput
-								}
 							: null
+				},
+				text_input: {
+					enabled: guildConfig.textChannelInputPlay,
+					mode: guildConfig.textChannelMode,
+					delete_input: guildConfig.textChannelDeleteInput
 				},
 				dj_role: djRole ? { id: djRole.id, name: djRole.name } : guildConfig.djRoleId ? { id: guildConfig.djRoleId, name: null } : null,
 				jtc: {
@@ -217,7 +208,7 @@ export function createBotSettingsTools(deps: Pick<AiToolDeps, 'guildService' | '
 		effect: 'settings',
 		description:
 			'서버의 봇 설정을 변경해요. 서버 관리(ManageGuild) 권한이 필요해요. ' +
-			'지정한 항목만 변경돼요. 기본 채널(default_text_channel, default_voice_channel), 고정 채널(pinned_channel, pinned_mode: play|select, pinned_delete_input), ' +
+			'지정한 항목만 변경돼요. 기본 채널(default_text_channel, default_voice_channel), 채팅 입력 재생(text_input_play, text_input_mode: play|select, text_delete_input), ' +
 			'DJ 역할(dj_role), 임시 음성방(jtc_enabled, jtc_category, jtc_template, jtc_user_limit), AI 정책(ai_mode, ai_channel_toggle), ' +
 			'채팅 TTS(tts_volume, tts_duck, tts_channel_toggle), 카운팅(counting_enabled, counting_channel). ' +
 			'채널이나 역할을 해제하려면 null 또는 "none"을 넘기세요.',
@@ -230,18 +221,19 @@ export function createBotSettingsTools(deps: Pick<AiToolDeps, 'guildService' | '
 				type: 'string',
 				description: '기본 음성 채널 이름, 멘션(<#...>), 또는 ID ("none" 또는 null이면 해제)'
 			},
-			pinned_channel: {
-				type: 'string',
-				description: '음악 고정 명령어 채널 이름, 멘션, 또는 ID ("none" 또는 null이면 해제)'
+			text_input_play: {
+				type: 'boolean',
+				description: '기본 텍스트 채널에서 채팅으로 입력한 곡 제목·링크를 바로 재생할지 여부'
 			},
-			pinned_mode: {
+			text_input_mode: {
 				type: 'string',
 				enum: ['play', 'select'],
-				description: '고정 채널 재생 모드 (play: 즉시 재생, select: 검색 목록에서 선택)'
+				description: '채팅 입력 재생 모드 (play: 즉시 재생, select: 검색 목록에서 선택)'
 			},
-			pinned_delete_input: {
+			text_delete_input: {
 				type: 'boolean',
-				description: '고정 채널에서 사용자가 보낸 명령어 메시지 자동 삭제 여부'
+				description:
+					'패널 모드 여부 — 켜면 기본 채널에 플레이어 패널을 메시지 1개로 고정하고, 사용자가 입력한 메시지는 처리 후 삭제해요 (채팅 입력 재생이 켜져 있어야 해요)'
 			},
 			dj_role: {
 				type: 'string',
@@ -319,12 +311,15 @@ export function createBotSettingsTools(deps: Pick<AiToolDeps, 'guildService' | '
 
 			// 1. 채널 설정
 			if (args.default_text_channel !== undefined) {
+				const previousTextChannel = await guildChannels.getDefaultTextChannel(deps.guildService, guildId);
 				if (isNoneValue(args.default_text_channel)) {
 					await guildChannels.setDefaultTextChannel(deps.guildService, guildId, null);
+					await deps.syncTextChannelPanel?.(guildId, previousTextChannel);
 					updated.default_text_channel = null;
 				} else {
 					const ch = resolveTextChannel(guild, String(args.default_text_channel));
 					await guildChannels.setDefaultTextChannel(deps.guildService, guildId, ch.id);
+					await deps.syncTextChannelPanel?.(guildId, previousTextChannel);
 					updated.default_text_channel = { id: ch.id, name: ch.name };
 				}
 			}
@@ -340,30 +335,27 @@ export function createBotSettingsTools(deps: Pick<AiToolDeps, 'guildService' | '
 				}
 			}
 
-			if (args.pinned_channel !== undefined) {
-				if (isNoneValue(args.pinned_channel)) {
-					await guildChannels.setPinnedChannel(deps.guildService, guildId, null);
-					updated.pinned_channel = null;
-				} else {
-					const ch = resolveTextChannel(guild, String(args.pinned_channel));
-					await guildChannels.setPinnedChannel(deps.guildService, guildId, ch.id);
-					updated.pinned_channel = { id: ch.id, name: ch.name };
-				}
+			if (args.text_input_play !== undefined && args.text_input_play !== null) {
+				const enabled = Boolean(args.text_input_play);
+				await guildChannels.setTextChannelInputPlay(deps.guildService, guildId, enabled);
+				await deps.syncTextChannelPanel?.(guildId, await guildChannels.getDefaultTextChannel(deps.guildService, guildId));
+				updated.text_input_play = enabled;
 			}
 
-			if (args.pinned_mode !== undefined && args.pinned_mode !== null) {
-				const mode = String(args.pinned_mode);
+			if (args.text_input_mode !== undefined && args.text_input_mode !== null) {
+				const mode = String(args.text_input_mode);
 				if (!['play', 'select'].includes(mode)) {
-					throw new Error('고정 채널 모드는 play 또는 select 중 하나여야 해요.');
+					throw new Error('채팅 입력 재생 모드는 play 또는 select 중 하나여야 해요.');
 				}
-				const savedMode = await guildChannels.setPinnedChannelMode(deps.guildService, guildId, mode as PinnedChannelMode);
-				updated.pinned_mode = savedMode;
+				const savedMode = await guildChannels.setTextChannelMode(deps.guildService, guildId, mode as TextChannelMode);
+				updated.text_input_mode = savedMode;
 			}
 
-			if (args.pinned_delete_input !== undefined && args.pinned_delete_input !== null) {
-				const deleteInput = Boolean(args.pinned_delete_input);
-				await guildChannels.setPinnedChannelDeleteInput(deps.guildService, guildId, deleteInput);
-				updated.pinned_delete_input = deleteInput;
+			if (args.text_delete_input !== undefined && args.text_delete_input !== null) {
+				const deleteInput = Boolean(args.text_delete_input);
+				await guildChannels.setTextChannelDeleteInput(deps.guildService, guildId, deleteInput);
+				await deps.syncTextChannelPanel?.(guildId, await guildChannels.getDefaultTextChannel(deps.guildService, guildId));
+				updated.text_delete_input = deleteInput;
 			}
 
 			// 2. DJ 역할

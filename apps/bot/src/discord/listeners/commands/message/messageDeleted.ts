@@ -5,6 +5,7 @@ import { notice } from '../../../../lib/notice.ts';
 import { emoji, MemoryCache } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
 import { inGuildTheme } from '../../../../lib/guildThemeScope.ts';
+import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 
 const deleteCountCache = new MemoryCache<string, number>({
 	maxSize: 100,
@@ -20,6 +21,15 @@ export class MessageDeleteListener extends Listener {
 		if (!message.guild?.id) return;
 
 		const guildId = message.guild.id;
+
+		// 대기 화면 상태의 기본 채널 패널을 사용자가 지웠다면 다시 올린다 (재생 중이면 컨트롤러 갱신이 새로 보낸다).
+		const panelMessageId = await guildChannels.getTextMessage(this.container.guildService, guildId).catch(() => null);
+		if (panelMessageId && panelMessageId === message.id) {
+			await guildChannels.setTextMessage(this.container.guildService, guildId, null).catch(() => null);
+			if (!this.container.audio.getPlayer(guildId)?.queue.current) {
+				await this.container.lavalink.playerNotifier.syncPanel(guildId, null);
+			}
+		}
 
 		const player = this.container.audio.getPlayer(guildId);
 		if (player) {

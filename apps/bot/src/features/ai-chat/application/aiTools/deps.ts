@@ -57,4 +57,6 @@ export interface AiToolDeps {
 	fetchCommandIndex: (guildId: string | null) => Promise<ReadonlyMap<string, ApplicationCommand>>;
 	/** 웹 검색 설정 — 호출할 때마다 읽어요 */
 	getSearchConfig: () => AiToolSearchConfig;
+	/** 기본 텍스트 채널을 바꾼 뒤 상시 패널을 맞춰요 (플레이어 알림기) */
+	syncTextChannelPanel?: (guildId: string, previousChannelId: string | null) => Promise<void>;
 }

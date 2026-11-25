@@ -188,20 +188,38 @@ export const coreActions = {
 					.setStyle(ButtonStyle.Secondary)
 		}
 	},
-	togglePinDelete: {
+	toggleDeleteInput: {
 		mode: 'channel',
 		apply: async ({ guildId, services }) => {
 			const guild = await services.guildService.getGuild(guildId);
-			await guildChannels.setPinnedChannelDeleteInput(services.guildService, guildId, !guild.pinnedChannelDeleteInput);
+			await guildChannels.setTextChannelDeleteInput(services.guildService, guildId, !guild.textChannelDeleteInput);
+			await services.lavalink.playerNotifier.syncPanel(guildId, guild.textChannelId);
 		},
 		control: {
 			screen: 'channel',
 			row: 'actions',
 			build: (guild) =>
 				new ButtonBuilder()
-					.setLabel(guild.pinnedChannelDeleteInput ? '입력 메시지 보존' : '입력 메시지 삭제')
+					.setLabel(guild.textChannelDeleteInput ? '패널 모드 끄기' : '패널 모드 켜기')
 					.setStyle(ButtonStyle.Secondary)
-					.setDisabled(!guild.pinnedChannelId)
+					.setDisabled(!guild.textChannelId || !guild.textChannelInputPlay)
+		}
+	},
+	toggleInputPlay: {
+		mode: 'channel',
+		apply: async ({ guildId, services }) => {
+			const guild = await services.guildService.getGuild(guildId);
+			await guildChannels.setTextChannelInputPlay(services.guildService, guildId, !guild.textChannelInputPlay);
+			await services.lavalink.playerNotifier.syncPanel(guildId, guild.textChannelId);
+		},
+		control: {
+			screen: 'channel',
+			row: 'actions',
+			build: (guild) =>
+				new ButtonBuilder()
+					.setLabel(guild.textChannelInputPlay ? '채팅 입력 재생 끄기' : '채팅 입력 재생 켜기')
+					.setStyle(guild.textChannelInputPlay ? ButtonStyle.Success : ButtonStyle.Secondary)
+					.setDisabled(!guild.textChannelId)
 		}
 	},
 	toggleJtc: {
@@ -295,7 +313,9 @@ export const coreActions = {
 		mode: 'channel',
 		apply: async ({ interaction, guildId, services }) => {
 			if (!interaction.isChannelSelectMenu()) return;
+			const previous = await guildChannels.getDefaultTextChannel(services.guildService, guildId);
 			await guildChannels.setDefaultTextChannel(services.guildService, guildId, interaction.values[0]);
+			await services.lavalink.playerNotifier.syncPanel(guildId, previous);
 		},
 		control: {
 			screen: 'channel',
@@ -318,30 +338,16 @@ export const coreActions = {
 					.setChannelTypes(ChannelType.GuildVoice, ChannelType.GuildStageVoice)
 		}
 	},
-	selectPin: {
-		mode: 'channel',
-		apply: async ({ interaction, guildId, services }) => {
-			if (!interaction.isChannelSelectMenu()) return;
-			const previous = await guildChannels.getPinnedChannel(services.guildService, guildId);
-			await guildChannels.setPinnedChannel(services.guildService, guildId, interaction.values[0]);
-			await services.lavalink.playerNotifier.syncPinnedPanel(guildId, previous);
-		},
-		control: {
-			screen: 'channel',
-			row: 'pin',
-			build: () => new ChannelSelectMenuBuilder().setPlaceholder('고정 채널을 선택하세요').setChannelTypes(ChannelType.GuildText)
-		}
-	},
-	// 고정 채널 입력 동작 (play: 즉시 재생 / select: 5개 선택)
-	selectPinMode: {
+	// 채팅 입력 재생 동작 (play: 즉시 재생 / select: 5개 선택)
+	selectInputMode: {
 		mode: 'channel',
 		apply: async ({ interaction, guildId, services }) => {
 			if (!interaction.isStringSelectMenu()) return;
-			await guildChannels.setPinnedChannelMode(services.guildService, guildId, interaction.values[0] === 'select' ? 'select' : 'play');
+			await guildChannels.setTextChannelMode(services.guildService, guildId, interaction.values[0] === 'select' ? 'select' : 'play');
 		},
 		control: {
 			screen: 'channel',
-			row: 'pinMode',
+			row: 'inputMode',
 			build: (guild) =>
 				new StringSelectMenuBuilder()
 					.setPlaceholder('입력 동작 선택')
@@ -352,13 +358,13 @@ export const coreActions = {
 							emoji: emoji('arrow_forward'),
 							label: '즉시 재생 (첫 결과 바로 재생)',
 							value: 'play',
-							default: guild.pinnedChannelMode !== 'select'
+							default: guild.textChannelMode !== 'select'
 						},
 						{
 							emoji: emoji('clipboard'),
 							label: '선택 재생 (5개 중 선택)',
 							value: 'select',
-							default: guild.pinnedChannelMode === 'select'
+							default: guild.textChannelMode === 'select'
 						}
 					])
 		}
@@ -366,7 +372,9 @@ export const coreActions = {
 	removeText: {
 		mode: 'channel',
 		apply: async ({ guildId, services }) => {
+			const previous = await guildChannels.getDefaultTextChannel(services.guildService, guildId);
 			await guildChannels.setDefaultTextChannel(services.guildService, guildId, null);
+			await services.lavalink.playerNotifier.syncPanel(guildId, previous);
 		},
 		control: {
 			screen: 'channel',
@@ -393,24 +401,6 @@ export const coreActions = {
 					.setLabel('음성 채널 제거')
 					.setStyle(ButtonStyle.Danger)
 					.setDisabled(!guild.voiceChannelId)
-		}
-	},
-	removePin: {
-		mode: 'channel',
-		apply: async ({ guildId, services }) => {
-			const previous = await guildChannels.getPinnedChannel(services.guildService, guildId);
-			await guildChannels.setPinnedChannel(services.guildService, guildId, null);
-			await services.lavalink.playerNotifier.syncPinnedPanel(guildId, previous);
-		},
-		control: {
-			screen: 'channel',
-			row: 'actions',
-			build: (guild) =>
-				new ButtonBuilder()
-					.setEmoji(emoji('trash'))
-					.setLabel('고정 채널 제거')
-					.setStyle(ButtonStyle.Danger)
-					.setDisabled(!guild.pinnedChannelId)
 		}
 	},
 	selectJtcCategory: {
