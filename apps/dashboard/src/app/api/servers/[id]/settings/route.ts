@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import type { Guild as PrismaGuild } from "@sirubot/prisma";
 import { normalizeChatToolMode, normalizeEmbedFixSites, normalizeEmbedFixTranslateLang } from "@sirubot/utils/chatTools";
 import {
-  normalizeTextChannelMode,
   normalizeRepeatMode,
   normalizeSponsorBlockSegments,
+  normalizeTextChannelMode,
   normalizeThemePreset,
   normalizeTtsAnnounceMode,
 } from "@sirubot/utils/guildSettingsContract";
