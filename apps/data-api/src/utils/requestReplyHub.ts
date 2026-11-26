@@ -44,7 +44,7 @@ export interface RequestReplyHubConfig<TContract extends HubContract, TMeta, TRe
 
 export interface RequestReplyCall<TContract extends HubContract, TMeta> {
 	requestId: string;
-	/** REQUEST 채널로 보낼 페이로드 — 계약의 요청 스키마 형태이고, 서명 봉투로 감싸 퍼블리시해요 */
+	/** REQUEST 채널로 보낼 페이로드 — 계약의 요청 스키마 형태이고, 서명을 붙여 퍼블리시해요 */
 	payload: RedisRpcRequestInput<TContract>;
 	/** requestId에 묶어두는 메타 — 응답 대조에 써요 */
 	meta: TMeta;

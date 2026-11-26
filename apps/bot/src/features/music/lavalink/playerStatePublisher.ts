@@ -113,7 +113,7 @@ export function publishPlayerState(deps: LavalinkDeps, player: CustomPlayer, opt
 		positionMs: payload.positionMs,
 		advancing: payload.playing && !payload.paused && !payload.isStream
 	});
-	// state 허브가 fail-closed 검증을 하므로 서명 봉투로 감싸 보내요 (키 없으면 구버전 평문).
+	// state 허브가 fail-closed 검증을 하므로 서명을 붙여 보내요 (키 없으면 구버전 평문).
 	store.publishRawPlayerState(player.guildId, wrapRedisMessage(getConfig().redis.signingKey, payload));
 }
 

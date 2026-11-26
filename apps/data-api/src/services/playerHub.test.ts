@@ -114,7 +114,7 @@ describe('서명 검증', () => {
 		expect(getPlayerState('wrongkey-guild')).toBeNull();
 	});
 
-	it('서명 봉투지만 본문이 손상됐으면 거부해요', () => {
+	it('서명은 있지만 본문이 손상됐으면 거부해요', () => {
 		const tampered = JSON.stringify({ body: frame({ guildId: 'tampered-guild' }), sig: '0'.repeat(64) });
 		handlePlayerStateMessage(tampered, 'sirubot:player:tampered-guild');
 		expect(getPlayerState('tampered-guild')).toBeNull();

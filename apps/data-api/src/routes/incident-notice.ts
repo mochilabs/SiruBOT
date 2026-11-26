@@ -27,7 +27,7 @@ function requireRedis(reply: { code: (n: number) => any }): RedisClient | null {
 
 /**
  * 장애 공지 (P-14) — 대시보드 `/admin` → 이 라우트 → Redis 키(TTL = 만료) → 봇이 30초 캐시로 읽어요.
- * 값은 다른 pending 키처럼 서명 봉투로 감싸요. 봇은 읽기만 해요.
+ * 값은 다른 pending 키처럼 서명을 붙여요. 봇은 읽기만 해요.
  */
 export function registerIncidentNoticeRoutes(fastify: FastifyInstance): void {
 	const signingKey = resolveRedisSigningKey(process.env);

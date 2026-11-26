@@ -221,7 +221,7 @@ describe('now-playing source', () => {
 	});
 });
 
-describe('서명 봉투', () => {
+describe('서명된 메시지', () => {
 	afterEach(() => {
 		setConfigForTesting(null);
 		store.publishRawPlayerState.mockClear();

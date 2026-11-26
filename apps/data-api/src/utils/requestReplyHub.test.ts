@@ -122,7 +122,7 @@ describe('createRequestReplyHub', () => {
 		expect(logger.warn).toHaveBeenCalledWith('Rejected test response with invalid signature');
 		expect(hub.status().pending).toBe(1);
 
-		// 올바른 서명 봉투는 상관해요
+		// 올바른 서명 메시지는 상관해요
 		options?.onMessage(wrapRedisMessage('shared-key', { requestId: REQUEST_ID, guildId: GUILD_ID }), 'test:response');
 		await expect(promise).resolves.toEqual({ ok: true });
 	});

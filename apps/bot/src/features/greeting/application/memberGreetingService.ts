@@ -112,7 +112,7 @@ export interface MemberGreetingServiceDeps {
 	logger: AppLogger;
 	/** Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용). */
 	signingKey: string;
-	/** 테스트 전송 결과 퍼블리시 — 서명 봉투는 publisher가 감싸요 */
+	/** 테스트 전송 결과 퍼블리시 — 서명은 publisher가 붙여요 */
 	publisher: Pick<RedisPublisher, 'publish'>;
 	/** 호출 시점에 읽어요 — redisStore는 setupServices 뒤에 만들어져요 */
 	getPendingStore: () => GreetingPendingStore | undefined;
@@ -226,7 +226,7 @@ export class MemberGreetingService {
 			sentAt: Date.now()
 		};
 		if (result.error) state.error = result.error;
-		// data-api 허브가 fail-closed 검증을 하므로 publisher가 서명 봉투로 감싸 보내요.
+		// data-api 허브가 fail-closed 검증을 하므로 publisher가 서명을 붙여 보내요.
 		this.deps.publisher.publish(memberGreetingStateEvent.channel(guildId), state, `Member greeting state (guild ${guildId})`);
 		this.logger.debug(`멤버 인사 테스트 결과 퍼블리시 (guild ${guildId}, kind ${kind}, ok ${result.ok})`);
 	}

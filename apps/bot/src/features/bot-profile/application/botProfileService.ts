@@ -55,7 +55,7 @@ export interface BotProfileServiceDeps {
 	logger: ServiceLogger;
 	/** Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용). */
 	signingKey: string;
-	/** 상태 퍼블리시 — 서명 봉투는 publisher가 감싸요 */
+	/** 상태 퍼블리시 — 서명은 publisher가 붙여요 */
 	publisher: Pick<RedisPublisher, 'publish'>;
 	/** setupRedis 뒤에야 생겨서 호출 시점에 읽어요 (없으면 undefined) */
 	getRedisStore: () => Pick<RedisStore, 'getCacheValue' | 'deleteCacheValue'> | undefined;
@@ -194,7 +194,7 @@ export class BotProfileService {
 				updatedAt: Date.now()
 			};
 
-			// data-api 허브가 fail-closed 검증을 하므로 publisher가 서명 봉투로 감싸 보내요.
+			// data-api 허브가 fail-closed 검증을 하므로 publisher가 서명을 붙여 보내요.
 			this.deps.publisher.publish(botProfileStateEvent.channel(guild.id), state, `Bot profile state (guild ${guild.id})`);
 		} catch (error) {
 			this.deps.logger.debug(`봇 프로필 상태 퍼블리시 실패 (guild ${guild.id}): ${error}`);
