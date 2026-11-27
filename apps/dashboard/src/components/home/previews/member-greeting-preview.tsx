@@ -9,10 +9,6 @@ import { Bot, CornerDownRight } from "lucide-react";
 import { motionBase, motionFast } from "@/components/motion/durations";
 import { cn } from "@/lib/utils";
 
-/**
- * 인사 카드 프리셋 — 에디터가 완성형 디자인을 먼저 고르고, 위에 자유 레이어를 덧칠하는 실제 흐름을 딴 것.
- * 반투명 배경은 어두운 임베드 위에서 탁해져서 불투명 면 + 짝이 맞는 글자색 토큰을 써요.
- */
 const CARD_PRESETS = [
   {
     label: "기본",
@@ -34,26 +30,15 @@ const CARD_PRESETS = [
   },
 ];
 
-/**
- * 입장 인사 프리뷰 — 실제 기능은 봇의 memberGreetingService: 멤버가 들어오면 설정한 채널로
- * {유저}·{서버}·{멤버수} 변수가 치환된 템플릿 인사 메시지를 보내요. 이미지 카드 옵션을 켜면
- * data-api가 렌더한 인사 카드가 첨부돼요. 참여 알림 → 시루 인사 → 인사 카드 순서로 재생하고,
- * 카드 프리셋을 골라 바꿔 보면 꾸미기가 자유롭다는 게 바로 보여요.
- *
- * 본문은 높이를 고정(absolute 레이어)해 단계가 진행돼도 아래 레이아웃이 밀리지 않아요.
- * 등장은 짧은 슬라이드+페이드만 쓰고 transform이라 레이아웃을 밀지 않아요.
- */
 export function MemberGreetingPreview() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.3 });
   const [presetIndex, setPresetIndex] = useState(0);
   const preset = CARD_PRESETS[presetIndex];
-  /** 0: 대기, 1: 참여 시스템 메시지, 2: 시루 인사 + 인사 카드 */
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
     if (!inView) return undefined;
     setPhase(0);
-    // reduced-motion에선 인사 카드까지 펼친 정지 화면을 바로 보여줘요
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setPhase(2);
       return undefined;
@@ -80,7 +65,6 @@ export function MemberGreetingPreview() {
           시루 · 입장 인사
         </span>
       </div>
-      {/* 내용이 절대 배치라 컨테이너 높이는 항상 이 고정값 — 아래 섹션이 밀리지 않아요 */}
       <div className="relative h-[300px] overflow-hidden sm:h-[360px]">
         <AnimatePresence mode="wait" initial={false}>
           <m.div
@@ -92,7 +76,6 @@ export function MemberGreetingPreview() {
             transition={{ duration: motionFast, ease: "easeOut" }}
           >
             {phase >= 1 && (
-              // Discord 참여 시스템 메시지 — 이름은 서버 권한 컬러처럼 보이는 초록
               <m.p
                 className="flex items-center gap-1.5 text-2xs text-discord-text-muted"
                 initial={{ opacity: 0, y: 8 }}
@@ -142,7 +125,6 @@ export function MemberGreetingPreview() {
                   <p className="text-sm leading-relaxed text-discord-text">
                     서름님, 시루봇 테스트 서버에 오신 걸 환영해요!
                   </p>
-                  {/* 인사 카드 mock — 실제로는 data-api가 1200×675 PNG로 렌더해 첨부해요 */}
                   <div
                     key={preset.label}
                     className={`relative aspect-[2/1] w-full max-w-md overflow-hidden rounded-card ${preset.className}`}
@@ -168,7 +150,6 @@ export function MemberGreetingPreview() {
                       </AnimatePresence>
                     </div>
                   </div>
-                  {/* 카드 프리셋 — 실제 에디터의 완성형 프리셋 흐름 */}
                   <div className="flex items-center gap-1.5">
                     <p className="text-2xs font-medium text-discord-text-muted">
                       카드 프리셋

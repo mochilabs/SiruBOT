@@ -24,7 +24,6 @@ describe("slider geometry and keyboard", () => {
         input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
       });
       expect(onChange).toHaveBeenCalledWith(51);
-      // 키보드 한 스텝도 값 확정으로 인정돼야 히스토리 커밋 단위가 됩니다
       expect(onCommit).toHaveBeenCalledWith(51);
     } finally {
       await act(async () => { root.unmount(); });
@@ -39,7 +38,6 @@ describe("slider geometry and keyboard", () => {
     document.body.append(host);
     const root = createRoot(host);
     try {
-      // happy-dom은 레이아웃이 없어 폭이 0이에요 — 접힌 구획에서 마운트된 상황과 같아요
       await act(async () => { root.render(<Slider value={60} min={0} max={150} label="음악 볼륨" />); });
       const thumb = host.querySelector<HTMLElement>('[data-slot="slider-thumb"]')!;
       const range = host.querySelector<HTMLElement>('[data-slot="slider-range"]')!;

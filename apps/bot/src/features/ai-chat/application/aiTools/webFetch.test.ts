@@ -105,7 +105,6 @@ describe('web_fetch 응답 검증·본문 정제', () => {
 	});
 
 	it('내부 주소로 해석되는 DNS 결과는 연결 단계에서 거절한다', async () => {
-		// 리바인딩 완화: 공개 호스트로 보이지만 조회 결과가 사설 주소다.
 		vi.unstubAllGlobals();
 		lookup.mockResolvedValue([{ address: '10.0.0.8', family: 4 }]);
 

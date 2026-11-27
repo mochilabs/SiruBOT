@@ -7,10 +7,6 @@ import { STUB_GUILD_ID } from "@/lib/stub/guild-stub";
 
 import { StubGate } from "../dashboard/stub-gate";
 
-/**
- * 개발 전용 — 로그인·봇·data-api 없이 음악 플레이어 페이지(/player/[id])를 확인하는 페이지예요.
- * 데이터 요청은 lib/stub/guild-stub.ts가 가로채 가짜 데이터로 채워요. 프로덕션에서는 404예요.
- */
 export default function PlayerPreview() {
 	if (process.env.NODE_ENV === "production") notFound();
 

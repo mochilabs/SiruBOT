@@ -57,7 +57,6 @@ export async function openPlaylistPanel(
 				: { kind: 'tracks', playlistId: initial.id, page: Math.max(0, (options.page ?? 1) - 1) }
 		: { kind: 'list', page: 0 };
 	const id = randomUUID();
-	/** 이 보관함 패널의 컴포넌트 customId만 해석해요 (모달·다른 패널의 ID는 null). */
 	const decodeOwn = (customId: string) => {
 		const decoded = libraryId.decode(customId);
 		return decoded && decoded.action !== 'form' && decoded.action !== 'formValue' && decoded.sessionId === id ? decoded : null;

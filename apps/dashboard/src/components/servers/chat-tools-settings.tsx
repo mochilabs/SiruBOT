@@ -14,7 +14,6 @@ import { SettingsPanel, useSettingsPanel } from "./settings-panel";
 import { SettingsSection, SettingsToggleRow } from "./settings-section";
 import { ChannelListError, InfoBox, type ModeCardOption, ModePicker, WarningBox } from "./settings-shared";
 
-// 임베드 복구 사이트 — 봇 계약(packages/utils/src/chatTools.ts)과 같은 순서를 지켜요
 const SITE_TOGGLES = [
 	{ value: "x", label: "X (트위터)" },
 	{ value: "instagram", label: "인스타그램" },
@@ -59,7 +58,6 @@ const toChatToolsForm = (settings: GuildSettings): ChatToolsForm => ({
 	countingChannelId: settings.countingChannelId,
 });
 
-// 채널 정책 카드 데이터만 여기 두고 마크업은 settings-shared의 ModePicker를 써요
 const MODE_LABEL: Record<ChatToolMode, string> = { all: "모든 채널", channels: "특정 채널", off: "끄기" };
 
 const MODE_CARDS: ModeCardOption<ChatToolMode>[] = [
@@ -112,7 +110,6 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 					const selected = new Set<string>(form.embedFixSites);
 					if (checked) selected.add(site);
 					else selected.delete(site);
-					// 계약 순서(x → instagram → booth)를 유지해요
 					const sites = SITE_TOGGLES.map((toggle) => toggle.value).filter((value) => selected.has(value));
 					patch({ embedFixSites: sites });
 				};

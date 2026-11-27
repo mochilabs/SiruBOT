@@ -1,4 +1,3 @@
-// format 회귀 계약 — 상대 시간 경계(방금/초/분/시간/일·7일 초과 날짜)와 메모리 표기를 잠가요.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { formatMemory, formatRelativeTime, formatRelativeTimeFromISO } from "./format";

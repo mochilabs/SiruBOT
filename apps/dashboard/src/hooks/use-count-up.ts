@@ -4,20 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
 
 interface CountUpOptions {
-	/** 최종 목표 값 */
 	end: number;
-	/** 시작 값 (기본 0) */
 	start?: number;
-	/** 지속 시간 ms (기본 1200) */
 	durationMs?: number;
 }
 
-/**
- * 뷰포트에 들어오면 0(또는 start)부터 end까지 카운트업하는 숫자를 반환한다.
- * - `prefers-reduced-motion: reduce` 환경에서는 애니메이션 없이 즉시 end 값 표시
- * - 진행 중 `end` 값이 바뀌면(예: 기간 필터 변경) 현재 표시 값부터 이어서 애니메이션
- * - 훅이 반환하는 `ref`를 숫자 요소에 붙여야 뷰포트 진입을 감지한다
- */
 export function useCountUp({ end, start = 0, durationMs = 1200 }: CountUpOptions): {
 	ref: (node?: Element | null) => void;
 	value: number;

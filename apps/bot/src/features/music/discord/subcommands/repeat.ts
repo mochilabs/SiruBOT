@@ -7,7 +7,6 @@ import { actorFromMember } from '../../application/actor.ts';
 export const name = 'repeat';
 export const ko = '반복';
 export const description = '반복 모드를 설정해요. 모드를 비우면 현재 설정만 보여줘요.';
-/** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Set the repeat mode.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying', 'DJOrAlone'];
 
@@ -44,7 +43,6 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		return;
 	}
 
-	// 인가·값 검증·저장·플레이어 반영(mixer 슬롯 정리 포함)은 유스케이스가 맡아요.
 	const { mode: repeatUpdated } = await container.music.setRepeat(actorFromMember(interaction.member), mode);
 
 	await interaction.reply({

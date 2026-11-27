@@ -27,7 +27,6 @@ describe('GuildUnavailablePanel', () => {
 
 		expect(document.body.textContent).toContain('서버 정보를 확인하지 못했어요');
 		expect(document.body.textContent).toContain('잠시 후 다시 시도해 주세요');
-		// 핵심: 일시 장애는 "없는 주소" 404 문구로 위장하지 않아요.
 		expect(document.body.textContent).not.toContain('없는 주소');
 
 		await act(async () => {

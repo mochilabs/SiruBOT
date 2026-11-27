@@ -6,7 +6,6 @@ import { buildPlayerStatePayload, publishPlayerState, publishPlayerEnded, clearP
 
 const { store } = vi.hoisted(() => ({ store: { ready: true, publishRawPlayerState: vi.fn() } }));
 
-/** publisher가 받는 LavalinkDeps 역할 — 필요한 필드만 가진 객체예요 */
 const container: Record<string, any> = {
 	redisStore: store,
 	playerStatePublishTracker: new Map(),
@@ -28,7 +27,6 @@ function player(overrides: Record<string, unknown> = {}) {
 	};
 }
 
-// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
 beforeEach(() => setConfigForTesting(makeTestConfig()));
 afterEach(() => setConfigForTesting(null));
 
@@ -192,7 +190,7 @@ describe('buildPlayerStatePayload', () => {
 
 		const payload = buildPlayerStatePayload(container as never, p);
 		expect(payload.trackTitle).toBe('현재 곡');
-		expect(payload.queueLength).toBe(1); // 선예열 추천곡은 대기열 수에서 제외
+		expect(payload.queueLength).toBe(1);
 		expect(payload.queue).toHaveLength(1);
 		expect(payload.queue[0]!.title).toBe('대기 곡');
 	});
@@ -235,7 +233,6 @@ describe('서명된 메시지', () => {
 		const body = unwrapRedisMessage('test-signing-key', payload);
 		expect(body).not.toBeNull();
 		expect(JSON.parse(body as string)).toMatchObject({ guildId: 'g1' });
-		// 봉투가 아니면(평문) unwrap 실패해야 해요 — 서명 없는 발행이 섞이지 않는지 확인.
 		expect(payload).toContain('"sig"');
 	});
 

@@ -9,13 +9,8 @@ import { cn } from "@/lib/utils"
 
 type ToastVariant = "success" | "error" | "warning" | "info"
 
-/**
- * 앱 전체에서 단 하나뿐인 토스트 매니저 — root layout이 마운트하는 <Toaster />만 이걸 렌더해요.
- * Provider 내부 store가 이 매니저를 미러링하므로 어느 컴포넌트에서 추가해도 목적지는 하나예요.
- */
 const toastManager = ToastPrimitive.createToastManager()
 
-/** 토스트 자동 닫힘 시간(ms) — Base UI 기본값(5000)과 같고, 진행 막대 길이도 이 값을 따라요. */
 const TOAST_TIMEOUT_MS = 5000
 
 const toast = Object.assign(toastManager, {
@@ -54,7 +49,6 @@ function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
   return (
     <ToastPrimitive.Viewport
       data-slot="toast-viewport"
-      // 모달류(dialog/sheet/dropdown 등)는 z-(--z-overlay)(=50), 토스트 알림은 항상 그 위 z-(--toast-z)(=100) — 모달이 열려 있어도 알림이 뒤로 가려지지 않게.
       // z-toast처럼 보이는 커스텀 이름은 v4 --z-* 네임스페이스가 없어 규칙이 안 만들어지므로 z-(--var) 문법을 써요.
       className={cn(
         "pointer-events-none fixed inset-x-4 bottom-24 z-(--toast-z) mx-auto w-auto max-w-xs sm:bottom-auto sm:top-20 sm:max-w-sm outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",
@@ -171,11 +165,9 @@ function ToastIcon({ type }: { type: string | undefined }) {
   )
 }
 
-/** 자동 닫힘까지 남은 시간을 보여주는 막대 — 호버·포커스로 타이머가 멈추면(data-expanded) 같이 멈춰요. */
 function ToastProgress({ type, timeout }: { type: string | undefined; timeout: number | undefined }) {
   const variant = type as ToastVariant | undefined
   const duration = timeout ?? TOAST_TIMEOUT_MS
-  // timeout 0 = 자동으로 닫히지 않는 토스트라 막대가 없어요.
   if (duration <= 0) return null
 
   return (

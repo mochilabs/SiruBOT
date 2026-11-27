@@ -22,7 +22,6 @@ vi.mock('@sapphire/framework', () => ({
 	InteractionHandlerTypes: { SelectMenu: 'select-menu' },
 	UserError: class UserError extends Error {}
 }));
-// 음성 채널 조건은 픽스처 멤버로 판정해요 — 권한 보유자(permissions.has)는 원격 권한자로 면제돼요. 정책 자체는 access.test.ts가 검증해요.
 vi.mock('../utils/permissionCheck.ts', () => ({
 	checkDJOrAlone: mocks.allowed,
 	checkInBotVoice: async (

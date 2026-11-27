@@ -79,8 +79,6 @@ describe('CachedQueueStore pending writes', () => {
 		await store.set('g1', 'VNEW');
 
 		store.onConnect();
-		// sync가 막혀 있는 동안 get은 Redis의 과거 값이 아니라 최신 pending 값을 돌려주고,
-		// redis.get으로 cache를 오염시키지 않는다.
 		await expect(store.get('g1')).resolves.toBe('VNEW');
 		expect(redis.get).not.toHaveBeenCalled();
 

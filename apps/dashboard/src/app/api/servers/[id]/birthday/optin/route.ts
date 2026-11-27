@@ -8,7 +8,6 @@ import { WRITE_RATE } from "@/lib/rate-limit";
 
 const bodySchema = z.object({ enabled: z.boolean() });
 
-/** 이 서버에서 내 생일 축하를 받을지 (서버 멤버) — 봇 `/프로필 생일축하`와 같은 BirthdayOptIn이에요 */
 export const PUT = createGuildApiHandler({
   role: "member",
   rate: WRITE_RATE,

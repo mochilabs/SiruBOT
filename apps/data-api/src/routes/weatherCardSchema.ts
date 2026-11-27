@@ -2,10 +2,6 @@ import { z } from 'zod';
 
 const nullableNumber = z.number().finite().nullable().default(null);
 
-/**
- * 날씨 카드 이미지 입력 — 봇이 /v1/weather 응답(WeatherResult)에서 표시에 필요한 필드만 골라 보내요.
- * 위치·시각 문자열은 길이를 제한해 카드 레이아웃이 깨지지 않게 하고, 수치는 null을 허용해요(제공자가 비워 줄 수 있어요).
- */
 export const weatherCardSchema = z.object({
 	scope: z.enum(['now', 'today', 'tomorrow', 'week']),
 	locationLabel: z.string().trim().min(1).max(80),

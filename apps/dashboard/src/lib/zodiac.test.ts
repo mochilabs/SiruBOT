@@ -1,4 +1,3 @@
-// zodiac 회귀 계약 — 별자리 분기 경계(봇 ohaasaService와 동일)와 범위 밖 처리를 잠가요.
 import { describe, expect, it } from "vitest";
 
 import { getZodiac } from "./zodiac";

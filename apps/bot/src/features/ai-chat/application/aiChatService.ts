@@ -1,19 +1,3 @@
-/**
- * AI 채팅 서비스 퍼사드 — 구현은 ./aiChat/ 하위 모듈로 분리돼 있어요.
- * 피처 밖에서는 features/ai-chat/index.ts를 통해서만 들어와요.
- *
- * | 모듈 | 책임 |
- * |---|---|
- * | aiChat/types.ts | 공용 타입·ChatServiceError·contentText |
- * | aiChat/tokenBudget.ts | 토큰 추정 (컨텍스트 예산 값은 deps로 받아요) |
- * | aiChat/config.ts | 길드 AI 정책 |
- * | aiChat/historyStore.ts | 채널 히스토리 인메모리 캐시 + DB 영속화·동기화 |
- * | aiChat/prompt.ts | 시스템 프롬프트·채널 최근 채팅 블록 조립 |
- * | aiChat/completion.ts | OpenAI compatible 스트리밍 호출·think 토큰 처리 |
- * | aiChat/summarizer.ts | 롤링 요약 백그라운드 작업 |
- * | aiChat/turnControl.ts | 채널 턴 잠금·유저 턴 한도·중지 레지스트리 |
- * | aiChat/agentLoop.ts | runChatTurn 에이전트 루프·멀티모달 첨부 처리 |
- */
 export {
 	contentText,
 	ChatServiceError,

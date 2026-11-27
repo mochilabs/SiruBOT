@@ -20,10 +20,8 @@ import { renderGreetingPreviewUrl } from "./greeting-svg";
 
 export type GreetingTemplate = (typeof GREETING_TEMPLATES)[number];
 
-/** 썸네일 배율 — 1200×675 카드를 300×169로 그려요 */
 const THUMB_SCALE = 0.25;
 
-/** 썸네일은 한 번에 하나씩 그려요 (공유 WASM 렌더러에 15장이 한꺼번에 몰리지 않게) */
 let thumbQueue: Promise<unknown> = Promise.resolve();
 const thumbCache = new Map<string, string>();
 
@@ -61,14 +59,11 @@ function TemplateThumb({ template, avatarSrc, guildName }: { template: GreetingT
 
 interface GreetingTemplateSectionProps {
   saving: boolean;
-  /** 썸네일에 쓰는 샘플 값 — 에디터 미리보기와 같아요 */
   avatarSrc: string | null;
   guildName: string;
-  /** 템플릿을 적용하면 배경과 레이어가 모두 바뀌어요 (실행취소로 되돌릴 수 있어요) */
   onApply: (template: GreetingTemplate) => void;
 }
 
-/** 템플릿 — 미리 조립된 배경·레이어 조합을 적용해요. 적용 전 확인 대화상자를 거쳐요 */
 export function GreetingTemplateSection({
   saving,
   avatarSrc,

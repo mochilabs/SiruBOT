@@ -1,11 +1,5 @@
 import type { FastifyInstance } from 'fastify';
 
-/**
- * siru_tts 음성 카탈로그 프록시 — 대시보드는 siru_tts 주소를 몰라도 돼요(data-api만 보유).
- * `GET /v1/tts/voices?lang=&q=`는 siru_tts `/v1/voices`의 첫 200개를 5분간 캐시해 돌려줘요.
- * SIRU_TTS_URL이 없으면 503이에요. siru_tts는 내부망 전용이라 인증 헤더가 없어요.
- */
-
 const VOICES_TTL_MS = 5 * 60_000;
 const VOICES_PAGE_SIZE = 200;
 const CACHE_MAX = 50;

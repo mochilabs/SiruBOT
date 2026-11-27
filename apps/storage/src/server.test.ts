@@ -5,8 +5,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Env } from './config/env.ts';
 import { buildServer } from './server.ts';
 
-// 공용 에러 계약 스모크: buildServer가 등록한 errorHandler·auth 401·notFound shape를 잠가요.
-
 let dir: string;
 let fastify: Awaited<ReturnType<typeof buildServer>>['fastify'];
 

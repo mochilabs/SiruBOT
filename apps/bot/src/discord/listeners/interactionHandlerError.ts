@@ -12,7 +12,6 @@ export class InteractionHandlerError extends Listener {
 	public override async run(error: Error, { handler, interaction }: InteractionHandlerErrorPayload) {
 		const presentation = presentError(error, `${emoji('tools')} 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`);
 
-		// UserError 같은 의도된 안내는 Sentry에 적재하지 않아요.
 		if (presentation.report) {
 			Sentry.withScope((scope) => {
 				scope.setTag('handler', handler.name);
@@ -33,7 +32,6 @@ export class InteractionHandlerError extends Listener {
 		if (interaction.isRepliable()) {
 			try {
 				const { ephemeral, message } = presentation;
-				// 예기치 못한 오류에만 지원 서버 버튼과 장애 공지를 붙여요
 				const view = presentation.showSupport ? await unexpectedErrorView(message) : errorView(message);
 
 				const payload = ephemeral

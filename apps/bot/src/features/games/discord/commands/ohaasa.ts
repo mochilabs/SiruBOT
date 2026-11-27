@@ -89,7 +89,6 @@ export class OhaasaCommand extends Command {
 				});
 			}
 		}
-		// 지정이 없으면 프로필에 저장된 생일로 자동 조회해요
 		if (!targetZodiacCode) {
 			const profile = await getUserProfile(interaction.user.id);
 			if (profile?.birthMonth != null && profile?.birthDay != null) {
@@ -106,7 +105,6 @@ export class OhaasaCommand extends Command {
 			target = this.resolveTarget(daily, targetZodiacCode);
 		}
 
-		// 카드 이미지는 요약(별자리·순위·럭키)만 그려요. 렌더에 실패하면 전부 텍스트로 보여줘요.
 		const date = formatOhaasaDate(daily.date);
 		const png = target
 			? await this.container.dataApi.renderOhaasaCard(buildOhaasaCardRequest(target, date)).catch(() => null)

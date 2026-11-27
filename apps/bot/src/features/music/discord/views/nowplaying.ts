@@ -22,7 +22,6 @@ export function nowplaying({ player, track }: NowPlayingViewProps) {
 		containerComponent.addTextDisplayComponents(nowplayingTextDisplay);
 	}
 
-	// Queue details stay visually separated; the idle footer does not.
 	if (player.queue.tracks.length > 0) {
 		containerComponent.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
 	}

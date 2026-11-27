@@ -44,12 +44,10 @@ interface GreetingImageEditorProps {
   config: GreetingConfig;
   image: GreetingImage;
   saving: boolean;
-  /** 탭이 보일 때만 캔버스를 그려요 — 탭 셸이 패널을 마운트 유지하기 때문이에요 */
   active: boolean;
   onPatch: (next: GreetingConfig) => void;
 }
 
-/** 레이어 기반 드래그 이미지 편집기 — 캔버스+툴바(좌) / 레이어·속성 사이드 패널(우) 2분할 */
 export function GreetingImageEditor({
   guildId,
   guildName,
@@ -62,19 +60,16 @@ export function GreetingImageEditor({
   const { data: session } = useSession();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // 선택은 id 배열이에요 (마지막 = 가장 최근에 고른 레이어). 되돌리기로 사라진 레이어 id는 아래에서 걸러내요
   const [rawSelectedIds, setSelectedIds] = useState<string[]>([]);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [overlay, setOverlay] = useState<GreetingOverlay>({});
 
   const avatarSrc = session?.user?.image ?? null;
 
-  // 마지막으로 선택한 배경 프리셋 — 배경 초기화(업로드 되돌리기)가 하드코딩 없이 여기로 복원해요
   const lastPresetRef = useRef<string>(
     image.background.presetId ?? PRESET_BACKGROUNDS[0].id,
   );
 
-  // 편집 상태: imageRef는 patchImage가 동기적으로 갱신해요 (히스토리 커밋이 최신값을 읽기 위함)
   const imageRef = useRef(image);
   useEffect(() => {
     imageRef.current = image;
@@ -88,7 +83,6 @@ export function GreetingImageEditor({
     [config, onPatch],
   );
 
-  // 되돌리기/다시실행: 조작 단위로 commit()이 호출돼 한 단계씩 쌓여요
   const { canUndo, canRedo, commit, undo, redo } = useGreetingHistory({
     getSnapshot: () => imageRef.current,
     applySnapshot: patchImage,
@@ -125,7 +119,6 @@ export function GreetingImageEditor({
     [rawSelectedIds, image.layers],
   );
 
-  // 드래그 이동(다중·스냅)·리사이즈·마퀴 선택 (pointer capture + rAF 스로틀). 드래그 중에는 선택 박스만 따라가요
   const { handlePointerDown, handlePointerMove, endDrag, dragging } = useGreetingDrag({
     canvasRef,
     saving,
@@ -138,8 +131,6 @@ export function GreetingImageEditor({
     setOverlay,
   });
 
-  // 카드 본체: 서버와 같은 greetingCard를 Takumi WASM으로 그려요 — 드래그 중엔 멈추고 놓을 때·입력 150ms 뒤에 다시 그려요.
-  // 움직임이 있으면 재생·타임라인 조작도 이 훅이 맡아요 (서버는 같은 키프레임으로 애니메이션 WebP를 만들어요)
   const preview = useGreetingSvg({
     active,
     image,
@@ -148,7 +139,6 @@ export function GreetingImageEditor({
     paused: dragging,
   });
 
-  // 선택 오버레이: 투명 canvas에 선택 테두리·핸들만 그려요 (가벼워서 바로 갱신)
   useEffect(() => {
     if (!active) return;
     const ctx = canvasRef.current?.getContext("2d");
@@ -156,7 +146,6 @@ export function GreetingImageEditor({
     drawGreetingSelection(ctx, image, selectedIds, overlay);
   }, [active, image, selectedIds, overlay]);
 
-  // 레이어 조작: 각 조작이 되돌리기 한 단계(커밋 1회)예요
   const addLayer = useCallback(
     (layer: GreetingLayer) => {
       patchImage({ ...image, layers: [...image.layers, layer] });
@@ -180,7 +169,6 @@ export function GreetingImageEditor({
   );
   const removeLayer = useCallback((id: string) => removeLayers([id]), [removeLayers]);
 
-  // 복제 — 각 복사본이 원본 바로 위에 쌓이고 조금 비껴 놓여요 (겹쳐서 안 보이는 일이 없게)
   const duplicateLayers = useCallback(
     (ids: string[]) => {
       const sources = image.layers.filter((layer) => ids.includes(layer.id));
@@ -212,7 +200,6 @@ export function GreetingImageEditor({
     commit();
   }, [image, patchImage, commit]);
 
-  // 방향키 이동 — 키를 누르고 있어도 되돌리기 한 단계로 묶이게 멈춘 뒤에 커밋해요
   const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -273,7 +260,6 @@ export function GreetingImageEditor({
     [patchImage, commit],
   );
 
-  // 배경: 마지막으로 선택한 프리셋으로 되돌려요 (하드코딩 없이)
   const applyPresetBackground = useCallback(
     (presetId: string) => {
       lastPresetRef.current = presetId;
@@ -291,21 +277,18 @@ export function GreetingImageEditor({
     commit();
   }, [image, patchImage, commit]);
 
-  // 업로드 (이미지 레이어 / 커스텀 배경)
   const { uploading, backgroundUploading, handleImageUpload, handleBackgroundUpload } =
     useGreetingUpload({ guildId, image, patchImage, commit, addLayer });
 
   const selectedLayer =
     selectedIds.length === 1 ? (image.layers.find((layer) => layer.id === selectedIds[0]) ?? null) : null;
 
-  // 레이어 패널 클릭: Shift/Ctrl/Cmd면 선택 토글, 아니면 그 레이어만 선택
   const selectFromPanel = useCallback((id: string, additive: boolean) => {
     setSelectedIds((prev) =>
       additive ? (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]) : [id],
     );
   }, []);
 
-  // 키보드 단축키 (되돌리기·다시실행·삭제·복사·붙여넣기·복제·전체 선택·방향키 이동)
   const shortcutActions = useMemo(
     () => ({
       undo,
@@ -335,7 +318,6 @@ export function GreetingImageEditor({
   return (
     <div className="min-w-0 rounded-card bg-surface-2 p-4">
       <div className="grid grid-cols-1 gap-5 lg:h-[calc(90dvh-11rem)] lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_minmax(0,1fr)]">
-        {/* 미리보기 — 모바일은 맨 위, 데스크톱은 좌상단 */}
         <GreetingPreviewSection
           canvasRef={canvasRef}
           previewSrc={preview.src}
@@ -359,7 +341,6 @@ export function GreetingImageEditor({
           onToggleSnap={() => setSnapEnabled((prev) => !prev)}
         />
 
-        {/* 레이어 + 속성 — 모바일은 캔버스 바로 뒤, 데스크톱은 우측 전체 높이 패널(독립 스크롤) */}
         <div className="min-w-0 space-y-4 lg:-mx-1.5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:px-1.5 lg:py-1.5">
           <SectionLabel as="p">레이어</SectionLabel>
           <LayerPanel
@@ -383,7 +364,6 @@ export function GreetingImageEditor({
           />
         </div>
 
-        {/* 배경 · 템플릿 · 요소 추가 — 모바일은 사이드 패널 뒤, 데스크톱은 캔버스 아래(미리보기는 고정, 이 영역만 스크롤) */}
         <div className="min-w-0 space-y-3 lg:-mx-1.5 lg:col-start-1 lg:row-start-2 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:px-1.5 lg:py-1">
           <GreetingBackgroundSection
             background={image.background}

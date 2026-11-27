@@ -19,7 +19,6 @@ const sampleRoles: DiscordRoleSummary[] = [
 	{ id: "5", name: "봇", color: "#95a5a6", position: 2, managed: false },
 ];
 
-// 실제 서버처럼 순서가 섞여 있는 채널 표본이에요. ChannelSelect가 정렬해서 보여주는지 확인용이에요.
 const sampleChannels: DiscordChannelSummary[] = [
 	{ id: "1002", name: "음악", type: ChannelTypeValue.GuildCategory, parentId: null, position: 1 },
 	{ id: "1001", name: "게임", type: ChannelTypeValue.GuildCategory, parentId: null, position: 0 },

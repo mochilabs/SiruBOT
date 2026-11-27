@@ -35,7 +35,6 @@ describe('ws IDENTIFY route', () => {
 		const registry = new ShardRegistry(shardCount, shardsPerProcess, notifier);
 		registries.push(registry);
 		const app = Fastify();
-		// ws 라우트는 fastify.manager 로케이터로 registry/notifier/authKey를 끌어와요.
 		app.decorate('manager', { getRegistry: () => registry, getNotifier: () => notifier, getAuthKey: () => AUTH_KEY } as never);
 		await app.register(fastifyWebsocket, { options: { maxPayload: 64 * 1024 } });
 		await app.register(wsRoutes);
@@ -51,7 +50,6 @@ describe('ws IDENTIFY route', () => {
 		public closeInfo: Promise<{ code: number; reason: string }> | null = null;
 
 		private constructor(private readonly socket: WebSocket) {
-			// terminate/서버 종료로 오는 후행 에러 이벤트는 조용히 흡수해요 (unhandled 'error' 방지).
 			socket.on('error', () => {});
 			socket.on('message', (raw) => {
 				this.messages.push(JSON.parse(raw.toString()) as WsMessage<unknown>);
@@ -75,7 +73,6 @@ describe('ws IDENTIFY route', () => {
 			this.socket.send(JSON.stringify({ op, payload }));
 		}
 
-		/** 특정 조건의 메시지를 기다려요. 서버는 클라이언트 메시지를 마주쳐야 응답하므로 polling이 자연스러워요. */
 		public async waitFor(predicate: (message: WsMessage<unknown>) => boolean, timeoutMs = 2_000): Promise<WsMessage<unknown>> {
 			const deadline = Date.now() + timeoutMs;
 			while (Date.now() < deadline) {
@@ -94,7 +91,6 @@ describe('ws IDENTIFY route', () => {
 			]);
 		}
 
-		/** 조건 없이 잠깐 기다려요. "오면 안 되는" 메시지 부재 검증용. */
 		public async waitQuietly(ms: number): Promise<void> {
 			await new Promise((resolve) => setTimeout(resolve, ms));
 		}

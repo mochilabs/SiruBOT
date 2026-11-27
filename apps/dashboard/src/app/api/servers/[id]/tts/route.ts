@@ -5,9 +5,7 @@ import { createGuildApiHandler } from "@/lib/api-handler";
 import { db } from "@/lib/db";
 import { WRITE_RATE } from "@/lib/rate-limit";
 
-/** 내 TTS 음성 — 봇 `/tts 설정`과 같은 TtsUserSetting.voice를 써요. 봇 캐시(60초) 뒤에 반영돼요. */
 const voiceSchema = z.object({
-  // engine:voice 식별자. null이면 봇 기본 음성(서버가 텍스트 언어로 선택)
   voice: z.string().trim().min(1).max(120).nullable(),
 });
 

@@ -51,7 +51,6 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
   const [setupLoading, setSetupLoading] = useState(false);
   const [markerNameDraft, setMarkerNameDraft] = useState<string | null>(null);
 
-  /** 카테고리 선택·마커 이름 변경 = 봇 마커 채널 준비 작업(디스코드 채널 생성/이동/이름 변경) */
   const runJtcSetup = useCallback(
     async (categoryId: string, markerChannelName?: string) => {
       const trimmedName = markerChannelName?.trim() || undefined;
@@ -71,8 +70,6 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
           categoryId: string;
           markerChannelId: string;
         };
-        // /jtc/setup은 서버가 즉시 DB에 저장하므로 baseline과 SWR 캐시도 함께 갱신해
-        // SaveBar가 불필요하게 dirty로 뜨지 않게 해요.
         commitExternal({
           jtcCategoryId: data.categoryId,
           jtcMarkerChannelId: data.markerChannelId,
@@ -108,7 +105,6 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
     >
       {(form) => {
         const currentMarkerName = channels?.find((channel) => channel.id === form.jtcMarkerChannelId)?.name;
-        // 마커 채널 준비 중에는 저장 바와 무관하게 나머지 컨트롤도 잠가요
         const busy = saving || setupLoading;
         const draftPending = markerNameDraft !== null && markerNameDraft.trim() !== (currentMarkerName ?? "");
         const markerName = currentMarkerName ?? form.jtcMarkerChannelId;

@@ -11,18 +11,6 @@ import { rejectUnassignableRoles } from "@/lib/data-api/role-panel-validation";
 import { db } from "@/lib/db";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 
-/**
- * 역할 패널 단건 조회·수정·삭제.
- *
- * GET: 단일 패널(버튼 포함).
- * PUT: 패널 필드 + 버튼 목록 동기화. 저장 전 역할 부여 가능 여부를 봇에 검증해요:
- *   - 결정적 무효(봇이 "부여 불가" 답) → 400 거부 + 문제 역할 안내.
- *   - 통신 장애(봇 다운·Redis timeout) → 경고 없이 통과(패널은 저장, 클릭 시점에 검증).
- *   버튼은 id 기준 upsert라 기존 버튼 id가 유지돼요 — 이미 게시된 메시지의 customId가 계속 유효해요.
- *   저장 후 게시된 패널이 있으면 봇에 제자리 갱신(refresh)을 요청해요.
- * DELETE: 패널 삭제.
- */
-
 export const GET = createGuildApiHandler({
   role: "manage",
   rate: READ_RATE,
@@ -68,8 +56,6 @@ export const PUT = createGuildApiHandler({
         );
       }
 
-      // 반응 방식 규칙(모든 역할에 이모지·중복 금지·20개 이하)을 저장될 최종 상태 기준으로 검사해요.
-      // mode나 buttons 중 하나만 와도 나머지는 저장된 값과 합쳐서 봐요.
       const finalMode = data.mode ?? existing.mode;
       if (finalMode === "reaction" && (data.mode || data.buttons)) {
         const reason = validateReactionButtons(
@@ -80,7 +66,6 @@ export const PUT = createGuildApiHandler({
         }
       }
 
-      // 버튼 목록이 오면 저장 전에 역할 부여 가능 여부를 봇에 검증해요.
       if (data.buttons) {
         const rejected = await rejectUnassignableRoles(
           guildId,
@@ -89,7 +74,6 @@ export const PUT = createGuildApiHandler({
         if (rejected) return rejected;
       }
 
-      // 패널 필드 갱신 + 버튼 동기화: 기존 id는 update(id 유지), 새 버튼은 create, 빠진 버튼은 delete.
       const updated = await db.$transaction(async (tx) => {
         if (data.buttons) {
           const current = await tx.rolePanelButton.findMany({
@@ -154,7 +138,6 @@ export const PUT = createGuildApiHandler({
         });
       });
 
-      // 게시된 메시지에 편집 내용을 반영해요 (best-effort — 실패해도 저장은 성공).
       let refreshed: boolean | null = null;
       if (existing.channelId && existing.messageId) {
         const refresh = await requestPanelPost(guildId, "rolePanel", {

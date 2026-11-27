@@ -1,9 +1,3 @@
-/**
- * 나눔 관리 — 봇에 위임하는 data-api 프록시 헬퍼예요.
- *
- * 참여 카드 게시와 결과 발표는 봇 토큰으로만 가능해요. 대시보드가 data-api `/v1/internal/giveaway/manage`를
- * 호출하면 data-api가 Redis request/reply로 봇에 전달해요. 서버 전용이에요 — API 라우트에서만 import해요.
- */
 import type { GiveawayCondition } from "@sirubot/utils/giveaway";
 
 import { forwardDataApiPost } from "./client";
@@ -14,7 +8,6 @@ export type GiveawayManageInput =
       channelId: string;
       prize: string;
       winnerCount: number;
-      /** ISO 8601 */
       endsAt: string;
       conditions: GiveawayCondition[];
     }
@@ -29,7 +22,6 @@ export interface GiveawayManageApiResult {
   status: number;
 }
 
-/** 시작은 카드 게시까지 기다리므로 넉넉히 18초 (data-api 봇 응답 대기 15초보다 길게) */
 export async function requestGiveawayManage(
   guildId: string,
   userId: string,

@@ -3,13 +3,9 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 export interface PageHeaderProps {
-	/** 메인 타이틀 */
 	title: React.ReactNode;
-	/** 타이틀 아래에 들어갈 설명 텍스트 */
 	description?: React.ReactNode;
-	/** 우측(또는 하단)에 배치할 추가 요소 (예: 프로필 위젯, 액션 버튼 등) */
 	children?: React.ReactNode;
-	/** 추가적인 className */
 	className?: string;
 }
 

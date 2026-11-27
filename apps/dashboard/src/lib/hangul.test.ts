@@ -1,5 +1,3 @@
-// hangul 회귀 계약 — 한글 자소 분해(초성 → 초+중성 → 완성글자)의 타이핑 중간 상태 배열과
-// 한글 밖 문자 처리를 잠가요.
 import { describe, expect, it } from "vitest";
 
 import { decomposeHangul } from "./hangul";
@@ -15,7 +13,7 @@ describe("decomposeHangul", () => {
 
 	it("쌍자음·복합받침도 분해해요", () => {
 		expect(decomposeHangul("까")[0]).toBe("ㄲ");
-		expect(decomposeHangul("닭")).toHaveLength(3); // ㄷ → 닥 → 닭
+		expect(decomposeHangul("닭")).toHaveLength(3);
 	});
 
 	it("한글이 아닌 문자는 그대로 1요소 배열이에요", () => {

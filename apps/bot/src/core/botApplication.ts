@@ -99,14 +99,11 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	constructor(options: ClientOptions) {
 		super({
 			...options,
-			// 전역 기본 allowedMentions — 트랙 제목처럼 외부에서 들어온 문자열에 멘션 마크업이 섞여도
-			// 알림이 울리지 않아요(멘션 주입 방지). 멘션이 필요한 전송(인사 등)은 전송 시점에
-			// allowedMentions를 명시해 다시 켜요 (예: memberGreetingService).
+			// 트랙 제목 등 외부 문자열의 멘션 주입을 막기 위해 전역 기본값을 비워요.
 			allowedMentions: options.allowedMentions ?? { parse: [], users: [], roles: [], repliedUser: false }
 		});
 	}
 
-	/** `root`는 PIECE_ROOTS의 항목처럼 src 기준 상대 경로예요 (예: `features/music/discord`). */
 	public setupStore(root: string) {
 		this.logger.debug(`Setting up piece root: ${root}`);
 		this.stores.registerPath(join(this.rootData.root, root));
@@ -119,14 +116,12 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			},
 			{
 				logger: this.logger as SapphireInterfaceLogger,
-				// audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
 				getAudio: () => container.audio
 			}
 		);
 		try {
 			await redisStore.connect();
 		} catch (error) {
-			// Redis 없이도 메모리 폴백으로 부팅 계속 (큐/세션은 휘발). 연결 실패를 치명 오류로 취급하지 않음.
 			this.logger.warn(`Redis connection failed, continuing in memory-only mode: ${error}`);
 		}
 
@@ -136,8 +131,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	}
 
 	public async setupDatabase(): Promise<PrismaClient> {
-		// 쿼리 이벤트는 쿼리마다 파라미터까지 구성된다 — LOGLEVEL이 debug(2) 이하일 때만 붙인다.
-		// (data-api 쪽 클라이언트도 쿼리 로깅을 안 쓴다: apps/data-api/src/services/db.ts)
+		// LOGLEVEL이 debug 이하일 때만 쿼리 파라미터 구성 비용을 감수하고 query 이벤트를 연결해요.
 		const config = getConfig();
 		const logQueries = shouldLogQueries(config.logLevel);
 		const prismaEventLog: Array<{ level: 'error' | 'warn' | 'info' | 'query'; emit: 'event' }> = [
@@ -167,9 +161,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	}
 
 	public setupServices() {
-		// 종료 시 stop()이 필요한 상태 소유자 레지스트리 — 소유자를 만들면 container.stoppables에 push해요 (종료 때 병렬로 stop, core/shutdown.ts)
 		container.stoppables = [];
-		// 애플리케이션 계층과 Redis 수신 계층이 함께 쓰는 로거 — 호출 시점에 container.logger를 읽어요
 		const appLogger: AppLogger = {
 			info: (msg: string, ...values: unknown[]) => container.logger.info(msg, ...values),
 			warn: (msg: string, ...values: unknown[]) => container.logger.warn(msg, ...values),
@@ -177,7 +169,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			debug: (msg: string, ...values: unknown[]) => container.logger.debug(msg, ...values)
 		};
 		const subscriberLogger = appLogger;
-		// Lavalink 계층 의존성 — 서비스보다 먼저 만들고 getter로 호출 시점에 읽어요 (mixer·sponsorBlock·playerNotifier는 아래에서 생겨요).
 		const lavalinkLogger: LavalinkLogger = {
 			...appLogger,
 			getSubLogger: (settings) => (container.logger as SapphireInterfaceLogger).getSubLogger(settings)
@@ -232,7 +223,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.dataApi = createDataApiClient({ logger: appLogger });
 		container.webhookRelay = new WebhookRelay({ logger: appLogger, getBotUser: () => container.client.user });
 		container.guildService = new GuildService({ db: container.db });
-		// 컨테이너 강조선·앱 이모지가 서버 테마(themePreset)를 따르도록 맥락 훅을 연결해요.
 		setContextThemeResolver(currentGuildTheme);
 		container.trackService = new TrackService({ db: container.db });
 		container.playlistService = new PlaylistService({ db: container.db });
@@ -240,7 +230,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			logger: appLogger,
 			guildService: container.guildService,
 			lavalink,
-			// audio는 setupAudio 뒤에, client는 로그인 뒤에, mixerService는 이 서비스 뒤에 만들어져서 호출 시점에 읽어요
 			getAudio: () => container.audio,
 			getClient: () => container.client,
 			getMixerService: () => container.mixerService,
@@ -251,7 +240,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			guildService: container.guildService,
 			lavalink,
 			callTimeoutMs: getConfig().mixer.callTimeoutMs,
-			// playerNotifier는 setupAudio에서 만들어져서 호출 시점에 읽어요
 			getPlayerNotifier: () => container.playerNotifier
 		});
 		container.sponsorBlockService = new SponsorBlockService({
@@ -266,7 +254,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.playlistPlayback = createPlaylistPlayback({
 			guildService: container.guildService,
 			audioService: container.audioService,
-			// audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
 			getAudio: () => container.audio
 		});
 		container.ttsService = new TtsService({ logger: appLogger, getTtsConfig });
@@ -279,7 +266,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			mixer: container.mixerService,
 			playback: container.audioService,
 			guildService: container.guildService,
-			// audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
 			getPlayer: (guildId) => container.audio.getPlayer(guildId)
 		});
 		container.tempVoiceService = createTempVoiceService({
@@ -289,7 +275,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 				setJtcCategory: (guildId, categoryId, markerChannelId) =>
 					guildJtc.setJtcCategory(container.guildService, guildId, categoryId, markerChannelId)
 			},
-			// redisStore는 setupServices 뒤(setupRedis)에 만들어지므로 호출 시점에 읽어요
 			roomStore: {
 				getFields: (key) => container.redisStore.getCacheHashFields(key),
 				setFields: (key, fields) => container.redisStore.setCacheHashFields(key, fields),
@@ -310,7 +295,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.botActivity = new BotActivityService({
 			activity: getConfig().discord.botActivity,
 			getClient: () => container.client,
-			// audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
 			getPlayerCount: () => container.audio?.players?.size ?? 0
 		});
 		container.stoppables.push(container.voiceLeaveTimers, container.botActivity);
@@ -332,7 +316,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			sponsorBlock: container.sponsorBlockService,
 			playlistService: container.playlistService,
 			tempVoice: container.tempVoiceService,
-			// music은 setupServices 끝(setupMusicControl)에, audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
 			getMusic: () => container.music,
 			getMusicPlay: () => container.musicPlay,
 			getAudio: () => container.audio,
@@ -340,7 +323,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			getCommands: () => container.stores.get('commands'),
 			fetchCommandIndex,
 			getSearchConfig: () => getConfig().search,
-			// playerNotifier는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
 			syncTextChannelPanel: (guildId, previousChannelId) => container.playerNotifier.syncPanel(guildId, previousChannelId)
 		});
 		container.aiChat = createAiChat({
@@ -351,9 +333,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			promotions: memoryPromotions,
 			tools: aiTools,
 			getClient: () => container.client,
-			// audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
 			getPlayer: (guildId) => container.audio?.getPlayer?.(guildId),
-			// redisStore는 setupRedis 뒤에 생겨서 호출 시점에 읽어요
 			getRedisStore: () => container.redisStore,
 			getContextTokenBudget: () => getConfig().aiChat.contextTokenBudget
 		});
@@ -377,13 +357,11 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			logger: appLogger
 		});
 		container.stoppables.push(container.usageRecorder);
-		// 예약 작업 실행기 — 이 프로세스가 가진 길드(client.guilds.cache)의 만기 작업만 가져가요. 핸들러는 각 기능이 등록해요
 		container.guildJobScheduler = new GuildJobScheduler({
 			db: container.db,
 			getOwnedGuildIds: () => [...container.client.guilds.cache.keys()],
 			logger: appLogger,
 			processId: `${hostname()}:${process.pid}`,
-			// 예약 메시지·나눔 종료 같은 작업이 서버 테마 색으로 나가도록 길드 맥락 안에서 실행해요
 			runInGuild: inGuildTheme
 		});
 		container.stoppables.push(container.guildJobScheduler);
@@ -429,15 +407,13 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.rolePanelService = createRolePanelService({ db: container.db, logger: appLogger, messages: rolePanelMessages });
 		container.stoppables.push(container.ticketService);
 
-		// 서비스 간 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (data-api와 공유). 없으면 서명 없는 구버전 모드.
-		// (설정 무효화 채널은 대시보드 저장 흐름이 서명 없이 퍼블리시해서 이벤트 계약이 signed: false로 받아요)
+		// REDIS_AUTH_KEY ?? AUTH_KEY; 미설정 시 서명 없는 구버전 모드로 동작해요.
 		const redisSigningKey = getConfig().redis.signingKey;
 		const redisPublisher = new RedisPublisher({ getStore: () => container.redisStore, signingKey: redisSigningKey, logger: subscriberLogger });
 		container.botProfileService = new BotProfileService({
 			logger: subscriberLogger,
 			signingKey: redisSigningKey,
 			publisher: redisPublisher,
-			// redisStore는 setupServices 뒤(setupRedis)에 만들어지므로 호출 시점에 읽어요
 			getRedisStore: () => container.redisStore,
 			getGuild: (guildId) => container.client.guilds.cache.get(guildId),
 			getBotUsername: () => container.client.user?.username
@@ -474,30 +450,17 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			publisher: redisPublisher,
 			resolveGuild: (guildId) => container.client.guilds.cache.get(guildId)
 		};
-		// 공유 구독 연결 하나에 묶이는 응답자·이벤트 리스너 — 새 응답자는 각 feature의 index.ts에서 내보내 여기에 한 줄만 추가하면 돼요.
-		// 모든 start는 실패해도 부팅을 막지 않아요 (공유 구독이 자체 재연결). 연결이 끊기면 대시보드 요청은 타임아웃 폴백으로 끝나요.
 		const redisBindings: RedisBinding[] = [
-			// 대시보드 설정 저장 → data-api Redis 브로드캐스트 → 봇 GuildService·커스텀 명령어 캐시 무효화 (60초 TTL 폴백이 있어요).
 			createGuildSettingsInvalidationListener(),
-			// 대시보드 봇 프로필(닉네임·아바타) 저장·최신 상태 조회 → data-api → Redis → 봇 적용·상태 퍼블리시.
 			...createBotProfileListeners(),
-			// 대시보드 멤버 인사(환영/작별) 테스트 전송 → data-api → Redis → 봇 전송.
 			createMemberGreetingSendListener(),
-			// 대시보드 웹 플레이어(검색·재생·제어·음성 상태) 요청 → data-api → Redis → 봇 응답.
 			createPlayerWebResponder(),
-			// 대시보드 JTC 마커 채널 셋업(생성·이동) → data-api → Redis → 봇 tempVoiceService 수행.
 			createJtcSetupResponder(),
-			// 대시보드 채널/역할 목록 요청 → data-api → Redis → 봇 응답.
 			createGuildDataResponder(),
-			// 대시보드 소셜 알림 구독 추가 → notifier → Redis → 봇이 대상 채널에 웹훅 1회 생성.
 			createSocialWebhookResponder(),
-			// 대시보드 관리자 패널(/admin) 제어 → data-api → Redis → 봇 수행 (대표 프로세스만 응답).
 			createBotAdminResponder(),
-			// 대시보드 패널 메시지(티켓·역할 패널) 직접 게시 → data-api → Redis → 봇 게시.
 			createPanelPostResponder(),
-			// 대시보드 나눔 시작·종료·취소·다시 뽑기 → data-api → Redis → 봇 GiveawayService 수행.
 			createGiveawayManageResponder(() => container.giveaways),
-			// 대시보드 역할 부여 가능 여부 검증 → data-api → Redis → 봇 검증.
 			createRoleValidationResponder()
 		];
 		container.redisSubscribers = [
@@ -510,10 +473,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		this.setupMusicPlay();
 	}
 
-	/**
-	 * 음악 제어 유스케이스를 한 번만 만들어 container.music으로 노출해요.
-	 * 슬래시·버튼·대시보드·AI 도구가 같은 인가 정책과 부수 효과를 거치도록 의존성을 여기서만 엮어요 (container는 호출 시점에 읽어요).
-	 */
 	private setupMusicControl() {
 		container.music = createMusicControl<CustomPlayer>({
 			access: createMusicAccess(this.musicAccessDeps()),
@@ -535,10 +494,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		});
 	}
 
-	/**
-	 * 투표 건너뛰기 유스케이스를 한 번만 만들어 container.voteSkip으로 노출해요.
-	 * 허용 판정은 여기서, 실제 건너뛰기는 container.music.skipApproved(인가 없이 mixer 스킵)로 보내요. 플레이어 상태는 호출 시점에 읽어요.
-	 */
 	private setupVoteSkip() {
 		container.voteSkip = createVoteSkip({
 			playback: (guildId) => {
@@ -559,7 +514,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		});
 	}
 
-	/** 봇 음성 채널과 DJ 역할 조회 — 음악 제어·곡 추가 인가가 같은 원천을 써요. */
 	private musicAccessDeps() {
 		return {
 			getBotVoiceChannelId: (guildId: string) =>
@@ -568,10 +522,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		};
 	}
 
-	/**
-	 * 곡 검색·대기열 추가 유스케이스를 한 번만 만들어 container.musicPlay로 노출해요 (슬래시 /재생·/검색, 고정 채널, AI music_play, 웹 플레이어).
-	 * 플레이어·검색·접속 같은 재생 메커니즘은 audioService가 맡고, 여기서는 그 함수들을 좁은 포트로 넘겨요.
-	 */
 	private setupMusicPlay() {
 		const deps: MusicPlayServiceDeps = {
 			access: this.musicAccessDeps(),
@@ -590,7 +540,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		const sessionStore = container.redisStore.getNodeSessionStore();
 		const shardKey = NodeSessionStore.makeShardKey(shardInfo.shardIds);
 
-		// 각 노드에 대해 이전 sessionId 조회
 		const nodeSessionMap = new Map<string, string>();
 		for (const node of nodes) {
 			if (node.id) {

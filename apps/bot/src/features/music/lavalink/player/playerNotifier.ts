@@ -23,20 +23,13 @@ export class PlayerNotifier implements Stoppable {
 	private stopped = false;
 	private logger: Logger<ILogObj>;
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
-	/** 전송/수정은 길드별로 직렬화하고, 이미지 렌더는 이 체인 밖에서 수행한다. */
 	private readonly sendChains: Map<string, Promise<void>> = new Map();
 	private readonly pendingUpdates = new Map<string, CustomPlayer>();
 	private readonly updateDrainQueued = new Set<string>();
 	private readonly updateRevisions = new Map<string, number>();
 	private readonly cardRefreshes = new Map<string, { messageId: string; trackKey: string }>();
 	private readonly renderedSignatures = new WeakMap<Message, string>();
-	/** 메시지에 붙어 있는 카드의 키 — 새 카드(볼륨/챕터/일시정지 상태)로 바뀌면 같은 파일명으로 교체 첨부한다. */
 	private readonly cardTrackKeys = new WeakMap<Message, string>();
-	/**
-	 * 재생 중 컨트롤러의 주기 갱신 틱 — 챕터 경계를 넘었는지 확인해 챕터 줄·종료 시각을 갱신한다.
-	 * 종료 시각은 디스코드 타임스탬프(<t:unix:R>)라 진행률 자체는 클라이언트가 갱신하므로,
-	 * 시그니처가 그대로면(경계 미도달) updateController가 no-op으로 끝난다.
-	 */
 	private readonly progressTicks = new Map<string, NodeJS.Timeout>();
 	private readonly controllerVersions = new WeakMap<CustomPlayer, number>();
 	private readonly destroyedPlayers = new WeakSet<CustomPlayer>();
@@ -52,7 +45,6 @@ export class PlayerNotifier implements Stoppable {
 		this.logger = deps.logger.getSubLogger({ name: 'playerNotifier' });
 	}
 
-	/** 패널 대기 화면 — 플레이어 이벤트에서 그려져 상호작용 맥락이 없으므로 서버 테마를 직접 싣는다. */
 	private async idleView(guildId: string) {
 		const guild = await this.deps.guildService.getGuild(guildId);
 		const recent = await this.fetchRecentTracks(guildId);
@@ -73,7 +65,6 @@ export class PlayerNotifier implements Stoppable {
 		);
 	}
 
-	/** 서버에서 최근 재생된 곡(중복 제거, 최대 5곡) — 대기 화면의 '최근 곡 다시 재생'에 쓴다. */
 	private async fetchRecentTracks(guildId: string) {
 		try {
 			return await this.deps.trackService.getRecentGuildTracks(guildId, 5);
@@ -124,19 +115,16 @@ export class PlayerNotifier implements Stoppable {
 			if (!options.enableController && !interaction) return;
 			if (!this.canSend(player, version, interaction)) return;
 
-			// 기본 채널이면 상시 패널 메시지를 그대로 이어 쓴다 (없거나 지워졌으면 새로 보낸다).
 			const pinnedPanel = interaction ? null : await this.fetchPanelMessage(player);
 			if (pinnedPanel) {
 				if (player.controller && player.controller.id !== pinnedPanel.id) await this.removeController(player);
 				else this.resetControllerState(player);
 			} else {
-				// 새 컨트롤러를 실제로 보내기 직전에만 기존 메시지를 지운다.
 				await this.removeController(player);
 			}
 			if (!this.canSend(player, version, interaction)) return;
 
 			const textChannelId = interaction?.channelId ?? player.textChannelId;
-			// 큰 카드 이미지는 기본 채널 패널에서만 사용한다.
 			const {
 				pinned: pinnedChannel,
 				card,
@@ -210,10 +198,6 @@ export class PlayerNotifier implements Stoppable {
 		}
 	}
 
-	/**
-	 * 종료: 컨트롤러 갱신 디바운스 타이머와 주기 갱신 인터벌을 모두 해제하고 대기 중인 갱신을 버려요.
-	 * 컨트롤러 메시지는 다음 부팅의 복구 경로가 다시 맞추므로 flush할 데이터는 없어요. 이후 갱신 요청은 타이머를 만들지 않아요.
-	 */
 	public async stop(): Promise<void> {
 		this.stopped = true;
 		for (const timer of this.debounceTimers.values()) clearTimeout(timer);
@@ -223,10 +207,6 @@ export class PlayerNotifier implements Stoppable {
 		this.pendingUpdates.clear();
 	}
 
-	/**
-	 * 매니저가 이 길드에 들고 있는 플레이어가 아닌 객체(복구·재생성으로 고아가 된 옛 인스턴스)인지 —
-	 * 옛 인스턴스는 곡 정보와 position이 멈춘 채 같은 컨트롤러 메시지를 덮어써서 새 곡 표시와 번갈아 나타난다.
-	 */
 	private isOrphanPlayer(player: CustomPlayer): boolean {
 		const live = this.deps.audio?.getPlayer?.(player.guildId);
 		return Boolean(live) && live !== player;
@@ -268,11 +248,7 @@ export class PlayerNotifier implements Stoppable {
 		}).catch((error) => this.logger.error(`Failed to update controller for guild ${guildId}:`, error));
 	}
 
-	/**
-	 * 편집 생략 판별용 시그니처 — 트랙 identity를 포함한다. 카드 모드에서 트랙
-	 * 식별자가 이미지 첨부에만 실려 있어, 컴포넌트 JSON만 비교하면 전이 직후의
-	 * 편집이 스킵될 수 있다.
-	 */
+	/** Include track identity because card mode puts track info only in the attachment. */
 	private renderSignature(player: CustomPlayer, components: { toJSON(): unknown }): string {
 		const encoded = nowPlayingTrack(player)?.encoded;
 		return `${typeof encoded === 'string' ? normalizeTrackEncoded(encoded) : ''}::${JSON.stringify(components.toJSON())}`;
@@ -287,7 +263,6 @@ export class PlayerNotifier implements Stoppable {
 			if (!options || (!options.enableController && !allowDisabled)) return;
 			if (!this.canSend(player, version) || player.messageId !== message.id || player.controller?.id !== message.id) return;
 			const textChannelId = player.textChannelId;
-			// 카드 trackKey가 바뀌면 같은 파일명이라도 재업로드한다 (볼륨/챕터/일시정지 상태 변경).
 			const {
 				pinned: pinnedChannel,
 				card,
@@ -336,7 +311,7 @@ export class PlayerNotifier implements Stoppable {
 			) {
 				player.messageId = null;
 				player.controller = null;
-				// 이미 직렬화 체인 안에 있으므로 다시 enqueue하지 않는다.
+				// Already inside the serialized sendChain; calling sendController would deadlock.
 				await this.sendControllerNow(player, undefined, version);
 			}
 		}
@@ -372,11 +347,6 @@ export class PlayerNotifier implements Stoppable {
 		}
 	}
 
-	/**
-	 * 재생 중 컨트롤러의 주기 갱신 틱(≈5초) — 챕터 경계를 넘어 챕터 줄·종료 시각이 바뀌었는지 확인한다.
-	 * 종료 시각은 디스코드 타임스탬프라 진행률 갱신은 클라이언트 몫이므로,
-	 * 경계 미도달이면 updateController가 시그니처 비교로 no-op으로 끝난다.
-	 */
 	private ensureProgressTick(player: CustomPlayer): void {
 		if (this.stopped || this.progressTicks.has(player.guildId)) return;
 		if (player.queue.current?.info.isStream === true) return;
@@ -404,7 +374,6 @@ export class PlayerNotifier implements Stoppable {
 		await this.removeController(player);
 	}
 
-	/** 대기 중 갱신·타이머를 정리하고 플레이어의 메시지 참조를 비운다 — 메시지 자체는 건드리지 않는다. */
 	private resetControllerState(player: CustomPlayer): { controllerMessage: Message | null; messageId: string | null } {
 		this.clearDebounceTimer(player.guildId);
 		this.pendingUpdates.delete(player.guildId);
@@ -415,13 +384,12 @@ export class PlayerNotifier implements Stoppable {
 		const controllerMessage = (player.controller as Message | null) ?? null;
 		const messageId = player.messageId ?? null;
 
-		// 봇이 직접 삭제할 때, messageDeleted 이벤트가 발생했을 때 구별하기 위해 미리 null로 비워둡니다.
+		// Clear refs before deleting so messageDeleted listener recognizes bot-initiated removal.
 		player.messageId = null;
 		player.controller = null;
 		return { controllerMessage, messageId };
 	}
 
-	/** 기본 채널에 저장된 상시 패널 메시지 — 플레이어의 텍스트 채널이 기본 채널일 때만, 편집 가능하면 돌려준다. */
 	private async fetchPanelMessage(player: CustomPlayer): Promise<Message | null> {
 		try {
 			if (!player.textChannelId) return null;
@@ -439,20 +407,14 @@ export class PlayerNotifier implements Stoppable {
 		}
 	}
 
-	/**
-	 * 기본 채널 상시 패널을 맞춘다 — 채널·입력 재생·입력 삭제 설정 변경 직후 호출한다. 패널 모드가 꺼졌으면 패널 메시지를 지운다.
-	 * 이전 패널은 지우고, 새 기본 채널에는 대기 화면(재생 중이면 컨트롤러)을 올려 메시지 ID를 저장한다.
-	 */
 	public async syncPanel(guildId: string, previousChannelId: string | null): Promise<void> {
 		await this.enqueueControllerOperation(guildId, async () => {
 			try {
 				const oldMessageId = await guildChannels.getTextMessage(this.deps.guildService, guildId);
-				// 패널 모드(기본 채널 + 입력 재생 + 패널 모드)일 때만 패널 채널이 있다.
 				const channelId = await guildChannels.getPanelChannel(this.deps.guildService, guildId);
 				const player = this.deps.audio?.getPlayer?.(guildId);
 				const playing = Boolean(player?.queue.current);
 
-				// 채널이 그대로면 패널 메시지를 새로 만들지 않는다 — 재생 중이면 컨트롤러가, 대기 중이면 대기 화면 편집이 맡는다.
 				if (channelId && oldMessageId && (previousChannelId === null || previousChannelId === channelId)) {
 					if (playing) return;
 					const channel = this.deps.client.channels.cache.get(channelId);
@@ -471,7 +433,7 @@ export class PlayerNotifier implements Stoppable {
 					}
 				}
 
-				// 봇이 직접 지우는 메시지가 messageDelete 이벤트로 다시 패널을 만들지 않게, 먼저 ID를 비운 뒤 지운다.
+				// Clear stored ID before deleting so messageDelete doesn't recreate the panel.
 				await guildChannels.setTextMessage(this.deps.guildService, guildId, null);
 				const oldChannelId = previousChannelId ?? channelId ?? (await guildChannels.getDefaultTextChannel(this.deps.guildService, guildId));
 				if (oldMessageId && oldChannelId) {
@@ -481,14 +443,12 @@ export class PlayerNotifier implements Stoppable {
 					}
 				}
 				if (!channelId) {
-					// 패널 모드가 꺼졌는데 재생 중이면 일반 컨트롤러로 다시 보낸다.
 					if (player && playing) await this.sendControllerNow(player);
 					return;
 				}
 				const channel = this.deps.client.channels.cache.get(channelId);
 				if (!channel?.isSendable()) return;
 				if (player && playing) {
-					// 이미 재생 중이면 패널 채널로 컨트롤러를 옮겨 새 패널 메시지로 만든다.
 					player.textChannelId = channelId;
 					await this.sendControllerNow(player);
 					return;
@@ -508,7 +468,6 @@ export class PlayerNotifier implements Stoppable {
 	private async removeController(player: CustomPlayer): Promise<void> {
 		const { controllerMessage, messageId } = this.resetControllerState(player);
 
-		// controller 객체가 이미 있으면 fetch 없이 바로 삭제
 		if (controllerMessage?.deletable) {
 			await controllerMessage.delete().catch((error: any) => {
 				if (error.code !== 10008) {
@@ -518,7 +477,6 @@ export class PlayerNotifier implements Stoppable {
 			return;
 		}
 
-		// controller 객체가 없지만 messageId가 남아있는 경우 (resume 등) fallback fetch
 		if (messageId && player.textChannelId) {
 			const channel = this.deps.client.channels.cache.get(player.textChannelId);
 			if (channel?.isSendable()) {
@@ -538,14 +496,12 @@ export class PlayerNotifier implements Stoppable {
 		this.logger.debug(`Track started in guild: ${player.guildId}`);
 
 		if (player.textChannelId && player.messageId) {
-			// 패널 모드: 채팅에 밀려도 항상 같은 메시지를 edit로 유지한다.
 			if (await this.isPanelChannel(player.guildId, player.textChannelId)) {
 				this.updateController(player);
 				return;
 			}
 			const channel = this.deps.client.channels.cache.get(player.textChannelId);
 			if (channel?.isSendable()) {
-				// 만약 컨트롤러가 이미 마지막 메시지라면 굳이 다시 보낼 필요 없이 업데이트만 진행
 				if (channel.lastMessageId === player.messageId) {
 					this.updateController(player);
 					return;
@@ -560,7 +516,6 @@ export class PlayerNotifier implements Stoppable {
 		this.logger.trace(`Player updated in guild: ${player.guildId}`);
 
 		if (!player.queue.current) {
-			// 재생 중인데 current가 비어 있으면 전이 리커널(trackHandler)이 복원할 때까지 기다린다.
 			if (player.playing) {
 				this.logger.debug(`onPlayerUpdate skipped: current is null while playing (guild ${player.guildId}), transition reconcile pending`);
 			}
@@ -573,12 +528,10 @@ export class PlayerNotifier implements Stoppable {
 		this.logger.debug(`Player destroyed in guild: ${player.guildId}`);
 		this.destroyedPlayers.add(player);
 		clearNowPlayingCard(this.deps, player.guildId);
-		// 기본 채널 패널은 지우지 않고 대기 화면으로 되돌린다.
 		const panel = player.controller as Message | null;
 		if (panel && player.textChannelId && panel.editable && (await this.isPanelChannel(player.guildId, player.textChannelId))) {
 			this.controllerVersions.set(player, (this.controllerVersions.get(player) ?? 0) + 1);
 			this.resetControllerState(player);
-			// 진행 중인 편집과 겹쳐도 파괴 경로가 막히지 않게 기다리지 않는다.
 			const idleView = await this.idleView(player.guildId);
 			void panel
 				.edit({ components: [idleView], attachments: [], files: [], flags: [MessageFlags.IsComponentsV2] })
@@ -601,7 +554,6 @@ export class PlayerNotifier implements Stoppable {
 		}
 	}
 
-	/** 컨트롤러가 떠 있는 채널이 길드의 기본 채널(패널)인지 — 맞으면 핀 모드(edit 유지)로 다룬다. */
 	private async isPanelChannel(guildId: string, textChannelId: string): Promise<boolean> {
 		try {
 			const pinned = await guildChannels.getPanelChannel(this.deps.guildService, guildId);

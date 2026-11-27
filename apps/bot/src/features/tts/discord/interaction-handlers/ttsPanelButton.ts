@@ -7,10 +7,6 @@ import type { TtsUserPreset } from '../../application/ttsUserSettings.ts';
 import { buildTtsPanel, normalizePanelLang } from '../views/ttsView.ts';
 import { ttsId } from '../customIds.ts';
 
-/**
- * /tts 패널의 버튼 핸들러 — 낭독 토글, 기본값 복구.
- * 음성·위치 셀렉트는 `ttsPanelSelect.ts`가 받는다.
- */
 @ApplyOptions<InteractionHandler.Options>({
 	interactionHandlerType: InteractionHandlerTypes.Button
 })

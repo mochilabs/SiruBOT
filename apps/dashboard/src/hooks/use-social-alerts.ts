@@ -13,29 +13,22 @@ import type {
 	YouTubeResolveResponse,
 } from "@/types/social";
 
-/** 구독 추가에 필요한 입력 — 대시보드에서 조립해 POST로 보내요. */
 export interface SocialSubscriptionInput {
 	platform: SocialPlatform;
 	sourcePlatformId: string;
 	sourceName: string;
 	targetChannelId: string;
 	messageTemplate?: string | null;
-	/** 웹훅 표시명 — null이면 기본 이름(시루 소셜 알림 — 채널 이름) */
 	webhookName?: string | null;
-	/** 웹훅 프로필 사진 URL — null이면 웹훅 기본 아바타 */
 	webhookAvatarUrl?: string | null;
-	/** 라이브 섬네일 표시 — 없으면 기본값(true) */
 	showThumbnail?: boolean;
 }
 
 export interface SocialSubscriptionPatch {
 	messageTemplate?: string | null;
 	status?: "active" | "disabled";
-	/** 웹훅 표시명 — null이면 기본 표시로 되돌려요 */
 	webhookName?: string | null;
-	/** 웹훅 프로필 사진 URL — null이면 기본 아바타로 되돌려요 */
 	webhookAvatarUrl?: string | null;
-	/** 라이브 섬네일 표시 */
 	showThumbnail?: boolean;
 }
 
@@ -43,7 +36,6 @@ export type SocialActionResult<T> = { ok: true; data: T } | { ok: false; error: 
 
 const listFetcher = createApiFetcher<SocialSubscriptionsResponse>("알림 구독 목록을 불러오지 못했어요.");
 
-/** 소셜 알림 구독 CRUD + 플랫폼별 채널 해석 — data-api → notifier 프록시를 경유해요. */
 export function useSocialAlerts(guildId: string, enabled = true) {
 	const { data, error, isLoading, mutate, guildUrl, redirectToLogin } = useGuildResource<SocialSubscriptionsResponse>(guildId, "/social/subscriptions", {
 		enabled,
@@ -52,7 +44,6 @@ export function useSocialAlerts(guildId: string, enabled = true) {
 
 	const subscriptions: SocialSubscription[] | null = data?.subscriptions ?? null;
 
-	/** 실패 응답 — 본문 error(한국어) 우선은 toApiError가 담당하고, status를 잃지 않도록 401은 로그인으로 보내요 (다른 길드 훅과 같은 규율). */
 	const failure = async (res: Response, fallback: string): Promise<{ ok: false; error: string }> => {
 		const apiError = await toApiError(res, fallback);
 		if (apiError.status === 401) redirectToLogin();

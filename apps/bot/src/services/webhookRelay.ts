@@ -1,10 +1,3 @@
-/**
- * 웹훅 릴레이 — 봇이 만든 채널 웹훅으로 메시지를 원작자 이름·프사로 보내요.
- *
- * - 임베드 복구 결과를 "링크를 보낸 사람" 아이디로 띄우기 위해서예요 (embed-fixer 관행).
- * - 채널에 우리 웹훅이 없으면 만들고, 60초 캐시로 재사용해요 (fetch/create 절약).
- * - 스레드(웹훅 못 만듦)·권한 없음·전송 실패면 false — 호출자는 message.reply 폴백으로 봇 아이디로 보내요.
- */
 import { MemoryCache } from '@sirubot/utils';
 import {
 	type AnyThreadChannel,
@@ -22,31 +15,25 @@ const WEBHOOK_NAME = 'SiruBOT 임베드';
 const WEBHOOK_CACHE_TTL_MS = 60_000;
 
 export interface WebhookRelayOptions {
-	/** 원작자 표시 이름 */
 	username: string;
-	/** 원작자 프사 URL */
 	avatarURL: string;
 	content?: string;
 	components?: ContainerBuilder[];
 }
 
-/** 웹훅을 만들 수 있는 채널 — 스레드는 웹훅 생성을 지원하지 않아요 */
+// 스레드는 웹훅 생성을 지원하지 않아요
 type WebhookChannel = Exclude<GuildTextBasedChannel, AnyThreadChannel>;
 
-/** 웹훅 릴레이가 쓰는 의존성 — 봇 유저는 로그인 뒤에야 생겨서 호출 시점에 읽어요 */
 export interface WebhookRelayDeps {
 	logger: AppLogger;
 	getBotUser: () => ClientUser | null | undefined;
 }
 
-/** 웹훅 릴레이 — 채널별 웹훅 캐시(60초)를 인스턴스가 소유해요 (container.webhookRelay) */
 export class WebhookRelay {
-	/** 채널별 웹훅 캐시 */
 	private readonly webhooks = new MemoryCache<string, Webhook>({ ttl: WEBHOOK_CACHE_TTL_MS, maxSize: 500 });
 
 	public constructor(private readonly deps: WebhookRelayDeps) {}
 
-	/** 채널에 우리 봇이 만든 웹훅이 있는지 찾고 없으면 만들어요 */
 	private async getOrCreateWebhook(channel: WebhookChannel): Promise<Webhook | null> {
 		const cached = this.webhooks.get(channel.id);
 		if (cached) return cached;
@@ -72,7 +59,6 @@ export class WebhookRelay {
 		return created;
 	}
 
-	/** 원작자 이름·프사로 웹훅 전송 — 실패하면 false (호출자가 message.reply로 봇 아이디 폴백) */
 	public async relay(message: Message<true>, options: WebhookRelayOptions): Promise<boolean> {
 		const channel = message.channel;
 		if (channel.isThread()) return false;

@@ -12,7 +12,6 @@ import {
 	type MixerAdvancedEventPayload,
 	type MixerOverriddenEventPayload
 } from './mixerHandlers.ts';
-/** lavalink_mixer 0.5+가 메인이 빌 때 공지를 흘리려고 재생하는 내부 무음 트랙 식별자 */
 export const MIXER_IDLE_CARRIER_ID = 'lavalink-mixer:idle-carrier';
 
 interface IdleCarrierPayload {
@@ -22,12 +21,8 @@ interface IdleCarrierPayload {
 
 const TRACK_EVENT_TYPES = new Set(['TrackStartEvent', 'TrackEndEvent', 'TrackStuckEvent', 'TrackExceptionEvent']);
 
-/**
- * 무음 캐리어의 Track* 이벤트를 lavalink-client가 처리하기 전에 버린다.
- * 그대로 두면 라이브러리가 캐리어를 queue.current로 올리고, 종료 시 queueEnd(자동 재생·대기 종료)를 태운다.
- */
+/** Drop internal idle-carrier track events before lavalink-client treats them as real playback. */
 export function guardIdleCarrierEvents(node: LavalinkNode): void {
-	// handleEvent는 라이브러리 내부(private) 진입점이라 최소 형태로만 좁혀서 감싼다
 	const target = node as unknown as { handleEvent: (payload: IdleCarrierPayload) => Promise<void> };
 	const original = target.handleEvent.bind(node);
 	target.handleEvent = (payload) => {
@@ -36,12 +31,7 @@ export function guardIdleCarrierEvents(node: LavalinkNode): void {
 	};
 }
 
-/**
- * lavalink 노드 이벤트 핸들러 — 세션 저장/복원 엔진(SessionRestoreEngine)과
- * 노드 수명주기 로깅·고아 플레이어 마이그레이션만 담당한다.
- */
 export class NodeHandler extends BaseLavalinkHandler {
-	/** 세션 저장·복원 엔진 — ready/resumed 위임과 크래시 복구 전체를 담는다. */
 	public readonly sessionRestore: SessionRestoreEngine;
 
 	constructor(
@@ -61,8 +51,6 @@ export class NodeHandler extends BaseLavalinkHandler {
 			'resumed',
 			this.wrapAsyncHandler(this.sessionRestore.handleResumedPlayers.bind(this.sessionRestore), 'handleNodeResumed')
 		);
-		// ready op는 'resumed' 이벤트와 무관하게 항상 온다 — sessionId 확정 저장과
-		// fresh 세션 복구(크래시 재시작)의 트리거로 사용한다.
 		this.nodeManager.on('raw', this.handleNodeRaw.bind(this));
 	}
 
@@ -74,8 +62,6 @@ export class NodeHandler extends BaseLavalinkHandler {
 	private async handleNodeConnect(node: LavalinkNode) {
 		this.logger.info(`Node connected: ${node.options.id}`);
 		try {
-			// Enable resuming (timeout is in seconds per Lavalink API).
-			// 첫 연결(sessionId 미확정)이나 이전 세션 만료(404)면 건너뛴다 — ready op가 새 세션을 확정한다.
 			if (node.sessionId) {
 				await node.updateSession(true, RESUME_TIMEOUT_SECONDS);
 			}
@@ -85,15 +71,9 @@ export class NodeHandler extends BaseLavalinkHandler {
 		await this.sessionRestore.saveNodeSession(node);
 	}
 
-	/**
-	 * raw payload 중 ready op와 mixer op를 이벤트 측에서 분류한다.
-	 * - mixer op: overlapEnd(aborted)만 MixerService에 기록한다(나머지는 무시).
-	 * - ready op: sessionId 확정 저장·resume 연장·fresh 복구는 엔진(handleReadyOp)이 위임한다.
-	 */
 	private handleNodeRaw(node: LavalinkNode, payload: unknown) {
 		const data = payload as { op?: unknown; resumed?: unknown } | null;
 		if (!data) return;
-		// v2 mixer custom WebSocket events
 		if (data.op === 'mixer') {
 			const mixerMsg = payload as { type?: string; guildId?: string };
 			const gid = mixerMsg.guildId;
@@ -131,22 +111,15 @@ export class NodeHandler extends BaseLavalinkHandler {
 			return;
 		}
 
-		// Move orphan players to least used nodes with simple cycling
 		for (let idx = 0; idx < orphanPlayers.length; idx++) {
-			// Simple cycling through available nodes
-			// changeNode 실패(레이스로 신노드에 플레이어 미존재 등)를 두면 unhandled rejection + 오펜 플레이어가 남는다.
 			const player = orphanPlayers[idx];
-			// changeNode 전에 판정한다 — 믹서를 쓰던 플레이어만 신노드에서 체인을 다시 만든다.
 			const hadMixer = this.deps.mixerService?.hasMixerFilter?.(player) ?? false;
 			this.deps.mixerService?.markFiltersStale?.(player.guildId);
 			player
 				.changeNode(leastUsedNode[idx % leastUsedNode.length])
 				.then(async () => {
 					this.sessionRestore.clearOrphanPlayer(player);
-					// 마이그레이션한 신노드의 플러그인은 필터·설정·슬롯 상태를 모른다 —
-					// 필터와 DB 설정을 재전송하고 에폭을 맞추기 위해 리셋한다 (B-10).
-					// changeNode는 트랙을 filters보다 먼저 보내 현재 트랙 체인에 mixer가 빠진다 —
-					// 믹서 플레이어는 필터 재전송 + seek으로 체인을 재구성한다.
+					// changeNode sends the track before filters, so rebuild the mixer chain on the new node.
 					const resync = hadMixer
 						? this.deps.mixerService?.rebuildMixerChain?.(player)
 						: this.deps.mixerService?.ensureMixerFilter?.(player);
@@ -162,8 +135,6 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 	private handleNodeReconnecting(node: LavalinkNode) {
 		this.logger.info(`Node reconnecting: ${node.options.id}`);
-		// Lavalink 재시작 뒤 플러그인 필터 상태가 사라질 수 있다. 예열 슬롯은
-		// session resume 시 여전히 유효할 수 있으므로 보존하고, 다음 play 이전에만 필터를 재적용한다.
 		this.deps.mixerService.resetFilterReadiness();
 	}
 
@@ -172,7 +143,6 @@ export class NodeHandler extends BaseLavalinkHandler {
 	}
 
 	private handleNodeError(node: LavalinkNode, error: Error, payload: unknown) {
-		// lavalink-client가 mixer op를 몰라 던지는 오류 — raw에서 이미 소비하므로 error로 안 올린다.
 		if (error.message.startsWith('Unexpected op "mixer"')) {
 			this.logger.debug(`Node ${node.options.id} reported a mixer op: ${JSON.stringify(payload)}`);
 			return;
@@ -180,7 +150,6 @@ export class NodeHandler extends BaseLavalinkHandler {
 		this.logger.error(`Node error: ${node.options.id}`, error, payload);
 		this.deps.playbackReporter.reportNodeEvent(node.id, 'node_error', error.message);
 
-		// 재생 상태 페이지(reportNodeEvent)는 요약만 남겨요 — 원인 추적용 스택은 Sentry로 보내요
 		Sentry.withScope((scope) => {
 			scope.setTag('type', 'lavalinkNodeError');
 			scope.setTag('lavalink_node', node.options.id);

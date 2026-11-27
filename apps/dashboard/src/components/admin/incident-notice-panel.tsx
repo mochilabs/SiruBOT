@@ -18,7 +18,6 @@ import { toast } from "@/components/ui/toast";
 import { notifyApiError } from "@/lib/notify";
 import { createApiFetcher } from "@/lib/swr";
 
-/** 만료 선택지 (분). 최대 7일 — 서버도 같은 스키마로 검사해요. */
 const EXPIRY_OPTIONS = [
 	{ minutes: 30, label: "30분" },
 	{ minutes: 60, label: "1시간" },

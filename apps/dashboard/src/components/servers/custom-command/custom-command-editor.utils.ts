@@ -8,13 +8,11 @@ import {
 	type CustomCommandStep,
 	validateCustomCommandName} from "@sirubot/utils/customCommand";
 
-/** 빌더가 편집 중인 명령어 상태 — 저장 payload를 만들기 전의 값들이에요 */
 export interface EditorDraft {
 	name: string;
 	description: string;
 	method: CustomCommandMethod;
 	steps: CustomCommandStep[];
-	/** null이면 access 미설정(everyone) */
 	access: CustomCommandAccess | null;
 }
 
@@ -30,7 +28,6 @@ function walkSteps(steps: readonly StepLike[], visit: (step: StepLike) => void):
 	}
 }
 
-/** 스텝에 역할 변경 액션이 있는지 — 실행 제한 필수 판정에 써요 (if 서브 스텝 포함) */
 export function hasRoleAction(steps: readonly StepLike[]): boolean {
 	let found = false;
 	walkSteps(steps, (step) => {
@@ -39,7 +36,6 @@ export function hasRoleAction(steps: readonly StepLike[]): boolean {
 	return found;
 }
 
-/** 대기 합계(초) — if 서브 스텝 포함 */
 export function totalDelaySeconds(steps: readonly StepLike[]): number {
 	let total = 0;
 	walkSteps(steps, (step) => {
@@ -48,7 +44,6 @@ export function totalDelaySeconds(steps: readonly StepLike[]): number {
 	return total;
 }
 
-/** 편집기 상태 → 저장용 v2 스펙. 실패하면 첫 사유(한국어)를 돌려줘요. */
 export function buildSpec(draft: EditorDraft): { ok: true; spec: CustomCommandSpecV2 } | { ok: false; error: string } {
 	const spec = customCommandSpecSchemaV2.safeParse({
 		version: 2,
@@ -61,10 +56,6 @@ export function buildSpec(draft: EditorDraft): { ok: true; spec: CustomCommandSp
 	return { ok: true, spec: spec.data };
 }
 
-/**
- * 편집기 상태 검증 — 봇 실행 시와 같은 규칙을 저장 전에 보장해요.
- * 통과하면 null, 실패하면 한국어 사유를 돌려줘요.
- */
 export function validateEditorDraft(draft: EditorDraft): string | null {
 	const nameError = validateCustomCommandName(draft.name, draft.method);
 	if (nameError) return nameError;

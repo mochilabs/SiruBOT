@@ -28,28 +28,20 @@ interface PlaybackState {
 	lastOutroArmKey: string | null;
 }
 
-/** 건너뛰기 안내를 Discord 메시지로 만드는 포트 — 실제 구현은 features/music/discord/playbackMessages.ts예요. */
 export interface SponsorBlockMessagePort {
-	/** 건너뛴 구간 종류(SponsorBlock 카테고리) 하나에 대한 안내 메시지 */
 	skipNotice(category: string): MessageCreateOptions;
 }
 
 export interface SponsorBlockServiceDeps {
 	logger: AppLogger;
 	guildService: GuildService;
-	/** 건너뛰기 안내 메시지 렌더링 */
 	messages: SponsorBlockMessagePort;
-	/** client는 로그인 뒤에 준비돼서 호출 시점에 읽어요 */
 	getClient: () => Client;
-	/** mixerService와 서로 얽혀 있어서 호출 시점에 읽어요 */
 	getMixerService: () => MixerService;
-	/** 큐 관측 헬퍼가 쓰는 lavalink 의존성 (container.lavalink) */
 	lavalink: LavalinkDeps;
-	/** 조기 아웃로 다음 곡을 아밍하는 믹서 이벤트 처리 — mixerHandlers.handleMixerNeedNext를 주입받아요 (순환 import 회피) */
 	armNextTrack: (player: CustomPlayer, event: MixerNeedNextEventPayload) => Promise<void>;
 }
 
-/** Segment lookup, live skipping, and incoming mixer start all use the same source. */
 export class SponsorBlockService {
 	private readonly lookups = new Map<string, { expiresAt: number; promise: Promise<SponsorBlockSkipSegment[]> }>();
 	private readonly playback = new WeakMap<CustomPlayer, PlaybackState>();

@@ -6,7 +6,6 @@ import { isConfigLoaded, setConfigForTesting } from './config.ts';
 
 const SRC_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-/** import 시점에 부작용을 일으키는 게 계약인 파일 — .env 로딩/신호 핸들러(environment, setup)와 진입점(index)이에요. */
 const SIDE_EFFECT_ENTRIES = new Set(['index.ts', 'core/environment.ts', 'core/setup.ts']);
 
 function listModules(dir: string): string[] {

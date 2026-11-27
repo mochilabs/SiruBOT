@@ -25,7 +25,6 @@ const assetDateFormat = new Intl.DateTimeFormat("ko-KR", {
   day: "numeric",
 });
 
-/** 에셋 용량 표기 — 1MB 미만은 KB, 그 이상은 소수점 한 자리 MB */
 function formatAssetSize(sizeBytes: number): string {
   if (sizeBytes >= 1024 * 1024) {
     return `${(sizeBytes / (1024 * 1024)).toFixed(1)}MB`;
@@ -109,7 +108,6 @@ function AssetsPanel({ guildId }: { guildId: string }) {
   };
 
   const handleDelete = async (asset: GuildAsset) => {
-    // 첫 클릭은 무장(4초 자동 해제), 두 번째 클릭이 실제 삭제예요
     if (deletingId !== null || !requestDelete(asset.id)) return;
     setDeletingId(asset.id);
     try {

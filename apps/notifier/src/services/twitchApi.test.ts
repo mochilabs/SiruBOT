@@ -78,7 +78,6 @@ describe('TwitchApiClient', () => {
 		const client = new TwitchApiClient({ clientId: 'cid', clientSecret: 'cs', fetchFn });
 		const user = await client.getTwitchUser('siru');
 		expect(user).toEqual({ id: '111', login: 'siru', displayName: '시루' });
-		// token + users(401) + token(재발급) + users(200)
 		expect(fetchFn).toHaveBeenCalledTimes(4);
 	});
 

@@ -15,29 +15,18 @@ export class ReadyEvent extends Listener {
 	private readonly style = isDev ? yellow : blue;
 
 	public override async run() {
-		// Disable self after first run instead of using `once: true`.
-		// `once: true` triggers Piece.unload() which races with the
-		// framework's CoreReady listener (same `clientReady` event) and
-		// can cause UNLOADED_PIECE when the piece is already removed
-		// from the store by the other listener's unload().
+		// once: true는 CoreReady와 Piece.unload() 경합(UNLOADED_PIECE)이 날 수 있어 수동 비활성화해요.
 		this.enabled = false;
 
 		await this.printBanner().catch((error) => this.container.logger.error('Failed to print banner:', error));
 
-		// 앱 이모지 동기화 — shard 0만 미등록 PNG를 업로드하고, 모든 프로세스가
-		// 조회 결과를 `emoji()` 캐시에 주입한다. 실패해도 emoji()가 유니코드 폴백으로
-		// 동작해서 기능은 그대로다.
 		const shard = this.container.client.shard;
 		const shouldUpload = !shard || shard.ids.includes(0);
 		await this.container.appEmojiManager?.sync(shouldUpload);
 
-		// 상태 메시지 순환은 container.botActivity가 소유해요 — 종료 때 stop()이 인터벌을 해제해요
 		this.container.botActivity.start();
-		// 사용 지표 60초 flush — 종료 때 stop()이 남은 집계를 보내요
 		this.container.usageRecorder.start();
-		// 예약 작업 15초 tick — 길드 캐시가 찬 뒤에 시작해요. 종료 때 stop()이 진행 중인 핸들러를 기다려요
 		this.container.guildJobScheduler.start();
-		// 생일 축하는 켜져 있는데 다음 작업이 끊긴 서버를 다시 이어 줘요 (대시보드 저장 실패, 3회 실패 등)
 		await this.container.birthday
 			?.reconcile([...this.container.client.guilds.cache.keys()])
 			.catch((error: unknown) => this.container.logger.warn(`[birthday] 작업 복구 실패: ${error}`));

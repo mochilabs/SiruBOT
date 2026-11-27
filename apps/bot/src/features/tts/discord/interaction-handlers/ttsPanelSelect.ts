@@ -8,10 +8,6 @@ import { normalizeTtsChannel, normalizeTtsEmotion } from '../../application/ttsU
 import { buildTtsPanel, normalizePanelLang, TTS_VOICE_DEFAULT_VALUE } from '../views/ttsView.ts';
 import { ttsId } from '../customIds.ts';
 
-/**
- * /tts 패널의 음성·위치 셀렉트 핸들러. 선택한 음성을 저장하고 패널을 다시 그려 현재 선택을 표시한다.
- * "기본 음성"을 고르면 저장된 음성을 지워 봇 기본 음성으로 되돌린다.
- */
 @ApplyOptions<InteractionHandler.Options>({
 	interactionHandlerType: InteractionHandlerTypes.SelectMenu
 })
@@ -22,7 +18,6 @@ export class TtsPanelSelectHandler extends InteractionHandler {
 		const decoded = ttsId.decode(interaction.customId);
 		if (!decoded) return this.none();
 		const lang = normalizePanelLang(decoded.lang);
-		// 언어 셀렉트는 저장할 값이 없다 — 보는 언어만 바꿔 패널을 다시 그린다
 		if (decoded.action === 'lang') return this.some({ patch: null, lang: value });
 		if (decoded.action === 'voice') return this.some({ patch: { voice: value === TTS_VOICE_DEFAULT_VALUE ? null : value }, lang });
 		if (decoded.action === 'channel') return this.some({ patch: { channel: normalizeTtsChannel(value) }, lang });

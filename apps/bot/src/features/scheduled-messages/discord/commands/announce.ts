@@ -9,13 +9,8 @@ import * as list from '../subcommands/list.ts';
 
 const SUBCOMMANDS: SubcommandModule[] = [create, list, del];
 
-/** /도움말에서 서브커맨드 멘션을 그릴 때 써요 */
 export const ANNOUNCE_SUBCOMMANDS = subcommandSummaries(SUBCOMMANDS);
 
-/**
- * /공지 — 예약 메시지 만들기·목록·삭제 (서버 관리 권한).
- * 상한·간격 등 서버별 설정은 대시보드에서 바꿔요.
- */
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'announce',

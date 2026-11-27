@@ -43,10 +43,8 @@ vi.mock('@sapphire/framework', () => ({
 		};
 	},
 	InteractionHandlerTypes: { Button: 'button' },
-	// controllerPayload 빌더가 직접 import하는 전역 container — pinned 조회만 필요하다.
 	container: { guildService: {}, lavalink: { guildService: {}, currentBpm: { read: () => null } } }
 }));
-// 음성 채널 조건은 픽스처 멤버로 판정해요 — 권한 보유자(permissions.has)는 원격 권한자로 면제돼요. 정책 자체는 access.test.ts가 검증해요.
 vi.mock('../utils/permissionCheck.ts', () => ({
 	checkDJOrAlone: mocks.allowed,
 	checkInBotVoice: async (
@@ -147,7 +145,6 @@ describe('controller button cached rendering', () => {
 
 	it('keeps an existing cached image without uploading it again', async () => {
 		mocks.cached.mockReturnValue({ url: 'attachment://card.png', filename: 'card.png', file: new AttachmentBuilder(Buffer.from('card')) });
-		// 컨트롤러가 떠 있는 채널이 길드의 고정 채널이어야 카드가 붙는다.
 		mocks.pinned.mockResolvedValue('controller-channel');
 		const { edit, interaction, handler } = context();
 		const original = (interaction as unknown as { message: { attachments: Collection<string, { id: string; name: string }> } }).message;

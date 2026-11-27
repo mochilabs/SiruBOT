@@ -276,7 +276,6 @@ describe('runCustomCommandSpec — CV2 디자인', () => {
 		expect(payload.flags).toContain(MessageFlags.IsComponentsV2);
 		expect(payload.allowedMentions).toEqual({ parse: [] });
 		expect(payload.components).toHaveLength(1);
-		// 렌더링은 ctx.renderDesign 포트가 맡고, 인터프리터는 인수 치환 함수만 넘겨요
 		expect(h.renderDesign).toHaveBeenCalledOnce();
 		expect(h.renderDesign.mock.calls[0]![0]).toMatchObject({ accentColor: 'blue' });
 	});

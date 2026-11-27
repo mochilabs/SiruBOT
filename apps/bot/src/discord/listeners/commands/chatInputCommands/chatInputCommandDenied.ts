@@ -8,8 +8,6 @@ import { ignoreDiscord } from '../../../../lib/ignoreDiscord.ts';
 @ApplyOptions<Listener.Options>({ event: Events.ChatInputCommandDenied })
 export class ChatInputCommandDenied extends Listener {
 	public override async run({ message: content }: UserError, { interaction }: ChatInputCommandDeniedPayload) {
-		// 조건 미충족(silent 포함)도 사용자에게 항상 ephemeral로 응답해요.
-		// 무응답이면 디스코드가 "애플리케이션이 응답하지 않음"을 띄워요.
 		await sendComponent(interaction, notice(content), { ephemeral: true });
 	}
 }
@@ -20,9 +18,7 @@ export async function sendComponent(
 	options: { ephemeral: boolean } = { ephemeral: false }
 ) {
 	if (interaction.deferred || interaction.replied) {
-		// defer 후 ephemeral 요청:
-		// - 이미 ephemeral로 defer된 경우: editReply로 그대로 수정 가능해요
-		// - 공개 defer된 경우: followUp을 먼저 호출하면 Discord가 첫 followUp으로 @original을 채운 뒤 deleteReply가 그 에러 메시지 자체를 지워버리므로, 반드시 @original(생각 중 자리표시자)을 먼저 삭제한 뒤 ephemeral followUp을 보내요
+		// 공개 defer 후 ephemeral 응답 시, followUp 전에 @original을 먼저 지워야 followUp이 @original을 채운 뒤 삭제되는 문제를 피해요.
 		if (options.ephemeral) {
 			if (interaction.ephemeral) {
 				await ignoreDiscord(

@@ -180,7 +180,6 @@ export class PlaylistCommand extends Command {
 
 		const focused = interaction.options.getFocused(true);
 		if (focused.name === 'track') {
-			// 번호 후보는 이미 고른 플레이리스트의 곡 목록이에요
 			return respondPlaylistTrackPositions(interaction, interaction.options.getString('name'));
 		}
 		if (focused.name === 'name' && subcommand !== 'create') {

@@ -6,7 +6,6 @@ import { dataApiFailResponse, dataApiUserMessage, forwardDataApiGet, forwardData
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 import type { SocialSubscriptionResponse, SocialSubscriptionsResponse } from "@/types/social";
 
-/** 알림 구독 생성 본문 — 최종 검증은 notifier가 socialSubscriptionCreateSchema로 해요. */
 const createSchema = z.object({
   platform: z.enum(["youtube", "chzzk", "twitch"]),
   sourcePlatformId: z.string().trim().min(1).max(200),
@@ -21,7 +20,6 @@ const createSchema = z.object({
 const LIST_FALLBACK = "알림 구독 목록을 불러오지 못했어요.";
 const CREATE_FALLBACK = "알림 구독을 추가하지 못했어요.";
 
-/** 길드 소셜 알림 구독 목록 — notifier 소유 도메인을 data-api 프록시로 그대로 전달해요. */
 export const GET = createGuildApiHandler({
   role: "manage",
   rate: READ_RATE,
@@ -38,7 +36,6 @@ export const GET = createGuildApiHandler({
   },
 });
 
-/** 알림 구독 추가 — 봇이 대상 채널에 웹훅을 만들고 notifier가 구독을 저장해요. */
 export const POST = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,

@@ -2,10 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import type { Message, MessageReaction, PartialMessage, PartialMessageReaction, PartialUser, User } from 'discord.js';
 
-/**
- * 반응 이벤트를 스타보드 서비스의 디바운스 예약으로 넘겨요. 이벤트 흐름을 건드리지 않게 절대 throw하지 않아요.
- * 한 파일에 리스너가 여럿이라 이름을 따로 줘요 (이름이 같으면 Sapphire가 앞의 것을 unload해요).
- */
+// 한 파일에 리스너가 여럿이라 이름을 따로 줘요 (이름이 같으면 Sapphire가 앞의 것을 unload해요)
 async function scheduleFor(
 	container: Listener['container'],
 	message: Message | PartialMessage,

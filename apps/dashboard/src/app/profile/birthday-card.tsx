@@ -25,10 +25,6 @@ async function requestBirthday(method: "PUT" | "DELETE", body?: { month: number;
   }
 }
 
-/**
- * 생일 카드 — 보기 / 편집 두 상태. 저장·삭제 후 router.refresh()로 서버 페이지를 다시 그려
- * 별자리와 오늘의 운세 카드까지 함께 바뀌어요. 연도는 받지 않아요 (봇과 같은 월/일 저장).
- */
 export function BirthdayCard({ birthday }: { birthday: ProfileBirthday }) {
   const router = useRouter();
   const hasBirthday = birthday.month != null && birthday.day != null;
@@ -48,7 +44,6 @@ export function BirthdayCard({ birthday }: { birthday: ProfileBirthday }) {
 
   const changeMonth = (next: number) => {
     setMonth(next);
-    // 2월 30일처럼 없는 날짜가 되면 그 달의 마지막 날로 맞춰요
     setDay((prev) => Math.min(prev, BIRTHDAY_DAYS_IN_MONTH[next - 1] ?? 31));
   };
 

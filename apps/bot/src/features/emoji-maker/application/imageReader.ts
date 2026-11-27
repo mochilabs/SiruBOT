@@ -2,22 +2,8 @@ import type { AppLogger } from '../../../lib/appLogger.ts';
 import { fetchImageAsDataUrl } from '../../../lib/imageDataUrl.ts';
 import { cleanTranslation, type TranslatorLlmConfig } from './promptTranslator.ts';
 
-/**
- * 첨부 이미지를 비전 모델(AI 채팅과 같은 OpenAI 호환 엔드포인트)로 읽어 이모지용 영어 설명을 만들고,
- * 같은 호출에서 부적절한(NSFW) 이미지인지 판정해요.
- *
- * 판정이 안전망이라 실패하면 닫혀요: LLM이 꺼져 있거나, 응답이 없거나, JSON을 해석하지 못하면
- * 확인하지 못한 이미지로 그리지 않고 오류를 돌려줘요.
- */
-
 const VISION_TIMEOUT_MS = 30_000;
 
-/**
- * 생성 모델(Tessera-small)은 Pixel Art Atlas의 짧은 명사구 캡션으로 학습했어요
- * (예: "silver twenty-sided die with beveled edges in bright colors", 평균 5단어, 최대 12단어).
- * 그래서 "pixel art" 같은 말을 붙이기보다 같은 문체로 색·재질·시점·특징을 담아야 더 또렷하게 나와요.
- * 텍스트 인코더(CLIP)가 24토큰까지만 읽어서 길이도 그 안에 맞춰요.
- */
 const SYSTEM_PROMPT = [
 	'You turn an image into a caption for a 16x16 pixel-art sprite generator, then check it for safety.',
 	'',
@@ -43,7 +29,6 @@ const SYSTEM_PROMPT = [
 	'Reply with JSON only, no markdown: {"nsfw": true|false, "prompt": "...", "subject": "..."}. When nsfw is true, prompt and subject may be empty.'
 ].join('\n');
 
-/** subject는 이모지 이름 기본값에 쓰는 짧은 대상 이름이에요 (없을 수 있어요). */
 export type ImageReading = { kind: 'ok'; prompt: string; subject: string | null } | { kind: 'nsfw' };
 
 export type ImageReaderErrorCode = 'not_configured' | 'failed';
@@ -61,17 +46,14 @@ export class ImageReaderError extends Error {
 
 export interface ImageReaderDeps {
 	logger: AppLogger;
-	/** 모델이나 URL이 비면 null — 이미지로 만들기를 쓸 수 없어요. */
 	getLlmConfig: () => TranslatorLlmConfig | null;
 }
 
 export interface ImageReader {
 	isEnabled(): boolean;
-	/** typeHint는 디스코드 첨부의 contentType — 응답 헤더에 형식이 없을 때만 써요. */
 	read(imageUrl: string, note?: string, typeHint?: string | null): Promise<ImageReading>;
 }
 
-/** 모델 답에서 JSON 객체를 꺼내요. 생각 토큰·코드 펜스가 섞여 있어도 첫 `{`부터 마지막 `}`까지 읽어요. */
 export function parseImageReading(raw: string): ImageReading | null {
 	const text = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/```(?:json)?/gi, '');
 	const start = text.indexOf('{');

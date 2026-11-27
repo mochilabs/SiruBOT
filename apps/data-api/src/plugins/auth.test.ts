@@ -7,7 +7,6 @@ const KEY = 'data-api-test-key-1234';
 async function buildTestApp(dataApiAuthKey: string) {
 	const fastify = Fastify({ logger: false });
 	await auth(fastify, dataApiAuthKey);
-	// 인증 통과 여부만 확인하면 돼서, 200을 반환하는 탐침 라우트를 등록해요.
 	fastify.get('/probe', async () => ({ ok: true }));
 	fastify.get('/api/health', async () => ({ ok: true }));
 	fastify.get('/api/health/live', async () => ({ ok: true }));
@@ -20,7 +19,6 @@ describe('auth plugin', () => {
 	});
 
 	it('키가 없으면 fail-closed로 기동을 거절한다', async () => {
-		// 라이브러리는 throw로 거절해요 — 진입점(index.ts main().catch)이 process.exit(1)로 이어져요.
 		const fastify = Fastify({ logger: false });
 		await expect(auth(fastify, undefined)).rejects.toThrow(/AUTH_KEY is not set/);
 		await fastify.close();
@@ -65,7 +63,6 @@ describe('auth plugin', () => {
 			const response = await fastify.inject({ method: 'GET', url });
 			expect(response.statusCode, `url=${url}`).toBe(200);
 		}
-		// 접두사로 겹치는 경로는 인증이 필요해요 — 미래 라우트가 무인증으로 새는 것을 막아요
 		for (const url of ['/api/health/live', '/api/healthz']) {
 			const response = await fastify.inject({ method: 'GET', url });
 			expect(response.statusCode, `url=${url}`).toBe(401);

@@ -3,14 +3,7 @@ import { getToken } from "next-auth/jwt";
 
 import { getSessionSecret } from "@/lib/env";
 
-/**
- * 서버(Route Handler/Server Component) 전용 — 현재 요청의 JWT에서 Discord accessToken을 읽어요.
- * accessToken은 session 콜백에서 노출하지 않으므로(클라이언트 유출 방지),
- * 토큰이 필요한 Discord API 호출은 반드시 이 헬퍼로 서버에서만 꺼내 쓰세요.
- *
- * next-auth v5는 JWT 암호화 salt로 세션 쿠키 이름을 써요 — 요청 프로토콜에 따라
- * `__Secure-authjs.session-token`(HTTPS) 또는 `authjs.session-token`(HTTP)이 되므로 둘 다 시도해요.
- */
+// next-auth v5 uses cookie name as JWT encryption salt; try both HTTPS and HTTP variants.
 const SESSION_COOKIE_NAMES = [
   "__Secure-authjs.session-token",
   "authjs.session-token",
@@ -18,11 +11,9 @@ const SESSION_COOKIE_NAMES = [
 
 export interface SessionTokenState {
   accessToken: string | null;
-  /** accessToken 만료 시각(epoch ms). 알 수 없으면 null. */
   expiresAt: number | null;
 }
 
-/** 토큰과 만료 시각을 함께 읽어요 — 로그인 페이지가 "실제로 쓸 수 있는 세션"인지 판단할 때 써요. */
 export async function getSessionTokenState(): Promise<SessionTokenState> {
   const secret = getSessionSecret();
   if (!secret) return { accessToken: null, expiresAt: null };

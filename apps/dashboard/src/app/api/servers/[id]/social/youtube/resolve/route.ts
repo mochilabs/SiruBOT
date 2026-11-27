@@ -12,7 +12,6 @@ const bodySchema = z.object({
 
 const FALLBACK = "유튜브 채널을 확인하지 못했어요.";
 
-/** 유튜브 채널 해석 — URL·@핸들·UC 채널 ID를 채널 ID와 이름으로 바꿔요. */
 export const POST = createGuildApiHandler({
   role: "manage",
   rate: READ_RATE,

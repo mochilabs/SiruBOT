@@ -7,12 +7,10 @@ import { getLogger } from '../utils/logger.ts';
 
 const logger = getLogger('lyrics-translation');
 
-/** 번역 상태 — ready: 저장된 번역이 있어요 / pending: 번역 중이에요(다시 조회하면 반영돼요) / none: 번역하지 않아요(한국어 가사·키 없음·DB 없음·실패). */
 export type LyricsTranslationStatus = 'ready' | 'pending' | 'none';
 
 export interface LyricsTranslationResult {
 	status: LyricsTranslationStatus;
-	/** 원문 줄 → 한국어 번역. status가 ready일 때만 채워져요. */
 	lines: Record<string, string> | null;
 }
 
@@ -22,17 +20,14 @@ export interface LyricsTranslationProvider {
 	chatCompletion(systemPrompt: string, userContent: string, providerLabel: string, options?: { responseFormat?: unknown }): Promise<string>;
 }
 
-/** 한 번에 보내는 줄 수·글자 수 상한 — 모델 출력이 잘리지 않게 나눠요. */
 const CHUNK_LINES = 60;
 const CHUNK_CHARS = 5000;
-/** 실패한 가사를 다시 시도하기까지 기다리는 시간 */
 const RETRY_AFTER_MS = 10 * 60 * 1000;
 const MAX_LINES = 400;
 
 const HANGUL = /[ᄀ-ᇿ㄰-㆏가-힯]/;
 const LETTER = /\p{L}/u;
 
-/** 가사 어디에 나오든 같은 줄이면 한 번만 번역해요: 단어 싱크 → 줄 싱크 → 일반 가사 순으로 모은 고유 줄 목록. */
 export function collectLyricLines(result: Pick<LyricsResult, 'plainLyrics' | 'syncedLyrics' | 'wordSync'>): string[] {
 	const seen = new Set<string>();
 	const out: string[] = [];
@@ -48,7 +43,6 @@ export function collectLyricLines(result: Pick<LyricsResult, 'plainLyrics' | 'sy
 	return out;
 }
 
-/** 한글이 절반 넘게 섞인 가사는 이미 한국어라 번역하지 않아요. */
 export function isMostlyKorean(lines: string[]): boolean {
 	let korean = 0;
 	for (const line of lines) if (HANGUL.test(line)) korean++;
@@ -96,7 +90,6 @@ const RESPONSE_FORMAT = {
 	}
 } as const;
 
-/** 모델 출력 파싱 — 펜스와 앞뒤 설명은 벗기고, 범위 밖 번호는 버려요. */
 export function parseLineTranslations(text: string, count: number): Map<number, string> | null {
 	const stripped = text.replace(/```(?:json)?/gi, '').trim();
 	const start = stripped.indexOf('{');
@@ -132,10 +125,6 @@ function chunkLines(lines: string[]): string[][] {
 	return chunks;
 }
 
-/**
- * 가사 한국어 번역 — 가사 조회 응답은 기다리지 않고, 번역은 뒤에서 돌려 DB(LyricsTranslation)에 저장해요.
- * 같은 가사는 한 번만 번역해요(진행 중 합치기, 실패 후 쿨다운).
- */
 export class LyricsTranslator {
 	private readonly inflight = new Map<string, Promise<void>>();
 	private readonly failedAt = new Map<string, number>();
@@ -145,7 +134,6 @@ export class LyricsTranslator {
 		private readonly provider: LyricsTranslationProvider
 	) {}
 
-	/** 저장된 번역을 돌려주고, 없으면 번역을 시작해요(기다리지 않아요). */
 	public async lookup(result: LyricsResult): Promise<LyricsTranslationResult> {
 		const none: LyricsTranslationResult = { status: 'none', lines: null };
 		const db = this.getDb();
@@ -162,7 +150,6 @@ export class LyricsTranslator {
 			return none;
 		}
 
-		// 업로더가 올린 한국어 자막이 있으면 AI 번역 대신 그걸 저장해요
 		const hint = result.captionTranslation;
 		if (hint && Object.keys(hint).length > 0) {
 			try {
@@ -200,7 +187,7 @@ export class LyricsTranslator {
 			try {
 				content = await this.provider.chatCompletion(SYSTEM_PROMPT, input, 'lyrics translation', { responseFormat: RESPONSE_FORMAT });
 			} catch (error) {
-				// response_format을 모르는 호환 서버는 400/422를 줘요 — 프롬프트 지시만으로 한 번 더 시도해요
+				// Fall back to prompt-only JSON when the endpoint rejects response_format.
 				if (!/failed: (?:400|422)\b/.test(String(error))) throw error;
 				content = await this.provider.chatCompletion(SYSTEM_PROMPT, input, 'lyrics translation');
 			}

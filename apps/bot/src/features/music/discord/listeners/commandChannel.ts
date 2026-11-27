@@ -16,19 +16,10 @@ import { RESULT_LIMIT, SELECT_TIMEOUT_MS } from '../utils/searchSelect.ts';
 import { usageFeatureKey } from '@sirubot/utils/modules';
 import { inGuildTheme } from '../../../../lib/guildThemeScope.ts';
 
-/** 검색어로 취급할 최대 길이 — 일반 대화로 보이는 긴 메시지는 거절 안내를 보낸다. */
 const MAX_QUERY_LENGTH = 100;
-/** 같은 유저의 연속 입력 쿨다운(ms) — 도배 방지, 초과분은 조용히 무시한다. */
 const COOLDOWN_MS = 2500;
-/** 패널 모드에서 오류 안내를 보여주는 시간(ms) — 지나면 안내와 입력 메시지를 지운다. */
 const NOTICE_LIFETIME_MS = 5000;
-/** 곡 선택 대기 시간(ms). */
-/** 선택 모드에서 보여줄 최대 결과 수 */
 
-/**
- * 기본 채널 입력 재생 리스너 — 설정된 채널의 텍스트 메시지를 검색어로 받아 재생한다.
- * 음성 채널 정책(봇과 같은 채널, 원격 권한자 예외)은 음악 유스케이스가 판정하고, 여기서는 노드·도배 방지와 응답 화면만 맡는다.
- */
 @ApplyOptions<Listener.Options>({
 	event: Events.MessageCreate
 })
@@ -38,7 +29,6 @@ export class CommandChannelListener extends Listener {
 
 	public override async run(message: Message): Promise<void> {
 		try {
-			// 서버 테마 맥락 안에서 처리해요 — 검색 결과·안내 뷰가 서버 색을 써요.
 			await inGuildTheme(message.guildId, () => this.handle(message));
 		} catch (error) {
 			this.container.logger.error(`[commandChannel] unhandled error (guild ${message.guildId}): ${error}`);
@@ -64,7 +54,6 @@ export class CommandChannelListener extends Listener {
 		const pinned = await guildChannels.getDefaultTextChannel(this.container.guildService, guildId);
 		if (!pinned || pinned !== message.channelId) return;
 		if (!(await guildChannels.getTextChannelInputPlay(this.container.guildService, guildId))) return;
-		// 패널 모드: 입력 메시지는 지우고 결과는 패널이 보여주므로, 오류 안내만 잠깐 띄웠다 지운다.
 		const panelMode = (await guildChannels.getPanelChannel(this.container.guildService, guildId)) === message.channelId;
 
 		if (content.length > MAX_QUERY_LENGTH) {
@@ -99,7 +88,6 @@ export class CommandChannelListener extends Listener {
 				query: content,
 				platform: 'ytsearch' as const,
 				requester: { id: message.author.id, username: message.author.username },
-				// 텍스트 채널은 기본 채널로 고정한다 — 컨트롤러도 거기서 갱신된다.
 				textChannelId: pinned,
 				pinTextChannel: true
 			};
@@ -124,10 +112,6 @@ export class CommandChannelListener extends Listener {
 		}
 	}
 
-	/**
-	 * 안내(오류) 답장 — 패널 모드에서는 채널에 안내가 쌓이지 않게 몇 초 뒤 안내와 입력 메시지를 함께 지운다.
-	 * 입력 메시지를 지우려면 봇에게 메시지 관리 권한이 필요하다.
-	 */
 	private async replyNotice(message: Message, components: ContainerBuilder[], panelMode: boolean): Promise<void> {
 		const reply = await message
 			.reply({ components, flags: [MessageFlags.IsComponentsV2], allowedMentions: { repliedUser: false } })
@@ -140,7 +124,6 @@ export class CommandChannelListener extends Listener {
 		timer.unref?.();
 	}
 
-	/** 패널 모드 — 입력 메시지를 지운다 (Manage Messages 권한 필요). 패널 모드가 아니면 그대로 둔다. */
 	private async deleteInput(message: Message, panelMode: boolean): Promise<void> {
 		if (!panelMode || !message.deletable) return;
 		await message.delete().catch((error) => {
@@ -148,7 +131,6 @@ export class CommandChannelListener extends Listener {
 		});
 	}
 
-	/** play 모드 — 패널 모드면 입력만 지우고 패널이 결과를 보여주고, 아니면 첫 결과의 피드백을 답장한다. */
 	private async replyPlayed(message: Message, player: Player, track: Track | UnresolvedTrack, wasIdle: boolean, panelMode: boolean): Promise<void> {
 		if (panelMode) {
 			await this.deleteInput(message, true);
@@ -163,9 +145,7 @@ export class CommandChannelListener extends Listener {
 			.catch(() => null);
 	}
 
-	/** select 모드 — 5개 선택 뷰를 올리고 30초간 선택을 기다린다. */
 	private async runSelect(message: Message, player: Player, query: string, tracks: (Track | UnresolvedTrack)[], panelMode: boolean): Promise<void> {
-		// 선택 모드는 입력 메시지 위에 선택 UI를 reply로 다는 형태라, 패널 모드의 원본·선택 UI 삭제는 선택 확정/취소/만료 시점에 한다.
 		const selectMessage = await message
 			.reply({
 				components: [searchView.searchResults(query, tracks)],
@@ -202,7 +182,6 @@ export class CommandChannelListener extends Listener {
 			if (session.settled) return;
 			const index = Number.parseInt(selectInteraction.values[0], 10);
 			const selected = tracks[index];
-			// 범위 밖 번호는 임시 안내만 보내고 선택 대기는 유지해요 (settle하지 않아요).
 			if (!selected) {
 				await selectInteraction
 					.reply({
@@ -259,7 +238,6 @@ export class CommandChannelListener extends Listener {
 		});
 	}
 
-	/** 쿨다운 맵이 커지는 것을 막는다 — 10초 지난 항목은 버린다. */
 	private pruneCooldowns(now: number): void {
 		if (this.cooldowns.size < 1000) return;
 		for (const [key, timestamp] of this.cooldowns) {

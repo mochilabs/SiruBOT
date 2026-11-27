@@ -10,7 +10,6 @@ import { describeSettingLines } from './summary.ts';
 import * as guildMixer from '../../../../services/guildSettings/mixer.ts';
 import * as guildPlayback from '../../../../services/guildSettings/playback.ts';
 
-/** 확인 창에 보여줄 항목 이름 — 도구 스키마의 인자 이름과 같아요 */
 const MUSIC_SETTING_LABELS: Record<string, string> = {
 	volume: '기본 볼륨',
 	repeat: '반복 모드',
@@ -38,7 +37,6 @@ function checkMemberManageGuild(ctx: AiToolContext, port: Pick<MusicToolPort, 'c
 	}
 }
 
-/** 음악 설정 도구를 만들어요 — 의존성은 deps로 받아요 */
 export function createMusicSettingsTools(
 	deps: Pick<AiToolDeps, 'guildService' | 'mixerService' | 'sponsorBlock' | 'musicPort' | 'getMusic' | 'getAudio'>
 ): AiTool[] {
@@ -51,7 +49,6 @@ export function createMusicSettingsTools(
 		}
 	}
 
-	/** 음악 설정 변경을 위한 2차 권한 검사 (서버 관리자 또는 DJ 역할 필요) */
 	async function requireMusicSettingsPermission(ctx: AiToolContext): Promise<void> {
 		const guildId = requireGuild(ctx);
 		if (!ctx.member) throw new Error('사용자 권한을 확인할 수 없어요.');

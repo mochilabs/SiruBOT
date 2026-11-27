@@ -12,7 +12,6 @@ const REDIS_TTL_SECONDS = 7 * 24 * 3600;
 const LOCK_TTL_SECONDS = 90;
 const JITTER_MAX_MS = 20 * 60_000;
 
-/** 마지막 성공 본 (upstream 전멸 시 stale 폴백용) */
 let lastGood: DailyHoroscope | null = null;
 let lastRefreshAt: number | null = null;
 let lastSource: string | null = null;
@@ -36,7 +35,6 @@ export function lastGoodDaily(): DailyHoroscope | null {
 export async function refreshOnce(provider: TranslationProvider | null): Promise<DailyHoroscope> {
 	const raw = await fetchOhaasaRaw();
 	const key = ohaasaCacheKey(raw.date);
-	// 세 갱신 경로(원문·번역·폴백)가 같은 규칙으로 마지막 기록과 Redis 캐시를 함께 남겨요.
 	const commit = async (daily: DailyHoroscope, source: string): Promise<void> => {
 		lastGood = daily;
 		lastRefreshAt = Date.now();
@@ -49,7 +47,6 @@ export async function refreshOnce(provider: TranslationProvider | null): Promise
 		return raw;
 	}
 
-	// 단일 레플리카라 in-process면 충분하지만, 확장 대비 Redis 락도 걸어요
 	const acquired = await sharedCache.acquireLock(`${key}:lock`, LOCK_TTL_SECONDS);
 	if (!acquired) return raw;
 
@@ -65,7 +62,7 @@ export async function refreshOnce(provider: TranslationProvider | null): Promise
 	}
 }
 
-// KST 보정 UTC 대상이에요 — memoryTidy.msUntilNext는 서버 로컬 시각 기준이라 타임존 의미가 달라요.
+// KST-adjusted UTC target (unlike memoryTidy's server-local schedule).
 function msUntilNextRefresh(refreshAt: string): number {
 	const KST_OFFSET_MS = 9 * 3600_000;
 	const { hour, minute } = parseClock(refreshAt, { hour: 6, minute: 50 });
@@ -94,7 +91,6 @@ export function startOhaasaScheduler(env: Env, provider: TranslationProvider | n
 		}
 	};
 
-	// 부팅 시 캐시 워밍 (오늘 키가 있으면 스케줄만, 없으면 즉시 갱신)
 	void (async () => {
 		const todayKey = ohaasaCacheKey(getTodayDateString());
 		const existing = await sharedCache.get(todayKey);
@@ -103,9 +99,7 @@ export function startOhaasaScheduler(env: Env, provider: TranslationProvider | n
 				lastGood = JSON.parse(existing) as DailyHoroscope;
 				lastRefreshAt = Date.now();
 				lastSource = 'cache-warm';
-			} catch {
-				// 손상된 캐시는 무시하고 갱신
-			}
+			} catch {}
 		}
 		if (!lastGood && !stopped) await tick();
 		else if (!stopped) {

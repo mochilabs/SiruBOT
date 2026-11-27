@@ -8,13 +8,10 @@ interface CommandEntry {
 	mention: string;
 	category: string;
 	description: string;
-	/** 등록된 인자/서브명령 요약 — name: description (필수 여부) */
 	options: string[];
-	/** 기본 권한 제한이 있으면 권한명 목록 */
 	permissions?: string[];
 }
 
-/** 등록된 애플리케이션 명령어에서 인자·서브명령 요약을 뽑아요 */
 function describeOptions(command: ApplicationCommand): string[] {
 	const lines: string[] = [];
 	for (const option of command.options ?? []) {

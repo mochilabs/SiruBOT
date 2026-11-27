@@ -25,7 +25,6 @@ import type { Guild } from '@sirubot/prisma';
 
 const backButton = () => new ButtonBuilder().setStyle(ButtonStyle.Primary);
 
-/** 첫 화면 "음악" 항목의 한 줄 요약 (셀렉트 설명은 100자 이하) */
 export function musicNavDescription(
 	guild: Pick<Guild, 'sponsorBlockSegments' | 'djRoleId' | 'gaplessEnabled'> & Parameters<typeof transitionMode>[0]
 ): string {
@@ -40,7 +39,6 @@ const MUSIC_SUBPAGE_OPTIONS: Array<{ value: MusicSubpage; emoji: string; label: 
 	{ value: 'dj', emoji: emoji('cd'), label: 'DJ 역할', description: '제어 권한을 가진 역할' }
 ];
 
-/** 음악 하위 페이지 4개 위에 놓이는 이동 셀렉트 — 첫 화면과 같은 `navigate` 액션을 써서 customId는 그대로예요 */
 export function buildMusicSubNav(current: MusicSubpage): StringSelectMenuBuilder {
 	return new StringSelectMenuBuilder()
 		.setPlaceholder('음악 설정 페이지 이동')
@@ -49,7 +47,6 @@ export function buildMusicSubNav(current: MusicSubpage): StringSelectMenuBuilder
 		.addOptions(MUSIC_SUBPAGE_OPTIONS.map((option) => ({ ...option, default: option.value === current })));
 }
 
-/** 첫 화면·페이지 이동 — 하위 페이지의 뒤로가기 버튼은 뷰가 붙여요 */
 export const coreActions = {
 	navigate: {
 		mode: ({ interaction }): SettingsScreen => {
@@ -84,7 +81,6 @@ export const coreActions = {
 		}
 	},
 	back: { mode: 'main', control: null },
-	// 선택된 모듈이 켜짐이에요. 목록에 없는 값과 끌 수 없는 모듈은 서비스가 걸러내요.
 	selectModules: {
 		mode: 'main',
 		apply: async ({ interaction, guildId, services }) => {
@@ -92,7 +88,6 @@ export const coreActions = {
 			const enabled = new Set(interaction.values);
 			const disabled = BOT_MODULES.filter((m) => m.toggleable && !enabled.has(m.id)).map((m) => m.id);
 			await guildModules.setDisabledModules(services.guildService, guildId, disabled);
-			// 다른 프로세스·대시보드 캐시도 바로 따라오게 알려요 (연결이 없으면 건너뛰어요. 60초 TTL이 폴백이에요)
 			services.redisStore?.publish(
 				GUILD_SETTINGS_INVALIDATE_CHANNEL,
 				JSON.stringify({ guildId }),
@@ -102,7 +97,6 @@ export const coreActions = {
 		control: {
 			screen: 'main',
 			row: 'modules',
-			// 기능 모듈 켜기/끄기 (P-06): 켜져 있는 모듈이 선택된 상태예요. 관리 모듈은 끌 수 없어서 목록에 없어요.
 			build: (guild) => {
 				const toggleable = BOT_MODULES.filter((m) => m.toggleable);
 				return new StringSelectMenuBuilder()
@@ -143,7 +137,6 @@ export const coreActions = {
 			const guild = await services.guildService.getGuild(guildId);
 			const next = !guild.related;
 			await guildPlayback.setRelated(services.guildService, guildId, next);
-			// /추천곡 커맨드와 동일하게, 켰을 때는 현재 곡의 다음 추천을 미리 준비해 둔다.
 			if (next) {
 				const player = services.audio.getPlayer(guildId);
 				const currentTrack = player?.queue.current;
@@ -338,7 +331,6 @@ export const coreActions = {
 					.setChannelTypes(ChannelType.GuildVoice, ChannelType.GuildStageVoice)
 		}
 	},
-	// 채팅 입력 재생 동작 (play: 즉시 재생 / select: 5개 선택)
 	selectInputMode: {
 		mode: 'channel',
 		apply: async ({ interaction, guildId, services }) => {
@@ -459,7 +451,6 @@ export const coreActions = {
 	}
 } satisfies Record<string, SettingsEntry>;
 
-/** 뒤로가기 버튼 모양 — 뷰가 모든 하위 페이지에 같은 모양으로 붙여요 */
 export function buildBackButton(): ButtonBuilder {
 	return backButton().setEmoji(emoji('arrow_back')).setLabel('뒤로가기');
 }

@@ -277,7 +277,6 @@ export async function fetchWeather(location: string, scope: WeatherScope = 'now'
 	}
 }
 
-/** 위치+스코프별 단기 캐시 (날씨는 10~30분이면 충분해요) */
 export function weatherCacheKey(location: string, scope: WeatherScope): string {
 	return `dataapi:v1:weather:${scope}:${location.trim().toLowerCase().replace(/\s+/g, ' ')}`;
 }

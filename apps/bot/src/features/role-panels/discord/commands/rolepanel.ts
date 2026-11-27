@@ -7,10 +7,6 @@ import { PanelPostError } from '../../application/rolePanelService.ts';
 import { ticketMessageView } from '../../../tickets/index.ts';
 import { respondRolePanelNames } from '../../../../lib/autocomplete.ts';
 
-/**
- * /rolepanel — 역할 패널 게시·목록·삭제 (관리자 전용).
- * 패널 생성·편집은 대시보드에서 해요. 여기선 게시(post)·목록(list)·삭제(delete)만 다뤄요.
- */
 @ApplyOptions<Subcommand.Options>({
 	enabled: true,
 	name: 'rolepanel',

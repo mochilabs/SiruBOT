@@ -57,7 +57,6 @@ function track(title: string, identifier: string, duration = 100_000, extra: Rec
 	} as unknown as Track;
 }
 
-// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
 beforeEach(() => setConfigForTesting(makeTestConfig()));
 afterEach(() => setConfigForTesting(null));
 
@@ -106,7 +105,6 @@ describe('titleSimilarity', () => {
 	});
 
 	it('computes the dice coefficient of normalized bigrams', () => {
-		// 'abcd' vs 'abce' → 공통 bigram ab,bc (2개) / 전체 bigram 3+3 → 2*2/6
 		expect(titleSimilarity('abcd', 'abce')).toBeCloseTo(2 / 3, 5);
 		expect(titleSimilarity('abcd', 'wxyz')).toBe(0);
 	});
@@ -123,11 +121,8 @@ describe('pickBySimilarity bands', () => {
 
 	it('picks the mid-band candidate and drops too-similar and too-different ones', () => {
 		const reference = track('abcd', 'ref', 100_000);
-		// 동일 제목+동일 길이 → 유사도 1.0 (≥ HIGH) → 상위 밴드에서 제외
 		const tooSimilar = track('abcd', 'dup', 100_000);
-		// titleSim 2/3, durSim 0.5 → 0.6*2/3 + 0.4*0.5 = 0.6 (중간 밴드)
 		const mid = track('abce', 'mid', 200_000);
-		// titleSim 0, durSim 0.1 → 0.04 (< LOW) → 하위 제외
 		const tooDifferent = track('wxyz', 'diff', 1_000_000);
 
 		const picked = pickBySimilarity(container as never, [tooSimilar, mid, tooDifferent], reference);
@@ -136,13 +131,13 @@ describe('pickBySimilarity bands', () => {
 
 	it('relaxes only the lower bound when no mid-band candidate exists', () => {
 		const reference = track('abcd', 'ref', 100_000);
-		const unrelated = track('wxyz', 'diff', 1_000_000); // 0.04 → 밴드1 제외, 밴드2(<HIGH)에는 포함
+		const unrelated = track('wxyz', 'diff', 1_000_000);
 		expect(pickBySimilarity(container as never, [unrelated], reference)).toBe(unrelated);
 	});
 
 	it('falls back to all candidates when everything is too similar', () => {
 		const reference = track('abcd', 'ref', 100_000);
-		const identical = track('abcd', 'dup', 100_000); // 1.0 → 밴드1·2 모두 제외 → 밴드3(전체)
+		const identical = track('abcd', 'dup', 100_000);
 		expect(pickBySimilarity(container as never, [identical], reference)).toBe(identical);
 	});
 });
@@ -175,7 +170,6 @@ describe('pickBySimilarity spread', () => {
 	it('can pick beyond the top three candidates', () => {
 		const reference = track('abcdefgh', 'ref', 100_000);
 		const candidates = ['abcdefxy', 'abcdexyz', 'abcdwxyz', 'abcvwxyz', 'abuvwxyz'].map((title, i) => track(title, `c${i}`, 100_000));
-		// 굴림이 끝자락이면 유사도 5위 곡이 뽑힌다 (예전엔 상위 3곡으로 고정)
 		const picked = pickBySimilarity(container as never, candidates, reference, () => 0.999999);
 		expect(picked?.info.identifier).toBe('c4');
 	});
@@ -201,14 +195,14 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 
 	it('hard-excludes current/previous/queued identifiers from the search results', async () => {
 		const reference = track('abcd', 'ref', 100_000);
-		const midCandidate = track('abce', 'fresh-mid', 200_000); // 유사도 0.6 → 유일한 중간 밴드
+		const midCandidate = track('abce', 'fresh-mid', 200_000);
 		const player = makePlayer({
 			loadType: 'search',
 			tracks: [
-				track('current song', 'current-id', 90_000), // 큐 current → 하드 제외
-				track('past song', 'previous-id', 80_000), // 재생 이력 → 하드 제외
-				track('waiting song', 'waiting-id', 70_000), // 대기열 → 하드 제외
-				track('abcd', 'ref', 100_000), // 마지막 재생 곡 자신 → 하드 제외
+				track('current song', 'current-id', 90_000),
+				track('past song', 'previous-id', 80_000),
+				track('waiting song', 'waiting-id', 70_000),
+				track('abcd', 'ref', 100_000),
 				midCandidate
 			]
 		});
@@ -222,10 +216,7 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 		const secondCandidate = track('abce', 'second', 200_000);
 		const player = makePlayer({
 			loadType: 'search',
-			tracks: [
-				track('abce', 'first', 200_000), // extraExcludes에 이미 있음 → 제외
-				secondCandidate
-			]
+			tracks: [track('abce', 'first', 200_000), secondCandidate]
 		});
 
 		const selected = await fetchRelatedCandidate(container as never, player, reference, ['first']);

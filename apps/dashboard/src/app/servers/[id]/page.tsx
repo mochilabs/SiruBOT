@@ -29,9 +29,7 @@ export default async function ServerDashboardPage({
     redirect(`/api/auth/signin?callbackUrl=/servers/${id}`);
   }
 
-  // 멤버십·관리 권한·서버 표시 정보를 하나의 Discord 호출(캐시 + 단일 비행)로 확인해요.
-  // 탭을 누를 때마다 페이지가 서버에서 다시 실행되므로, 호출이 캐시되지 않으면
-  // Discord 레이트리밋(429)이 곧바로 404처럼 보이는 원인이 돼요.
+  // 탭 전환마다 서버에서 재실행되므로 단일 캐시 호출로 Discord 429 방지
   const [membership, manageable, guildMeta] = await Promise.all([
     resolveGuildMembership(accessToken, session.user.id, id),
     resolveCanManage(accessToken, session.user.id, id),
@@ -39,11 +37,9 @@ export default async function ServerDashboardPage({
   ]);
 
   if (membership.status === "invalid-token") {
-    // 토큰 만료(401): 재로그인으로 안내해요.
     redirect(`/api/auth/signin?callbackUrl=/servers/${id}`);
   }
 
-  // Discord 일시 장애(429/5xx/네트워크): 없는 페이지가 아니에요. 404로 위장하지 않아요.
   if (membership.status === "unavailable") {
     return (
       <Container>
@@ -52,7 +48,6 @@ export default async function ServerDashboardPage({
     );
   }
 
-  // 멤버가 아니면(또는 접근 권한이 없으면) 보여줄 대시보드가 없어요.
   if (!membership.isMember) {
     notFound();
   }
@@ -62,7 +57,6 @@ export default async function ServerDashboardPage({
 
   return (
     <Container>
-      {/* 서버 선택기: PC(lg+)는 사이드바 맨 위, 모바일은 기능 선택 버튼 오른쪽 같은 줄 */}
       <h1 className="sr-only">{guildMeta?.name || "서버 대시보드"}</h1>
       <ServerDashboard
         switcher={<ServerSwitcher variant="sidebar" guildId={id} guildName={guildMeta?.name || "서버 대시보드"} icon={guildMeta?.icon ?? null} />}

@@ -8,7 +8,6 @@ import * as server from '../subcommands/server.ts';
 
 const SUBCOMMANDS: SubcommandModule[] = [bot, server];
 
-/** /도움말에서 서브커맨드 멘션을 그릴 때 써요 */
 export const INFO_SUBCOMMANDS = subcommandSummaries(SUBCOMMANDS);
 
 @ApplyOptions<Command.Options>({

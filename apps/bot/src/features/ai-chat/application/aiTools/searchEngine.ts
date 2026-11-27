@@ -25,7 +25,6 @@ export function stripTags(html: string): string {
 		.trim();
 }
 
-/** DuckDuckGo 리다이렉트 URL에서 실제 주소 추출 */
 function unwrapUrl(raw: string): string {
 	const decoded = decodeEntities(raw);
 	try {

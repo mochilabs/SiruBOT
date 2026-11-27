@@ -1,8 +1,4 @@
 // @vitest-environment happy-dom
-// PR #54 적대적 감사에서 발견한 결함群(F-1/F-2/F-6)의 회귀 방지 계약 테스트예요.
-// - F-1: useToast()가 Provider 없이도 동작해야 한다 (모듈 매니저 계약, player 페이지 크래시 재발 방지)
-// - F-2: 전역 <Toaster />가 토스트를 실제 DOM으로 렌더하는가 (페이지별 Provider 무음)
-// - F-6: useToast() 반환 참조가 불변인가 (토스트 방송마다 이펙트 재실행 루프)
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToString } from "react-dom/server";

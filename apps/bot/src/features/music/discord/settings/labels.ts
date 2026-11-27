@@ -9,8 +9,6 @@ export const repeatLabels: Record<string, string> = {
 	queue: '전체 반복'
 };
 
-// SponsorBlock 세그먼트 정의 — 이름 목록은 길드 설정 계약(@sirubot/utils/guildSettingsContract)이 단일 소스이고,
-// 여기서는 세그먼트별 표시 정보(라벨·이모지·설명)만 붙여요. 계약에 구간이 늘면 타입 오류로 알려줘요.
 type SegmentMeta = {
 	label: string;
 	appEmojiName: AppEmojiFallbackKey;
@@ -30,12 +28,10 @@ const SEGMENT_META: Record<SponsorBlockSegment, SegmentMeta> = {
 	filler: { label: '필러', appEmojiName: 'arrow_forward', description: '주제와 관련 없는 장면' }
 };
 
-// 앱 이모지 매핑은 봇 부팅(clientReady) 이후 로드되므로, 이모지 필드는 사용 시점에 emoji()로 평가한다.
 export const SPONSORBLOCK_SEGMENTS: SegmentType[] = SPONSORBLOCK_SEGMENT_NAMES.map((name) => ({ name, ...SEGMENT_META[name] }));
 
 export const sponsorBlockSegmentEmoji = (segment: SegmentType) => emoji(segment.appEmojiName);
 
-/** 음성 안내 방식 문구 */
 export const ANNOUNCE_MODE_LABELS: Record<TtsAnnounceMode, string> = {
 	sequential: '순서대로 재생',
 	parallel: '겹쳐서 재생',

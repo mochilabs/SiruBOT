@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TemplateEditor, type TemplateSample } from './template-editor';
 
-// SWR·디스코드 셀렉트는 이번 버그(변수 리터럴 표시)와 무관 — 네트워크·포털 없이 편집기만 렌더링해요
 vi.mock('@/hooks/use-guild-settings', () => ({
 	useGuildChannels: () => ({ channels: null }),
 	useGuildRoles: () => ({ roles: null })

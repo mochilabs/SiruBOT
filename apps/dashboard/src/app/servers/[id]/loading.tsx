@@ -7,13 +7,6 @@ import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonCircle } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-/**
- * 서버 대시보드 로딩 중 — 실제 화면과 같은 구조로 그려요:
- * 모바일은 PageHeader 안의 ServerSwitcher 트리거, PC(lg+)는 사이드바 카드 맨 위 트리거(size-8 아이콘 + 서버 이름)
- * PC(lg+)는 기능 사이드바 카드 + 설정 패널 2단, 모바일은 현재 기능 한 줄 버튼 + 패널이에요.
- * SaveBar는 편집 전에는 뜨지 않으므로 하단 가짜 취소/저장 버튼은 두지 않아요.
- * 탭 수·라벨 길이는 SERVER_TABS(실제 TABS와 같은 소스)에서 그대로 따라가요.
- */
 export default function ServerDashboardLoading() {
   return (
     <Container>
@@ -23,11 +16,8 @@ export default function ServerDashboardLoading() {
           대시보드를 불러오는 중…
         </span>
 
-        {/* ServerDashboard 셸 — PC는 사이드바+패널 2단, 모바일은 탭+패널 세로 */}
         <div className="flex flex-col items-start gap-4 lg:flex-row lg:gap-8">
-          {/* PC 기능 사이드바 모양 (ServerFeatureSidebar — 카드 + 그룹 라벨 + 항목, TABS 길이와 동일) */}
           <Card aria-hidden padding="none" className="hidden w-full shrink-0 lg:block lg:w-72">
-            {/* 서버 선택기 트리거 자리 */}
             <div className="flex min-h-12 items-center gap-3 border-b border-border-subtle p-2 px-3">
               <Skeleton className="size-8 shrink-0 rounded-control" />
               <Skeleton.Line width="8rem" height="h-5" />
@@ -50,13 +40,11 @@ export default function ServerDashboardLoading() {
           </Card>
 
           <div className="w-full min-w-0 flex-1">
-            {/* 모바일 기능 네비게이션 — ServerMobileNav의 한 줄 버튼과 같은 크기 */}
             <div aria-hidden className="mb-3 flex gap-2 lg:hidden">
               <Skeleton className="min-h-11 flex-1 rounded-menu" />
               <Skeleton className="min-h-11 w-28 rounded-menu" />
             </div>
 
-            {/* 활성 패널 — 설정 패널 카드(padding="lg")와 같은 모양 */}
             <PanelLoading label="" decorative />
           </div>
         </div>

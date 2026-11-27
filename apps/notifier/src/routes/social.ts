@@ -16,7 +16,6 @@ import { openWebhookToken, sealWebhookToken } from '../services/secretStorage.ts
 
 const logger = getLogger('social');
 
-/** 공개 응답에서 빼는 필드: webhookId/webhookToken은 대시보드에 절대 노출하지 않아요. */
 type SubscriptionRow = Omit<SocialSubscription, 'webhookId' | 'webhookToken'>;
 
 export interface SocialRouteOptions {
@@ -24,7 +23,6 @@ export interface SocialRouteOptions {
 	getDb: () => PrismaClient | null;
 	hub: SocialWebhookHub;
 	twitchClient: TwitchApiClient | null;
-	/** 트위치 EventSub 구독 상태 키 정리용: twitchScheduler와 같은 Redis를 써요. */
 	redis: NotifierRedis;
 	fetchFn?: FetchFn;
 }
@@ -63,7 +61,6 @@ async function sendError(reply: FastifyReply, error: unknown) {
 			message: issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')
 		});
 	}
-	// 예측 못 한 내부 오류: 앱 로거(로거:false인 Fastify의 reply.log는 no-op이라 유실됨)와 Sentry에 남겨요.
 	captureSentryException(error);
 	logger.error(error, '[notifier] social 라우트 처리 실패');
 	reply.code(500);
@@ -76,19 +73,12 @@ async function deleteDiscordWebhook(webhookId: string, webhookToken: string, fet
 			method: 'DELETE',
 			signal: AbortSignal.timeout(8_000)
 		});
-	} catch {
-		// 정리 실패는 무시해요. 고아 웹훅은 디스코드가 주기적으로 치워요.
-	}
+	} catch {}
 }
 
 export default async function subscriptionRoutes(fastify: FastifyInstance, options: SocialRouteOptions) {
 	const { guard, getDb, hub, twitchClient, redis, fetchFn } = options;
 
-	/**
-	 * Twitch EventSub 구독 정리: 스트리머 단위 구독이라 다른 길드가 아직 활성 구독이면 호출하지 않아요.
-	 * 구독 ID는 twitchScheduler가 Redis 상태 키에 남기므로 그 키를 열어 즉시 해지하고, 정리 실패는
-	 * best-effort예요 (약 10일 뒤 Twitch 쪽에서 저절로 만료돼요).
-	 */
 	async function releaseTwitchEventSub(broadcasterId: string): Promise<void> {
 		if (!twitchClient) return;
 		const stateKey = twitchSubscriptionStateKey(broadcasterId);
@@ -141,7 +131,6 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 			requestId: randomUUID(),
 			guildId,
 			targetChannelId: body.targetChannelId,
-			// 커스텀 표시명이 있으면 웹훅 자체의 이름으로도 반영하고, 없으면 기본 이름을 만들어요.
 			name: body.webhookName ?? `시루 소셜 알림: ${body.sourceName}`.slice(0, 80)
 		};
 		const hubResponse = await hub.requestWebhookCreate(hubRequest);
@@ -163,7 +152,6 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 					webhookAvatarUrl: body.webhookAvatarUrl ?? null,
 					showThumbnail: body.showThumbnail,
 					webhookId: hubResponse.webhookId,
-					// 저장 직전 암호화 — DB에는 크리덴셜 평문을 두지 않아요 (키 없으면 평문 폴백)
 					webhookToken: sealWebhookToken(hubResponse.webhookToken)
 				}
 			});
@@ -179,8 +167,6 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 		}
 	});
 
-	// 구독 IDOR 방지: 길드 스코프 경로에서 `where: { id, guildId }`로 조회해요.
-	// 다른 길드의 구독 UUID를 알아도 자기 길드 소유가 아니면 404예요 (생성·목록과 동일한 스코프 계약).
 	fastify.patch('/v1/guilds/:guildId/social/subscriptions/:id', { preHandler: guard }, async (request, reply) => {
 		const { guildId, id } = request.params as { guildId: string; id: string };
 		if (!/^[a-zA-Z0-9_-]+$/.test(guildId)) {
@@ -212,7 +198,6 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 			});
 			return reply.send({ subscription: publicSubscription(row) });
 		} catch (error) {
-			// 소유권 미일치(P2025)도 "찾지 못함"으로: 존재 여부를 새어 나가지 않아요.
 			if (prismaErrorCode(error) === 'P2025') {
 				reply.code(404);
 				return reply.send({ error: 'subscription_not_found', message: '구독을 찾지 못했어요.' });
@@ -221,7 +206,6 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 		}
 	});
 
-	// 구독 IDOR 방지: PATCH와 같은 길드 스코프에서 소유권을 확인해요 (미소유 = 404).
 	fastify.delete('/v1/guilds/:guildId/social/subscriptions/:id', { preHandler: guard }, async (request, reply) => {
 		const { guildId, id } = request.params as { guildId: string; id: string };
 		if (!/^[a-zA-Z0-9_-]+$/.test(guildId)) {

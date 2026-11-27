@@ -7,16 +7,11 @@ import { cn } from "@/lib/utils";
 
 interface SettingsSectionProps {
 	title: string;
-	/** 접힌 상태에서도 읽히는 현재값 요약 한 줄 */
 	summary?: ReactNode;
 	defaultOpen?: boolean;
 	children: ReactNode;
 }
 
-/**
- * 설정 패널 안의 접이식 구획 — 카드를 또 만들지 않고 구분선 + 한 줄 헤더로 나눠요.
- * 접어도 본문은 마운트된 채 숨기기만 해서(hidden) 폼 상태·SaveBar 동작이 그대로예요.
- */
 export function SettingsSection({ title, summary, defaultOpen = false, children }: SettingsSectionProps) {
 	const [open, setOpen] = useState(defaultOpen);
 	const bodyId = useId();
@@ -48,7 +43,6 @@ export function SettingsSection({ title, summary, defaultOpen = false, children 
 	);
 }
 
-/** 켜기/끄기 한 줄 — 제목과 설명은 왼쪽, 스위치는 오른쪽 */
 export function SettingsToggleRow({ title, description, control, extra }: { title: string; description?: ReactNode; control: ReactNode; extra?: ReactNode }) {
 	return (
 		<div className="flex items-start justify-between gap-4">

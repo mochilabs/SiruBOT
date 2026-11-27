@@ -52,7 +52,6 @@ const STATUS_BADGE = {
   failed: { label: "실패", variant: "danger" },
 } as const;
 
-/** 지금부터 10분 뒤를 "YYYY-MM-DDTHH:mm"(KST)로 — 입력 기본값 */
 function defaultRunAt(): string {
   return kstNow(10);
 }
@@ -103,7 +102,6 @@ export function ScheduledMessagesSettings({ guildId }: { guildId: string }) {
       await mutate();
       toast.success("예약했어요.");
     } catch (err) {
-      // 상한·간격 같은 입력 문제는 폼 안에서 바로 읽을 수 있게 보여줘요
       setFormError(toError(err, "예약하지 못했어요.").message);
     } finally {
       setCreating(false);

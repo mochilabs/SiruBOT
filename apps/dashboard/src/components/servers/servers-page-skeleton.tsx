@@ -2,11 +2,6 @@ import { SERVERS_GRID_CLASS } from "@/components/servers/guild-card";
 import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonCircle, SkeletonLine } from "@/components/ui/skeleton";
 
-/**
- * 로드된 GuildCard와 같은 모양을 미리 그리는 스켈레톤 — 모바일은 한 행 리스트(아바타 + 서버 이름 1줄 +
- * 정사각형 아이콘 버튼 2개), PC(md 이상)는 그리드 카드(아바타 + 이름/상태 2줄 + 하단 2버튼).
- * 그리드 열·간격은 GuildCard의 SERVERS_GRID_CLASS를 공유해요.
- */
 export function ServersGridSkeleton({ count = 9 }: { count?: number }) {
     return (
         <section className="space-y-12" aria-busy="true" aria-live="polite">
@@ -35,7 +30,6 @@ export function ServersGridSkeleton({ count = 9 }: { count?: number }) {
 export function ServersPageSkeleton() {
     return (
         <>
-            {/* PageHeader와 같은 구조 — pb-6·우측 유저 카드 크기를 그대로 맞춰요 */}
             <header aria-busy="true" className="relative mb-6 flex flex-col justify-between gap-6 pb-6 md:flex-row md:items-end">
                 <div className="min-w-0 flex-1 space-y-1">
                     <SkeletonLine width="18rem" height="h-10 sm:h-12" className="max-w-full" />

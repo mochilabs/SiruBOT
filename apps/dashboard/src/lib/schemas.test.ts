@@ -9,7 +9,6 @@ import {
 	parseSettingBody,
 } from "./schemas";
 
-/** Prisma 스키마 원문에서 model Guild 블록의 컬럼별 @default를 읽어요 — 봇 기본값과의 일치 검증용 */
 function readPrismaGuildDefaults(): Record<string, unknown> {
 	const schema = readFileSync(new URL("../../../../packages/prisma/src/schema.prisma", import.meta.url), "utf8");
 	const start = schema.indexOf("model Guild {");
@@ -22,7 +21,6 @@ function readPrismaGuildDefaults(): Record<string, unknown> {
 		if (!column) continue;
 		const [, name, tail] = column;
 		const declared = /@default\((.*)\)\s*$/.exec(tail);
-		// nullable 컬럼은 @default가 없어요 — Prisma 기본값은 null이에요
 		defaults[name] = declared ? parsePrismaDefault(declared[1]) : null;
 	}
 	return defaults;
@@ -96,7 +94,6 @@ describe("guildSettingsSchema 크로스페이드 범위", () => {
 		expect(guildSettingsSchema.safeParse({ crossfadeMs: 15000 }).success).toBe(true);
 		expect(guildSettingsSchema.safeParse({ crossfadeMs: 499 }).success).toBe(false);
 		expect(guildSettingsSchema.safeParse({ crossfadeMs: 15001 }).success).toBe(false);
-		// Lavalink mixer 플러그인 상한(15초)이 늘어나면 이 계약도 함께 옮겨져야 해요
 	});
 
 	it("범위를 벗어나면 한국어 안내로 거절해요", () => {

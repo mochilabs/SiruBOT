@@ -16,10 +16,6 @@ interface ThemePresetPickerProps {
 	onChange: (preset: ThemePreset) => void;
 }
 
-/**
- * 봇 메시지 미리보기 — 디스코드 임베드 모양의 목업이에요. 배경·글자는 `--discord-*` 토큰이라 대시보드의 밝은/어두운
- * 테마를 따라가고, 프리셋 색(사용자가 고르는 강조색)만 값으로 칠해요.
- */
 function Preview({ color }: { color: string }) {
 	return (
 		<div
@@ -56,7 +52,6 @@ function Preview({ color }: { color: string }) {
 	);
 }
 
-/** 봇 테마 선택기 — 색 칩 6개(라디오 그룹) + 고른 색을 적용한 미리보기 하나예요. */
 export function ThemePresetPicker({ value, disabled = false, onChange }: ThemePresetPickerProps) {
 	return (
 		<div className="space-y-3">

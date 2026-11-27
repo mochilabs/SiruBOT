@@ -5,10 +5,6 @@ import { runSubcommandPreconditions } from '../../../../lib/subcommandDispatcher
 import * as play from '../subcommands/play.ts';
 import { musicMemberPreconditionError } from '../utils/preconditions.ts';
 
-/**
- * `/재생` — `/음악 재생`의 1급 승격. 실사용 빈도가 가장 높은 재생만 top-level로 두고,
- * 나머지 제어는 `/음악`에 남겨요(같은 서브커맨드 모듈을 그대로 재사용).
- */
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'play',

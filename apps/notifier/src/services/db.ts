@@ -6,7 +6,6 @@ const logger = getLogger('db');
 
 let db: PrismaClient | null = null;
 
-/** DATABASE_URL이 있을 때만 Prisma를 연결해요 (없으면 소셜 알림 워커가 비활성화돼요). */
 export async function connectDb(connectionString: string | undefined): Promise<PrismaClient | null> {
 	if (!connectionString) {
 		logger.warn('DATABASE_URL이 없어요. 소셜 알림 워커를 비활성화해요.');

@@ -26,10 +26,6 @@ interface ServerOverviewTabProps {
 	onSelectTab: (tab: ServerTabKey) => void;
 }
 
-/**
- * 서버 대시보드 개요 탭 — 빠른 작업과 모듈 켜기/끄기 상태를 한 화면에 모아요.
- * 설정 캐시는 useGuildSettings(SWR)를 공유해서 다른 탭과 중복 요청하지 않아요.
- */
 export function ServerOverviewTab({ guildId, onSelectTab }: ServerOverviewTabProps) {
 	const { settings, isLoading, error, saving, save, reload } = useGuildSettings(guildId);
 	const [pendingModule, setPendingModule] = useState<BotModuleId | null>(null);
@@ -69,7 +65,6 @@ export function ServerOverviewTab({ guildId, onSelectTab }: ServerOverviewTabPro
 					}
 				/>
 
-				{/* 빠른 작업: 같은 크기의 타일 대신 구분선으로 나눈 한 목록이에요 */}
 				<section aria-label="빠른 작업" className="space-y-1">
 					<SectionLabel className="px-0">빠른 작업</SectionLabel>
 					<ul className="divide-y divide-border-subtle">
@@ -107,7 +102,6 @@ export function ServerOverviewTab({ guildId, onSelectTab }: ServerOverviewTabPro
 				</section>
 			</Card>
 
-			{/* 모듈 카드 */}
 			<Card padding="lg" className="gap-5">
 				<div className="flex flex-wrap items-center justify-between gap-2">
 					<div className="space-y-0.5">

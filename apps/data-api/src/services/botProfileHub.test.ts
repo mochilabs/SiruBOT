@@ -22,7 +22,6 @@ function state(overrides: Record<string, unknown> = {}): Record<string, unknown>
 	};
 }
 
-// 서명 키가 없는 구버전 모드를 보장해요 — 로컬/CI 환경의 AUTH_KEY 유무에 테스트 결과가 달라지지 않게.
 beforeEach(() => {
 	vi.stubEnv('REDIS_AUTH_KEY', '');
 	vi.stubEnv('AUTH_KEY', '');

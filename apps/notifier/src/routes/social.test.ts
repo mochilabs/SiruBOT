@@ -50,7 +50,6 @@ function makeRow(guildId: string, overrides: Partial<Row> = {}): Row {
 	};
 }
 
-/** Prisma 소유권 where({id, guildId})와 P2025 동작을 흉내내는 인메모리 구독 저장소 */
 function makeDb(rows: Row[]) {
 	const prismaError = (code: string) => Object.assign(new Error(`prisma error ${code}`), { code });
 	return {
@@ -194,7 +193,6 @@ describe('social routes', () => {
 		});
 		expect(response.statusCode).toBe(404);
 		expect(response.json()).toMatchObject({ error: 'subscription_not_found' });
-		// 소유권 검증은 쿼리 스코프 where: { id, guildId } 안에서 이뤄져요.
 		expect(db.socialSubscription.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: SUB_ID, guildId: GUILD_A } }));
 	});
 
@@ -251,7 +249,6 @@ describe('social routes', () => {
 		const shared = await app.inject({ method: 'DELETE', url: `/v1/guilds/${GUILD_A}/social/subscriptions/${SUB_ID}`, headers: authHeader });
 		expect(shared.statusCode).toBe(200);
 		await vi.waitFor(() => expect(db.socialSubscription.delete).toHaveBeenCalled());
-		// 다른 길드가 아직 활성 구독 중: EventSub 구독은 유지해요.
 		expect(twitchClient.deleteSubscription).not.toHaveBeenCalled();
 
 		const last = await app.inject({

@@ -7,7 +7,6 @@ import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 
 const PATH = "/v1/internal/incident-notice";
 
-/** 현재 장애 공지 조회 — 없으면 `notice: null` */
 export const GET = createGuildApiHandler({
 	role: "admin",
 	rate: READ_RATE,
@@ -19,7 +18,6 @@ export const GET = createGuildApiHandler({
 	},
 });
 
-/** 장애 공지 등록 — 본문 200자 이하, 만료(분)는 필수이고 최대 7일이에요. 이전 공지는 덮어써요. */
 export const POST = createGuildApiHandler({
 	role: "admin",
 	rate: WRITE_RATE,
@@ -32,7 +30,6 @@ export const POST = createGuildApiHandler({
 	},
 });
 
-/** 장애 공지 내리기 */
 export const DELETE = createGuildApiHandler({
 	role: "admin",
 	rate: WRITE_RATE,

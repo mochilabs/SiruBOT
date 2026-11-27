@@ -89,9 +89,6 @@ export class TicketCommand extends Subcommand {
 		});
 	}
 
-	/**
-	 * /ticket panel — 패널 게시 (ManageGuild or ManageChannels 필요)
-	 */
 	public async chatInputPanel(interaction: ChatInputCommandInteraction<'cached'>) {
 		if (
 			!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) &&

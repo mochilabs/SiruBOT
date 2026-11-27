@@ -1,10 +1,3 @@
-/**
- * Lavalink 계층(핸들러·플레이어 알림·Redis 저장소)과 그 헬퍼가 쓰는 의존성 묶음이에요.
- *
- * 이 파일의 타입을 쓰는 모듈은 `container`를 읽지 않아요. 값은 `BotApplication.setupServices`가 `container.lavalink`로
- * 한 번 만들어 넘기고, 부팅 순서상 나중에 생기는 것(audio, client, redisStore, playerNotifier, shardInfo)은
- * getter로 호출 시점에 읽어요. 서로 얽힌 application 서비스(mixer, sponsorBlock)도 같은 방식이에요.
- */
 import type { Client } from 'discord.js';
 import type { LavalinkManager, Track } from 'lavalink-client';
 import type { ILogObj, Logger } from 'tslog';
@@ -23,24 +16,20 @@ import type { PlayerNotifier } from './player/playerNotifier.ts';
 import type { NowPlayingCardStore } from './player/nowPlayingCard.ts';
 import type { RedisStore } from './redisStore.ts';
 
-/** 하위 로거를 만드는 Sapphire 로거 — 핸들러 이름별 sub-logger(tslog)를 만들 때 써요. */
 export interface LavalinkLogger extends AppLogger {
 	getSubLogger(settings: { name: string }): Logger<ILogObj>;
 }
 
-/** 샤드 배정 정보 (setupAudio가 기록하고, 세션 복원이 읽어요). */
 export interface LavalinkShardInfo {
 	shardIds: number[];
 	shardCount: number;
 }
 
-/** 길드별 마지막 플레이어 상태 퍼블리시 기록 (주기 스로틀 + 변경 지문). */
 export type PlayerStatePublishTracker = Map<
 	string,
 	{
 		at: number;
 		fingerprint: string;
-		/** 마지막으로 발행한 위치와 진행 여부 — 다음 발행 때 예상 위치(탐색·점프 감지)를 계산해요. */
 		positionMs: number;
 		advancing: boolean;
 	}
@@ -53,7 +42,6 @@ export interface LavalinkDeps {
 	readonly dataApi: DataApiClient;
 	readonly chatTtsService: ChatTtsService;
 	readonly playbackReporter: PlaybackReporter;
-	/** 장애 공지 — 재생 실패 알림 끝에 한 줄 덧붙여요 */
 	readonly incidentNotice: IncidentNoticeService;
 	readonly sponsorBlockService: SponsorBlockService;
 	readonly mixerService: MixerService;
@@ -62,11 +50,8 @@ export interface LavalinkDeps {
 	readonly client: Client;
 	readonly redisStore: RedisStore;
 	readonly shardInfo: LavalinkShardInfo | undefined;
-	/** now-playing 카드 캐시 소유자 — 버튼과 알림이 같은 상태를 써요. */
 	readonly nowPlayingCards: NowPlayingCardStore;
 	readonly playerStatePublishTracker: PlayerStatePublishTracker;
-	/** 길드별 진행 중인 추천곡 프리페치 — 자동 선예열·자동재생 fallback·/추천이 같은 가드를 공유해요 (이중 추가 방지). */
 	readonly relatedFetchInFlight: Map<string, Promise<Track | null>>;
-	/** 현재 곡 BPM 캐시 소유자 — 컨트롤러 렌더링이 읽어요. */
 	readonly currentBpm: CurrentBpmCache;
 }

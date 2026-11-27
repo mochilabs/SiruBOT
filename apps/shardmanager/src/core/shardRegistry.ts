@@ -8,15 +8,11 @@ const logger = getLogger('shardRegistry');
 export const HEARTBEAT_TIMEOUT_MS = 60_000;
 const HEARTBEAT_CHECK_INTERVAL_MS = 15_000;
 
-/** ws readyState 값: 2(CLOSING)/3(CLOSED)는 이미 끊긴 소켓이에요 */
 const WS_CLOSING = 2;
 const WS_CLOSED = 3;
 
 export interface ShardRegistryOptions {
-	/**
-	 * 서버 시작 직후 신규 샤드 할당을 보류하는 시간(ms). 매니저가 재시작되면 레지스트리가 비어서, 재연결 백오프 중인 기존 봇들의
-	 * 샤드를 신규 프로세스가 먼저 가져가 이중 점유가 생길 수 있어요. 기존 봇의 re-identify(claimShards)는 이 시간에도 허용해요.
-	 */
+	/** 재시작 직후 기존 봇의 re-identify가 끝날 때까지 신규 할당을 보류하는 시간(ms). */
 	allocationGraceMs?: number;
 }
 
@@ -34,7 +30,7 @@ interface ShardProcessInfo {
 }
 
 export class ShardRegistry {
-	private processes: Map<string, ShardProcessInfo> = new Map(); // wsId -> info
+	private processes: Map<string, ShardProcessInfo> = new Map();
 	private allocatedShards: Set<number> = new Set();
 	private shardCount: number;
 	private shardsPerProcess: number;
@@ -79,13 +75,7 @@ export class ShardRegistry {
 		return available;
 	}
 
-	/**
-	 * Re-identification용 샤드 ID claim: 요청 전체를 검증하고, 하나라도 잘못되면 null을 돌려줘요.
-	 * - 각 ID는 [0, shardCount) 안의 정수여야 하고 중복이면 안 돼요
-	 * - 살아있는 다른 프로세스가 점유 중인 ID는 거부해요 (샤드 이중 점유/탈취 방지)
-	 * - 점유 주인의 소켓이 이미 끊긴 경우(재연결 레이스)에는 이전 등록에서 떼어와 새 주인에게 넘겨요
-	 * 할당 집합(allocatedShards)에만 남은 유실 ID는 재사용해요. 이전 버전의 할당 누수를 스스로 치유해요.
-	 */
+	/** Re-identify 시 요청된 샤드 ID를 검증·점유하며, 끊긴 소켓의 잔여 점유는 회수하고 하나라도 유효하지 않으면 null을 반환해요. */
 	public claimShards(wsId: string, requested: number[]): number[] | null {
 		const claimed: number[] = [];
 		const seen = new Set<number>();
@@ -199,7 +189,6 @@ export class ShardRegistry {
 		}
 	}
 
-	/** 반환에서 wsConnection은 제외해요. */
 	public getAllProcesses(): Array<Omit<ShardProcessInfo, 'wsConnection'> & { wsId: string }> {
 		return Array.from(this.processes.entries()).map(([wsId, info]) => {
 			const { wsConnection, ...rest } = info;
@@ -257,9 +246,7 @@ export class ShardRegistry {
 					process.status = 'disconnected';
 					try {
 						process.wsConnection.close();
-					} catch {
-						// 이미 끊긴 소켓 close 실패는 무해해요
-					}
+					} catch {}
 					this.release(wsId);
 				}
 			}

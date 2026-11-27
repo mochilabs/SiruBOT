@@ -1,10 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-/**
- * 택배사 검색 — `/택배 택배사` 자동완성 목록 API의 계약이에요.
- * 조회(resolveCarrierId)와 같은 별칭·우선순위 규칙을 공유하는지, 목록 실패가 그대로 전파되는지 잠가요.
- */
-
 const CARRIERS = [
 	{ id: 'kr.cjlogistics', name: 'CJ대한통운', tel: '1588-1255' },
 	{ id: 'kr.hanjin', name: '한진택배', tel: '1588-0011' },

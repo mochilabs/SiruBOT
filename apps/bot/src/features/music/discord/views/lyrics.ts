@@ -2,7 +2,6 @@ import { createContainer, emoji } from '@sirubot/utils';
 import { ButtonBuilder, ButtonStyle } from 'discord.js';
 import type { LyricsViewMode } from '../utils/lyricsText.ts';
 
-/** 가사 메시지 버튼 customId — 컬렉터가 직접 읽는 값이라 이 모듈 안에서만 써요 */
 export const LYRICS_BUTTON_IDS = {
 	original: 'lyrics:original',
 	translation: 'lyrics:translation',
@@ -19,12 +18,9 @@ const MODE_LABELS: ReadonlyArray<{ mode: LyricsViewMode; label: string }> = [
 ];
 
 export interface LyricsViewOptions {
-	/** 번역 상태 — ready면 보기 방식 버튼, pending이면 새로고침 버튼, none이면 번역 버튼이 없어요 */
 	translation: 'ready' | 'pending' | 'none';
 	mode: LyricsViewMode;
-	/** 시간이 지나 버튼을 끌 때 */
 	disabled?: boolean;
-	/** 재생 중인 곡의 줄 싱크 가사라 실시간 보기 버튼을 보여줄 때 */
 	live?: boolean;
 }
 
@@ -58,7 +54,6 @@ export function lyricsView(trackName: string, lyrics: string, options?: LyricsVi
 	return container.addActionRowComponents((row) => row.addComponents(...buttons));
 }
 
-/** 실시간 가사 메시지 — 줄이 넘어갈 때마다 본문만 바뀌고, 누구나 정지할 수 있어요. */
 export function liveLyricsView(trackName: string, liveText: string) {
 	return createContainer()
 		.addTextDisplayComponents((text) => text.setContent(`### ${emoji('music_notes')} ${trackName}\n\n${liveText}`))

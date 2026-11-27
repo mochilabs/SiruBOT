@@ -3,7 +3,6 @@ import { Bot, Dices, type LucideIcon, Music, Settings, Users, Wrench } from "luc
 
 import { cn } from "@/lib/utils";
 
-/** 기능 모듈 아이콘 — 모듈 표(@sirubot/utils/modules)의 유니코드 이모지 대신 대시보드에서 쓰는 Lucide 아이콘이에요. */
 const MODULE_ICONS: Record<BotModuleId, LucideIcon> = {
 	music: Music,
 	community: Users,

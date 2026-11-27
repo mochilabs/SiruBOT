@@ -17,7 +17,6 @@ describe("server-tabs", () => {
 		for (const tab of SERVER_TABS) {
 			expect(resolveServerTab(tab.key)).toBe(tab.key);
 		}
-		// 모듈 탭은 개요(모듈 켜기/끄기)와 봇 프로필(테마)로 합쳐졌어요.
 		expect(resolveServerTab("modules")).toBe("overview");
 	});
 

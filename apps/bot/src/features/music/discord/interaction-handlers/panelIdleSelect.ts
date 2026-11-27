@@ -5,7 +5,6 @@ import { playPlaylist, playRecent, replyPanelError } from '../utils/panelIdleAct
 
 type Action = 'recent' | 'playlistPick';
 
-/** 대기 화면 '최근 곡 다시 재생' 셀렉트와 플레이리스트 선택 메뉴 */
 export default class PanelIdleSelectHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
 		super(ctx, { ...options, interactionHandlerType: InteractionHandlerTypes.SelectMenu });

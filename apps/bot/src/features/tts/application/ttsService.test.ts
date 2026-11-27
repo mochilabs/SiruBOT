@@ -9,12 +9,11 @@ const mocks = vi.hoisted(() => ({ logger: { warn: vi.fn(), info: vi.fn(), error:
 const fetchMock = vi.hoisted(() => vi.fn());
 vi.stubGlobal('fetch', fetchMock);
 
-/** 반환 타입을 명시하지 않고 추론하게 둬요 — undici-types의 Response 이중화(TS2741) 회피 */
+/** undici-types의 Response 이중화(TS2741) 회피 */
 function respondJson(status: number, body: unknown, headers?: Record<string, string>) {
 	return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 }
 
-/** siru_tts 엔드포인트를 URL별로 라우팅하는 fetch 목 */
 function routeFetch(handlers: { usage?: () => any; readyz?: () => any; synthesize?: () => any; voices?: () => any }): void {
 	fetchMock.mockImplementation(async (input: string | URL | Request) => {
 		const url = String(input instanceof Request ? input.url : input);

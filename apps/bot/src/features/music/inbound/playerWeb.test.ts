@@ -13,7 +13,6 @@ vi.mock('../../../services/guildSettings/playback.ts', async (orig) => ({
 	getDJRole: vi.fn().mockResolvedValue(null)
 }));
 
-/** 응답자 바인딩에 요청을 흘려 넣고 퍼블리시된 응답을 관찰하는 하네스 — publish는 (채널, 본문, 라벨)로 받아요 */
 const harness = {
 	receive: null as null | ((raw: string) => void)
 };
@@ -29,7 +28,6 @@ function start(logger: RedisRuntime['logger'], publish: Mock, signingKey = '') {
 }
 vi.mock('../discord/views/play.ts', () => ({}));
 
-/** actorFromMember가 읽는 필드까지 갖춘 최소 멤버 */
 const memberBase = { id: 'user', guild: { id: 'guild' }, roles: { cache: new Map() }, voice: { channelId: null, channel: null } };
 
 describe('web player permissions', () => {
@@ -37,11 +35,9 @@ describe('web player permissions', () => {
 		vi.restoreAllMocks();
 	});
 	it.each([
-		// 봇이 음성 채널에 없고 요청자도 미접속 — 원격 권한자는 제어는 되지만 곡 추가는 들어갈 채널이 없어 안 돼요
 		['manager', PermissionsBitField.Flags.ManageGuild, null, null, { canControl: true, canPlay: false, inVoice: false }],
 		['administrator', PermissionsBitField.Flags.Administrator, null, null, { canControl: true, canPlay: false, inVoice: false }],
 		['member', 0n, null, null, { canControl: false, canPlay: false, inVoice: false }],
-		// 봇이 재생 중 — 원격 권한자는 채널 밖에서도 둘 다, 일반 사용자는 같은 채널에서만 돼요
 		['remote manager', PermissionsBitField.Flags.ManageGuild, null, 'vc-bot', { canControl: true, canPlay: true, inVoice: false }],
 		['member in the bot channel', 0n, 'vc-bot', 'vc-bot', { canControl: true, canPlay: true, inVoice: true }],
 		['member in another channel', 0n, 'vc-other', 'vc-bot', { canControl: false, canPlay: false, inVoice: true }]
@@ -91,7 +87,6 @@ describe('web player permissions', () => {
 			},
 			audio: { getPlayer: vi.fn().mockReturnValue(null) },
 			music: { skipNow: vi.fn().mockRejectedValue(new AppError('not_found', '현재 곡이 없어요.')) },
-			// 실제 음악 유스케이스로 권한 판정을 해요 (봇 채널 없음 → 곡 추가는 음성 채널 안내로 거절)
 			musicPlay: createMusicPlay({
 				access: { getBotVoiceChannelId: () => null, getDjRoleId: async () => null },
 				getOrCreatePlayer: vi.fn(),
@@ -133,12 +128,10 @@ describe('web player permissions', () => {
 		start(logger, publish, 'test-key');
 		const payload = { requestId: 'ecbbfba6-987c-46fa-b7b2-49f517db1c1e', guildId: 'guild', userId: 'user', kind: 'voice-context' };
 
-		// 서명 없는 메시지는 처리 자체가 되지 않아요 (Redis 쓰기 권한 보유자의 위조 요청 거부)
 		harness.receive!(JSON.stringify(payload));
 		await vi.waitFor(() => expect(logger.warn).toHaveBeenCalledWith('웹 플레이어 요청 거부: 서명 검증 실패'));
 		expect(publish).not.toHaveBeenCalled();
 
-		// 서명된 메시지는 처리돼요
 		harness.receive!(wrapRedisMessage('test-key', payload));
 		await vi.waitFor(() => expect(publish).toHaveBeenCalledOnce());
 	});

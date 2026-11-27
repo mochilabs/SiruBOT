@@ -27,7 +27,6 @@ export class EvalModalHandler extends InteractionHandler {
 		}
 
 		const code = interaction.fields.getTextInputValue(evalId.encode('code'));
-		// eval 결과(환경값·토큰 등 컨테이너 값)가 채널 전체에 보이지 않도록 임시 메시지로만 게시해요
 		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
 		let result: string;

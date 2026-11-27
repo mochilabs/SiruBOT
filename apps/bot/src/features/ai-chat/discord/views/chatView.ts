@@ -4,7 +4,6 @@ import { chatCancelId } from '../customIds.ts';
 
 const FINAL_SEGMENT_LIMIT = 3_900;
 const MAX_FINAL_SEGMENTS = 4;
-/** 생성 중 화면에 붙이는 타이핑 커서 — 최종 답변(finalPayload)에는 없어요 */
 const TYPING_CURSOR = '▍';
 
 interface ChatPayload {
@@ -13,7 +12,6 @@ interface ChatPayload {
 	allowedMentions: { parse: [] };
 }
 
-/** 코드블록/줄 경계를 피해 안전하게 문단을 잘라요 (siru_lambda safeSplitMarkdown 방식) */
 function splitTextForDisplay(text: string): string[] {
 	if (text.length <= FINAL_SEGMENT_LIMIT) return [text];
 	const chunks: string[] = [];

@@ -6,11 +6,6 @@ import { m, useReducedMotion } from "framer-motion";
 import { motionSlow } from "@/components/motion/durations";
 import { decomposeHangul } from "@/lib/hangul";
 
-/**
- * 자소 분해 타이핑 애니메이션.
- * `fit` — 보이지 않는 예약 레이어가 가장 긴 후보의 폭을 항상 차지해서
- * 줄바꿈·레이아웃 점프를 막되, 실제 텍스트는 정렬 컨텍스트를 그대로 따라 자연스러워요.
- */
 export function TypingText({
 	texts,
 	speed = 150,
@@ -77,7 +72,6 @@ export function TypingText({
 	const content = (
 		<>
 			{displayText}
-			{/* 타이핑 커서 깜빡임 — 타이핑 데모의 핵심 모티프(R-19). reduced-motion에선 정지한 커서. */}
 			<m.span
 				animate={shouldReduce ? undefined : { opacity: [1, 0] }}
 				transition={{ duration: motionSlow, repeat: Infinity, ease: "linear" }}
@@ -91,11 +85,9 @@ export function TypingText({
 		<span className={className}>
 			{fit ? (
 				<span className="relative inline-block whitespace-nowrap">
-					{/* 폭 예약 — 가장 긴 후보를 보이지 않게 렌더 */}
 					<span aria-hidden className="invisible">
 						{longest}
 					</span>
-					{/* 실제 텍스트 — 예약 레이어 위에 겹쳐 정렬은 컨텍스트를 따름 */}
 					<span className="absolute inset-0">{content}</span>
 				</span>
 			) : (

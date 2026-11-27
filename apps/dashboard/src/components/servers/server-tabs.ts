@@ -1,11 +1,5 @@
 import type { BotModuleId } from "@sirubot/utils/modules";
 
-/**
- * 서버 대시보드 탭 목록 — 아이콘 없는 순수 데이터예요.
- * server-dashboard.tsx가 아이콘을 붙여 렌더링하고,
- * servers/[id]/loading.tsx 스켈레톤이 같은 목록으로 탭 수를 따라가요 (9/7 하드코딩 방지).
- * `module`이 있는 탭은 해당 봇 모듈이 꺼졌을 때 사이드바에서 흐리게 표시해요.
- */
 export const SERVER_TABS = [
 	{ key: "overview", label: "개요", group: "general" },
 	{ key: "music", label: "음악", group: "music", module: "music" },
@@ -28,7 +22,6 @@ export const SERVER_TABS = [
 	{ key: "assets", label: "에셋", group: "style" },
 ] as const;
 
-/** 사이드바·모바일 내비게이션의 그룹 — SERVER_TABS가 그룹 순서대로 정렬돼 있어요 */
 export const SERVER_TAB_GROUPS = {
 	general: "기본",
 	music: "음악",
@@ -46,13 +39,11 @@ const TAB_MODULES = new Map<ServerTabKey, BotModuleId>(
 	SERVER_TABS.flatMap((item) => ("module" in item ? [[item.key, item.module] as const] : [])),
 );
 
-/** URL `?tab=` 값을 유효한 탭 키로 정규화해요. 없거나 알 수 없는 값이면 개요 탭을 돌려줘요. */
 export function resolveServerTab(value: string | null | undefined): ServerTabKey {
 	const normalized = value === "mixer" ? "music" : value;
 	return normalized && TAB_KEYS.has(normalized) ? (normalized as ServerTabKey) : DEFAULT_SERVER_TAB;
 }
 
-/** 탭이 속한 봇 모듈 id. 모듈과 무관한 탭이면 null이에요. */
 export function getTabModule(key: ServerTabKey): BotModuleId | null {
 	return TAB_MODULES.get(key) ?? null;
 }

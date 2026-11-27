@@ -6,7 +6,6 @@ import { MUSIC_PROMOTED_COMMANDS, MUSIC_SUBCOMMAND_CATALOG, MUSIC_SUBCOMMANDS } 
 
 const SUBCOMMANDS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'subcommands');
 
-/** 카탈로그 항목이 실제 서브커맨드 모듈의 메타데이터와 같은지 확인해요 (카탈로그가 어긋나면 /도움말이 틀려요) */
 describe('music command catalog', () => {
 	it('matches every subcommand module', async () => {
 		const files = readdirSync(SUBCOMMANDS_DIR).filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'));

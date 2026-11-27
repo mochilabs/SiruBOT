@@ -10,7 +10,6 @@ import {
   ScheduledMessageRejected,
 } from "@/lib/scheduled-messages";
 
-/** 예약 메시지 목록과 서버별 상한·간격 설정 (서버 관리 권한) */
 export const GET = createGuildApiHandler({
   role: "manage",
   rate: READ_RATE,
@@ -29,7 +28,6 @@ export const GET = createGuildApiHandler({
   },
 });
 
-/** 예약 만들기 — 본문·일시·상한·같은 채널 간격은 봇 명령과 같은 규칙(@sirubot/utils/scheduledMessage)으로 확인해요 */
 export const POST = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,

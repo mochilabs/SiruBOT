@@ -13,7 +13,6 @@ interface ErrorScreenProps {
 	onRetry: () => void;
 }
 
-/** 라우트 단위 오류 화면 */
 export function ErrorScreen({ title, message, onRetry }: ErrorScreenProps) {
 	return (
 		<StatusScreen

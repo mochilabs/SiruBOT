@@ -17,9 +17,6 @@ const sizeMap = {
     xl: "h-16 w-16",
 };
 
-/**
- * Reusable Loader component for consistent loading UI across the dashboard.
- */
 export default function Loader({
     className = "",
     size = "lg",

@@ -12,7 +12,6 @@ const AI_MODE_DESCRIPTIONS: Record<AiMode, string> = {
 	off: '이 서버에서는 AI 채팅을 쓸 수 없어요.'
 };
 
-/** AI 채팅 페이지 — 구 `/채팅설정`의 서버 모드·상태·기록 초기화 (현재 채널 켜기/끄기는 옮기지 않았어요) */
 export const aiActions = {
 	selectAiMode: {
 		mode: 'ai',
@@ -40,7 +39,6 @@ export const aiActions = {
 			}
 		}
 	},
-	// 패널이 놓인 채널의 AI 대화 기록을 확인 뒤에 지워요
 	resetAiHistory: {
 		mode: 'ai',
 		apply: async ({ interaction, channelId, services }) => {

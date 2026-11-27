@@ -21,35 +21,23 @@ interface ProfileGameStats {
 	rpsLosses: number;
 	rpsDraws: number;
 	rpsBestStreak: number;
-	/** 숫자맞히기 개인 최고 기록 (몇 번 만에 성공). 없으면 null */
 	guessBest: number | null;
 }
 
-/**
- * 프로필 카드 데이터. 텍스트/Components V2/이미지 렌더가 공유해요.
- * - 생일(월/일)은 본인 조회 때만 채워요. 타인에게는 null + 별자리 코드만.
- * - 음악 집계는 길드 안이면 해당 길드 기준, DM이면 전체 기준이에요.
- */
 interface ProfileCardData {
 	isSelf: boolean;
 	inGuild: boolean;
-	/** 본인일 때만 값 있음. 타인은 null */
 	birthMonth: number | null;
-	/** 본인일 때만 값 있음. 타인은 null */
 	birthDay: number | null;
 	zodiacCode: string | null;
-	/** 유저가 등록한 한 줄 소개. 비어 있으면 카드에서 소개 칸을 생략해요 */
 	intro: string;
 	playlistCount: number;
 	requestedCount: number;
 	listenMs: number;
-	/** 신청 곡이 샘플 상한을 넘어서 청취 시간이 일부 기준이면 true */
 	listenSampled: boolean;
 	recentTracks: ProfileRecentTrack[];
 	topTracks: ProfileTopTrack[];
-	/** 게임 전적 (GameRecord 기반) */
 	gameStats: ProfileGameStats;
-	/** 출석 스트릭 (연속 일수, 없으면 0) */
 	checkinStreak: number;
 }
 
@@ -131,7 +119,6 @@ export async function buildProfileCardData(targetUserId: string, viewerUserId: s
 	};
 }
 
-/** 프로필 텍스트 카드용 게임 전적 2줄 요약. 전적이 하나도 없으면 null */
 export function formatGameStatsLines(gameStats: ProfileGameStats): string[] | null {
 	const { rpsWins, rpsLosses, rpsDraws, rpsBestStreak, guessBest } = gameStats;
 	const hasRps = rpsWins + rpsLosses + rpsDraws > 0;

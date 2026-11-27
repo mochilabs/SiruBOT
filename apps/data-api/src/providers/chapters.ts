@@ -57,7 +57,6 @@ async function fetchSearchChapters(youtube: Innertube, videoId: string): Promise
 		}));
 }
 
-/** 경로 하나로 챕터 작업 전체(영상 정보, 필요하면 검색)를 해요. 막히면 `outboundPool()`이 다음 경로로 다시 해요. */
 async function lookupOnRoute(route: OutboundRoute, videoId: string, durationMs: number): Promise<YouTubeChapter[]> {
 	const youtube = await youtubeClientFor(route);
 	let infoFailed = false;
@@ -77,7 +76,6 @@ async function lookupOnRoute(route: OutboundRoute, videoId: string, durationMs: 
 			);
 		}
 	} catch (error) {
-		// 경로가 막힌 거면 검색으로 넘어가지 않고 바로 다음 경로로 가요
 		if (error instanceof RouteBlockedError) throw error;
 		infoFailed = true;
 		logger.debug(`video info lookup failed for ${videoId}: ${String(error)}`);

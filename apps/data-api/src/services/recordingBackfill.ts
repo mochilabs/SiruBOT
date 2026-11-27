@@ -1,12 +1,6 @@
 import type { PrismaClient } from '@sirubot/prisma';
 import { displayMetadata, durationMatches, sourcePriority, trackIdentity } from '@sirubot/utils/trackIdentity';
 
-/**
- * 기존 Track을 Recording 묶음으로 채우는 일회성 백필.
- * 묶음 규칙은 봇 `apps/bot/src/features/music/application/recordingLink.ts`와 같아요
- * (ISRC → 같은 녹음 키 중 길이 ±3초 → 새 묶음).
- */
-
 export interface BackfillTrack {
 	id: string;
 	title: string;
@@ -26,7 +20,6 @@ export interface ExistingRecording {
 }
 
 export interface PlannedGroup {
-	/** 이미 있는 묶음에 붙으면 그 id, 새 묶음이면 null */
 	recordingId: string | null;
 	key: string;
 	isrc: string | null;
@@ -34,7 +27,6 @@ export interface PlannedGroup {
 	tracks: BackfillTrack[];
 }
 
-/** Track 목록을 묶음으로 나눠요. 순수 함수라 드라이런과 실제 실행이 같은 결과를 써요. */
 export function planRecordingGroups(tracks: BackfillTrack[], existing: ExistingRecording[]): { groups: PlannedGroup[]; skipped: BackfillTrack[] } {
 	const groups: PlannedGroup[] = existing.map((r) => ({ recordingId: r.id, key: r.key, isrc: r.isrc, duration: r.duration, tracks: [] }));
 	const byIsrc = new Map(groups.filter((g) => g.isrc).map((g) => [g.isrc!, g]));
@@ -42,7 +34,6 @@ export function planRecordingGroups(tracks: BackfillTrack[], existing: ExistingR
 	for (const g of groups) byKey.set(g.key, [...(byKey.get(g.key) ?? []), g]);
 	const skipped: BackfillTrack[] = [];
 
-	// 정식 소스·많이 재생된 곡부터 넣어야 묶음 대표 길이가 안정돼요.
 	const ordered = [...tracks].sort(
 		(a, b) => sourcePriority(b.source) - sourcePriority(a.source) || b.totalPlays - a.totalPlays || a.id.localeCompare(b.id)
 	);
@@ -80,10 +71,9 @@ export function planRecordingGroups(tracks: BackfillTrack[], existing: ExistingR
 	return { groups: groups.filter((g) => g.tracks.length > 0), skipped };
 }
 
-/** 묶음 하나를 DB에 써요: 새 묶음이면 만들고, 멤버 Track을 연결하고, 누적 재생수를 더해요. */
 export async function applyGroup(db: PrismaClient, group: PlannedGroup): Promise<string> {
 	const plays = group.tracks.reduce((sum, t) => sum + t.totalPlays, 0);
-	const lead = group.tracks[0]!; // planRecordingGroups가 우선순위 순으로 넣었어요
+	const lead = group.tracks[0]!;
 	return db.$transaction(async (tx) => {
 		let id = group.recordingId;
 		if (id) {
@@ -110,10 +100,6 @@ export async function applyGroup(db: PrismaClient, group: PlannedGroup): Promise
 	});
 }
 
-/**
- * GuildTrackHistory를 KST 날짜 × 서버로 묶어 일별 롤업을 채워요. `before` 이전 기록만 봐요
- * (그 뒤 재생은 봇이 이미 롤업에 쌓았어요). 요청자 없는 기록(자동재생 등)은 빼요.
- */
 export async function previewDailyRollup(db: PrismaClient, before: Date): Promise<{ rows: number; plays: number }> {
 	const [result] = await db.$queryRaw<{ rows: bigint; plays: bigint | null }[]>`
 		SELECT count(*) AS rows, sum(c) AS plays FROM (

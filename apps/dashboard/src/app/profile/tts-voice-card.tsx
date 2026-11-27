@@ -15,14 +15,9 @@ import type { TtsVoiceOption } from "@/lib/data-api/tts";
 import { discordGuildIconUrl } from "@/lib/discord-cdn";
 import { useAuthedSWR } from "@/lib/swr";
 
-/** "기본" 선택값 — SearchableSelect는 빈 문자열을 선택 안 됨으로 보므로 별도 값을 써요 */
+/** SearchableSelect가 빈 문자열을 미선택으로 취급하므로 별도 센티넬 값 사용 */
 const AUTO = "__auto__";
 
-/**
- * 서버별 TTS 음성 카드 — 생일 카드처럼 평소엔 현재 음성만 조용히 보여주고,
- * "변경"을 누른 줄만 셀렉트로 바뀌어요. 봇 `/tts 설정` 패널과 같은 TtsUserSetting.voice를 쓰고,
- * 봇 캐시(60초) 뒤에 반영돼요.
- */
 export function TtsVoiceCard() {
   const guilds = useAuthedSWR<{ guilds: EnrichedGuild[] }>("/api/servers", "/profile");
   const voices = useAuthedSWR<{ items: TtsVoiceOption[] }>("/api/profile/tts-voices", "/profile");

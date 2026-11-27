@@ -19,7 +19,6 @@ function toSettings(row: StarboardSettingsRow | null): StarboardSettings {
 	};
 }
 
-/** 스타보드 설정 — 행이 없어도 기본값을 내려줘요. 봇은 저장 후 설정 무효화 브로드캐스트로 캐시를 비워요. */
 export const GET = createGuildApiHandler({
 	role: 'manage',
 	rate: READ_RATE,
@@ -42,7 +41,6 @@ export const PUT = createGuildApiHandler({
 	schema: starboardSettingsPatchSchema,
 	handler: async ({ guildId, data }) => {
 		try {
-			// 설정 행은 Guild를 외래키로 참조해요 — 봇이 아직 만들지 않은 길드여도 저장되게 먼저 보장해요
 			await db.guild.upsert({ where: { id: guildId }, create: { id: guildId }, update: {} });
 
 			const row = await db.starboardSettings.upsert({

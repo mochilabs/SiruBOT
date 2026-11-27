@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SharedCache } from './cache.ts';
 
-// 환경 상수와 동일한 상한 (MAX_KEYS는 모듈 밖에서 접근 불가)
 const MAX_KEYS = 50_000;
 
 type CacheInternals = {
@@ -21,7 +20,6 @@ describe('SharedCache', () => {
 	});
 
 	afterEach(async () => {
-		// 메모리 폴백 맵은 모듈 레벨이라 인스턴스와 무관하게 비워요.
 		await cache.disconnect();
 		vi.useRealTimers();
 	});
@@ -72,7 +70,6 @@ describe('SharedCache', () => {
 
 		await expect(cache.get('purge-0')).resolves.toBeNull();
 		await expect(cache.get('brand-new')).resolves.toBe('nv');
-		// 만료 정리로 공간이 났으므로 만료되지 않은 항목은 제거되지 않아요
 		await expect(cache.get('purge-1')).resolves.toBe('v');
 	});
 

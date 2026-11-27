@@ -8,7 +8,6 @@ import { actorFromMember } from '../../application/actor.ts';
 export const name = 'volume';
 export const ko = '볼륨';
 export const description = '볼륨을 설정해요. 볼륨을 비우면 현재 설정만 보여줘요.';
-/** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Set the player volume.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying', 'DJOrAlone'];
 
@@ -20,7 +19,6 @@ const TARGET_LABEL: Record<VolumeTarget, string> = {
 	duck: '낭독 중 음악 볼륨'
 };
 
-/** music은 유스케이스(`container.music`)가 검증해요 — 이 표는 아직 어댑터가 직접 처리하는 TTS 계열 최대치예요. tts는 0..150%, duck은 0..100% (stored as 0..1) */
 const TARGET_MAX: Record<Exclude<VolumeTarget, 'music'>, number> = {
 	tts: 150,
 	duck: 100
@@ -77,7 +75,6 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	}
 
 	if (target === 'music') {
-		// 인가·범위 검증·저장·플레이어 반영은 유스케이스가 맡아요.
 		const { volume: updated, playing } = await container.music.setVolume(actorFromMember(interaction.member), volume);
 
 		await interaction.editReply({
@@ -88,7 +85,6 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		return;
 	}
 
-	// Discord 옵션 제약(setMinValue/setMaxValue) 밖 값은 사실상 불가능하지만, 방어로 한 번 더 검증한다.
 	const max = TARGET_MAX[target];
 	if (volume < 0 || volume > max) {
 		throw new UserError({

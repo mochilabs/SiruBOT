@@ -11,10 +11,6 @@ const favoriteSchema = z.object({
   trackId: z.string().trim().min(1).max(64),
 });
 
-/**
- * 트랙 → 즐겨찾기 원클릭 추가 (POST /api/favorites)
- * 즐겨찾기 플레이리스트(없으면 자동 생성)에 곡을 추가해요. 이미 추가된 곡이면 409.
- */
 export const POST = createGuildApiHandler({
   role: "user",
   rate: WRITE_RATE,
@@ -34,7 +30,6 @@ export const POST = createGuildApiHandler({
         );
       }
 
-      // 없으면 자동 생성(유저 upsert + 즐겨찾기 생성) — playlists 라우트와 같은 보장이에요.
       const playlist = await ensureUserAndFavorites(userId);
 
       const existing = await db.playlistTrack.findFirst({
@@ -75,10 +70,6 @@ export const POST = createGuildApiHandler({
   },
 });
 
-/**
- * 즐겨찾기 제거 (DELETE /api/favorites?trackId=...)
- * 차트 하트 토글 2번째 클릭(이미 즐겨찾기 상태)에서 사용해요.
- */
 export const DELETE = createGuildApiHandler({
   role: "user",
   rate: WRITE_RATE,
@@ -135,9 +126,6 @@ export const DELETE = createGuildApiHandler({
   },
 });
 
-/**
- * 즐겨찾기 표시 상태 조회 (GET /api/favorites) — 현재 페이지 트랙 ID 목록으로 필터링
- */
 export const GET = createGuildApiHandler({
   role: "user",
   rate: READ_RATE,

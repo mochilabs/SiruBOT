@@ -8,7 +8,6 @@ import { requireAuth } from '../plugins/auth.ts';
 import { ObjectStore } from '../services/objectStore.ts';
 import { registerObjectRoutes } from './objects.ts';
 
-// inject payload는 Buffer로 실어야 원시 바이트가 돼요 (Uint8Array는 JSON으로 직렬화돼요)
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00]);
 

@@ -13,11 +13,6 @@ const postSchema = z.object({
     .optional(),
 });
 
-/**
- * 역할 패널 게시 — 봇 토큰이 필요한 작업이라 data-api → Redis로 봇에 위임해요.
- * 패널이 이 길드 소유인지 먼저 확인해요 (다른 길드의 panelId로 게시 불가).
- * channelId를 생략하면 패널에 저장된 채널로 다시 게시해요.
- */
 export const POST = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,

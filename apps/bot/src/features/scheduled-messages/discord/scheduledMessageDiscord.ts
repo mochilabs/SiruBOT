@@ -7,17 +7,13 @@ export interface ScheduledMessageDiscordDeps {
 	logger: AppLogger;
 }
 
-/**
- * 예약 메시지 전송 옵션 — 사용자·역할 멘션은 허용하고 @everyone/@here는 막아요(parse에 'everyone'을 넣지 않아요).
- * 본문 검증이 @everyone/@here를 거부하지만, 예전에 저장됐거나 검증을 거치지 않은 본문도 여기서 한 번 더 막아요.
- */
+// @everyone/@here는 parse에서 제외해 이중으로 차단해요
 export function scheduledMessageSendOptions(content: string): MessageCreateOptions {
 	return { content, allowedMentions: { parse: ['users', 'roles'] } };
 }
 
 const SENDABLE_TYPES = new Set<ChannelType>([ChannelType.GuildText, ChannelType.GuildAnnouncement]);
 
-/** 예약 메시지 서비스의 Discord 어댑터 — 채널 권한 확인, 전송, 만든 사람 DM을 맡아요 */
 export function createScheduledMessageDiscord(deps: ScheduledMessageDiscordDeps): ScheduledMessageDiscordPort {
 	const getChannel = async (channelId: string) => {
 		const client = deps.getClient();

@@ -18,7 +18,6 @@ import type { ChartEntry } from "@/lib/track-chart";
 
 interface TrackListProps {
 	entries: ChartEntry[];
-	/** 재생 수 아래 붙는 기간 라벨 (예: "주간 재생") */
 	playsLabel: string;
 }
 
@@ -60,7 +59,6 @@ export const TrackList = memo(function TrackList({ entries, playsLabel }: TrackL
 	);
 });
 
-/** 차트 로딩 자리 — TrackItem과 같은 크기의 행을 보여줘서 데이터가 들어와도 레이아웃이 튀지 않아요. */
 export function TrackListSkeleton({ rows = 8 }: { rows?: number }) {
 	return (
 		<div role="status" aria-label="차트를 불러오는 중" className="w-full space-y-2">
@@ -123,24 +121,17 @@ const AnimatedTrackItem = memo(function AnimatedTrackItem({
 	);
 });
 
-/**
- * 현재 사용자의 즐겨찾기 트랙 ID 집합 (페이지 로드 시 일괄 조회).
- * 클릭 → 캐시 낙관 업데이트(revalidate: false) → POST/DELETE → finally 재검증 순서.
- */
 function useFavoriteIds(trackIds: string[]) {
 	const key = trackIds.length > 0 ? `/api/favorites?trackIds=${encodeURIComponent(trackIds.join(","))}` : null;
-	// 무한 스크롤로 key가 바뀌어도 이전 하트 상태를 유지해 깜빡임/오토글을 막아요
 	const { data, mutate } = useSWR<{ trackIds: string[] }>(key, { keepPreviousData: true });
 
 	const favoriteIds = useMemo(() => new Set(data?.trackIds ?? []), [data]);
-	// toggle이 클로저의 오래된 data에 의존하지 않도록 최신 집합을 ref로 들고 있어요
 	const favoriteRef = useRef(favoriteIds);
 	favoriteRef.current = favoriteIds;
 
 	const toggle = useCallback(
 		async (trackId: string) => {
 			const wasFavorite = favoriteRef.current.has(trackId);
-			// 낙관적 업데이트 — 성공 여부와 무관하게 마지막에 재검증 (함수형 갱신으로 연속 클릭도 서로 지우지 않아요)
 			const next = new Set(favoriteRef.current);
 			next[wasFavorite ? "delete" : "add"](trackId);
 			favoriteRef.current = next;
@@ -174,7 +165,6 @@ function useFavoriteIds(trackIds: string[]) {
 	return { favoriteIds, toggle };
 }
 
-/** 트랙 아이템에 표시되는 하트 토글 — 클릭 한 번으로 즐겨찾기 추가/제거 */
 function FavoriteButton({
 	trackId,
 	favorite,
@@ -218,7 +208,6 @@ function FavoriteButton({
 	);
 }
 
-/** 직전 같은 길이 기간 대비 순위 변화 — ▲상승 ▼하락 NEW 신규 –유지 */
 function RankChange({ change }: { change: ChartEntry["rankChange"] }) {
 	if (change === null) return null;
 	if (change === "new") {
@@ -264,7 +253,6 @@ export const TrackItem = memo(function TrackItem({
 
 	return (
 		<div className="bg-surface-2 rounded-card group relative flex items-center gap-2.5 sm:gap-4 p-3 sm:p-4 transition-colors duration-fast">
-			{/* Desktop Rank Indicator */}
 			<div className="hidden sm:flex w-10 flex-col items-center justify-center gap-0.5 shrink-0">
 				{isTopThree ? (
 					<Crown className={`h-6 w-6 ${rank === 1 ? "text-rank-1" : rank === 2 ? "text-rank-2" : "text-rank-3"}`} />
@@ -275,7 +263,6 @@ export const TrackItem = memo(function TrackItem({
 			</div>
 
 			<div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-card bg-muted/20">
-				{/* Mobile Rank Overlay */}
 				<div className="absolute top-0 left-0 z-10 sm:hidden flex items-center justify-center min-w-5 h-5 bg-surface-3 rounded-br-control px-1.5 shadow-sm">
 					{isTopThree ? (
 						<Crown className={`h-3 w-3 ${rank === 1 ? "text-rank-1" : rank === 2 ? "text-rank-2" : "text-rank-3"}`} />
@@ -318,7 +305,6 @@ export const TrackItem = memo(function TrackItem({
 				<p className="mt-0.5 truncate text-sm sm:text-base font-bold text-muted-foreground" title={entry.artist}>
 					{entry.artist}
 				</p>
-				{/* 모바일 전용 줄 — 데스크톱은 길이·재생 수를 오른쪽 열에 보여줘요 */}
 				<p className="mt-1 truncate text-xs font-medium text-muted-foreground sm:hidden">
 					<RankChange change={entry.rankChange} /> {entry.duration > 0 ? `${formatTimeToKorean(entry.duration / 1000)} · ` : ""}
 					<span className="font-bold text-primary-text tabular-nums">{entry.plays.toLocaleString()}</span>회

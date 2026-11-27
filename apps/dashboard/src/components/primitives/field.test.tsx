@@ -1,5 +1,4 @@
 // @vitest-environment happy-dom
-// Field 회귀 계약: 설명/오류 id 연결(describedBy), 오류 시 invalid, 필수 표시의 스크린 리더 대안과 required 전달.
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
@@ -49,7 +48,6 @@ describe("field aria wiring", () => {
 			expect(label.getAttribute("for")).toBe(control.id);
 			expect(error.textContent).toBe("채널을 골라 주세요.");
 
-			// 별표는 눈에만 보이고 스크린 리더에는 (필수)가 읽혀야 필수 여부가 전달돼요.
 			const marks = Array.from(label.querySelectorAll("span"));
 			expect(marks.find((span) => span.getAttribute("aria-hidden") === "true")?.textContent).toBe("*");
 			expect(marks.find((span) => span.className.includes("sr-only"))?.textContent).toBe("(필수)");

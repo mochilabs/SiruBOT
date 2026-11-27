@@ -1,4 +1,3 @@
-/** 별자리 코드 → 한글 이름 (봇 ohaasaService.ts와 동일한 목록) */
 const ZODIAC_KO: Record<string, string> = {
   "01": "양자리",
   "02": "황소자리",
@@ -19,10 +18,6 @@ export interface ZodiacInfo {
   ko: string;
 }
 
-/**
- * 생일(월, 일) → 별자리 코드/한글 이름. 범위 밖이면 null.
- * 분기 경계는 봇 `apps/bot/src/features/games/application/ohaasaService.ts`와 동일해요.
- */
 export function getZodiac(month: number, day: number): ZodiacInfo | null {
   if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return { code: "01", ko: ZODIAC_KO["01"]! };
   if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return { code: "02", ko: ZODIAC_KO["02"]! };

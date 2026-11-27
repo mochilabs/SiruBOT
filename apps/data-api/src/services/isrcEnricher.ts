@@ -8,7 +8,6 @@ import { applyTrackIsrc, type ApplyIsrcResult } from './recordingMerge.ts';
 const logger = getLogger('isrc-enricher');
 
 const INTERVAL_MS = 10 * 60_000;
-/** 못 찾은 곡은 이 기간이 지나면 다시 찾아봐요 (카탈로그에 나중에 올라오는 경우). */
 const RETRY_AFTER_MS = 30 * 24 * 60 * 60_000;
 
 export interface IsrcEnrichStats {
@@ -23,7 +22,6 @@ export interface IsrcEnrichStats {
 	conflicts: number;
 }
 
-/** 프로바이더를 서킷 브레이커·메트릭으로 감싸요. 열린 브레이커는 장애로 보고해 isrcCheckedAt을 남기지 않아요. */
 function guarded(provider: IsrcProvider): IsrcProvider {
 	const name = `isrc:${provider.name}`;
 	return {
@@ -46,7 +44,6 @@ function guarded(provider: IsrcProvider): IsrcProvider {
 }
 
 export function createIsrcProviders(options: { musicBrainzUserAgent?: string } = {}): IsrcProvider[] {
-	// Deezer는 라틴 표기, MusicBrainz는 원어 표기에 강해요 (packages/isrc/AGENTS.md).
 	return [createDeezerProvider(), createMusicBrainzProvider({ userAgent: options.musicBrainzUserAgent })].map(guarded);
 }
 
@@ -73,7 +70,6 @@ export class IsrcEnricher {
 		return { ...this.stats };
 	}
 
-	/** ISRC가 없는 Track 한 배치 — 처음 본 곡(isrcCheckedAt null)과 재시도 기한이 지난 곡, 많이 재생된 순. */
 	public async runBatch(limit = this.batchSize): Promise<IsrcEnrichStats> {
 		if (this.stats.running) return this.status();
 		this.stats.running = true;
@@ -97,10 +93,9 @@ export class IsrcEnricher {
 
 	private async enrichOne(track: { id: string; title: string; artist: string; duration: number; source: string }) {
 		try {
-			// 같은 배치의 앞선 곡이 묶음에 ISRC를 채웠을 수 있어요 — 최신 상태로 다시 봐요.
+			// Re-fetch in case an earlier track in this batch already populated the recording ISRC.
 			const fresh = await this.db.track.findUnique({ where: { id: track.id }, select: { isrc: true, recording: { select: { isrc: true } } } });
 			if (!fresh || fresh.isrc) return;
-			// 묶음이 이미 ISRC를 알면 외부 조회 없이 물려받아요.
 			if (fresh.recording?.isrc) {
 				this.count(await applyTrackIsrc(this.db, track.id, fresh.recording.isrc, 'recording'));
 				this.stats.inherited++;
@@ -114,7 +109,7 @@ export class IsrcEnricher {
 				this.stats.found++;
 				this.count(await applyTrackIsrc(this.db, track.id, match.isrc, match.provider));
 			} else if (failedProviders.length === 0) {
-				// 모든 프로바이더가 "없음"이라고 답했을 때만 조회 완료로 남겨요. 장애면 다음 배치에서 다시 봐요.
+				// Only mark checked when all providers cleanly report not found.
 				this.stats.notFound++;
 				await this.db.track.update({ where: { id: track.id }, data: { isrcCheckedAt: new Date() } });
 			} else {
@@ -137,12 +132,10 @@ export class IsrcEnricher {
 
 let active: IsrcEnricher | null = null;
 
-/** /status용 — 스케줄러가 꺼져 있으면 null */
 export function isrcEnrichStatus(): IsrcEnrichStats | null {
 	return active?.status() ?? null;
 }
 
-/** 10분마다 배치를 돌려요. DB가 없거나 꺼져 있으면 아무것도 하지 않아요. */
 export function startIsrcEnrichScheduler(enricher: IsrcEnricher | null, options: { enabled: boolean }): () => void {
 	active = enricher && options.enabled ? enricher : null;
 	if (!enricher || !options.enabled) {

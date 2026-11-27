@@ -21,8 +21,6 @@ export const POST = createGuildApiHandler({
 	schema: testSchema,
 	handler: async ({ guildId, authz, data }) => {
 		try {
-			// 사용자에게는 로그인한 본인 멤버 정보로 카드를 렌더해 전송해요.
-			// requestId는 data-api가 만들어 돌려주고, 테스트 결과 폴링(status)에서 같은 값으로 매칭해요.
 			const result = await forwardDataApiPost<DataApiGreetingSendResult>("/v1/internal/greeting/send", {
 				guildId,
 				kind: data.kind,

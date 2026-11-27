@@ -8,15 +8,6 @@ import { motionFast } from "@/components/motion/durations";
 import { Portal, usePopoverCoords } from "@/components/overlay/portal";
 import { Button } from "@/components/ui/button";
 
-/**
- * 믹서 설정 설명 팝오버 — 갭리스/크로스페이드가 무엇을 하는지 파형 그래프 애니메이션으로 보여줘요.
- *
- * 모션 사유(R-19): 스윕하는 재생 헤드와 겹침 구간은 설정의 실제 동작(곡이 어떻게 이어지는지)을
- * 직접 시연하는 교육용 모션이에요. framer-motion은 MotionConfig reducedMotion="user"를 따라
- * 저사양 모드에서 자동으로 멈춰요. 파형 높이는 sin 합으로 결정적으로 만들어요(Math.random은
- * 하이드레이션 어긋남을 만들어요).
- */
-
 const COPY = {
 	gapless: {
 		title: "갭리스 재생",
@@ -34,7 +25,6 @@ const COPY = {
 
 export type MixerInfoKind = keyof typeof COPY;
 
-/* 그래프 지오메트리: viewBox 240×56, 막대 32개 */
 const GRAPH_W = 240;
 const GRAPH_H = 56;
 const BAR_COUNT = 32;
@@ -43,7 +33,6 @@ const BAR_WIDTH = 5;
 const MID_Y = GRAPH_H / 2;
 const MAX_AMP = MID_Y - 3;
 
-/** 결정적 파형 — i마다 안정적으로 같은 높이(0.3..1) */
 function barLevel(i: number): number {
 	const wave = Math.sin(i * 1.7) + Math.sin(i * 0.43 + 1.2) * 0.6;
 	return 0.3 + 0.7 * (0.5 + wave / 3.2);
@@ -63,7 +52,6 @@ function Bars({ from, to, envelope, className }: { from: number; to: number; env
 	);
 }
 
-/** 재생 헤드 스윕 — 그래프 폭을 3초에 한 바퀴 linear로 지나가요 */
 function SweepLine() {
 	return <m.div className="absolute inset-y-0 w-px bg-foreground/70" initial={false} animate={{ left: ["0%", "100%"] }} transition={{ duration: 3, repeat: Infinity, ease: "linear" }} aria-hidden />;
 }
@@ -95,7 +83,6 @@ function GraphLegend({ center, centerTone }: { center: string; centerTone?: bool
 	);
 }
 
-/** 크로스페이드 — 겹침 구간에서 현재 곡(핑크)은 줄어들고 다음 곡(회색)은 커져요 */
 function CrossfadeGraph() {
 	const FADE_BARS = 9;
 	const fadeStart = 12;
@@ -111,7 +98,6 @@ function CrossfadeGraph() {
 	);
 }
 
-/** 갭리스 — 현재 곡과 다음 곡이 공백 없이 바로 맞닿아요 (이음선이 곡 경계) */
 function GaplessGraph() {
 	const seam = BAR_COUNT / 2;
 
@@ -124,9 +110,8 @@ function GaplessGraph() {
 	);
 }
 
-const PANEL_WIDTH = 288; // w-72
+const PANEL_WIDTH = 288;
 
-/** 설정 라벨 옆 (i) — 누르면 파형 그래프 설명 팝오버가 떠요 */
 export function MixerInfoTip({ kind }: { kind: MixerInfoKind }) {
 	const [open, setOpen] = useState(false);
 	const triggerRef = useRef<HTMLButtonElement>(null);
@@ -142,7 +127,6 @@ export function MixerInfoTip({ kind }: { kind: MixerInfoKind }) {
 		return () => window.removeEventListener("keydown", onKey);
 	}, [open]);
 
-	// 오른쪽 화면 끝에서 잘리지 않게 좌측 위치를 클램프해요.
 	const left = Math.min(coords.left, Math.max(8, coords.left + coords.rightSpace - PANEL_WIDTH - 8));
 
 	return (
@@ -160,7 +144,6 @@ export function MixerInfoTip({ kind }: { kind: MixerInfoKind }) {
 			<AnimatePresence>
 				{open && coords.top > 0 && (
 					<Portal>
-						{/* 바깥 클릭용 투명 백드롭 — 스크롤은 막지 않아요(팝오버가 트리거를 따라가요) */}
 						<div className="fixed inset-0 z-(--z-overlay)" onClick={() => setOpen(false)} aria-hidden />
 						<m.div
 							initial={{ opacity: 0, y: -4 }}

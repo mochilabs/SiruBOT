@@ -5,7 +5,6 @@ import { ChannelType, ChatInputCommandInteraction, GuildPremiumTier, MessageFlag
 export const name = 'server';
 export const ko = '서버';
 export const description = '현재 서버 정보를 보여줘요.';
-/** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Show information about this server.';
 export const preconditions: string[] = [];
 

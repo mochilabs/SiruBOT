@@ -5,8 +5,6 @@ import { auth } from "@/lib/auth";
 import { guardRateLimit, publicReadLimit, rateKey } from "@/lib/rate-limit";
 import { fetchVoiceServerHistory, toPublicVoiceServerHistory } from "@/lib/voice-server-stats";
 
-// 음성 서버(Lavalink) 스트리밍 개수 시계열 공개 API — 로그인 없이 허용해요.
-// CPU 부하(시스템/Lavalink)는 인프라 텔레메트리라 서버에서 제거하고 플레이어 수 추이만 내려줘요.
 const historyQuerySchema = z.object({
 	hours: z.coerce.number().int().min(1).max(168).default(24),
 });

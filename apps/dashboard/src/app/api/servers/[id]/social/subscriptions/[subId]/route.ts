@@ -8,7 +8,6 @@ import type { SocialSubscriptionResponse, SocialSubscriptionsResponse } from "@/
 
 const idSchema = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 
-/** 구독 수정 본문 — 템플릿·웹훅 표시·상태 변경이에요. 최종 검증은 notifier가 해요. */
 const updateSchema = z
   .object({
     messageTemplate: z.string().trim().min(1).max(1000).nullable().optional(),
@@ -34,10 +33,7 @@ const DELETE_FALLBACK = "알림 구독을 삭제하지 못했어요.";
 const OWNERSHIP_FALLBACK = "알림 구독을 확인하지 못했어요.";
 const NOT_FOUND = "이 서버의 알림 구독을 찾을 수 없어요.";
 
-/**
- * 구독 소유 검증 — subId가 [id] 길드 소유가 아니면 위임하지 않고 404로 막아요 (IDOR 방지).
- * 길드 스코프 목록 확인에 실패하면 소유를 확인할 수 없으니 502로 열지 않아요(fail-closed).
- */
+// subId가 해당 길드 소유가 아니거나 목록 조회 실패 시 위임하지 않아요 (IDOR 방지, fail-closed).
 async function verifySubscriptionOwnership(
   guildId: string,
   subId: string,
@@ -54,7 +50,6 @@ async function verifySubscriptionOwnership(
   return null;
 }
 
-/** 알림 구독 수정 — 템플릿 교체·일시정지·재개. */
 export const PATCH = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,
@@ -83,7 +78,6 @@ export const PATCH = createGuildApiHandler({
   },
 });
 
-/** 알림 구독 삭제 — notifier가 구독과 웹훅을 정리해요. */
 export const DELETE = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,

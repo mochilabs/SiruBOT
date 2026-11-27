@@ -15,7 +15,7 @@ import { sendError } from './common.ts';
 
 type RedisClient = NonNullable<ReturnType<typeof sharedCache.getClient>>;
 
-/** 공지는 봇이 읽는 Redis 키에만 있어야 해요 — 메모리 폴백(`sharedCache.set`)은 봇에 닿지 않으므로 쓰지 않아요 */
+// Notice must live in Redis only; in-memory fallback never reaches the bot.
 function requireRedis(reply: { code: (n: number) => any }): RedisClient | null {
 	const client = sharedCache.getClient();
 	if (!client) {
@@ -25,10 +25,6 @@ function requireRedis(reply: { code: (n: number) => any }): RedisClient | null {
 	return client;
 }
 
-/**
- * 장애 공지 (P-14) — 대시보드 `/admin` → 이 라우트 → Redis 키(TTL = 만료) → 봇이 30초 캐시로 읽어요.
- * 값은 다른 pending 키처럼 서명을 붙여요. 봇은 읽기만 해요.
- */
 export function registerIncidentNoticeRoutes(fastify: FastifyInstance): void {
 	const signingKey = resolveRedisSigningKey(process.env);
 
@@ -56,7 +52,6 @@ export function registerIncidentNoticeRoutes(fastify: FastifyInstance): void {
 		}
 	});
 
-	// 만료 시간은 필수예요 (스키마가 강제). 새 공지는 이전 공지를 덮어써요.
 	fastify.post('/v1/internal/incident-notice', async (request, reply) => {
 		try {
 			const input = incidentNoticeInputSchema.parse(request.body ?? {});

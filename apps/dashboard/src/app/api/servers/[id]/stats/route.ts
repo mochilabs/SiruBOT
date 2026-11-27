@@ -7,11 +7,6 @@ import { db } from "@/lib/db";
 import { kstDateString } from "@/lib/kst-date";
 import { READ_RATE } from "@/lib/rate-limit";
 
-/**
- * days 파라미터 — "safe"(전체 기간) 또는 1~90 정수.
- * safe는 zod에서 파싱할 수 없어 사전에 분기하고, 나머지는 coerce로 검증해요.
- * 라우트에서 daysParam이 없으면 "7"로 채우므로 default는 없어요.
- */
 const daysSchema = z.coerce.number().int().min(1).max(90).safe();
 
 export interface StatsTopTrack {
@@ -27,9 +22,7 @@ export interface StatsTopTrack {
 export interface StatsTopRequester {
   userId: string;
   count: number;
-  /** 봇 캐시에서 조회한 표시 이름 — 조회 실패 시 null이면 클라이언트가 ID 라벨로 표시해요 */
   displayName: string | null;
-  /** 봇 캐시에서 조회한 아바타 URL — 없으면 null */
   avatarUrl: string | null;
 }
 
@@ -43,11 +36,6 @@ export interface StatsServerStatsResponse {
   period: { first: string | null; last: string | null };
 }
 
-/**
- * topRequesters에 봇 캐시에서 조회한 표시 정보(별명·아바타)를 입혀요.
- * data-api 요청 실패나 봇 미응답 시 표시 정보는 null로 내려가요 —
- * 부가 표시일 뿐이라 통계 본문이 실패하지 않게 해요.
- */
 async function enrichRequesters(
   guildId: string,
   requesters: { userId: string; count: number }[],
@@ -63,7 +51,6 @@ async function enrichRequesters(
       memberMap.set(member.id, { displayName: member.displayName, avatarUrl: member.avatarUrl });
     }
   } catch {
-    // 표시 정보는 부가 장식이에요 — 조회 실패가 통계 본문까지 실패시키지 않게 해요.
   }
   return requesters.map((requester) => {
     const member = memberMap.get(requester.userId);
@@ -75,12 +62,6 @@ async function enrichRequesters(
   });
 }
 
-/**
- * 길드 재생 기록 통계 — GuildTrackHistory를 Prisma groupBy로 집계해요.
- * 요청자 표시 정보(별명·아바타)는 사용자 토큰으로 Discord API를 직접 호출할 수 없어서
- * 봇 캐시 경유(data-api Redis request/reply)로 조회해요. 조회 실패 시 표시 정보 없이
- * 내려가고 클라이언트가 사용자 ID 라벨로 표시해요.
- */
 export const GET = createGuildApiHandler({
   role: "manage",
   rate: READ_RATE,
@@ -149,7 +130,6 @@ export const GET = createGuildApiHandler({
           }),
         ]);
 
-      // 트랙 상세 조합 — groupBy 결과 순서를 유지해요.
       const trackIds = groupedTracks.map((row) => row.trackId);
       const tracks =
         trackIds.length > 0
@@ -188,7 +168,6 @@ export const GET = createGuildApiHandler({
       );
       const topRequesters = await enrichRequesters(guildId, baseRequesters);
 
-      // 날짜별 재생 수 — KST 하루 단위로 그룹핑 후 오름차순 정렬해요.
       const dailyMap = new Map<string, number>();
       for (const row of historyRows) {
         const dateKey = kstDateString(row.createdAt);

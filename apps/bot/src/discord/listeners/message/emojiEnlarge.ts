@@ -1,11 +1,3 @@
-/**
- * 이모지 확대 리스너 — 커스텀 이모지만으로 구성된 메시지를 큰 이미지로 다시 보여줘요.
- *
- * - 길드별 설정(이모지 확대 모드)로 채널 단위로 켜고 끄고, 판정 계약은 packages/utils/src/chatTools.ts예요.
- * - 확대 결과는 채널 웹훅으로 "이모지를 보낸 사람" 이름·프사로 보내요 (임베드 복구와 같은 방식).
- * - 유저당 5초 쿨다운으로 같은 이모지를 반복해서 확대하는 도배를 막아요.
- * - 봇·웹훅 메시지는 무시해요 (자기 재전송 루프 방지).
- */
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { Message, MessageFlags } from 'discord.js';
@@ -26,7 +18,6 @@ export class EmojiEnlargeListener extends Listener {
 	private readonly cooldowns = new MemoryCache<string, true>({ ttl: ENLARGE_COOLDOWN_MS, maxSize: 5_000 });
 
 	public override run(message: Message) {
-		// 서버 테마 맥락 안에서 처리해요 — 길드 설정은 어차피 캐시에서 읽어요(모든 길드 메시지가 이미 거쳐요).
 		if (message.author.bot || !message.inGuild() || message.webhookId) return Promise.resolve();
 		return inGuildTheme(message.guildId, () => this.handle(message));
 	}

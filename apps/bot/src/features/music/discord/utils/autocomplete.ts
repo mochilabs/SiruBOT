@@ -4,12 +4,6 @@ import { CHOICE_LIMIT, clipChoiceName } from '../../../../lib/autocomplete.ts';
 import { getUserQueuedTracks } from '../../lavalink/autoPlayRelated.ts';
 import { queueSelectionValue } from './queueSelection.ts';
 
-/**
- * 대기열 곡 자동완성 — 1-based 번호를 선택지 값으로 내려요.
- * `/음악 건너뛰기`, `/대기열 제거·이동`이 같은 인덱스 규칙(유저 대기열, 선예열 추천곡 제외)을 공유해야
- * 사용자가 목록에서 고른 번호가 그대로 그 명령어의 인자로 먹혀요.
- * 숫자를 입력 중이면 그 번호부터 25개 창을 옮겨요 — 뒤쪽 곡도 골라질 수 있게.
- */
 export async function respondQueuedTracks(interaction: AutocompleteInteraction): Promise<void> {
 	if (!interaction.inCachedGuild()) return interaction.respond([]);
 
@@ -33,10 +27,6 @@ export async function respondQueuedTracks(interaction: AutocompleteInteraction):
 	);
 }
 
-/**
- * 플레이리스트 이름 자동완성 — 사용자 본인 플레이리스트만 후보예요.
- * 값은 실제 이름 그대로 내려요 (핸들러가 이름으로 조회해요).
- */
 export async function respondPlaylistNames(interaction: AutocompleteInteraction): Promise<void> {
 	const typed = interaction.options.getFocused().trim().toLowerCase();
 	const playlists = await container.playlistService.getUserPlaylists(interaction.user.id).catch(() => []);
@@ -52,7 +42,6 @@ export async function respondPlaylistNames(interaction: AutocompleteInteraction)
 	);
 }
 
-/** 플레이리스트 곡 번호 자동완성 — 선택한 플레이리스트의 트랙 제목을 1-based 번호로 내려요 */
 export async function respondPlaylistTrackPositions(interaction: AutocompleteInteraction, playlistName: string | null): Promise<void> {
 	if (!playlistName) return interaction.respond([]);
 

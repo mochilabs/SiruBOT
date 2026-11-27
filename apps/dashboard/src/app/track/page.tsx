@@ -26,7 +26,6 @@ function parsePeriod(value: string | null): ChartPeriod {
   return PERIODS.some((p) => p.value === value) ? (value as ChartPeriod) : "week";
 }
 
-/** 기간 선택 — URL ?period=로 유지해서 공유할 수 있어요. 바꾸면 1페이지로 돌아가요. */
 function PeriodSelector({ value }: { value: ChartPeriod }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -66,8 +65,6 @@ function TrackContent() {
   const period = parsePeriod(searchParams.get("period"));
   const periodInfo = PERIODS.find((p) => p.value === period)!;
 
-  // 차트는 로그인 없이 열려 있어요 — /api/tracks가 공개 읽기 전용이라 상태 게이트를 두지 않아요.
-  // keepPreviousData: 재검색 동안 이전 목록을 유지해 로딩 스피너로 배경이 번쩍이는 걸 막아요.
   const { data, error, isLoading, isValidating, mutate } = useSWR<ChartPage>(
     `/api/tracks?period=${period}&query=${encodeURIComponent(query)}&page=${page}`,
     { keepPreviousData: true },
@@ -100,7 +97,6 @@ function TrackContent() {
           )
         }
       >
-        {/* 검색 · 기간 · 요약을 한 줄로 — 좁은 화면에선 검색 아래로 접혀요 */}
         <div className="w-full flex flex-col lg:flex-row gap-3 lg:items-center">
           <div className="w-full flex-1 min-w-0">
             <SearchInput />

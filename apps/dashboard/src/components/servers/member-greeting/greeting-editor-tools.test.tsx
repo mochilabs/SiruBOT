@@ -30,7 +30,6 @@ async function mount(node: React.ReactNode) {
   return { host, root };
 }
 
-/** 폭을 글자 수 × size × 0.5로 재는 가짜 canvas 컨텍스트 */
 function fakeCtx(): CanvasRenderingContext2D {
   let font = "";
   return {
@@ -54,11 +53,8 @@ describe("layerBounds — 새 옵션 반영", () => {
     expect(layerBounds(fakeCtx(), { ...text, letterSpacing: 10 }).w).toBe(base.w + 50);
     const wrapped = layerBounds(fakeCtx(), { ...text, maxWidth: 50, overflow: "wrap" });
     expect(wrapped.w).toBe(50 + 16);
-    // 100px 글자를 폭 50에 → 2줄 × 40 × 1.25 + 16
     expect(wrapped.h).toBe(2 * 40 * 1.25 + 16);
-    // 말줄임이면 한 줄이에요
     expect(layerBounds(fakeCtx(), { ...text, maxWidth: 50, overflow: "ellipsis" }).h).toBe(40 + 16);
-    // maxLines로 높이를 제한해요
     expect(layerBounds(fakeCtx(), { ...text, maxWidth: 20, overflow: "wrap", maxLines: 2 }).h).toBe(2 * 40 * 1.25 + 16);
   });
 
@@ -94,7 +90,6 @@ describe("drawGreetingSelection", () => {
     const multi = recordingCtx();
     drawGreetingSelection(multi.ctx, image, ["t", "a"]);
     expect(multi.calls.filter((call) => call.startsWith("fillRect"))).toHaveLength(0);
-    // 레이어마다 + 묶음 박스
     expect(multi.calls.filter((call) => call.startsWith("strokeRect"))).toHaveLength(3);
   });
 
@@ -116,7 +111,6 @@ describe("LayerPanel — 다중 선택", () => {
     );
     const rows = [...host.querySelectorAll<HTMLButtonElement>("li > button[aria-pressed]")];
     expect(rows).toHaveLength(2);
-    // 위=앞이라 표시 순서는 배열 역순: 아바타(a), 텍스트(t)
     expect(rows.map((row) => row.getAttribute("aria-pressed"))).toEqual(["false", "true"]);
     await act(async () => { rows[0]!.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true })); });
     expect(onSelect).toHaveBeenLastCalledWith("a", true);

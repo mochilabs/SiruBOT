@@ -4,7 +4,6 @@ import { createGuildApiHandler } from "@/lib/api-handler";
 import { db } from "@/lib/db";
 import { READ_RATE } from "@/lib/rate-limit";
 
-/** 내 서버별 TTS 음성 (GET /api/profile/tts) — { [guildId]: "engine:voice" } 만 돌려줘요. */
 export const GET = createGuildApiHandler({
   role: "user",
   rate: READ_RATE,

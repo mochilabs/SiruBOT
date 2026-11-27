@@ -6,7 +6,6 @@ import { ProxyUnavailableError } from '../utils/proxyPool.ts';
 
 describe('serveCached', () => {
 	afterEach(async () => {
-		// 모듈 레벨 메모리 폴백 맵을 비워 테스트 간 상태를 격리해요.
 		await sharedCache.disconnect();
 	});
 
@@ -70,7 +69,6 @@ describe('serveCached', () => {
 		};
 		const first = serveCached(options);
 		const second = serveCached(options);
-		// 두 호출이 모두 dedup 진입(캐시 조회 → in-flight 등록)까지 도달하게 해요.
 		await new Promise((resolve) => setTimeout(resolve, 0));
 		resolveFetch({ value: 7 });
 		const [a, b] = await Promise.all([first, second]);
@@ -95,7 +93,6 @@ describe('serveCached', () => {
 			})
 		).rejects.toMatchObject({ name: 'WeatherError' });
 
-		// 회로가 닫혀 있어야 이후 호출이 성공해요
 		const ok = await serveCached({
 			route: 'test-domain',
 			key: 'domain-key',
@@ -144,7 +141,6 @@ describe('serveCached', () => {
 			fetchFresh
 		};
 
-		// failureThreshold(5)만큼 실패하면 회로가 열려요
 		for (let i = 0; i < 5; i++) {
 			await expect(serveCached({ ...base, key: `breaker-key-${i}` })).rejects.toMatchObject({
 				status: 502,
@@ -152,7 +148,6 @@ describe('serveCached', () => {
 			});
 		}
 
-		// 회로 open — upstream 없이 즉시 503
 		await expect(serveCached({ ...base, key: 'breaker-key-blocked' })).rejects.toMatchObject({
 			status: 503,
 			code: 'provider_circuit_open'
@@ -172,7 +167,6 @@ describe('serveCached', () => {
 		expect(breaker.snapshot()['provider-miss404']).toBeUndefined();
 		expect(fetchFresh).toHaveBeenCalledTimes(6);
 
-		// 같은 키는 기억해 둔 404를 바로 돌려줘요
 		await expect(serveCached({ ...base, key: 'miss404-0' })).rejects.toMatchObject({ status: 404, code: 'lyrics_not_found' });
 		expect(fetchFresh).toHaveBeenCalledTimes(6);
 	});

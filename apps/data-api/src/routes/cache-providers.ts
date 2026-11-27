@@ -15,17 +15,12 @@ import { LyricsTranslator } from '../services/lyricsTranslation.ts';
 import type { RouteDeps } from './index.ts';
 import { fetchYouTubeSuggestionsFresh, youtubeSuggestionsCacheKey } from '../providers/youtubeSuggestions.ts';
 
-/** 캐시형 외부 프로바이더 읽기 — 가사(lrclib)·날씨(Open-Meteo)·택배(tracker.delivery)·유튜브 챕터. TTL은 라우트 단위 상수로 여기에 둬요. */
-
 const LYRICS_TTL_SECONDS = 30 * 24 * 3600;
-/** 가사 없음, 또는 자막이 막혀서 대신 낸 결과 — 짧게만 기억하고 다시 찾아요 */
 const LYRICS_RETRY_TTL_SECONDS = 15 * 60;
 const WEATHER_TTL_SECONDS = 15 * 60;
 
 export function registerCacheProviderRoutes(fastify: FastifyInstance, deps: Pick<RouteDeps, 'translationProvider'>): void {
 	const lyricsTranslator = new LyricsTranslator(getDb, deps.translationProvider);
-	// 가사
-	// `q`(자유 검색)는 기존 소비자용이고, `title`+`artist`(+`durationMs`)는 재생 중인 곡을 정확히 찾을 때 써요.
 	const lyricsQuery = z
 		.object({
 			q: z.string().trim().min(1).max(200).optional(),
@@ -64,7 +59,6 @@ export function registerCacheProviderRoutes(fastify: FastifyInstance, deps: Pick
 				},
 				validate: (d) => Boolean(d.plainLyrics || d.syncedLyrics)
 			});
-			// 번역은 캐시된 가사와 따로 붙여요 — 없으면 뒤에서 번역을 시작하고 pending으로 알려요
 			const translation = await lyricsTranslator.lookup(data);
 			const { captionTranslation: _hint, captionStatus: _status, ...body } = data;
 			return reply.send({ ...body, translation, _cached: cached });
@@ -73,7 +67,6 @@ export function registerCacheProviderRoutes(fastify: FastifyInstance, deps: Pick
 		}
 	});
 
-	// 날씨
 	const weatherQuery = z.object({
 		location: z.string().trim().min(1).max(200),
 		scope: z.enum(['now', 'today', 'tomorrow', 'week']).default('now')
@@ -95,7 +88,6 @@ export function registerCacheProviderRoutes(fastify: FastifyInstance, deps: Pick
 		}
 	});
 
-	// 택배 조회
 	const deliveryTrackQuery = z.object({
 		carrier: z.string().trim().min(1).max(100),
 		number: z.string().trim().min(4).max(50)
@@ -118,7 +110,6 @@ export function registerCacheProviderRoutes(fastify: FastifyInstance, deps: Pick
 		}
 	});
 
-	// 택배사 검색 — 봇 `/택배 택배사` 자동완성용. 목록은 24시간 캐시(provider) 안에서만 조회해요.
 	const deliveryCarriersQuery = z.object({ q: z.string().trim().max(100).default('') });
 	fastify.get('/v1/delivery/carriers', async (request, reply) => {
 		try {
@@ -130,7 +121,6 @@ export function registerCacheProviderRoutes(fastify: FastifyInstance, deps: Pick
 		}
 	});
 
-	// 유튜브 챕터
 	const chaptersQuery = z.object({
 		videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
 		durationMs: z.coerce
@@ -196,9 +186,7 @@ export function registerCacheProviderRoutes(fastify: FastifyInstance, deps: Pick
 					try {
 						const segments = sponsorBlockSegmentsSchema.parse(JSON.parse(stale));
 						if (segments.length > 0) return reply.send({ segments, _cached: true, stale: true });
-					} catch {
-						// 손상된 stale 캐시는 원래 upstream 오류를 반환해요.
-					}
+					} catch {}
 				}
 				throw error;
 			}

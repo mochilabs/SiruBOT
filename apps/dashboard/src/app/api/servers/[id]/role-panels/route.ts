@@ -7,13 +7,6 @@ import { rejectUnassignableRoles } from "@/lib/data-api/role-panel-validation";
 import { db } from "@/lib/db";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 
-/**
- * 역할 패널 목록·생성 — 길드당 여러 개(1:N)의 셀프 역할 패널.
- *
- * GET: 패널 목록(버튼 포함, clickCount 통계).
- * POST: 신규 패널 생성(이름·제목·안내문 + 버튼 목록).
- */
-
 export const GET = createGuildApiHandler({
   role: "manage",
   rate: READ_RATE,

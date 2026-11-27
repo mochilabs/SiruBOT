@@ -12,16 +12,13 @@ export interface TranslationItem {
 }
 
 export interface ChatCompletionOptions {
-	/** OpenAI `response_format` — Structured Outputs를 쓸 때 넘겨요. */
 	responseFormat?: unknown;
 }
 
-/** 번역 프로바이더 추상화 — 구현 교체 지점 (현재 OpenAI 호환 엔드포인트만 구현, 별도 환경변수 없음). */
 export interface TranslationProvider {
 	readonly name: string;
 	readonly available: boolean;
 	translateHoroscope(items: TranslationItem[]): Promise<Map<string, TranslationItem>>;
-	/** OpenAI 호환 chat/completions 공용 호출: 운세 번역과 장기 기억 정리가 같은 경로를 써요. */
 	chatCompletion(systemPrompt: string, userContent: string, providerLabel: string, options?: ChatCompletionOptions): Promise<string>;
 }
 
@@ -45,7 +42,6 @@ const translationItemSchema = z.object({
 });
 const translationOutputSchema = z.object({ items: z.array(translationItemSchema) });
 
-/** Structured Outputs(json_schema, strict) 요청 형식 — 최상위는 객체여야 해서 items로 감싸요. */
 const TRANSLATION_RESPONSE_FORMAT = {
 	type: 'json_schema',
 	json_schema: {
@@ -76,7 +72,6 @@ const TRANSLATION_RESPONSE_FORMAT = {
 	}
 } as const;
 
-/** 구조화 필드를 봇·카드가 읽는 기존 lucky 문자열로 조립해요 (봇 splitOhaasaLucky가 이 라벨을 알아봐요). */
 export function composeLucky(f: { luckyColor: string; luckyKey: string; luckyItem: string }): string {
 	const parts: string[] = [];
 	const color = f.luckyColor.trim();
@@ -88,7 +83,6 @@ export function composeLucky(f: { luckyColor: string; luckyKey: string; luckyIte
 	return parts.join(' · ');
 }
 
-/** 모델 출력 파싱 — strict 응답은 그대로 통과하고, 미지원 엔드포인트의 펜스·앞뒤 설명은 벗겨내요. */
 export function parseTranslation(text: string): Map<string, TranslationItem> | null {
 	const stripped = text.replace(/```(?:json)?/gi, '').trim();
 	const start = stripped.indexOf('{');
@@ -122,11 +116,6 @@ export class OpenAICompatTranslationProvider implements TranslationProvider {
 		this.available = apiKey.length > 0;
 	}
 
-	/**
-	 * OpenAI 호환 chat/completions 공용 호출 — 이 프로바이더를 쓰는 모든 호출부
-	 * (운세 번역·장기 기억 정리)가 같은 경로를 공유해요. 60초 타임아웃, 스트림 비활성.
-	 * providerLabel은 실패 시 에러 메시지에 쓰여요 (예: 'translation provider').
-	 */
 	public async chatCompletion(systemPrompt: string, userContent: string, providerLabel: string, options?: ChatCompletionOptions): Promise<string> {
 		const res = await fetch(`${this.baseUrl}/chat/completions`, {
 			method: 'POST',
@@ -146,7 +135,6 @@ export class OpenAICompatTranslationProvider implements TranslationProvider {
 			signal: AbortSignal.timeout(60_000)
 		});
 		if (!res.ok) {
-			// 실패 본문까지 남겨야 quota 초과(429 insufficient_quota)·인증 오류가 로그에서 바로 보여요
 			const detail = await res.text().catch(() => '');
 			const snippet = detail.replace(/\s+/g, ' ').trim().slice(0, 500);
 			throw new Error(`${providerLabel} failed: ${res.status}${snippet ? ` ${snippet}` : ''}`);
@@ -165,7 +153,7 @@ export class OpenAICompatTranslationProvider implements TranslationProvider {
 				responseFormat: TRANSLATION_RESPONSE_FORMAT
 			});
 		} catch (error) {
-			// response_format(json_schema)를 모르는 호환 서버는 400/422를 줘요 — 프롬프트 지시만으로 한 번 더 시도해요
+			// Fall back to prompt-only JSON when the endpoint rejects response_format.
 			if (!/failed: (?:400|422)\b/.test(String(error))) throw error;
 			logger.warn('structured output rejected, retrying with prompt-only JSON:', String(error));
 			content = await this.chatCompletion(TRANSLATE_SYSTEM_PROMPT, input, 'translation provider');
@@ -176,7 +164,6 @@ export class OpenAICompatTranslationProvider implements TranslationProvider {
 	}
 }
 
-/** 번역본 조립 — 한 건이라도 성공하면 translated:true, 전부 실패 시 throw */
 export async function translateDaily(raw: DailyHoroscope, provider: TranslationProvider): Promise<DailyHoroscope> {
 	const items: TranslationItem[] = raw.horoscopes
 		.filter((h) => h.content || h.lucky)

@@ -23,7 +23,6 @@ const MAX_LIST_KEYS = 1000;
 const NOT_FOUND_MESSAGE = '이미지를 찾을 수 없어요.';
 const TRANSCRIPT_EXTENSION = '.json.gz';
 const TRANSCRIPT_MIME = 'application/gzip';
-// gzip한 텍스트 기준이라 긴 상담도 수백 KB예요.
 const TRANSCRIPT_MAX_BYTES = 16 * 1024 * 1024;
 
 async function storeCall<T>(reply: FastifyReply, run: () => Promise<T>): Promise<StoreCallResult<T>> {
@@ -44,7 +43,6 @@ function publicObjectUrl(publicUrl: string, bucket: string, key: string): string
 	return `${publicUrl.replace(/\/+$/, '')}/${bucket}/${key}`;
 }
 
-// 비공개 버킷은 공개 URL이 없어요. key만 돌려주면 대시보드가 인증된 경로로 읽어요.
 async function uploadTranscript({ store, reply, bucket, key, bytes }: UploadContext) {
 	if (!key.endsWith(TRANSCRIPT_EXTENSION)) return reply.code(400).send({ error: `transcript는 ${TRANSCRIPT_EXTENSION} 형식이어야 해요.` });
 	if (bytes.length > TRANSCRIPT_MAX_BYTES) return reply.code(413).send({ error: 'transcript가 너무 커요. 최대 16MB까지 올릴 수 있어요.' });
@@ -58,7 +56,6 @@ async function uploadTranscript({ store, reply, bucket, key, bytes }: UploadCont
 async function uploadImage({ store, reply, bucket, key, bytes }: UploadContext, publicUrl: string) {
 	if (bytes.length > ASSET_MAX_BYTES) return reply.code(413).send({ error: '이미지가 너무 커요. 최대 8MB까지 올릴 수 있어요.' });
 
-	// 클라이언트가 보낸 Content-Type은 믿지 않고 파일 내용으로 판별해요.
 	const mime = sniffImageMime(bytes);
 	if (!mime || !ASSET_ALLOWED_MIME_TYPES.has(mime)) return reply.code(400).send({ error: 'PNG, JPEG, WebP, GIF 이미지만 지원해요.' });
 	if (contentTypeForKey(key) !== mime) return reply.code(400).send({ error: '이미지 형식과 확장자가 맞지 않아요.' });
@@ -89,7 +86,6 @@ export async function registerObjectRoutes(fastify: FastifyInstance, options: Ob
 		return bucket === TICKET_TRANSCRIPT_BUCKET ? uploadTranscript(upload) : uploadImage(upload, publicUrl);
 	});
 
-	// 인증 없이 열려 있어요. 디스코드가 직접 가져가요.
 	fastify.get<{ Params: ObjectParams }>('/:bucket/*', async (request, reply) => {
 		const { bucket } = request.params;
 		if (bucket === TICKET_TRANSCRIPT_BUCKET) return reply.code(404).send({ error: NOT_FOUND_MESSAGE });

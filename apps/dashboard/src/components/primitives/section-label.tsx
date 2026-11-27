@@ -2,7 +2,6 @@ import { cn } from "@/lib/utils";
 
 interface SectionLabelProps {
 	children: React.ReactNode;
-	/** div(기본) 또는 p. 그룹 레이블은 보통 p. */
 	as?: "div" | "p" | "span";
 	className?: string;
 }

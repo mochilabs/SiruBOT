@@ -3,16 +3,6 @@ import { gzipSync } from 'node:zlib';
 import type { Ticket } from '@sirubot/prisma';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 
-/**
- * 티켓 대화 기록(transcript) 저장 — 마감 5초 뒤 채널이 삭제되므로 그 전에 원문을 남겨요.
- *
- * 경로: 비공개 버킷 `ticket-transcripts/{guildId}/{ticketId}.json.gz`
- *  - storage의 공개 GET은 이 버킷을 404로 막고, 대시보드가 storage 인증으로 받아 관리자에게만 보여줘요.
- *  - 형식: JSON(gzip) — Discord가 주는 메시지 필드만 필요한 것만 골라 담아요(첨부 원본은 URL만).
- *
- * 실패해도 마감 자체는 계속돼요(티켓 상태는 이미 closed). 실패 사유는 로그·Sentry에만 남겨요.
- */
-
 export type UploadObject = (
 	bucket: string,
 	key: string,
@@ -25,9 +15,7 @@ export interface TicketTranscriptDeps {
 	uploadObject: UploadObject;
 }
 
-/** 한 티켓에서 저장하는 최대 메시지 수 — 오래 걸린 채널도 상한을 둬 transcript 폭주를 막아요 */
 const MAX_TRANSCRIPT_MESSAGES = 500;
-/** Discord API 페이지 상한 */
 const FETCH_PAGE_SIZE = 100;
 
 export interface TranscriptMessage {
@@ -56,12 +44,11 @@ export interface TranscriptFile {
 	messages: TranscriptMessage[];
 }
 
-/** 저장 키 — 대시보드가 같은 규칙으로 조회해요 (계약 중복 방지: 이 함수만 쓰고 문자열을 흩뿌리지 않아요) */
+/** 대시보드가 같은 규칙으로 조회하는 비공개 버킷 저장 키 */
 export function ticketTranscriptKey(guildId: string, ticketId: string): string {
 	return `${guildId}/${ticketId}.json.gz`;
 }
 
-/** 저장에 필요한 메시지 모양 (discord.js Message가 만족해요) */
 export interface TranscriptSourceMessage {
 	id: string;
 	author: { id: string; tag: string; bot: boolean };
@@ -71,7 +58,6 @@ export interface TranscriptSourceMessage {
 	attachments: { values(): Iterable<{ name: string; url: string; contentType?: string | null; size: number }> };
 }
 
-/** fetch 한 번의 결과 — 최신→과거 순 (discord.js Collection이 만족해요) */
 export interface TranscriptMessageBatch {
 	readonly size: number;
 	values(): Iterable<TranscriptSourceMessage>;

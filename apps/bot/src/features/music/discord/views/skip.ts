@@ -5,11 +5,9 @@ import { addTextWithThumbnail } from './play.ts';
 
 type voteSkipProps = {
 	requiredVotes: number;
-	/** 지금까지 모인 표 수 (시작자 포함) */
 	votes: number;
 	trackToSkip: Track;
 	nextTrack?: Track;
-	/** 투표 메시지마다 고유한 customId — 같은 채널의 투표가 서로 섞이지 않게 해요. */
 	customId: string;
 };
 

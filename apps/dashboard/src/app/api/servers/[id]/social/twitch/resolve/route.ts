@@ -15,7 +15,6 @@ const bodySchema = z.object({
 
 const FALLBACK = "트위치 사용자를 확인하지 못했어요.";
 
-/** 트위치 로그인 아이디 해석 — 스트리머의 사용자 ID와 표시 이름을 찾아요. */
 export const POST = createGuildApiHandler({
   role: "manage",
   rate: READ_RATE,

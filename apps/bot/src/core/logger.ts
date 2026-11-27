@@ -2,7 +2,6 @@ import { ILogger, LogLevel } from '@sapphire/framework';
 import { Logger, ILogObj, ISettingsParam } from 'tslog';
 import { getLoggerSettings } from '@sirubot/utils';
 
-/** 환경 변수 로그 레벨 문자열 → tslog 숫자 레벨 */
 const LOG_LEVEL_MAP: Record<string, number> = {
 	silly: 0,
 	trace: 1,
@@ -13,10 +12,6 @@ const LOG_LEVEL_MAP: Record<string, number> = {
 	fatal: 6
 } as const;
 
-/**
- * Sapphire LogLevel to tslog level mapping
- * Sapphire uses multiples of 10, tslog uses 0-6
- */
 const SAPPHIRE_TO_TSLOG_LEVEL_MAP: Record<LogLevel, number> = {
 	[LogLevel.Trace]: 1,
 	[LogLevel.Debug]: 2,
@@ -27,10 +22,6 @@ const SAPPHIRE_TO_TSLOG_LEVEL_MAP: Record<LogLevel, number> = {
 	[LogLevel.None]: 6
 } as const;
 
-/**
- * Custom logger implementation that bridges Sapphire's ILogger interface
- * with tslog's Logger functionality
- */
 export class SapphireInterfaceLogger extends Logger<ILogObj> implements ILogger {
 	constructor(settings?: Partial<ISettingsParam<ILogObj>>) {
 		super(getLoggerSettings(settings?.name ?? 'Sapphire', settings));

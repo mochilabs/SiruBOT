@@ -1,12 +1,3 @@
-/**
- * 커스텀 슬래시 명령어 실행 핸들러 — 길드에 등록된 슬래시형 커스텀 명령어 인터랙션을 실행해요.
- *
- * - slashRegistry가 길드 커맨드로 등록한 이름이 인터랙션으로 오면, 같은 인터프리터 엔진에
- *   interaction을 컨텍스트로 바꿔 넘겨요 (접두사 실행과 계약 동일 — access·역할 위계 재검증 포함).
- * - 슬래시는 3초 안에 응답해야 하므로 deferReply로 먼저 받고, 첫 메시지는 그 응답을 수정해 나가요.
- *   이후 메시지는 채널로 전송해요. 보낼 메시지가 전혀 없으면 '처리했어요' 한 줄로 마무리해요.
- * - delete_trigger는 응답 삭제(deleteReply)로 동작해요.
- */
 import { notice as noticeView } from '../../../../lib/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener, container } from '@sapphire/framework';
@@ -19,7 +10,6 @@ import { customCommandDesignView } from '../views/customCommand.ts';
 import { moduleDisabledMessage, usageFeatureKey } from '@sirubot/utils/modules';
 import { isMessageFeatureEnabled } from '../../../../services/guildSettings/modules.ts';
 
-/** 인터랙션 1건을 처리해요. 이 봇의 슬래시형 커스텀 명령어가 아니면 false를 돌려줘요. */
 export async function handleCustomCommandSlashInteraction(interaction: ChatInputCommandInteraction): Promise<boolean> {
 	if (!interaction.inGuild()) return false;
 	const guild = interaction.guild;
@@ -27,7 +17,6 @@ export async function handleCustomCommandSlashInteraction(interaction: ChatInput
 	const entry = await container.customCommandStore.findCustomCommand(interaction.guildId, normalizeCustomCommandName(interaction.commandName));
 	if (!entry || entry.method !== 'slash') return false;
 
-	// 커뮤니티 모듈이 꺼진 서버: 슬래시형 커스텀 명령어도 같은 문구로 거절해요 (P-06)
 	if (!(await isMessageFeatureEnabled(container.guildService, interaction.guildId, 'custom-command'))) {
 		await interaction.reply({
 			components: [noticeView(moduleDisabledMessage('community'))],

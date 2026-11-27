@@ -7,7 +7,6 @@ import { deleteScheduledMessage } from "@/lib/scheduled-messages";
 
 const seriesIdSchema = z.string().uuid();
 
-/** 예약 삭제 — 같은 예약의 대기·실패·끝난 회차를 모두 지워요. 이미 보내는 중인 회차는 막을 수 없어요 */
 export const DELETE = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,

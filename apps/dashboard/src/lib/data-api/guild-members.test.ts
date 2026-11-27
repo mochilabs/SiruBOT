@@ -1,4 +1,3 @@
-// 길드 멤버 표시 정보 조회 계약 — 최대 10명 제한(코어 제약), 빈 목록 단락, 실패 시 null 폴백을 잠가요.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { forwardDataApiGet } from "./client";

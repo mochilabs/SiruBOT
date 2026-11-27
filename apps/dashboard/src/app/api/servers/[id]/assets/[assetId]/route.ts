@@ -8,10 +8,8 @@ import { WRITE_RATE } from "@/lib/rate-limit";
 import { parseSettingBody } from "@/lib/schemas";
 import { deleteAssetObject } from "@/lib/storage";
 
-/** 이름 변경 — 보내준 `name`만 바꿔요 (공용 스키마: 공백 거부·60자 이하) */
 const assetRenameSchema = z.object({ name: assetNameSchema });
 
-/** PATCH /api/servers/[id]/assets/[assetId] — 에셋 이름 변경 */
 export const PATCH = createGuildApiHandler({
 	role: "manage",
 	rate: WRITE_RATE,
@@ -22,7 +20,6 @@ export const PATCH = createGuildApiHandler({
 			const body = await parseSettingBody(request, assetRenameSchema, ["name"]);
 			if (!body.ok) return body.response;
 
-			// 소유 검증 — 다른 길드의 에셋은 건드릴 수 없어요
 			const existing = await db.guildAsset.findFirst({ where: { id: assetId, guildId } });
 			if (!existing) {
 				return NextResponse.json({ error: "찾을 수 없는 이미지예요." }, { status: 404 });
@@ -46,10 +43,6 @@ export const PATCH = createGuildApiHandler({
 	},
 });
 
-/**
- * DELETE /api/servers/[id]/assets/[assetId] — 스토리지 오브젝트와 메타데이터를 함께 지워요.
- * 커스텀 명령어 스펙이 이 에셋 URL을 쓰고 있으면 이름을 `referencedBy`로 알려주지만 삭제는 진행해요.
- */
 export const DELETE = createGuildApiHandler({
 	role: "manage",
 	rate: WRITE_RATE,
@@ -62,12 +55,10 @@ export const DELETE = createGuildApiHandler({
 				return NextResponse.json({ error: "찾을 수 없는 이미지예요." }, { status: 404 });
 			}
 
-			// 참조 스캔 — 스펙 JSON에 이 에셋 URL이 들어간 커스텀 명령어 이름을 모아요 (경고용, 삭제는 계속)
 			const commands = await db.customCommand.findMany({ where: { guildId }, select: { name: true, spec: true } });
 			const referencedBy = commands.filter((command) => JSON.stringify(command.spec).includes(asset.url)).map((command) => command.name);
 
 			try {
-				// 404는 이미 없는 파일이라 성공 취급해요 (deleteAssetObject 계약)
 				await deleteAssetObject(asset.bucket, asset.key);
 			} catch (error) {
 				console.error(`Failed to delete guild asset object (guild ${guildId}):`, error);

@@ -1,4 +1,3 @@
-/** In-flight 요청 합치기 — 동시 같은 키 요청은 하나의 upstream 호출을 공유해요. */
 const inflight = new Map<string, Promise<unknown>>();
 
 export function deduped<T>(key: string, task: () => Promise<T>): Promise<T> {

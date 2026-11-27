@@ -52,7 +52,6 @@ describe('모듈 켜기/끄기 저장소', () => {
 		const store = new GuildSettingsStore({ db });
 		await expect(setDisabledModules(store, 'guild', ['fun', 'admin', 'nope', 'music', 'fun'])).resolves.toEqual(['music', 'fun']);
 		expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ update: { disabledModules: ['music', 'fun'] } }));
-		// 저장 직후 읽기는 캐시에서 와요
 		await expect(isModuleEnabled(store, 'guild', 'fun')).resolves.toBe(false);
 		expect(upsert).toHaveBeenCalledTimes(1);
 	});

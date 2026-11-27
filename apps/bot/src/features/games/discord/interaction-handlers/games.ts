@@ -6,7 +6,7 @@ import type { GameRecords, GameResult } from '../../application/gameRecords.ts';
 import { textContainer } from '../views/textContainer.ts';
 import { gameId } from '../customIds.ts';
 
-/** outcome: 0 = 비김, 1 = 승, 2 = 패. 표시할 연승 문구가 있으면 반환 */
+// outcome: 0=비김, 1=승, 2=패
 async function resolveStreakLine(records: GameRecords, userId: string, outcome: number): Promise<string | null> {
 	const before = await records.getRpsStats(userId);
 	const result: GameResult = outcome === 1 ? 'win' : outcome === 2 ? 'loss' : 'draw';

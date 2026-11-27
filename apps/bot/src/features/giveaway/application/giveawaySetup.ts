@@ -8,10 +8,6 @@ import {
 } from '@sirubot/utils/giveaway';
 import { parseKstDateTime } from '@sirubot/utils/scheduledMessage';
 
-/**
- * `/나눔 시작` 설정 패널이 들고 있는 값 — 디스코드 객체 없이 순수 값만 둬요.
- * 마감은 "시작을 누른 시점 기준 N시간 뒤"(relative)와 "정해진 시각"(absolute) 두 가지예요. 패널을 열어 둔 사이 시간이 흘러도 기간이 줄지 않게 relative는 시작할 때 계산해요.
- */
 export type GiveawaySetupEnd = { kind: 'relative'; ms: number } | { kind: 'absolute'; at: Date };
 
 export interface GiveawaySetupState {
@@ -29,7 +25,6 @@ export interface GiveawaySetupState {
 const HOUR_MS = 60 * 60_000;
 const DAY_MS = 24 * HOUR_MS;
 
-/** 마감 빠른 선택 — value는 셀렉트 메뉴 값이에요 */
 export const GIVEAWAY_QUICK_DURATIONS = [
 	{ value: '1h', label: '1시간', ms: HOUR_MS },
 	{ value: '6h', label: '6시간', ms: 6 * HOUR_MS },
@@ -57,13 +52,11 @@ export function quickDuration(value: string) {
 	return GIVEAWAY_QUICK_DURATIONS.find((item) => item.value === value) ?? null;
 }
 
-/** 지금 기준의 마감 시각. 아직 정하지 않았으면 null */
 export function resolveSetupEnd(end: GiveawaySetupEnd | null, now: Date): Date | null {
 	if (!end) return null;
 	return end.kind === 'absolute' ? end.at : new Date(now.getTime() + end.ms);
 }
 
-/** 시작하려면 더 채워야 하는 항목 (한국어 이름) */
 export function missingSetupFields(state: GiveawaySetupState): string[] {
 	const missing: string[] = [];
 	if (!state.prize) missing.push('상품');
@@ -81,10 +74,8 @@ export function setupConditions(state: GiveawaySetupState): GiveawayCondition[] 
 	});
 }
 
-/** 모달 입력 한 칸의 결과 — 값이 올바르면 value, 아니면 사용자에게 보여줄 문구 */
 export type SetupParse<T> = { ok: true; value: T } | { ok: false; message: string };
 
-/** 마감 입력: "30분", "2h", "1d12h"(기간) 또는 "2026-12-25 21:00"(한국 시간) */
 export function parseSetupEnd(text: string): SetupParse<GiveawaySetupEnd> {
 	const source = text.trim();
 	if (/^\d{4}-\d{2}-\d{2}/.test(source)) {

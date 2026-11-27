@@ -4,12 +4,6 @@ import { TICKET_CONFIG_DEFAULTS } from "@sirubot/utils/ticket";
 
 import { GUILD_SETTINGS_DEFAULTS } from "@/lib/schemas";
 
-/**
- * 개발 전용 스텁 — 로그인·봇·data-api 없이 서버 대시보드 탭을 채워 보려고 window.fetch를 가로채요.
- * `/design/dashboard` 페이지에서만 설치하고(프로덕션이면 404라 도달하지 않아요) 언마운트하면 원복해요.
- * 쓰기 요청(PUT/POST/PATCH/DELETE)은 서버로 가지 않고 요청 본문을 합쳐 그대로 돌려줘요.
- */
-
 export const STUB_GUILD_ID = "100000000000000001";
 
 const ch = (id: string, name: string, type: number, parentId: string | null, position: number) => ({ id, name, type, parentId, position });
@@ -195,7 +189,6 @@ function stubGet(path: string): unknown | undefined {
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
-/** fetch 가로채기를 설치하고, 원복 함수를 돌려줘요 */
 export function installGuildStub(): () => void {
 	const original = window.fetch;
 	window.fetch = async (input, init) => {
@@ -218,7 +211,6 @@ export function installGuildStub(): () => void {
 			try {
 				patch = typeof init?.body === "string" ? JSON.parse(init.body) : {};
 			} catch {
-				/* 본문이 JSON이 아니면 무시해요 */
 			}
 			return json({ ...(typeof data === "object" && data ? data : {}), ...(typeof patch === "object" && patch ? patch : {}) });
 		}

@@ -30,7 +30,6 @@ import {
   WarningBox,
 } from "./settings-shared";
 
-// 모드 카드 데이터(라벨·설명·아이콘)만 여기 두고 마크업은 settings-shared의 ModePicker를 써요
 const MODE_CARDS: ModeCardOption<AiMode>[] = [
   {
     value: "all",
@@ -65,7 +64,6 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
   const [retryToken, setRetryToken] = useState(0);
   const confirmDelete = confirmTarget === "history";
 
-  // 특정 채널 모드가 활성일 때만 채널 목록을 요청해요
   const {
     channels,
     error: channelsError,
@@ -129,7 +127,6 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
   };
 
   const handleDeleteHistory = async () => {
-    // 첫 클릭은 무장(4초 자동 해제), 두 번째 클릭이 실제 삭제예요
     if (!requestDelete("history")) return;
     setDeleting(true);
     try {

@@ -20,7 +20,6 @@ import { MobileTabBar } from "./navbar/mobile-tab-bar";
 export function Navbar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
-  // 서버 설정 화면(과 같은 모양의 디자인 미리보기)은 상단 서버 선택기·제목 버튼으로 이동하니 하단 탭바를 숨겨요 (여백 변수도 같이 0으로).
   const hideTabBar = /^\/(servers\/[^/]+|design\/dashboard)/.test(pathname);
   useEffect(() => {
     document.documentElement.toggleAttribute("data-tabbar-off", hideTabBar);
@@ -56,8 +55,6 @@ export function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // R-32: 열린 프로필 메뉴는 Escape로도 닫혀요 (외부 클릭과 같은 경로).
-  // 닫히면 포커스를 트리거로 돌려 키보드 흐름이 끊기지 않게 해요.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && profileOpen) {
@@ -81,8 +78,6 @@ export function Navbar() {
       setTheme(nextTheme);
     });
   };
-
-
 
   const navContainerRef = useRef<HTMLDivElement>(null);
   const navRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -117,8 +112,6 @@ export function Navbar() {
 
   return (
     <>
-    {/* fixed 대신 루트 flex 컬럼의 sticky로 흐름 공간을 차지해요 — 페이지별 클리어런스 패딩이 필요 없어요.
-        루트의 overflow-x-clip은 스크롤 컨테이너를 만들지 않으므로 sticky가 깨지지 않아요 */}
     <div
       className={`sticky top-0 z-(--z-overlay) flex flex-col border-b border-transparent transition-colors duration-base ${scrolled
           ? "bg-background border-border-subtle shadow-sm"
@@ -127,7 +120,6 @@ export function Navbar() {
     >
       <nav className="h-[var(--navbar-h)] w-full shrink-0">
         <div className="mx-auto flex h-full w-full max-w-7xl items-center px-4 sm:px-6 lg:px-8">
-          {/* Logo */}
           <Link href="/" className="flex shrink-0 items-center gap-2 group">
             <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0">
               <Image
@@ -142,7 +134,6 @@ export function Navbar() {
           </Link>
 
           <div className="flex flex-1 items-center gap-2 lg:gap-4">
-            {/* Desktop Menu — 브랜드 옆에 붙여 왼쪽에 모아요 (가운데는 여백, 액션은 우측 밀착) */}
             <div ref={navContainerRef} className="relative ml-6 hidden md:flex items-center gap-1 lg:ml-8 lg:gap-2">
               {indicator && (
                 // transform x로만 이동해요 — left/width를 애니메이션하면 레이어가
@@ -177,11 +168,8 @@ export function Navbar() {
               })}
             </div>
 
-            {/* Action Buttons — 우측 끝에 밀착. 모바일에서는 하단 탭바가 내비를 대신하므로 액션만 남겨요 */}
             <div className="ml-auto flex items-center gap-2">
               <div className="flex items-center gap-2">
-                {/* 검색+테마 토글을 하나의 세그먼트 pill로 묶어요 — 공유 표면/경계로 한 덩어리,
-                    CTA만 분리해 헤더에서 유일한 액센트가 되게 해요. 전부 h-11(44px) 정렬. */}
                 <div className="flex h-11 items-center overflow-hidden rounded-control bg-surface-1 shadow-control-boundary">
                   <Button
                     variant="ghost"
@@ -241,7 +229,6 @@ export function Navbar() {
                           className="w-8 h-8 rounded-full"
                         />
                       ) : (
-                        // 이미지가 없으면 이니셜 원으로 자리를 채워 버튼이 빈 칸으로 보이지 않게 해요
                         <span
                           aria-hidden
                           className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-sm font-semibold text-muted-foreground"
@@ -299,11 +286,9 @@ export function Navbar() {
                     </AnimatePresence>
                   </div>
                 ) : status === "loading" ? (
-                  // 세션 확인 중 우측 클러스터 자리를 고정해, 로딩 후 로그인 버튼→아바타 교체 시 레이아웃 튐을 막아요
                   <Skeleton.Line width="6rem" height="h-11" className="shrink-0" />
                 ) : (
                   <div className="flex items-center gap-2">
-                    {/* 네비 링크 "대시보드"와의 이중 표기 방지 — CTA는 시작 동사만 남겨요 */}
                     <Button
                       variant="secondary"
                       onClick={() => signIn("discord")}
@@ -320,7 +305,6 @@ export function Navbar() {
       </nav>
     </div>
 
-    {/* 모바일 하단 탭바 — md 이상에서 숨겨져요 */}
     {!hideTabBar && <MobileTabBar status={status} />}
     </>
   );

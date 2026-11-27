@@ -5,7 +5,6 @@ import type { StarboardDiscordPort, StarboardMessageRef, StarboardSource } from 
 import { inGuildTheme } from '../../../lib/guildThemeScope.ts';
 import { starboardCard } from './views/starboardCard.ts';
 
-/** 반응한 사용자 조회 한 번의 상한 — 이보다 많으면 기준(최대 50)을 이미 훌쩍 넘어서 본인 반응 한 개로 판정이 바뀌지 않아요 */
 const REACTOR_FETCH_LIMIT = 100;
 
 export interface StarboardDiscordDeps {
@@ -18,7 +17,6 @@ const sendOptions: Pick<MessageCreateOptions, 'flags' | 'allowedMentions'> = {
 	allowedMentions: { parse: [] }
 };
 
-/** 스타보드 서비스의 Discord 어댑터 — 메시지 읽기·카드 게시·수정·삭제를 맡아요 */
 export function createStarboardDiscord(deps: StarboardDiscordDeps): StarboardDiscordPort {
 	const getTextChannel = async (channelId: string): Promise<(GuildBasedChannel & TextBasedChannel) | null> => {
 		const client = deps.getClient();

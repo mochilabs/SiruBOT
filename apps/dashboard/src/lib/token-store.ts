@@ -6,18 +6,6 @@ import { requestDiscordToken } from "@/lib/discord-token";
 import { getSessionSecret } from "@/lib/env";
 import { isRedisEnabled, randomLockToken, redisCompareAndDel, redisSetNx } from "@/lib/redis";
 
-/**
- * Discord OAuth 토큰의 서버측 단일 원본(Postgres/Prisma).
- *
- * 기존엔 accessToken·refreshToken이 전부 JWT 쿠키에 있어서, 다중 인스턴스/다중 탭에서
- * refresh 토큰 로테이션 레이스(한쪽 400 → 세션 파기)가 났어요. refreshToken을 DB로
- * 중앙화하고 Redis 뮤텍스 + 낙관적 버전 잠금(WHERE version = ?)으로 동시 갱신을 직렬화해요.
- *
- * accessToken은 JWT에 미러로 남겨두고(핫패스 DB 조회 제로 유지 — session-token.ts 참고),
- * 여기서는 갱신·회전·백필·암호화 저장만 담당해요.
- */
-
-/** 복호된 토큰 셋 — DB 행을 복호한 결과예요. */
 export interface TokenSet {
   accessToken: string;
   refreshToken: string;
@@ -25,10 +13,6 @@ export interface TokenSet {
   version: number;
 }
 
-/**
- * 구 세션 마이그레이션용 원본. JWT에 아직 refreshToken이 들어 있는(마이그레이션 전) 세션만
- * ensureFreshToken의 legacy 인자로 넘어와요.
- */
 export interface LegacyTokenSet {
   refreshToken: string;
   accessToken: string;
@@ -40,53 +24,34 @@ export type EnsureResult =
   | { status: "invalid" }
   | { status: "unavailable" };
 
-// 만료 10분 전부터 갱신을 시도해요 (JWT 쪽 빠른 경로와 동일한 마진).
 const FRESH_MARGIN_MS = 10 * 60 * 1000;
-// refresh 뮤텍스 TTL — Discord 호출(7초)보다 넉넉히 길어야 해요.
 const REFRESH_LOCK_TTL_MS = 12_000;
-// 대기자 폴링 간격.
 const POLL_MS = 150;
-// 대기자가 뮤텍스를 기다리는 최대 시간. 넘어서면 fail-open.
 const WAIT_MAX_MS = 12_000;
 
-/**
- * 암호화 키 소스 우선순위 — 전용 키 → 세션 시크릿 폴백.
- *
- * 전용 키(`TOKEN_ENCRYPTION_KEY`)를 두는 이유: 세션 시크릿에서 키를 유도하면 세션 시크릿을
- * 회전하는 순간 **전 사용자의 Discord refresh 토큰이 복호 불가**가 돼요(재로그인 유도).
- * 폴백은 기존 배포 호환용이고, 전용 키가 설정되면 저장 시점부터 즉시 전용 키로 다시 암호화돼요
- * (복호는 두 키를 모두 시도해 마이그레이션이 필요 없어요).
- */
 function encryptionSecrets(): string[] {
   const dedicated = process.env.TOKEN_ENCRYPTION_KEY?.trim();
   const session = getSessionSecret() ?? "";
-  // 복호 시도 순서: 전용 키가 있으면 먼저, 그다음 기존 세션 시크릿
   return [dedicated, session].filter((value): value is string => Boolean(value));
 }
 
-
-/** 저장 키 — 전용 키가 없으면 기존 계약대로 세션 시크릿을 써요. */
 function encryptionKey(): Buffer | null {
   const [secret] = encryptionSecrets();
   return deriveKeyFromSecret(secret);
 }
 
-/** 평문 토큰 암호화 — 형식/키 정책은 공용 `@sirubot/utils/secretBox`가 소유해요. */
 export function encryptToken(plain: string): string {
   return encryptSecret(plain, encryptionKey());
 }
 
-/** 암호문 복호 — 전용 키 → 세션 시크릿 순으로 시도해 회전 중 혼재 행도 읽어요. */
 export function decryptToken(enc: string): string | null {
   return decryptSecret(enc, encryptionSecrets().map(deriveKeyFromSecret));
 }
 
-/** 행이 전용 키가 아닌 폴백 키로 암호화됐는지 — 맞으면 저장 시점에 새 키로 다시 써요. */
 function needsRekey(enc: string): boolean {
   return !decryptsWith(enc, encryptionKey());
 }
 
-/** DB 행을 복호해 TokenSet으로 변환. 행 없음/복호 실패 시 null. */
 export async function readTokenSet(userId: string): Promise<TokenSet | null> {
   const key = encryptionKey();
   if (!key) return null;
@@ -96,7 +61,6 @@ export async function readTokenSet(userId: string): Promise<TokenSet | null> {
     const accessToken = decryptToken(row.accessToken);
     const refreshToken = decryptToken(row.refreshToken);
     if (accessToken === null || refreshToken === null) return null;
-    // 전용 키 도입 전에 세션 시크릿으로 암호화된 행은 읽을 때 한 번 다시 암호화해요 (best-effort, 실패는 무시)
     if (needsRekey(row.accessToken) || needsRekey(row.refreshToken)) {
       void db.userToken
         .update({
@@ -116,7 +80,6 @@ export async function readTokenSet(userId: string): Promise<TokenSet | null> {
   }
 }
 
-/** 토큰 셋을 암호화해 DB 기록용 컬럼으로 변환해요. */
 function encodeSet(set: Omit<TokenSet, "version">): { accessToken: string; refreshToken: string; accessTokenExpiresAt: Date } {
   return {
     accessToken: encryptToken(set.accessToken),
@@ -125,7 +88,6 @@ function encodeSet(set: Omit<TokenSet, "version">): { accessToken: string; refre
   };
 }
 
-/** 로그인용 — 기존 행을 덮어쓰고 version을 1 증가시켜요. */
 export async function replaceTokenSet(
   userId: string,
   set: Omit<TokenSet, "version">,
@@ -140,14 +102,9 @@ export async function replaceTokenSet(
       update: { ...data, version: { increment: 1 } },
     });
   } catch {
-    // 저장 실패는 재로그인 경로로 흘려보내고 여기서는 무시해요.
   }
 }
 
-/**
- * 백필용 — 행이 이미 있으면 아무것도 안 해요(no-op update).
- * 동시 백필이 겹쳐도 기존(더 새) 데이터를 덮어쓰지 않도록 멱등하게 유지해요.
- */
 async function insertTokenSetIfAbsent(
   userId: string,
   set: Omit<TokenSet, "version">,
@@ -162,14 +119,9 @@ async function insertTokenSetIfAbsent(
       update: {},
     });
   } catch {
-    // 백필 실패는 치명적이지 않아요.
   }
 }
 
-/**
- * 낙관적 잠금 쓰기 — expectedVersion과 일치할 때만 갱신해요(version 1 증가).
- * 경쟁에서 진 요청은 0건이 반환돼 "승자 채택"으로 폴백해요.
- */
 async function writeTokenSetOptimistic(
   userId: string,
   set: Omit<TokenSet, "version">,
@@ -189,14 +141,12 @@ async function writeTokenSetOptimistic(
   }
 }
 
-/** 토큰 셋 삭제 (진짜 폐기 시). */
 async function deleteTokenSet(userId: string): Promise<void> {
   const key = encryptionKey();
   if (!key) return;
   try {
     await db.userToken.deleteMany({ where: { userId } });
   } catch {
-    // 삭제 실패는 재로그인 경로로 흘려보내요.
   }
 }
 
@@ -204,12 +154,6 @@ function isFresh(set: TokenSet): boolean {
   return set.expiresAtMs > Date.now() + FRESH_MARGIN_MS;
 }
 
-/**
- * 호출 시점에 쓸 수 있는 fresh accessToken을 보장해요.
- * - 행이 없고 legacy가 있으면 백필 후 재조회.
- * - fresh면 바로 ok (DB/Redis 뮤텍스 안 침).
- * - 아니면 뮤텍스를 잡고 갱신하거나, 대기자로 승자를 기다려요.
- */
 export async function ensureFreshToken(userId: string, legacy?: LegacyTokenSet): Promise<EnsureResult> {
   let row = await readTokenSet(userId);
   if (!row) {
@@ -228,7 +172,6 @@ export async function ensureFreshToken(userId: string, legacy?: LegacyTokenSet):
     return { status: "ok", accessToken: row.accessToken, expiresAtMs: row.expiresAtMs };
   }
 
-  // Redis 미사용(REDIS_URL 미설정) → 뮤텍스·대기 없이 즉시 fail-open.
   if (!isRedisEnabled()) {
     return performRefresh(userId, null);
   }
@@ -237,29 +180,23 @@ export async function ensureFreshToken(userId: string, legacy?: LegacyTokenSet):
   const lockKey = "refresh:" + userId;
 
   if (await redisSetNx(lockKey, lockVal, REFRESH_LOCK_TTL_MS)) {
-    // 뮤텍스 획득 — 홀더가 되어 직접 갱신해요.
     return performRefresh(userId, lockVal);
   }
 
-  // 대기자 — 승자가 토큰을 회전할 때까지 폴링해요.
   const deadline = Date.now() + WAIT_MAX_MS;
   while (Date.now() < deadline) {
     await sleep(POLL_MS);
 
-    // 승자 채택 — version이 바뀌었거나 fresh해지면 즉시 반환해요.
     const latest = await readTokenSet(userId);
     if (latest && (latest.version !== row.version || isFresh(latest))) {
       return { status: "ok", accessToken: latest.accessToken, expiresAtMs: latest.expiresAtMs };
     }
 
-    // 홀더가 해제했으면 내가 이어받아요.
     if (await redisSetNx(lockKey, lockVal, REFRESH_LOCK_TTL_MS)) {
       return performRefresh(userId, lockVal);
     }
   }
 
-  // 뮤텍스를 끝내 못 얻음(홀더 스톨/Redis 장애) → fail-open: 뮤텍스 없이 진행해요.
-  // 400 판정(performRefresh)이 안전망이라 레이스 위험을 감수할 수 있어요.
   const last = await readTokenSet(userId);
   if (last && isFresh(last)) {
     return { status: "ok", accessToken: last.accessToken, expiresAtMs: last.expiresAtMs };
@@ -267,13 +204,9 @@ export async function ensureFreshToken(userId: string, legacy?: LegacyTokenSet):
   return performRefresh(userId, null);
 }
 
-/**
- * 실제 갱신 수행. lockVal이 null이면 뮤텍스 없이(fail-open) 진행해요.
- */
 async function performRefresh(userId: string, lockVal: string | null): Promise<EnsureResult> {
   const lockKey = "refresh:" + userId;
   try {
-    // 획득 후 권위 재조회 — 사본(expected)을 곧바로 쓰지 않아요.
     const row = await readTokenSet(userId);
     if (!row) return { status: "invalid" };
     if (isFresh(row)) {
@@ -290,7 +223,6 @@ async function performRefresh(userId: string, lockVal: string | null): Promise<E
       };
       const wrote = await writeTokenSetOptimistic(userId, newSet, row.version);
       if (!wrote) {
-        // 낙관적 잠금 실패 — 다른 요청이 먼저 회전했어요. 승자를 채택해요.
         const winner = await readTokenSet(userId);
         if (winner) {
           return { status: "ok", accessToken: winner.accessToken, expiresAtMs: winner.expiresAtMs };
@@ -301,8 +233,7 @@ async function performRefresh(userId: string, lockVal: string | null): Promise<E
     }
 
     if (res.status === "invalid") {
-      // 400 모호성 판정 — Discord 400은 "이미 소비됨"일 수도, "진짜 폐기"일 수도 있어요.
-      // 다른 요청이 이미 회전했다면(version 변경) 경쟁 패배 → 승자 채택.
+      // Discord 400 may mean another request already rotated the token; adopt winner if version changed.
       const recheck = await readTokenSet(userId);
       if (recheck && recheck.version !== row.version) {
         return { status: "ok", accessToken: recheck.accessToken, expiresAtMs: recheck.expiresAtMs };
@@ -311,7 +242,6 @@ async function performRefresh(userId: string, lockVal: string | null): Promise<E
       return { status: "invalid" };
     }
 
-    // unavailable — 토큰을 유지하고 호출부가 쿨다운으로 재시도해요.
     return { status: "unavailable" };
   } finally {
     if (lockVal) {

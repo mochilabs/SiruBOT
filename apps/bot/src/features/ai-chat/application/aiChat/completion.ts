@@ -5,12 +5,11 @@ import { ChatServiceError, contentText, type ChatConfig, type ChatMessage, type 
 const REASON_OPEN = '<think>';
 const REASON_CLOSE = '</think>';
 
-/** `<think>` 토큰을 쓰는 모델용 — 추론 부분을 본문에서 제거 */
 export function extractThinkTokens(raw: string): string {
 	let result = '';
 	let insideReason = false;
 	let index = 0;
-	// 소문자 사본은 루프 밖에서 1회만 — 이터레이션마다 전체 문자열을 복사하면 스트림 응답 크기만큼 할당이 쌓여요
+	// 이터레이션마다 전체 문자열을 복사하지 않도록 루프 밖에서 1회만 소문자화해요.
 	const lowered = raw.toLowerCase();
 	while (index < raw.length) {
 		if (!insideReason) {
@@ -55,10 +54,6 @@ function toApiMessage(message: ChatMessage) {
 	return { role: message.role, content: message.content };
 }
 
-/**
- * OpenAI compatible `/chat/completions` 를 스트리밍으로 호출해요.
- * onDelta에는 지금까지 누적된 본문이 전달돼요. tool_calls가 있으면 함께 돌려줘요.
- */
 export async function streamChatCompletion(
 	logger: AppLogger,
 	options: {
@@ -75,7 +70,6 @@ export async function streamChatCompletion(
 	const onAbort = () => controller.abort();
 	if (options.signal?.aborted) controller.abort();
 	else options.signal?.addEventListener('abort', onAbort, { once: true });
-	/** 사용자 중지가 아닌 타임아웃/외부 원인 구분용 */
 	const userCancelled = () => options.signal?.aborted === true;
 	const abortError = () =>
 		userCancelled()

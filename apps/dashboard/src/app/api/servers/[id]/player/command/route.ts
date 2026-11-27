@@ -9,11 +9,6 @@ import { createGuildApiHandler } from "@/lib/api-handler";
 import { requestPlayerControl } from "@/lib/data-api/player-web";
 import { WRITE_RATE } from "@/lib/rate-limit";
 
-/**
- * 라이브 컨트롤러 — 볼륨·일시정지·재생·스킵·정지·반복 및 대기열 조작을 봇에 전달해요.
- * 요청자의 관리자/DJ 권한과 음성 채널은 봇만 판정할 수 있어서 userId까지 전달하고,
- * 봇이 검증 실패를 실은 안내 문구를 그대로 응답해요 (400/502/503).
- */
 const commandSchema = z
   .object({
     action: playerWebControlActionSchema,

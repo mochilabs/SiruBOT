@@ -23,7 +23,6 @@ function listeners(...ids: string[]): ReadonlySet<string> {
 	return new Set(ids);
 }
 
-/** n명의 청취자(요청자 포함) — 아이디는 `m0`, `m1`…이고 `requester`를 맨 앞에 넣어요. */
 function crowd(count: number): ReadonlySet<string> {
 	return new Set(['requester', ...Array.from({ length: count - 1 }, (_, i) => `m${i}`)]);
 }
@@ -260,17 +259,14 @@ describe('castVote: 투표 집계', () => {
 
 	it('과반에 못 미치면 counted로 현재 표 수를 돌려줘요', async () => {
 		const { service, skipApproved } = await started(crowd(5));
-		// 5명 → 필요 3표. 시작자 1표 + m0 1표 = 2표
 		await expect(service.castVote('100000000000000001', 'm0')).resolves.toEqual({ kind: 'counted', votes: 2, requiredVotes: 3 });
 		expect(skipApproved).not.toHaveBeenCalled();
 	});
 
 	it('과반이 되면 곡을 건너뛰고 passed를 돌려줘요', async () => {
 		const { service, skipApproved } = await started(crowd(4));
-		// 4명 → 필요 2표. 시작자 1표 + m0 1표 = 2표
 		await expect(service.castVote('100000000000000001', 'm0')).resolves.toEqual({ kind: 'passed', votes: 2, requiredVotes: 2 });
 		expect(skipApproved).toHaveBeenCalledExactlyOnceWith('g1');
-		// 끝난 투표는 닫혀 있어요
 		await expect(service.castVote('100000000000000001', 'm1')).resolves.toEqual({ kind: 'closed' });
 	});
 

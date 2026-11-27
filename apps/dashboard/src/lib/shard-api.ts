@@ -27,7 +27,6 @@ export interface ShardsResponse {
 	stats: ShardAggregateStats;
 }
 
-/** SHARD_MANAGER_AUTH_KEY가 없으면 에러 — 기본 키 폴백을 두지 않는다 (env.ts의 getShardManagerEnv) */
 function getShardManagerAuthKey(): string {
 	const key = getShardManagerEnv().authKey;
 	if (!key) {

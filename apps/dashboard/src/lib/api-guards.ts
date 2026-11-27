@@ -5,16 +5,10 @@ import { auth } from "@/lib/auth";
 import { resolveCanManage, resolveGuildMembership } from "@/lib/guild-permissions";
 import { getSessionAccessToken } from "@/lib/session-token";
 
-/** 권한 확인 결과 — unavailable은 Discord 장애(429/5xx/네트워크)라 502로 응답해요 */
 export type AuthorizeResult =
   | { ok: true; token: string; userId: string }
   | { ok: false; status: 401 | 403 | 502 };
 
-/**
- * 길드 관리 권한 공용 검증 — 세션 → accessToken → resolveCanManage 3상태 분기.
- * 세션/토큰 없음 → 401, 권한 없음 → 403, Discord 확인 불가 → 502.
- * 항상 token+userId를 반환하니 rate limit의 rateKey에 authz.userId를 쓰면 돼요.
- */
 export async function authorizeGuildManage(
   guildId: string,
 ): Promise<AuthorizeResult> {
@@ -31,11 +25,6 @@ export async function authorizeGuildManage(
   return { ok: true, token: accessToken, userId: session.user.id };
 }
 
-/**
- * 길드 멤버 공용 검증 — 관리자가 아니어도 길드 멤버면 통과해요.
- * 실제 제어 권한(DJ 역할)은 봇이 요청자 멤버로 판정해요 — 웹 OAuth로는 알 수 없어요.
- * 세션/토큰 없음 → 401, 멤버 아님 → 403, Discord 확인 불가 → 502.
- */
 export async function authorizeGuildMember(
   guildId: string,
 ): Promise<AuthorizeResult> {
@@ -55,7 +44,6 @@ export async function authorizeGuildMember(
   return { ok: true, token: accessToken, userId: session.user.id };
 }
 
-/** AuthorizeResult 실패 상태에 맞는 한국어 응답 — 라우트 진입점에서 바로 반환하세요 */
 export function deniedGuildManage(authz: Extract<
   AuthorizeResult,
   { ok: false }
@@ -68,7 +56,6 @@ export function deniedGuildManage(authz: Extract<
   return NextResponse.json({ error: messages[authz.status] }, { status: authz.status });
 }
 
-/** 멤버 게이트 실패 응답 — player 페이지의 멤버 전용 라우트에서 써요 */
 export function deniedGuildMember(authz: Extract<AuthorizeResult, { ok: false }>): NextResponse {
   const messages: Record<401 | 403 | 502, string> = {
     401: "로그인이 필요해요.",
@@ -78,25 +65,16 @@ export function deniedGuildMember(authz: Extract<AuthorizeResult, { ok: false }>
   return NextResponse.json({ error: messages[authz.status] }, { status: authz.status });
 }
 
-/** 로그인 전용 라우트 검증 결과 — 길드 권한 없이 세션 유저만 확인해요 */
 export type UserAuthorizeResult =
   | { ok: true; userId: string }
   | { ok: false; status: 401 | 403 };
 
-/**
- * 로그인 공용 검증 — 세션만 확인해요 (길드 권한은 authorizeGuildManage/Member).
- * 플레이리스트·즐겨찾기처럼 유저 소유 데이터 라우트의 진입점이에요.
- */
 export async function authorizeUser(): Promise<UserAuthorizeResult> {
   const session = await auth();
   if (!session?.user?.id) return { ok: false, status: 401 };
   return { ok: true, userId: session.user.id };
 }
 
-/**
- * 대시보드 운영자 공용 검증 — admin-ids allowlist를 적용해요
- * (env 미설정 전원 차단 fail-closed 계약 그대로).
- */
 export async function authorizeDashboardAdmin(): Promise<UserAuthorizeResult> {
   const session = await auth();
   if (!session?.user?.id) return { ok: false, status: 401 };
@@ -104,7 +82,6 @@ export async function authorizeDashboardAdmin(): Promise<UserAuthorizeResult> {
   return { ok: true, userId: session.user.id };
 }
 
-/** UserAuthorizeResult 실패 상태에 맞는 한국어 응답 — 라우트 진입점에서 바로 반환하세요 */
 export function deniedUser(authz: Extract<UserAuthorizeResult, { ok: false }>): NextResponse {
   const messages: Record<401 | 403, string> = {
     401: "로그인이 필요해요.",

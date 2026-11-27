@@ -1,6 +1,3 @@
-// api-guards 회귀 계약 — 401/403/502 3상태 분기와 denied* 한국어 응답 매핑을 잠가요.
-// auth·session-token·guild-permissions·admin-ids는 전부 모킹해서 게이트 자체 분기만 검증해요.
-// (api-handler.test.ts는 게이트를 mock으로 우회해 라우팅만 검증하므로 이 파일이 실제 분기의 커버예요.)
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));

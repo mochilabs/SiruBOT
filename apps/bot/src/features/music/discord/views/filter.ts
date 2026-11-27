@@ -17,7 +17,6 @@ type FilterPreset = {
 	description: string;
 };
 
-// 앱 이모지 매핑은 봇 부팅(clientReady) 이후 로드되므로, 이모지 필드는 사용 시점에 emoji()로 평가한다.
 export const FILTER_PRESETS: FilterPreset[] = [
 	{ name: 'bassboost', label: '베이스부스트', appEmojiName: 'volume_up', description: '저음을 강하게 부스트해요.' },
 	{ name: 'nightcore', label: '나이트코어', appEmojiName: 'sleep', description: '고속 + 고음으로 재생해요.' },
@@ -28,7 +27,6 @@ export const FILTER_PRESETS: FilterPreset[] = [
 
 export const filterPresetEmoji = (preset: FilterPreset) => emoji(preset.appEmojiName);
 
-// 프리셋 이름→표시 라벨 매핑: 카탈로그에 없는 이름은 원문을 유지한다.
 const presetLabel = (name: string): string => {
 	const preset = FILTER_PRESETS.find((p) => p.name === name);
 	return preset ? `${filterPresetEmoji(preset)} ${preset.label}` : name;
@@ -41,7 +39,6 @@ type FilterViewProps = {
 export function filterView({ activeFilters }: FilterViewProps) {
 	const containerComponent = createContainer();
 
-	// 현재 적용 필터 상태
 	const statusLines = [];
 	statusLines.push(`### ${emoji('spectrum')} 오디오 필터`);
 
@@ -54,7 +51,6 @@ export function filterView({ activeFilters }: FilterViewProps) {
 
 	containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(statusLines.join('\n')));
 
-	// 프리셋 선택 메뉴
 	const selectMenu = new StringSelectMenuBuilder()
 		.setCustomId(filterId.encode('select'))
 		.setPlaceholder('적용할 프리셋을 선택하세요')
@@ -75,7 +71,6 @@ export function filterView({ activeFilters }: FilterViewProps) {
 	containerComponent.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
 	containerComponent.addActionRowComponents(selectRow);
 
-	// 초기화 버튼
 	const resetButton = new ButtonBuilder()
 		.setCustomId(filterId.encode('reset'))
 		.setLabel('필터 초기화')

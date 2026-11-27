@@ -7,7 +7,6 @@ export const RPS_LABELS = ['가위', '바위', '보'];
 
 export const rpsIcons = () => [emoji('scissors'), emoji('fist'), emoji('wave')] as const;
 
-/** 가위바위보 선택 화면 — 버튼 customId `game:v1:rps:{0|1|2}`는 games 인터랙션 핸들러가 파싱해요 */
 export function rpsChoiceView(displayName: string) {
 	const container = textContainer([
 		`### ${emoji('fist')} 가위바위보`,
@@ -38,10 +37,8 @@ export function rpsChoiceView(displayName: string) {
 	return container;
 }
 
-/** 가위바위보 결과 화면 — `game:v1:rpsAgain` 버튼 포함 */
 export function rpsResultView(displayName: string, userPick: number, botPick: number, streakLine: string | null) {
 	const outcome = (userPick - botPick + 3) % 3;
-	// 승·무는 앱 이모지를 쓰지만, 앱 이모지 표(emoji-ids.json)에 패배 계열 이모지가 없어 패만 유니코드를 유지해요
 	const resultText = outcome === 0 ? `${emoji('cd')} 비겼어요!` : outcome === 1 ? `${emoji('party')} 이겼어요!` : `${emoji('sad')} 졌어요!`;
 	const resultEmoji = outcome === 0 ? emoji('fist_bump') : outcome === 1 ? emoji('smile') : emoji('melt');
 

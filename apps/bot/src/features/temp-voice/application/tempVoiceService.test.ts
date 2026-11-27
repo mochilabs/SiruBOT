@@ -10,7 +10,6 @@ const mocks = vi.hoisted(() => ({
 
 const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
 
-/** 평범한 가짜 deps로 만든 서비스 — Sapphire·Redis·Discord 없이 돌아가요 */
 const makeService = (over: Partial<TempVoiceServiceDeps> = {}) =>
 	createTempVoiceService({
 		logger,
@@ -22,7 +21,6 @@ const makeService = (over: Partial<TempVoiceServiceDeps> = {}) =>
 		...over
 	});
 
-/** 음성 채널 흉내 — members.filter 결과에 size가 있어야 서비스 코드가 동작해요 */
 function voiceChannel(id: string, humanCount: number) {
 	const members = Array.from({ length: humanCount }, (_, i) => ({ id: `u${i}`, user: { bot: false } }));
 	return {

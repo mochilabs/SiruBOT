@@ -21,12 +21,9 @@ export const main = async () => {
 
 	const client = createBotClient(shardIds, shardCount);
 
-	// 시그널 핸들러용 상태 — 핸들러를 셋업 "이전"에 등록하기 위해 바깥에 둔다.
-	// (기존에는 try 블록 마지막에 등록해 셋업 실패/중단 구간에서 SIGTERM이 무시됐다.)
+	// 셋업 실패/중단 중에도 SIGTERM을 처리하도록 try 바깥에 선언하고 즉시 등록해요.
 	let healthServer: Server | null = null;
 
-	// Handle graceful shutdown — 셋업 성공 여부와 무관하게 즉시 등록한다.
-	// 재진입 가드는 createShutdownHandler 안에 있다 (SIGINT/SIGTERM 중복 도착이나 핸들러 이중 실행 방지).
 	const shutdown = createShutdownHandler({
 		logger: client.logger,
 		container,
@@ -46,7 +43,6 @@ export const main = async () => {
 		client.logger.debug('Setting up logger...');
 		container.logger = client.logger;
 
-		// Audio -> discord (src/discord) -> Voice -> Games -> RedisStore -> Login -> Lavalink (After ready event)
 		for (const root of PIECE_ROOTS) client.setupStore(root);
 
 		client.logger.debug('Setting up database...');
@@ -58,7 +54,6 @@ export const main = async () => {
 		client.logger.debug('Setting up redis store manager... (optional)');
 		await client.setupRedis(config.redis.url);
 
-		// Redis 구독 서비스군 start — 등록 순서와 서비스별 설명은 BotApplication.setupServices의 레지스트리에 있어요.
 		await startRedisSubscribers(container.redisSubscribers, config.redis.url);
 
 		client.logger.info('Logging into discord...');
@@ -68,10 +63,8 @@ export const main = async () => {
 
 		client.logger.info('Logged in as ' + client.user!.tag);
 
-		// Health check HTTP server for Docker
 		healthServer = await startHealthServer(client);
 
-		// Production: report ready status + collect stats
 		if (!isDevMode && container.shardClient) {
 			container.shardClient.reportStatus('ready');
 			container.shardClient.onStats(() => ({

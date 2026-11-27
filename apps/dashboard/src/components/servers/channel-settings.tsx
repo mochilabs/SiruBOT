@@ -66,7 +66,6 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
   } = useGuildRoles(guildId, true);
 
   const listUnavailable = channels === null;
-  // 목록이 아직 없으면(로딩·실패) "불러오는 중", 목록에 없는 id는 삭제된 채널로 구분해요
   const nameOf = (id: string | null) => {
     if (!id) return "사용 안 함";
     if (!channels) return "불러오는 중";

@@ -120,7 +120,6 @@ describe('ShardRegistry', () => {
 			expect(registry.claimShards('ws-a', [-1])).toBeNull();
 			expect(registry.claimShards('ws-a', [4])).toBeNull();
 			expect(registry.claimShards('ws-a', [0, 0])).toBeNull();
-			// 거부된 claim은 아무것도 예약하지 않아야 해요
 			expect(registry.allocateShardIds()).toEqual([0, 1]);
 		});
 
@@ -139,7 +138,6 @@ describe('ShardRegistry', () => {
 			registry.register('ws-a', first, fakeSocket(3), 'host-a'); // CLOSED 소켓: close 이벤트가 아직 안 온 상태
 
 			expect(registry.claimShards('ws-b', first)).toEqual(first);
-			// 이전 주인의 release가 이미 넘어간 ID를 다시 해제하면 안 돼요
 			expect(registry.release('ws-a')).toEqual([]);
 			registerProcess(registry, 'ws-b', first);
 			expect(registry.getProcessByShardId(first[0]!)?.wsId).toBe('ws-b');
@@ -148,7 +146,6 @@ describe('ShardRegistry', () => {
 
 		it('reuses IDs left in the allocation set without an owner (유실 할당 자가 치유)', () => {
 			const registry = makeRegistry(4, 2);
-			// 등록 없이 예약만 된 상태(구버전 할당 누수 모방)
 			expect(registry.claimShards('ws-gone', [0])).toEqual([0]);
 
 			expect(registry.claimShards('ws-b', [0])).toEqual([0]);
@@ -190,7 +187,6 @@ describe('ShardRegistry', () => {
 			expect(socket.close).toHaveBeenCalled();
 			expect(registry.getProcess('ws-a')).toBeUndefined();
 
-			// 해제된 샤드는 재할당 가능해야 한다
 			expect(registry.allocateShardIds()).toEqual(shardIds);
 		});
 
@@ -206,7 +202,6 @@ describe('ShardRegistry', () => {
 			expect(notifier.shardHeartbeatTimeout).not.toHaveBeenCalled();
 			expect(registry.getProcess('ws-a')).toBeDefined();
 
-			// 마지막 하트비트가 시간 초과되면 결국 해제된다
 			vi.advanceTimersByTime(HEARTBEAT_TIMEOUT_MS + 15_000);
 			expect(notifier.shardHeartbeatTimeout).toHaveBeenCalledWith('ws-a', shardIds);
 			expect(registry.getProcess('ws-a')).toBeUndefined();

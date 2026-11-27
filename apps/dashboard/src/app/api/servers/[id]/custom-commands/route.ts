@@ -18,7 +18,6 @@ import { db } from "@/lib/db";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 import { parseSettingBody } from "@/lib/schemas";
 
-/** 커스텀 명령어 관리 — GET 목록 / POST 생성 / PUT 접두사 변경 (관리자 전용) */
 export const GET = createGuildApiHandler({
   role: "manage",
   rate: READ_RATE,
@@ -55,7 +54,6 @@ export const POST = createGuildApiHandler({
         return NextResponse.json({ error: nameError }, { status: 400 });
       }
 
-      // CustomCommand는 Guild FK를 가져요 — 길드 행이 아직 없으면 먼저 만들어 둬요
       await db.guild.upsert({ where: { id: guildId }, create: { id: guildId }, update: {} });
 
       const count = await db.customCommand.count({ where: { guildId } });
@@ -103,7 +101,6 @@ export const POST = createGuildApiHandler({
         },
       });
 
-      // 저장 성공 후 봇 캐시 무효화 (fire-and-forget) — 실패해도 봇이 TTL로 최신을 읽어요
       notifyGuildSettingsChanged(guildId).catch((error) => {
         console.warn(
           `Failed to notify custom command change (guild ${guildId}):`,
@@ -124,7 +121,6 @@ export const POST = createGuildApiHandler({
 
 const prefixBodySchema = z.object({ prefix: z.string() });
 
-/** 접두사 변경 — 예: '!' → '?' */
 export const PUT = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,

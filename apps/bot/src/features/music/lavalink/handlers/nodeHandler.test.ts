@@ -6,7 +6,6 @@ import type { Track } from 'lavalink-client';
 const { getSubLogger, reportNodeEvent } = vi.hoisted(() => ({ getSubLogger: vi.fn(), reportNodeEvent: vi.fn() }));
 const stubLogger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-/** 핸들러가 받는 LavalinkDeps 역할 — 테스트마다 필요한 필드를 Object.assign으로 채워요 */
 const container: Record<string, any> = { logger: { getSubLogger }, playbackReporter: { reportNodeEvent } };
 
 function makeHandler() {
@@ -67,7 +66,6 @@ describe('node event reporting (상태 페이지 최근 오류)', () => {
 	beforeEach(() => {
 		getSubLogger.mockReturnValue(stubLogger);
 		reportNodeEvent.mockClear();
-		// handleNodeDisconnect의 플레이어 마이그레이션 분기를 타지 않도록 빈 스웜을 넣어요
 		Object.assign(container, {
 			audio: {
 				players: { filter: () => ({ values: () => ({ toArray: () => [] }) }) },
@@ -200,7 +198,6 @@ describe('handleReadyOp (ready op → 엔진 위임)', () => {
 
 		engine.handleReadyOp(node, true);
 
-		// ready 직후가 아니라 다음 턴에서 실행된다(lavalink-client의 sessionId 배정 순서 때문).
 		expect(saveNodeSession).not.toHaveBeenCalled();
 		expect(engine.restoreTimers.size).toBe(1);
 
@@ -400,7 +397,6 @@ describe('mixer reconcile after restore (재시작 뒤 예열 슬롯 복구)', (
 });
 
 describe('restoreFreshSession (샤드 소유 필터 · 병렬 복구)', () => {
-	// (id >> 22) % 2 가 각각 1, 0 이 되도록 만든 길드 id (샤드 분리 운영 재현용)
 	const SHARD1_GUILD = String(1n << 22n);
 	const SHARD0_GUILD = String(2n << 22n);
 
@@ -408,7 +404,6 @@ describe('restoreFreshSession (샤드 소유 필터 · 병렬 복구)', () => {
 		getSubLogger.mockReturnValue(stubLogger);
 	});
 
-	// shardInfo는 이 파일이 새로 심는 전역 상태 — 이후 파일이 단일 인스턴스로 오인하지 않게 되돌린다.
 	afterEach(() => {
 		(container as unknown as Record<string, unknown>).shardInfo = undefined;
 	});
@@ -427,7 +422,6 @@ describe('restoreFreshSession (샤드 소유 필터 · 병렬 복구)', () => {
 
 		await handler.sessionRestore.restoreFreshSession({ options: { id: 'main' } });
 
-		// 남의 길드는 캐시에 없어 90초 폴링을 통째로 소모했다 — 소유 길드만 복구한다.
 		expect(restoreFreshGuild).toHaveBeenCalledTimes(1);
 		expect(restoreFreshGuild.mock.calls[0][1]).toBe(SHARD0_GUILD);
 	});
@@ -468,8 +462,6 @@ describe('fresh 복구 신선도 판정 (세션 시작 시점 기준)', () => {
 		const handler = makeHandler();
 		stubRestore(handler);
 		const now = Date.now();
-		// 세션 시작 70분 뒤에야 복구가 도착하는 상황 — 저장값은 세션 시작 시점 기준 5h55m 전(신선),
-		// 지금 시각 기준으로는 6h55m 전(구판 기준이라면 이미 폐기됐을 값).
 		const sessionStartedAt = now - 70 * 60_000;
 		const savedAt = sessionStartedAt - (SIX_HOURS - 5 * 60_000);
 		const playerSaver = { get: vi.fn(async () => ({ savedAt, voiceChannelId: 'vc-1' })), delete: vi.fn() };

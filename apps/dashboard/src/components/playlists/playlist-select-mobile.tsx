@@ -22,10 +22,6 @@ interface PlaylistSelectMobileProps {
 	onCreateNew: () => void;
 }
 
-/**
- * 모바일(<lg)용 플레이리스트 선택 — 세로로 큰 카드 목록 대신 select 메뉴 하나로.
- * 즐겨찾기/내 목록 그룹은 option group으로, 곡수는 라벨에 붙여요.
- */
 export function PlaylistSelectMobile({ playlists, activePlaylistId, onSelect, onCreateNew }: PlaylistSelectMobileProps) {
 	const favorited = playlists[0]?.name === FAVORITES_PLAYLIST_NAME ? playlists.slice(0, 1) : [];
 	const customs = favorited.length ? playlists.slice(1) : playlists;
@@ -36,8 +32,7 @@ export function PlaylistSelectMobile({ playlists, activePlaylistId, onSelect, on
 			<div className="min-w-0 flex-1">
 				<Select value={activePlaylistId ?? ""} onValueChange={(value: string | null) => { if (value) onSelect(value); }}>
 					<SelectTrigger className="w-full">
-						{/* Base UI Select.Value는 items 없이 children 함수도 없으면 raw value(UUID)를 그대로 표시해요.
-						    선택된 id로 목록에서 찾아 `이름 · N곡` 라벨을 보여 주고, 미선택 시 placeholder 문구를 반환해요. */}
+						{/* Base UI Select.Value는 items/children 함수가 없으면 raw value(UUID)를 그대로 표시한다. */}
 						<SelectValue placeholder="플레이리스트 선택...">
 							{(value: string) => {
 								if (!value) return "플레이리스트 선택...";

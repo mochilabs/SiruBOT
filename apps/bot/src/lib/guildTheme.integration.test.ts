@@ -14,13 +14,12 @@ describe('서버 테마 맥락 → 컨테이너·이모지', () => {
 			'1',
 			async () => 'purple',
 			async () => {
-				await Promise.resolve(); // 비동기 경계를 넘어도 유지돼요
+				await Promise.resolve();
 				return { color: createContainer().toJSON().accent_color, bar: emojiProgressBar(1), star: emoji('star') };
 			}
 		);
 		expect(inside.color).toBe(0xa78bfa);
 		expect(inside.bar).toContain('<:pb_start_filled_purple:2>');
-		// 보라 세트가 아직 없는 이모지는 기본 이름으로 폴백
 		expect(inside.star).toBe('<:star:3>');
 
 		expect(createContainer().toJSON().accent_color).toBe(0xff85c0);

@@ -6,9 +6,7 @@ import type { GreetingMemberInfo } from '../application/memberGreetingService.ts
 
 const KIND_LABELS: Record<GreetingKind, string> = { welcome: '환영', goodbye: '작별' };
 
-/** 입퇴장 인사 dispatch: 실패는 여기서 잡아 로그로만 남기고 입·퇴장 처리 흐름으로 새지 않아요 */
 export async function dispatchMemberGreeting(guild: Guild, kind: GreetingKind, member: GuildMember | PartialGuildMember): Promise<void> {
-	// 커뮤니티 모듈이 꺼진 서버는 인사를 보내지 않아요 (P-06)
 	if (!(await isMessageFeatureEnabled(container.guildService, guild.id, 'greeting').catch(() => true))) return;
 	const payload: GreetingMemberInfo = {
 		user: { id: member.id, username: member.user?.username ?? member.displayName },

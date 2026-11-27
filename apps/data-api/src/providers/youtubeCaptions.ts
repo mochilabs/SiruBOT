@@ -6,21 +6,16 @@ import { assertNotBotChecked, youtubeClientFor } from './youtubeClient.ts';
 
 const logger = getLogger('youtube-captions');
 
-/** 모든 경로가 막혀 자막을 못 받은 영상은 이만큼 다시 시도하지 않아요 */
 const CAPTION_FAIL_TTL_SECONDS = 6 * 3600;
 const MAX_CAPTION_CHARS = 400_000;
-/** 번역 줄을 원문 줄에 붙일 때 허용하는 시작 시각 차이 */
 const PAIR_TOLERANCE_MS = 1_500;
 const MIN_LINES = 4;
 const CAPTION_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 
-/** 자막 조회 결과 — `error`는 막혀서 못 받은 것이라 가사 캐시를 짧게 잡아요. */
 export type CaptionOutcome = { status: 'ok'; captions: CaptionLyrics } | { status: 'none' } | { status: 'error' };
 
 export interface CaptionLyrics {
-	/** 원문 자막 줄 (시작 시각 순) */
 	lines: LyricLine[];
-	/** 원문 줄 → 업로더가 올린 한국어 자막. 한국어 트랙이 따로 없으면 null */
 	koreanByLine: Record<string, string> | null;
 }
 
@@ -38,14 +33,12 @@ interface Json3Event {
 
 const baseLang = (code: string) => code.toLowerCase().split('-')[0] ?? '';
 
-/** `[Music]`, `(박수)`, `♪`처럼 가사가 아닌 줄 */
 function isNoiseLine(text: string): boolean {
 	const stripped = text.replace(/[♪♫♬🎵🎶\s]/gu, '');
 	if (!stripped) return true;
 	return /^[[(（【].*[\])）】]$/u.test(stripped);
 }
 
-/** 업로더 자막(json3)을 줄 목록으로 바꿔요 — 잡음 줄은 버리고 줄바꿈은 공백으로 합쳐요. */
 export function parseJson3Captions(raw: string): LyricLine[] {
 	if (raw.length > MAX_CAPTION_CHARS) return [];
 	let doc: { events?: Json3Event[] };
@@ -69,7 +62,6 @@ export function parseJson3Captions(raw: string): LyricLine[] {
 	return lines.sort((a, b) => a.startMs - b.startMs);
 }
 
-/** 한국어 자막 줄을 시작 시각이 가장 가까운 원문 줄에 붙여요. */
 export function pairKoreanLines(original: LyricLine[], korean: LyricLine[]): Record<string, string> | null {
 	const out: Record<string, string> = {};
 	for (const ko of korean) {
@@ -87,10 +79,6 @@ export function pairKoreanLines(original: LyricLine[], korean: LyricLine[]): Rec
 	return Object.keys(out).length > 0 ? out : null;
 }
 
-/**
- * 사람이 올린 자막 트랙 고르기 — 자동 생성(asr)은 쓰지 않아요.
- * 원문은 영상 음성 언어(자동 생성 트랙의 언어)와 같은 트랙, 그 정보가 없으면 한국어가 아닌 첫 트랙이에요.
- */
 export function pickCaptionTracks(tracks: CaptionTrack[]): { original: CaptionTrack; korean: CaptionTrack | null } | null {
 	const manual = tracks.filter((t) => t.kind !== 'asr');
 	if (manual.length === 0) return null;
@@ -115,10 +103,9 @@ export function captionFailKey(videoId: string): string {
 	return `dataapi:v1:caption-fail:${videoId}`;
 }
 
-/** 경로 하나로 자막 작업 전체(영상 정보 + 원문·한국어 자막)를 해요. */
 async function lookupOnRoute(route: OutboundRoute, videoId: string): Promise<CaptionLyrics | null> {
 	const youtube = await youtubeClientFor(route);
-	// 웹 클라이언트의 자막 주소는 빈 응답을 주는 일이 있어 iOS 클라이언트로 조회해요
+	// Web client caption URLs often return empty; use iOS client.
 	const info = await youtube.getInfo(videoId, { client: 'IOS' });
 	assertNotBotChecked(route, info.playability_status);
 	const tracks = (info.captions?.caption_tracks ?? []) as CaptionTrack[];
@@ -137,10 +124,6 @@ async function lookupOnRoute(route: OutboundRoute, videoId: string): Promise<Cap
 	return { lines, koreanByLine };
 }
 
-/**
- * 영상의 업로더 자막을 가사로 가져와요. 나가는 경로는 `outboundPool()`이 골라요(direct 우선, 막히면 프록시).
- * 모든 경로가 막히면 그 영상은 6시간 동안 다시 시도하지 않아요.
- */
 export async function fetchCaptionLyrics(videoId: string): Promise<CaptionOutcome> {
 	if (!/^[\w-]{11}$/.test(videoId)) return { status: 'none' };
 	const failKey = captionFailKey(videoId);

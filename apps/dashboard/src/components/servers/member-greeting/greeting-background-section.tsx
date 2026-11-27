@@ -18,14 +18,11 @@ interface GreetingBackgroundSectionProps {
   background: GreetingImage["background"];
   saving: boolean;
   uploading: boolean;
-  /** 프리셋 배경을 골라요 — 커스텀 배경 업로드는 되돌리기로만 해제돼요 */
   onSelectPreset: (presetId: string) => void;
   onUpload: (file: File | null) => Promise<void>;
-  /** 마지막으로 선택한 프리셋으로 되돌려요 (하드코딩 없이) */
   onReset: () => void;
 }
 
-/** 배경 — 프리셋 선택, 커스텀 이미지 업로드, 업로드 해제(배경 초기화) */
 export function GreetingBackgroundSection({
   background,
   saving,

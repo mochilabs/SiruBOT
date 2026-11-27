@@ -63,7 +63,6 @@ function TrackRow({
 	track: PlayerTrack;
 	meta: React.ReactNode;
 	onPlay?: (track: PlayerTrack) => void;
-	/** 재생 요청 중인 곡 url — 이 행은 로딩, 다른 행은 잠시 비활성이에요 */
 	playingUrl?: string | null;
 }) {
 	const safeUrl = /^https?:\/\//i.test(track.url) ? track.url : null;
@@ -100,7 +99,6 @@ function TrackRow({
 					variant="icon"
 					size="icon-sm"
 					className={cn(
-						// 마우스 환경에서는 행에 올렸을 때만 보여요. 터치·키보드 포커스·재생 요청 중에는 항상 보여요.
 						"transition-opacity duration-fast pointer-fine:opacity-0 pointer-fine:group-hover/row:opacity-100 focus-visible:opacity-100",
 						playingUrl === track.url && "pointer-fine:opacity-100",
 					)}

@@ -16,29 +16,15 @@ export type CustomPlayerJson = PlayerJson & {
 	relatedTrackHistory?: string[];
 };
 
-/** 예열 소비 확인 창(ms) — TrackHandler의 watchdog·reconcile과 autoPlayRelated 게이트가 공유한다. */
 export const transitionConfirmTimeoutMs = (): number => getConfig().mixer.confirmTimeoutMs;
 
-/**
- * 클라이언트 전이 상태 — 무형 setData/getData 문자열 키 대신, 불변식이 타입으로 걸리는 3개 값.
- * 프로세스 로컬(재시작 복구 대상 아님) — toJSON에 포함되지 않는다.
- */
 export type TransitionState = {
-	/** 유저 명령으로 정지/전이 중 — trackEnd의 자동 진행을 막는다 (trackStart 확정 시 해제) */
 	stopByCommand: boolean;
-	/** 마지막 시작 확정 트랙 encoded — 전이 리커널·정상 시작 판별 키 */
 	lastStartedEncoded: string | null;
-	/** 예열 소비 확인 창 시작 시각 — trackStart 확정 시 해제 */
 	preloadConsumedAt: number | null;
-	/**
-	 * trackStart로 확정된 표시 트랙 — NOWPLAYING 렌더러의 단일 소스.
-	 * `queue.current`는 lavalink-client의 전이 기계(지연 shift, queueEnd 시프트)가
-	 * 수시로 덮어쓰므로 표시 근거로 쓰지 않는다. [nowPlayingTrack]로 읽는다.
-	 */
+	/** Confirmed by trackStart; queue.current can be shifted prematurely by lavalink-client. */
 	confirmedNowPlaying: Track | null;
-	/** 예열 슬롯을 서버가 소비·재생 확정한 트랙 — 큐에서 빠진 예열곡의 표시 메타데이터 출처 */
 	serverConsumedTrack: Track | null;
-	/** 중복 기록 방지용 마지막 차트/히스토리 기록 트랙 키 (trackStart와 MixerAdvancedEvent 간 멱등성 보장) */
 	lastRecordedKey?: string | null;
 };
 export type OverrideAction = 'PLAY_NOW' | 'STOP';
@@ -64,7 +50,6 @@ export class CustomPlayer extends Player {
 	public messageId: string | null = null;
 	public controller: Message | null = null;
 	public chapters: Chapter[] = [];
-	/** `chapters`가 어느 트랙의 것인지 — 트랙이 바뀌면 이전 챕터를 버린다. */
 	public chaptersTrackIdentifier: string | null = null;
 	public activeFilters: string[] = [];
 	public consecutiveErrors: number = 0;
@@ -99,12 +84,6 @@ export class CustomPlayer extends Player {
 	}
 }
 
-/**
- * 정지로 끝난 플레이어를 소멸시킨다 — disconnect만 하면 클라·서버 플레이어가 남아, 늦게 도착한
- * 복구 경로가 current를 되살렸을 때 음성 없는 유령 플레이어가 영원히 재생 중으로 남는다.
- * destroy는 서버 플레이어 삭제와 playerDestroy(타이머·큐·컨트롤러 정리)까지 한다.
- * 소멸이 실패하면(노드 불통 등) 예전처럼 정지·퇴장만이라도 한다.
- */
 export async function destroyStoppedPlayer(player: Player): Promise<void> {
 	try {
 		await player.destroy('StopCommand');

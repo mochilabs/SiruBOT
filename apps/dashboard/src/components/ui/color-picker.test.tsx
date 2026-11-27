@@ -1,5 +1,4 @@
 // @vitest-environment happy-dom
-// color-picker 회귀 계약: 키보드 한 스텝이 값 확정(onCommit)까지 이어지는가, HEX 입력이 정규화되지 않은 값을 밖으로 내보내지 않는가.
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
@@ -34,7 +33,6 @@ describe("color-picker keyboard and commit contract", () => {
 			({ container, root } = await mount(
 				<ColorPicker value="#ff8888" label="강조색" onChange={onChange} onCommit={onCommit} />,
 			));
-			// 팔레트는 팝오버 안에 있어서 트리거를 눌러 연 뒤에 찾아요(포털이라 document 기준)
 			await act(async () => {
 				container!.querySelector<HTMLElement>('[aria-label="강조색 색 선택기 열기"]')!.click();
 			});
@@ -48,7 +46,6 @@ describe("color-picker keyboard and commit contract", () => {
 			const emitted = onCommit.mock.calls[0][0] as string;
 			expect(emitted).toMatch(/^#[0-9a-f]{6}$/);
 			expect(emitted).not.toBe("#ff8888");
-			// 한 스텝도 값 확정 단위라 onChange와 같은 hex로 커밋돼야 히스토리가 갈라지지 않아요.
 			expect(emitted).toBe(onChange.mock.calls[0][0]);
 		} finally {
 			if (root && container) await unmount(root, container);
@@ -79,7 +76,6 @@ describe("color-picker keyboard and commit contract", () => {
 				setNativeValue(input, "#zz");
 				input.dispatchEvent(new Event("input", { bubbles: true }));
 			});
-			// 깨진 입력은 미리보기를 깨지 않게 값으로 내보내지 않고 무효 표시만 남겨요.
 			expect(onChange).toHaveBeenCalledTimes(1);
 			expect(input.getAttribute("aria-invalid")).toBe("true");
 		} finally {
@@ -89,7 +85,6 @@ describe("color-picker keyboard and commit contract", () => {
 	});
 });
 
-/** React가 인스턴스에 붙여둔 value 세터를 우회하고 네이티브 세터로 값을 넣어요 (change 이벤트가 뜨도록). */
 function setNativeValue(input: HTMLInputElement, value: string) {
 	const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
 	setter?.call(input, value);

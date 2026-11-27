@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 
 import { WebhookAvatarField } from "./webhook-avatar-field";
 
-/** 웹훅 프로필 설정 상태 요약 — 접힌 헤더에 한 줄로 보여줘요. */
 export function webhookProfileSummary(name: string, avatarUrl: string | null, showThumbnail: boolean): string {
 	const profilePart = name.trim() ? (avatarUrl ? "커스텀 프로필" : "커스텀 표시명") : avatarUrl ? "커스텀 프로필 사진" : "기본 프로필";
 	const thumbPart = showThumbnail ? "섬네일 표시" : "섬네일 끔";
@@ -29,7 +28,6 @@ interface WebhookProfileSectionProps {
 	surface?: "surface-1" | "surface-2";
 }
 
-/** 웹훅 표시명·프로필 사진·섬네일 설정을 한 카드에 묶어 보여주는 컴팩트 섹션이에요. */
 export function WebhookProfileSection({
 	guildId,
 	name,

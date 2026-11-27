@@ -4,7 +4,6 @@ import { MUSIC_ACCESS_MESSAGES } from '../../application/access.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 
 export class DJOrAlone extends AllFlowsPrecondition {
-	// 클래스 필드 대신 getter로 렌더 시점에 평가해야 앱 이모지 매핑이 반영돼요.
 	get #message() {
 		return MUSIC_ACCESS_MESSAGES.djOnly();
 	}

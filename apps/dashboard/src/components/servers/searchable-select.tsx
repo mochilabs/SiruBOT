@@ -23,7 +23,6 @@ interface BaseProps {
 	searchPlaceholder?: string;
 	disabled?: boolean;
 	className?: string;
-	/** 트리거 id — `Field htmlFor`나 렌더 프롭 id와 연결해 라벨이 컨트롤 이름이 되게 해요 */
 	id?: string;
 	"aria-label"?: string;
 	"aria-describedby"?: string;
@@ -61,7 +60,6 @@ function useFilteredOptions(options: SearchableOption[], search: string) {
 	}, [options, search]);
 }
 
-/** 채널·역할 선택 등에 쓰이는 검색 가능 셀렉트 — 단일/다중과 그룹을 지원해요. */
 export function SearchableSelect(props: SearchableSelectProps) {
 	const {
 		options,
@@ -109,7 +107,6 @@ export function SearchableSelect(props: SearchableSelectProps) {
 
 	const displayLabel = useMemo(() => {
 		if (selectedValues.length === 0) return null;
-		// 다중 선택은 트리거에 개수를 세지 않고 아래 태그 칩으로 실제 선택을 보여줘요
 		if (isMultiple) return null;
 		const selected = options.find((option) => option.value === selectedValues[0]);
 		return selected ? (

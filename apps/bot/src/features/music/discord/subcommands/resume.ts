@@ -16,7 +16,6 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
 	await interaction.deferReply();
-	// 인가·재생할 곡 확인·재개는 유스케이스가 맡아요.
 	await container.music.resume(actorFromMember(interaction.member));
 	await interaction.editReply({ components: [view.resumed()], flags: [MessageFlags.IsComponentsV2] });
 }

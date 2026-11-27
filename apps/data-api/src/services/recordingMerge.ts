@@ -8,14 +8,10 @@ const recordingSelect = { id: true, isrc: true, totalPlays: true, source: true, 
 export type ApplyIsrcResult = 'track-only' | 'already' | 'filled' | 'merged' | 'conflict';
 
 async function advisoryLock(tx: Tx, key: string): Promise<void> {
-	// 봇 recordingLink.ts와 같은 키 — ISRC 묶음 생성·병합이 서로 겹치지 않게 해요.
+	// Must match bot recordingLink.ts lock key to serialize ISRC merges.
 	await tx.$queryRaw`SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtext(${key}))) AS l`;
 }
 
-/**
- * from 묶음을 to로 합쳐요 (트랜잭션 안에서 호출). Track 연결·일별 롤업·누적 재생수를 옮기고 from을 지워요.
- * 대표 표시값은 소스 우선순위가 높은 쪽을 남겨요. 관리자 병합 도구도 이 함수를 써요.
- */
 export async function mergeRecordings(tx: Tx, fromId: string, toId: string): Promise<void> {
 	if (fromId === toId) return;
 	const [from, to] = await Promise.all([
@@ -29,7 +25,7 @@ export async function mergeRecordings(tx: Tx, fromId: string, toId: string): Pro
 		INSERT INTO "RecordingDailyPlay" ("recordingId", "day", "guildId", "plays")
 		SELECT ${toId}, "day", "guildId", "plays" FROM "RecordingDailyPlay" WHERE "recordingId" = ${fromId}
 		ON CONFLICT ("recordingId", "day", "guildId") DO UPDATE SET "plays" = "RecordingDailyPlay"."plays" + EXCLUDED."plays"`;
-	// from의 일별 행은 Cascade로 함께 지워져요. isrc unique를 비운 뒤에 to에 옮겨요.
+	// Delete from before copying its unique isrc to to.
 	await tx.recording.delete({ where: { id: fromId } });
 
 	const takeFromDisplay = sourcePriority(from.source) > sourcePriority(to.source);
@@ -43,13 +39,6 @@ export async function mergeRecordings(tx: Tx, fromId: string, toId: string): Pro
 	});
 }
 
-/**
- * Track에서 찾은 ISRC를 저장하고 묶음에 반영해요.
- * - 묶음에 ISRC가 없고 같은 ISRC 묶음도 없으면 → 묶음에 채움
- * - 같은 ISRC를 가진 다른 묶음이 있으면 → 그쪽으로 병합
- * - 묶음이 이미 다른 ISRC면 → 합치지 않아요 (conflict)
- * 묶음의 다른 Track 중 ISRC가 없는 것은 묶음 ISRC를 물려받아 외부 조회를 건너뛰어요.
- */
 export async function applyTrackIsrc(db: PrismaClient, trackId: string, isrc: string, source: string): Promise<ApplyIsrcResult> {
 	return db.$transaction(async (tx) => {
 		await advisoryLock(tx, `isrc:${isrc}`);

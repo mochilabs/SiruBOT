@@ -7,9 +7,7 @@ import { READ_RATE } from "@/lib/rate-limit";
 import { type AdminUsageResponse,summarizeActivation, summarizeModules, summarizePlayback } from "@/lib/usage-summary";
 
 const DAY_MS = 24 * 60 * 60_000;
-/** 신규 서버 활성화율을 보는 기간 */
 const ACTIVATION_DAYS = 30;
-/** 모듈·재생 집계 기간 (오늘 포함 KST 7일) */
 const USAGE_DAYS = 7;
 
 export const GET = createGuildApiHandler({

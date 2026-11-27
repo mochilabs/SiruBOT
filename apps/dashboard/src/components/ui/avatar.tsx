@@ -28,7 +28,6 @@ const statusColors: Record<AvatarStatus, string> = {
 	online: "bg-success",
 	idle: "bg-warning",
 	dnd: "bg-destructive",
-	// 40% 불투명도는 페이지 배경과 합성하면 1.56~1.71:1이라 거의 안 보여요. 불투명도 100%로 올려 4.95~7.54:1을 확보해요.
 	offline: "bg-dot-neutral",
 };
 

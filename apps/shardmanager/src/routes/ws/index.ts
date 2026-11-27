@@ -16,7 +16,6 @@ const logger = getLogger('websocket');
 
 let wsIdCounter = 0;
 
-/** IDENTIFY 없이 유지되는 소켓의 최대 대기 시간 (미식별 소켓 회수) */
 const IDENTIFY_TIMEOUT_MS = 30_000;
 
 function send<T>(socket: WebSocket, message: WsMessage<T>) {
@@ -85,7 +84,6 @@ export default async function routes(fastify: FastifyInstance) {
 		socket.on('close', () => {
 			clearTimeout(identifyTimeout);
 			logger.info(`[${wsId}] WebSocket connection closed`);
-			// Get hostname before releasing
 			const processInfo = registry.getProcess(wsId);
 			const hostname = processInfo?.hostname;
 			const released = registry.release(wsId);
@@ -120,7 +118,6 @@ export default async function routes(fastify: FastifyInstance) {
 
 			let shardIds: number[] | null;
 
-			// Re-identification: bot sends its current shard IDs. 정수·범위·점유 상태를 검증해요.
 			if (payload.shardIds && payload.shardIds.length > 0) {
 				logger.info(`[${id}] Re-identifying with existing shards [${payload.shardIds.join(', ')}]`);
 				shardIds = registry.claimShards(id, payload.shardIds);

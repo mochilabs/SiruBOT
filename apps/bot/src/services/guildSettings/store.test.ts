@@ -21,9 +21,7 @@ describe('길드 설정 캐시 — 테마 조회가 DB를 반복해서 치지 �
 		const { store, upsert } = makeStore();
 		const load = async (guildId: string) => (await store.getGuild(guildId)).themePreset;
 		await withGuildTheme('1', load, async () => {
-			// 렌더 한 번에 컨테이너·이모지가 수십 번 읽어도 메모리 값이에요
 			for (let i = 0; i < 100; i++) expect(currentGuildTheme()).toBe('blue');
-			// 같은 상호작용 안의 중첩 맥락도 다시 조회하지 않아요
 			await withGuildTheme('1', load, () => expect(currentGuildTheme()).toBe('blue'));
 		});
 		expect(upsert).toHaveBeenCalledTimes(1);

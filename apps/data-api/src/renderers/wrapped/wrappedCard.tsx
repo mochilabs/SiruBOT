@@ -1,37 +1,21 @@
-/**
- * Wrapped 카드 렌더러 — Takumi로 개인 음악 요약을 900x1700 세로 PNG로 그려요 (스크린샷 공유용 비율).
- *
- * 디자인은 대시보드(apps/dashboard/DESIGN.md)의 다크 테마 토큰을 그대로 옮겼어요. 카드는 2배 스케일이에요
- * (rounded-card 1rem → 32, rounded-control 0.625rem → 20, p-5 → 40). 새 색을 만들지 말고 아래 토큰에서 골라요.
- * 레이아웃은 flex 선언만 쓰고, 좌표 계산은 하지 않아요.
- */
 import type { CSSProperties, ReactNode } from 'react';
 import { CARD_FONT, RADIUS, stripEmoji, T, W } from '@sirubot/cards';
 import type { WrappedRanking, WrappedStats } from '../../services/wrapped.ts';
 import { Box, fetchImageDataUri, renderCardPng } from '../shared/takumiKit.tsx';
 
 export const WRAPPED_CARD_SIZE = { width: 900, height: 1700 } as const;
-/** 기록이 없을 때는 안내 카드 하나뿐이라 짧게 그려요. */
 const WRAPPED_EMPTY_SIZE = { width: 900, height: 470 } as const;
 
 export interface WrappedCardInput {
 	displayName: string;
 	avatarUrl: string | null;
-	/** "최근 30일" 같은 기간 표기 */
 	periodLabel: string;
-	/** "이 서버" / "모든 서버" */
 	scopeLabel: string;
 	stats: WrappedStats;
 }
 
-/**
- * 카드 그림자(Elev-1)는 그리지 않아요 — 다크 배경에서 거의 안 보이는 값인데 블러 필터 비용이 커요. 깊이는 surface 톤 차이로 충분해요.
- * 같은 이유로 inset 그림자(control-boundary) 대신 border를 써요.
- */
-
 const number = (n: number): string => n.toLocaleString('ko-KR');
 
-/** 분을 "N시간 M분" / "M분"으로. */
 export function formatMinutes(minutes: number): string {
 	const hours = Math.floor(minutes / 60);
 	const rest = minutes % 60;
@@ -39,7 +23,6 @@ export function formatMinutes(minutes: number): string {
 	return rest === 0 ? `${hours}시간` : `${hours}시간 ${rest}분`;
 }
 
-/** 시간대를 "오후 9시"처럼 읽어요. */
 export function formatHour(hour: number): string {
 	const period = hour < 12 ? '오전' : '오후';
 	const h12 = hour % 12 === 0 ? 12 : hour % 12;
@@ -48,17 +31,14 @@ export function formatHour(hour: number): string {
 
 const ellipsis = { display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
 
-/** `Card`: borderless rounded-card bg-card shadow-sm p-5 */
 function Card({ children, style }: { children: ReactNode; style?: CSSProperties }): ReactNode {
 	return <Box style={{ flexDirection: 'column', background: T.surface1, borderRadius: RADIUS.card, padding: 32, ...style }}>{children}</Box>;
 }
 
-/** `SectionLabel` 자리 — 카드 맨 위의 작은 회색 라벨 */
 function SectionLabel({ text }: { text: string }): ReactNode {
 	return <Box style={{ fontSize: 22, fontWeight: W.semibold, color: T.mutedForeground }}>{text}</Box>;
 }
 
-/** 썸네일 — 없으면 자리표시자. 놓이는 면(onSurface)과 다른 표면 색으로 칠해야 보여요. */
 function Cover({
 	src,
 	size,
@@ -74,7 +54,6 @@ function Cover({
 	return <Box style={{ width: size, height: size, borderRadius: radius, background: onSurface === 'surface1' ? T.surface2 : T.surface1 }} />;
 }
 
-/** `StatCard`: bg-surface-2 rounded-control 안의 라벨 + font-black 숫자 */
 function StatCell({ label, value }: { label: string; value: string }): ReactNode {
 	return (
 		<Box style={{ flexDirection: 'column', flex: 1, minWidth: 0, background: T.surface2, borderRadius: RADIUS.control, padding: '20px 24px' }}>
@@ -84,7 +63,6 @@ function StatCell({ label, value }: { label: string; value: string }): ReactNode
 	);
 }
 
-/** "상위 N%" 알약(`button-cta` 색) + 풀 크기와 순위 캡션 — 합계 카드 오른쪽에 둬요. */
 function RankBadge({ ranking, scopeLabel }: { ranking: WrappedRanking; scopeLabel: string }): ReactNode {
 	return (
 		<Box style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
@@ -100,7 +78,6 @@ function RankBadge({ ranking, scopeLabel }: { ranking: WrappedRanking; scopeLabe
 
 const HOUR_BAR_MAX = 120;
 
-/** 24시간 막대 — 피크 시간만 brand, 나머지는 border-strong */
 function HourBars({ counts, peakHour }: { counts: readonly number[]; peakHour: number | null }): ReactNode {
 	const max = Math.max(1, ...counts);
 	return (
@@ -125,13 +102,11 @@ export async function renderWrappedCard(input: WrappedCardInput): Promise<Buffer
 	const { stats } = input;
 	const featured = stats.topTracks[0];
 	const rest = stats.topTracks.slice(1, 5);
-	// 썸네일과 아바타를 병렬로 받아요 — 실패한 이미지는 null이라 surface-2 자리표시자로 그려져요.
 	const [avatar, ...thumbs] = await Promise.all([
 		fetchImageDataUri(input.avatarUrl),
 		...stats.topTracks.slice(0, 5).map((track) => fetchImageDataUri(track.thumbnail))
 	]);
 
-	// `PageHeader`: 제목 font-black tracking-tighter, 설명 muted
 	const header = (
 		<Box style={{ alignItems: 'center' }}>
 			{avatar ? (
@@ -155,7 +130,6 @@ export async function renderWrappedCard(input: WrappedCardInput): Promise<Buffer
 
 	let body: ReactNode;
 	if (isEmpty || !featured) {
-		// `EmptyState`
 		body = (
 			<Card style={{ marginTop: 28, alignItems: 'center', padding: '96px 36px' }}>
 				<Box style={{ fontSize: 34, fontWeight: W.semibold, color: T.foreground }}>이 기간에 신청한 곡이 아직 없어요</Box>
@@ -165,7 +139,6 @@ export async function renderWrappedCard(input: WrappedCardInput): Promise<Buffer
 	} else {
 		body = (
 			<>
-				{/* 신청한 곡 합계 */}
 				<Card style={{ marginTop: 28 }}>
 					<SectionLabel text="신청한 곡" />
 					<Box style={{ alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 6 }}>
@@ -181,7 +154,6 @@ export async function renderWrappedCard(input: WrappedCardInput): Promise<Buffer
 						{`약 ${formatMinutes(stats.totalMinutes)} 분량 · 서로 다른 곡 ${number(stats.uniqueTracks)}개`}
 					</Box>
 				</Card>
-				{/* 많이 신청한 곡: 1위 + 2~5위 (행은 surface-2 — 카드 안의 카드 금지) */}
 				<Card style={{ marginTop: 16 }}>
 					<SectionLabel text="가장 많이 신청한 곡" />
 					<Box style={{ alignItems: 'center', marginTop: 18 }}>
@@ -225,7 +197,6 @@ export async function renderWrappedCard(input: WrappedCardInput): Promise<Buffer
 						</Box>
 					) : null}
 				</Card>
-				{/* 아티스트 TOP3 — 칩은 rounded-full + control-boundary */}
 				{stats.topArtists.length > 0 ? (
 					<Card style={{ marginTop: 16 }}>
 						<SectionLabel text="자주 들은 아티스트" />
@@ -245,7 +216,6 @@ export async function renderWrappedCard(input: WrappedCardInput): Promise<Buffer
 										fontSize: 26
 									}}
 								>
-									{/* 긴 이름은 한 줄에서 …로 줄이고, 횟수·순위는 밀리지 않게 고정해요 */}
 									<Box style={{ fontWeight: W.semibold, color: T.foreground, minWidth: 0, ...ellipsis }}>
 										{stripEmoji(artist.artist)}
 									</Box>
@@ -269,7 +239,6 @@ export async function renderWrappedCard(input: WrappedCardInput): Promise<Buffer
 						</Box>
 					</Card>
 				) : null}
-				{/* 활동 요약 */}
 				<Card style={{ marginTop: 16, flex: 1 }}>
 					<SectionLabel text="활동" />
 					<Box style={{ marginTop: 16, gap: 14 }}>

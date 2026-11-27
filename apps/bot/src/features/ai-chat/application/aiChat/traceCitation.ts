@@ -4,7 +4,6 @@ interface SourceItem {
 	url: string;
 }
 
-/** 도구 실행 결과 JSON 문자열에서 sources 배열을 안전하게 추출해요 */
 function parseSourcesFromResult(parsed: Record<string, unknown> | null): SourceItem[] {
 	if (!parsed) return [];
 	const raw = parsed.sources ?? (Array.isArray(parsed.results) ? parsed.results : null);
@@ -21,7 +20,6 @@ function parseSourcesFromResult(parsed: Record<string, unknown> | null): SourceI
 		.filter((s): s is SourceItem => Boolean(s && s.id && s.url));
 }
 
-/** 대화 루프 메시지(trace)에서 web_search 도구 호출 결과의 출처 맵을 구성해요 */
 export function extractWebSearchSources(
 	messages: ReadonlyArray<{ role: string; content?: unknown; tool_call_id?: string; name?: string }>
 ): Map<string, { title: string; url: string }> {

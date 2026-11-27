@@ -2,7 +2,6 @@ import { Music4 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-/** 썸네일 없는 트랙 표시: 그라디언트 서피스 + 음악 아이콘 + "이미지 없음" 워터마크 */
 export function MockThumbnail({ className }: { className: string }) {
 	return (
 		<div className={cn("flex flex-col items-center justify-center bg-surface-2 relative", className)}>

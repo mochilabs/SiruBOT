@@ -1,13 +1,3 @@
-/**
- * 기존 Track·재생 기록을 Recording 묶음과 일별 롤업으로 채워요. 기본은 드라이런이에요.
- *
- *   yarn workspace @sirubot/data-api build
- *   yarn workspace @sirubot/data-api backfill:recordings              # 드라이런: 묶음 결과만 출력
- *   yarn workspace @sirubot/data-api backfill:recordings --apply      # 실제 쓰기 (먼저 DB 백업)
- *   ... --apply --enrich=500                                         # 쓰기 후 상위 500곡 ISRC 보강
- *
- * DATABASE_URL은 환경 변수나 현재 폴더의 .env에서 읽어요. 출력에는 곡 제목만 나오고 사용자 정보는 나오지 않아요.
- */
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@sirubot/prisma';
 import { kstDay } from '@sirubot/utils/trackIdentity';
@@ -52,7 +42,6 @@ async function loadUnlinkedTracks(): Promise<BackfillTrack[]> {
 }
 
 async function main() {
-	// 첫 Recording이 생긴 시각 = 봇이 롤업을 쌓기 시작한 시각. 그 이전 기록만 롤업으로 옮겨요.
 	const firstRecording = await db.recording.findFirst({ orderBy: { createdAt: 'asc' }, select: { createdAt: true } });
 	const cutoff = firstRecording?.createdAt ?? new Date();
 

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { UsageRecorder, type UsageRecorderDeps } from './usageRecorder.ts';
 
-const NOW = new Date('2026-11-21T03:00:00Z'); // KST 12:00 → 날짜 2026-11-21
+const NOW = new Date('2026-11-21T03:00:00Z');
 
 function setup() {
 	const upsert = vi.fn(async () => ({}));
@@ -87,7 +87,7 @@ describe('UsageRecorder', () => {
 		try {
 			const { recorder, upsert } = setup();
 			recorder.start();
-			recorder.start(); // 두 번 불러도 타이머 하나
+			recorder.start();
 			recorder.record('g1', 'cmd:play', 'u1');
 			await vi.advanceTimersByTimeAsync(60_000);
 			expect(upsert).toHaveBeenCalledTimes(1);

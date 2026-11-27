@@ -5,8 +5,6 @@ import { guardRateLimit, publicReadLimit, rateKey } from "@/lib/rate-limit";
 import { fetchShards } from "@/lib/shard-api";
 
 export async function GET() {
-  // 공개 상태 엔드포인트 — 샤드 매니저의 실시간 상태는 로그인 없이 허용해요.
-  // 비로그인 요청은 전역 공용 버킷(PUBLIC_RATE)으로 묶어요 — 요청 헤더를 주체로 쓰지 않아 한도 우회를 막아요.
   const session = await auth();
   const limit = publicReadLimit(session?.user?.id);
 

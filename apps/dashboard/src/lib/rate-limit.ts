@@ -7,27 +7,13 @@ export interface RateRule {
   windowMs: number;
 }
 
-/** 쓰기(설정 변경): 분당 12회 — 대시보드에서 체감되지 않는 여유 있는 한도 */
 export const WRITE_RATE: RateRule = { limit: 12, windowMs: 60_000 };
-/** 읽기(Discord 프록시): 분당 30회 */
 export const READ_RATE: RateRule = { limit: 30, windowMs: 60_000 };
-/** 무거운 쓰기(Discord 채널 생성): 분당 5회 */
 export const HEAVY_WRITE_RATE: RateRule = { limit: 5, windowMs: 60_000 };
-/** 이미지 에셋 업로드: 분당 10회 — 파일 업로드는 저장소·DB 부하가 커서 좁게 잡아요 */
 export const UPLOAD_RATE: RateRule = { limit: 10, windowMs: 60_000 };
-/** 공개(무인증) 읽기: 분당 120회 — 전역 공용 버킷 하나로 묶어 한도 우회를 막아요 */
 export const PUBLIC_RATE: RateRule = { limit: 120, windowMs: 60_000 };
 
-/**
- * Redis 분산 슬라이딩 윈도우.
- *
- * 서버 시각은 Lua 안에서 `TIME`으로 읽어요 — 인스턴스 간 클록 오차를 없애고
- * 다중 인스턴스 배포에서도 한도가 프로세스 수만큼 희석되지 않게 해요.
- * member는 now + 랜덤 접미로 동일 밀리초에 여러 요청이 와도 서로 덮어쓰지 않게 해요.
- * 랜덤 시드는 Redis < 7에서 스크립트 실행마다 고정이라 TIME 마이크로초로 매 실행 다시 씨뿌려요 —
- * 안 그러면 동일 밀리초 요청이 같은 member를 만들어 ZADD가 멱등 처리돼 한도가 새지 않아요.
- * 반환은 `{ok, retryAfterMs}` 배열 (ok: 1=허용, 0=차단).
- */
+// Re-seed math.random per call: Redis < 7 fixes the PRNG seed per Lua script execution.
 const SLIDING_WINDOW_SCRIPT = `
   local time = redis.call('TIME')
   local now = time[1] * 1000 + math.floor(time[2] / 1000)
@@ -52,10 +38,8 @@ const SLIDING_WINDOW_SCRIPT = `
 const buckets = new Map<string, number[]>();
 const MAX_BUCKETS = 10_000;
 
-/** Redis 장애 시 fail-open 경고는 요청마다 찍지 않고 최초 1회만 남겨요. */
 let warnedRedisFailure = false;
 
-/** 인메모리 슬라이딩 윈도우. REDIS_URL 미설정(개발/standalone) 폴백이에요. */
 function rateLimit(
   key: string,
   rule: RateRule,
@@ -84,16 +68,11 @@ function rateLimit(
   return { ok: true, retryAfterMs: 0 };
 }
 
-/** 키 조립 — 사용자·길드·작업 단위로 격리해요. */
 export function rateKey(...parts: (string | null | undefined)[]): string {
   return parts.map((part) => part ?? "-").join(":");
 }
 
-/**
- * 공개(무인증) 엔드포인트의 레이트리밋 결정 — 로그인 사용자는 userId 버킷, 나머지는 전역 공용 버킷이에요.
- * 요청 헤더(X-Forwarded-For 등)로 주체를 만들지 않는 것이 핵심이에요: 클라이언트가 헤더를 위조하면
- * 요청마다 새 버킷이 생겨 한도가 우회됩니다. 신뢰할 프록시가 도입되면 그때 IP 주체를 추가해요.
- */
+// Intentionally ignores request headers (e.g. X-Forwarded-For) to prevent bucket spoofing.
 export function publicReadLimit(
   userId: string | undefined,
 ): { subject: string; rule: RateRule } {
@@ -102,12 +81,10 @@ export function publicReadLimit(
     : { subject: "anonymous", rule: PUBLIC_RATE };
 }
 
-/** 한도 초과면 429 응답, 아니면 null. 라우트 진입점에서 바로 반환하세요. */
 export async function guardRateLimit(
   key: string,
   rule: RateRule,
 ): Promise<NextResponse | null> {
-  // REDIS_URL 미설정 → 기존 인메모리 윈도우로 폴백 (단일 프로세스 기준).
   if (!isRedisEnabled()) {
     return rateLimitResponse(rateLimit(key, rule));
   }
@@ -117,7 +94,6 @@ export async function guardRateLimit(
     rule.limit,
   ]);
 
-  // Redis가 켜져 있는데 장애(null) → 한도를 세지 않고 허용(fail-open).
   if (result === null) {
     if (!warnedRedisFailure) {
       warnedRedisFailure = true;

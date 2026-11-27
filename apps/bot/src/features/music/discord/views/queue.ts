@@ -11,7 +11,6 @@ type QueueViewProps = {
 	page: number;
 	totalPages: number;
 	authorId: string;
-	/** 셀렉트 메뉴에서 선택된 곡의 전역 인덱스(0-based). 해당 옵션을 default로 표시한다. */
 	selectedIndex?: number | null;
 };
 
@@ -19,7 +18,6 @@ export const QUEUE_PAGE_SIZE = 10;
 
 export function queueList({ player, page, totalPages, authorId, selectedIndex = null }: QueueViewProps) {
 	const containerComponent = createContainer();
-	// 선예열한 추천곡은 대기열 목록에 세지 않는다 (재생에는 그대로 쓰인다).
 	const tracks = getUserQueuedTracks(player);
 	const start = (page - 1) * QUEUE_PAGE_SIZE;
 	const pageTracks = tracks.slice(start, start + QUEUE_PAGE_SIZE);
@@ -32,7 +30,6 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 		})}`;
 	});
 
-	// 카운트가 유저 대기열 곡만 세는 만큼, 남은 시간도 그 곡들만 센다 (재생 중인 곡 제외).
 	const queuedDuration = tracks.reduce((acc, track) => acc + (track.info.duration || 0), 0);
 	const totalDuration = formatTimeToKorean(queuedDuration / 1000);
 
@@ -45,7 +42,6 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 
 	containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(content));
 
-	// 곡 선택 셀렉트 메뉴 — 선택 후 점프/삭제 버튼으로 액션 수행 (queue:v1:sel)
 	const selectMenu = new StringSelectMenuBuilder()
 		.setCustomId(queueViewId.encode('sel', { ownerId: authorId, page }))
 		.setPlaceholder('곡을 선택하세요')
@@ -68,7 +64,6 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 
 	containerComponent.addActionRowComponents(new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu));
 
-	// 선택된 곡에 대한 액션 버튼 (queueViewButton의 queue:v1:jump / queue:v1:rm)
 	const selectedToken = selectedIndex === null ? null : queueSelectionValue(player, selectedIndex);
 	const jumpButton = new ButtonBuilder()
 		.setCustomId(queueViewId.encode('jump', { ownerId: authorId, page, token: selectedToken }))

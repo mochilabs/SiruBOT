@@ -11,7 +11,6 @@ import {
 import { panelId } from '../customIds.ts';
 
 export interface PanelRecentTrack {
-	/** Track 테이블 id — 셀렉트 값으로 쓴다 */
 	id: string;
 	title: string;
 	artist: string;
@@ -19,20 +18,15 @@ export interface PanelRecentTrack {
 }
 
 export interface PanelIdleOptions {
-	/** 채팅 입력 재생이 켜져 있는지 */
 	inputPlay: boolean;
-	/** 입력 재생 모드 */
 	inputMode: 'play' | 'select';
-	/** 패널 모드 여부 */
 	deleteInput: boolean;
 	djRoleId: string | null;
-	/** 서버에서 최근 재생된 곡 (최신순, 최대 5곡) */
 	recent: PanelRecentTrack[];
 	dashboardUrl: string | null;
 	guildId: string;
 }
 
-/** 기본 채널 상시 패널의 대기 화면 — 재생이 없을 때 컨트롤러 메시지를 이 모습으로 되돌려요. */
 export function panelIdleView(options: PanelIdleOptions) {
 	const usage = options.inputPlay
 		? `이 채널에 **곡 제목이나 링크**를 입력하면 ${options.inputMode === 'select' ? '검색 결과 5개 중 골라서' : '바로'} 재생해요.`

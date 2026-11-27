@@ -41,7 +41,6 @@ export function GlobalCommandPalette() {
 	const open = useUIStore((s) => s.commandPaletteOpen);
 	const setOpen = useUIStore((s) => s.setCommandPaletteOpen);
 
-	// ⌘K / Ctrl+K 토글 ( 열기와 닫기 모두 여기서 처리해요 )
 	useEffect(() => {
 		const handler = (e: KeyboardEvent) => {
 			if (!e.isComposing && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {

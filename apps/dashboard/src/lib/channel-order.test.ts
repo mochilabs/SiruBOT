@@ -13,10 +13,6 @@ function channel(
   return { id, name: id, type, parentId, position };
 }
 
-/**
- * discord.js가 보내는 position은 "같은 부모 + 같은 정렬 그룹" 안에서의 인덱스예요.
- * 아래 표본도 그 규칙 그대로 만들었어요 (uncategorized 텍스트 0/1, 음성 0).
- */
 const MIXED: DiscordChannelSummary[] = [
   channel("b", ChannelTypeValue.GuildCategory, null, 1),
   channel("a-voice", ChannelTypeValue.GuildVoice, "a", 0),

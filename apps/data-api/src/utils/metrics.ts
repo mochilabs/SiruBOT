@@ -1,4 +1,3 @@
-/** 라우트별 가벼운 계측. /v1/status에서 노출해요 (대시보드 P1 연동용). */
 interface RouteStats {
 	requests: number;
 	cacheHits: number;

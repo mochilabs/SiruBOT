@@ -61,7 +61,6 @@ export const PATCH = createGuildApiHandler({
   role: "user",
   rate: WRITE_RATE,
   key: "playlist-patch",
-  // 플레이리스트 id까지 버킷에 넣는 기존 키를 그대로 유지해요.
   rateKey: ({ key, userId, params }) => rateKey(key, userId, params.id),
   handler: async ({ authz, params, request }) => {
     const playlistId = params.id;
@@ -109,7 +108,6 @@ export const PATCH = createGuildApiHandler({
         );
       }
 
-      // Check duplicates if name is changing
       if (name !== playlist.name) {
         const existing = await db.playlist.findFirst({
           where: { userId, name },

@@ -30,10 +30,8 @@ import { CustomCommandDesigner } from "./custom-command-designer";
 import { useListEditor } from "./use-list-editor";
 
 export type EditorStep = CustomCommandStep;
-/** if 서브 스텝(then/else)에 들어갈 수 있는 타입 — 중첩 if는 없어요 */
 export type EditorSubStep = Exclude<CustomCommandStep, { type: "if" }>;
 
-/** 편집기 배열 → 서브 스텝 배열 (중첩 if는 구조상 생길 수 없어 걸러내요) */
 function toSubSteps(steps: EditorStep[]): EditorSubStep[] {
 	return steps.filter((step) => step.type !== "if") as EditorSubStep[];
 }
@@ -63,7 +61,6 @@ const PERMISSION_OPTIONS: Array<{ value: "ManageRoles" | "ManageChannels" | "Man
 ];
 export { PERMISSION_OPTIONS };
 
-/** 스텝 종류별 시작값 */
 function createStep(type: EditorStep["type"]): EditorStep {
 	switch (type) {
 		case "send_message":
@@ -95,11 +92,9 @@ interface StepsEditorProps {
 	channels: DiscordChannelSummary[];
 	saving: boolean;
 	onChange: (steps: EditorStep[]) => void;
-	/** if 서브 스텝 목록 — 여기서는 if를 또 넣을 수 없어요 */
 	nested?: boolean;
 }
 
-/** 스텝 블록 조립 — 종류별 필드 + 순서 변경 + if 서브 스텝 편집 */
 export function StepsEditor({
 	guildId,
 	steps,
@@ -111,7 +106,6 @@ export function StepsEditor({
 }: StepsEditorProps) {
 	const limit = nested ? CUSTOM_COMMAND_IF_MAX_SUB_STEPS : 20;
 
-	// 목록 조작(수정·이동·삭제)은 공용 훅 — 디자이너 구성 요소 편집과 같은 동작이에요
 	const {
 		keys: stepKeys,
 		updateItem: updateStep,

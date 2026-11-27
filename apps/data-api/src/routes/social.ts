@@ -4,18 +4,10 @@ import { redisIdSchema } from '@sirubot/utils';
 import { metrics } from '../utils/metrics.ts';
 import { guildIdParams } from './common.ts';
 
-/**
- * 소셜 알림 프록시 — 대시보드의 단일 게이트웨이(data-api) 규칙을 유지하면서
- * 실제 구독 도메인 로직은 notifier(단일 소유자)에 위임해요.
- * 파라미터·바디의 최종 검증은 notifier가 담당하고, 여기서는 경로 파라미터만 검증해요.
- */
-
-/** 구독 수정·삭제 경로 파라미터 — notifier가 길드 스코프(`{ id, guildId }`)로 소유권을 검증하므로 guildId가 함께 필요해요. */
 const subscriptionRouteParams = z.object({ guildId: redisIdSchema, id: z.string().uuid() });
 
 type ForwardResult = { status: number; body: unknown } | null;
 
-/** notifier로 요청을 넘겨요 — 결과는 {status, body}로 정규화, 설정·네트워크 실패는 null/throw로 구분해요. */
 async function forwardToNotifier(
 	deps: { notifierUrl?: string; notifierAuthKey?: string },
 	method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
@@ -65,7 +57,6 @@ async function handleProxy(
 	}
 }
 
-/** 경로 파라미터 검증. 실패하면 400을 내리고 null을 돌려 핸들러가 조기 반환해요. */
 function parseParamsOr400<Output>(reply: FastifyReply, schema: z.ZodType<Output>, params: unknown, message: string): Output | null {
 	const parsed = schema.safeParse(params);
 	if (!parsed.success) {

@@ -6,7 +6,6 @@ interface TrackListenLinkProps {
 	compact?: boolean;
 }
 
-/** 트랙의 원본 URL을 여는 공통 듣기 액션이에요. */
 export function TrackListenLink({ url, title, compact = false }: TrackListenLinkProps) {
 	if (!url) return null;
 

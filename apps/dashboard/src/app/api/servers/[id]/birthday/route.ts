@@ -5,7 +5,6 @@ import { createGuildApiHandler } from "@/lib/api-handler";
 import { BirthdayRejected, getBirthdaySettings, saveBirthdaySettings } from "@/lib/birthday-celebration";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 
-/** 서버의 생일 축하 설정 (서버 관리 권한) */
 export const GET = createGuildApiHandler({
   role: "manage",
   rate: READ_RATE,
@@ -20,10 +19,6 @@ export const GET = createGuildApiHandler({
   },
 });
 
-/**
- * 설정 저장 — 카드·메시지는 인사 카드와 같은 스키마로 검증해요. 새로 켜면 다음 날부터 축하하고,
- * 다음 작업은 DB에 바로 예약해요 (봇은 DB를 읽어서 따로 알릴 필요가 없어요).
- */
 export const PUT = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,

@@ -22,7 +22,6 @@ export class MessageDeleteListener extends Listener {
 
 		const guildId = message.guild.id;
 
-		// 대기 화면 상태의 기본 채널 패널을 사용자가 지웠다면 다시 올린다 (재생 중이면 컨트롤러 갱신이 새로 보낸다).
 		const panelMessageId = await guildChannels.getTextMessage(this.container.guildService, guildId).catch(() => null);
 		if (panelMessageId && panelMessageId === message.id) {
 			await guildChannels.setTextMessage(this.container.guildService, guildId, null).catch(() => null);
@@ -33,10 +32,8 @@ export class MessageDeleteListener extends Listener {
 
 		const player = this.container.audio.getPlayer(guildId);
 		if (player) {
-			// playerNotifier.deleteController 에서 봇이 지우기 전엔 null로 바꾸기 때문에
-			// 여기 들어온다는 것은 '사용자' 또는 '다른 봇'이 강제로 지웠다는 뜻입니다.
+			// 봇이 지울 때는 deleteController가 먼저 messageId를 비우므로 여기선 외부 삭제만 해당해요.
 			if (message.id === player.messageId) {
-				// 더 이상 참조하지 않도록 초기화
 				player.messageId = null;
 				player.controller = null;
 
@@ -44,7 +41,6 @@ export class MessageDeleteListener extends Listener {
 				const newCount = currentCount + 1;
 				deleteCountCache.set(guildId, newCount);
 
-				// 3번 지우면 알려주기
 				if (newCount === 3) {
 					if (message.channel.isSendable()) {
 						try {

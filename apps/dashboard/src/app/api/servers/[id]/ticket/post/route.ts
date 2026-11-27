@@ -12,10 +12,6 @@ const postSchema = z.object({
     .optional(),
 });
 
-/**
- * 티켓 패널 게시 — 봇 토큰이 필요한 작업이라 data-api → Redis로 봇에 위임해요.
- * channelId를 생략하면 설정에 저장된 panelChannelId로 게시해요.
- */
 export const POST = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,

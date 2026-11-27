@@ -7,7 +7,6 @@ import { notice } from '../../../../lib/notice.ts';
 import { actorFromMember } from '../../application/actor.ts';
 import { panelId } from '../customIds.ts';
 
-/** 기본 채널 패널 대기 화면의 빠른 동작 — 최근 곡 다시 재생, 내 플레이리스트 불러오기 */
 export async function openPlaylists(interaction: ButtonInteraction<'cached'>) {
 	await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 	const playlists = (await container.playlistService.getUserPlaylists(interaction.user.id)).filter((playlist) => playlist._count.tracks > 0);
@@ -72,7 +71,6 @@ export async function playRecent(interaction: StringSelectMenuInteraction<'cache
 	});
 }
 
-/** 빠른 동작 실행 중 오류를 본인에게만 보이는 안내로 바꿔 보낸다. */
 export async function replyPanelError(interaction: ButtonInteraction<'cached'> | StringSelectMenuInteraction<'cached'>, error: unknown) {
 	const known = error instanceof AppError || error instanceof UserError;
 	if (!known) container.logger.error(`[panelIdle] ${error}`);

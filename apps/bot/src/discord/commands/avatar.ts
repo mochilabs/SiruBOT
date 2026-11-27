@@ -4,10 +4,6 @@ import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
 import * as avatar from '../subcommands/avatar.ts';
 
-/**
- * `/아바타` — `/정보 아바타`에서 승격. `/정보`는 봇·서버 정보 2개만 남기고,
- * 아바타는 독립적으로 자주 쓰이는 조회라 top-level로 둬요.
- */
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'avatar',

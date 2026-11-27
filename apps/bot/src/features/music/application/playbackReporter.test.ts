@@ -10,7 +10,6 @@ describe('playbackReporter', () => {
 	let reporter: PlaybackReporter;
 
 	beforeEach(() => {
-		// 테스트마다 새로 만들어요 — client는 호출 시점에 읽어요
 		reporter = new PlaybackReporter({ logger, getClient: () => ({ guilds: { cache: new Map() } }) as never });
 		fetchMock.mockReset();
 		fetchMock.mockResolvedValue({ ok: true });

@@ -29,10 +29,7 @@ export default function ShardsPage() {
         dedupingInterval: 2000,
     });
 
-    // 폴링 실패 처리 — 마지막 정상 데이터가 있으면 화면을 유지해요:
-    // 일시적인 네트워크 오류로 실시간 대시보드 전체가 에러 페이지로 튀는 것보다,
-    // 마지막 정보를 계속 보여 주고 조용한 배지로 상태를 알리는 편이 낫기 때문이에요.
-    // 최초 로드 실패(데이터 없음)일 때만 라우트 에러 페이지(app/error.tsx)로 넘겨요.
+    // 최초 로드 실패 시에만 에러 페이지로 넘기고, 폴링 실패 시에는 마지막 데이터를 유지
     const initialLoadFailed = (error || (data && "error" in data)) && !data;
     if (initialLoadFailed && !isValidating) {
         throw new Error("샤드 매니저와 연결하지 못했어요. 서버가 점검 중이거나 오프라인 상태일 수 있어요.", {

@@ -2,10 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { encryptSecret, deriveKeyFromSecret } from '@sirubot/utils/secretBox';
 import { openWebhookToken, sealWebhookToken } from './secretStorage.ts';
 
-/**
- * 웹훅 토큰 at-rest 암호화 계약 — 저장 시 봉인, 사용 시 복호, 키 회전 호환.
- */
-
 const KEY = 'test-auth-key-for-notifier';
 const ROTATED = 'rotated-auth-key';
 
@@ -42,12 +38,10 @@ describe('sealWebhookToken / openWebhookToken', () => {
 	it('키를 회전할 때 옛 키를 DATA_ENCRYPTION_KEY에 남기면 기존 행을 읽어요 (재봉인은 이 모듈이 강제하지 않아요)', () => {
 		const legacySealed = `enc:v1:${encryptSecret('legacy-token', deriveKeyFromSecret(KEY))}`;
 
-		// 회전: 새 AUTH_KEY로 저장하되, 옛 키는 보조 키로 남겨 둠
 		vi.stubEnv('AUTH_KEY', ROTATED);
 		vi.stubEnv('DATA_ENCRYPTION_KEY', KEY);
 		expect(openWebhookToken(legacySealed)).toBe('legacy-token');
 
-		// 보조 키를 지우면 더는 복호 불가 — 운영에서 옛 행 재봉인이 끝난 뒤에만 지워야 해요
 		vi.stubEnv('DATA_ENCRYPTION_KEY', '');
 		vi.stubEnv('NOTIFIER_AUTH_KEY', '');
 		expect(openWebhookToken(legacySealed)).toBe('');

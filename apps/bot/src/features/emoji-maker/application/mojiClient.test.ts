@@ -9,7 +9,6 @@ const config = { url: 'http://moji.invalid', authKey: 'k' };
 const png = Buffer.from('png-bytes');
 const jsonResponse = (status: number, body: unknown) =>
 	new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-/** NDJSON 스트림 — chunks로 쪼개 보내서 줄이 청크 경계에서 잘리는 경우도 재현해요. */
 const ndjson = (events: object[], chunkSize = 7) => {
 	const text = events.map((e) => JSON.stringify(e)).join('\n') + '\n';
 	const bytes = new TextEncoder().encode(text);

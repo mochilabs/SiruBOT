@@ -9,7 +9,6 @@ export interface FieldRenderProps {
 	id: string;
 	describedBy?: string;
 	invalid: boolean;
-	/** 필수 입력 여부: 렌더 프롭 소비자가 컨트롤에 required/aria-required를 연결할 때 써요 */
 	required: boolean;
 }
 
@@ -31,7 +30,6 @@ export function Field({ label, description, error, required = false, htmlFor, cl
 	const errorId = error ? `${id}-error` : undefined;
 	const invalid = Boolean(error);
 	const describedBy = [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
-	// 렌더 프롭으로 id를 넘기는 경우에만 label과 실제로 연결된다.
 	const labelFor = htmlFor ?? (isRenderProp ? id : undefined);
 
 	return (

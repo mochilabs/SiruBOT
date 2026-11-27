@@ -5,7 +5,6 @@ import { extractTrackData } from './trackData.ts';
 
 const FAVORITES_PLAYLIST_NAME = '즐겨찾기';
 
-/** PlaylistService가 쓰는 의존성 — DB 접근만 받아요 */
 export interface PlaylistServiceDeps {
 	db: PrismaClient;
 }

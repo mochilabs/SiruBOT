@@ -6,7 +6,6 @@ import type { CustomPlayer } from '../../lavalink/player/customPlayer.ts';
 
 type ControllerInteraction = ButtonInteraction<'cached'> | StringSelectMenuInteraction<'cached'>;
 
-/** 컨트롤러·필터 핸들러가 공유하는 거절 문구 — 문구와 이모지를 한 곳에서 관리해요. */
 export const GUARD_MESSAGES = {
 	notInSameVoice: '봇과 같은 음성 채널에 있어야 사용할 수 있어요.',
 	djOnlyControl: '이 컨트롤은 DJ 역할이 있거나 채널에 혼자 있을 때만 사용할 수 있어요.',
@@ -14,7 +13,6 @@ export const GUARD_MESSAGES = {
 	noPlayer: '현재 재생 중인 플레이어가 없어요.'
 } as const;
 
-/** 본인에게만 보이는 거절 응답을 보내요. */
 export async function replyGuardError(interaction: ControllerInteraction, message: string): Promise<void> {
 	await interaction.reply({
 		flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
@@ -22,10 +20,6 @@ export async function replyGuardError(interaction: ControllerInteraction, messag
 	});
 }
 
-/**
- * 음성 채널(원격 권한자는 면제) → DJ → 플레이어 존재 순으로 검사해요. 거절하면 이미 응답했으니 `null`을 돌려줘요.
- * `djMessage`가 없으면 DJ 검사를 건너뛰어요.
- */
 export async function guardPlayerAccess(
 	interaction: ControllerInteraction,
 	player: CustomPlayer | undefined,

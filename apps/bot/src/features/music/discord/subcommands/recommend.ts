@@ -9,7 +9,6 @@ import { errorView } from '../../../../lib/errorView.ts';
 export const name = 'recommend';
 export const ko = '추천';
 export const description = '현재 곡 기반의 추천 곡을 대기열에 추가해요.';
-/** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Queue tracks related to the current one.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying', 'DJOrAlone'];
 
@@ -52,7 +51,6 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	const count = interaction.options.getInteger('count') ?? 1;
 
-	// 추천 곡 검색은 YouTube RD 플레이리스트 조회라 네트워크 왕복이 필요하다.
 	await interaction.deferReply();
 
 	const added = await addManualRecommendation(container.lavalink, player, current, count);
@@ -72,6 +70,5 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		flags: [MessageFlags.IsComponentsV2],
 		allowedMentions: { users: [], roles: [] }
 	});
-	// 대기열이 바뀌었으므로 컨트롤러도 갱신한다.
 	container.playerNotifier.updateController(player);
 }

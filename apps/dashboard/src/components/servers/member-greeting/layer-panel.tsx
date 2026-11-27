@@ -25,7 +25,6 @@ interface LayerPanelProps {
 	layers: GreetingLayer[];
 	selectedIds: readonly string[];
 	saving: boolean;
-	/** additive가 true면 Shift/Ctrl/Cmd 클릭 — 선택을 토글해요 */
 	onSelect: (id: string, additive: boolean) => void;
 	onToggleHidden: (id: string) => void;
 	onRemove: (id: string) => void;
@@ -33,12 +32,10 @@ interface LayerPanelProps {
 	onMove: (id: string, dir: 1 | -1) => void;
 }
 
-/** 레이어 목록 — 위=앞(가장 나중에 그려지는 레이어). 순서/보임/삭제/복제를 다뤄요. */
 export function LayerPanel({ layers, selectedIds, saving, onSelect, onToggleHidden, onRemove, onDuplicate, onMove }: LayerPanelProps) {
 	if (layers.length === 0) {
 		return <p className="text-sm text-muted-foreground">레이어가 없어요. 요소 추가에서 텍스트·아바타·이미지·도형을 추가해 보세요.</p>;
 	}
-	// 위=앞 → 배열 역순으로 표시 (배열 마지막이 최상단 레이어)
 	const display = [...layers].map((layer, index) => ({ layer, arrayIndex: index })).reverse();
 
 	return (

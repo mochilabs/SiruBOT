@@ -8,9 +8,7 @@ import { editTrackPlayReply, replyPlaylistPlay } from '../utils/playFeedback.ts'
 export const name = 'play';
 export const ko = '재생';
 export const description = '음성 채널에서 노래를 재생해요.';
-/** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Play a track in your voice channel.';
-/** 음성 채널 조건(봇과 같은 채널, 원격 권한자 예외)은 음악 유스케이스가 판정해요. */
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'MemberListenable'];
 
 const VALID_PLATFORMS = ['ytsearch', 'scsearch', 'spsearch'] as const;
@@ -21,7 +19,6 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 	return named;
 }
 
-/** 옵션만 붙여요 — `/재생`처럼 서브커맨드 없이 top-level 커맨드로 승격할 때 같은 옵션 정의를 재사용해요 */
 export function withOptions<T extends SlashCommandSubcommandBuilder | SlashCommandOptionsOnlyBuilder>(builder: T): void {
 	builder
 		.addStringOption((option) =>

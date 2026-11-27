@@ -1,14 +1,7 @@
-/**
- * Wrapped 집계 — GuildTrackHistory(신청 기록)를 유저·기간 단위로 모아 카드에 쓸 통계를 만들어요.
- * 순수 집계(summarizeWrapped)와 DB 조회(loadWrappedStats)를 나눠서 집계만 단위 테스트해요.
- * userId가 있는 행만 세요 — 자동재생은 신청자가 없어 자연히 빠져요.
- */
 import { Prisma, type PrismaClient } from '@sirubot/prisma';
 
-/** 한국 표준시(UTC+9) — 시간대·날짜 집계는 서비스 기준 시간대로 맞춰요. */
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
-/** 한 번에 읽는 이력 상한 — 이보다 많은 헤비 유저는 최근 순으로 잘려요. */
 const MAX_EVENTS = 100_000;
 const TRACK_ID_CHUNK = 1000;
 
@@ -21,53 +14,39 @@ export interface WrappedTrackInfo {
 	id: string;
 	title: string;
 	artist: string;
-	/** 곡 길이 (ms) */
 	duration: number;
 	thumbnail: string | null;
-	/** 같은 곡의 다른 업로드를 묶는 키 — 없으면 트랙 id 자체가 키예요. */
 	recordingId: string | null;
 }
 
-/** 같은 기간 신청자 풀 안에서의 순위. 동점은 같은 순위예요. */
 export interface WrappedRanking {
-	/** 풀 크기 — 기간 안에 한 곡이라도 신청한 사용자 수 */
 	pool: number;
-	/** 1부터 시작하는 순위 */
 	rank: number;
-	/** 상위 몇 % (1~100, 올림) */
 	topPercent: number;
 }
 
 export interface WrappedStats {
 	totalPlays: number;
-	/** 재생한 곡 길이의 합 (분) — 실제 청취 시간이 아니라 신청 곡 길이 기준이에요. */
 	totalMinutes: number;
 	uniqueTracks: number;
 	activeDays: number;
 	longestStreak: number;
-	/** 가장 많이 신청한 시간대 (KST 0~23). 기록이 없으면 null */
 	peakHour: number | null;
-	/** KST 시간대별 신청 수 (길이 24) */
 	hourCounts: number[];
 	topTracks: Array<{ title: string; artist: string; thumbnail: string | null; plays: number }>;
 	topArtists: Array<{ artist: string; plays: number }>;
-	/** 신청 수 기준 전체 순위 — 풀이 너무 작으면 null. summarizeWrapped는 항상 null이고 loadWrappedStats가 채워요. */
 	ranking: WrappedRanking | null;
-	/** 가장 많이 들은 아티스트 기준 순위 */
 	topArtistRanking: (WrappedRanking & { artist: string }) | null;
 }
 
-/** 순위를 퍼센트로 말하기엔 풀이 너무 작으면 보여주지 않아요 (3명 중 1위가 "상위 34%"인 건 의미가 없어요). */
 export const MIN_RANKING_POOL = 5;
 
-/** higher = 나보다 신청 수가 많은 사용자 수. 풀이 작으면 null. */
 export function rankingOf(pool: number, higher: number): WrappedRanking | null {
 	if (pool < MIN_RANKING_POOL) return null;
 	const rank = higher + 1;
 	return { pool, rank, topPercent: Math.min(100, Math.max(1, Math.ceil((rank / pool) * 100))) };
 }
 
-/** KST 기준 날짜 키 (일 단위 정수) — 연속일 계산에 써요. */
 function kstDayIndex(date: Date): number {
 	return Math.floor((date.getTime() + KST_OFFSET_MS) / DAY_MS);
 }
@@ -76,11 +55,10 @@ function kstHour(date: Date): number {
 	return new Date(date.getTime() + KST_OFFSET_MS).getUTCHours();
 }
 
-/** 날짜 정수 집합에서 가장 긴 연속 구간 길이를 구해요. */
 function longestStreakOf(days: Set<number>): number {
 	let best = 0;
 	for (const day of days) {
-		if (days.has(day - 1)) continue; // 구간의 시작점에서만 센다
+		if (days.has(day - 1)) continue;
 		let length = 1;
 		while (days.has(day + length)) length += 1;
 		if (length > best) best = length;
@@ -103,7 +81,6 @@ export function summarizeWrapped(
 	}
 
 	let totalMs = 0;
-	// 같은 곡(recordingId)의 다른 업로드는 한 곡으로 합쳐요.
 	const byKey = new Map<string, { title: string; artist: string; thumbnail: string | null; plays: number }>();
 	const byArtist = new Map<string, number>();
 	for (const [trackId, plays] of playsByTrack) {
@@ -143,7 +120,6 @@ export function summarizeWrapped(
 
 export interface WrappedQuery {
 	userId: string;
-	/** null이면 모든 서버를 합쳐요. */
 	guildId: string | null;
 	from: Date;
 	to: Date;
@@ -178,10 +154,6 @@ export async function loadWrappedStats(db: PrismaClient, query: WrappedQuery): P
 	return stats;
 }
 
-/**
- * 같은 기간·범위에서 신청한 사용자들 사이의 내 순위. artist를 주면 그 아티스트 곡만 세요.
- * 내 신청 수는 풀과 같은 쿼리에서 읽어서(이력 상한과 무관하게) 순위 기준이 어긋나지 않게 해요.
- */
 async function loadRanking(db: PrismaClient, query: WrappedQuery, artist: string | null): Promise<WrappedRanking | null> {
 	const guildFilter = query.guildId ? Prisma.sql`AND h."guildId" = ${query.guildId}` : Prisma.empty;
 	const artistJoin = artist ? Prisma.sql`JOIN "Track" t ON t.id = h."trackId"` : Prisma.empty;
@@ -203,7 +175,6 @@ async function loadRanking(db: PrismaClient, query: WrappedQuery, artist: string
 
 export type WrappedPeriod = 'month' | 'year' | 'all';
 
-/** 기간 이름을 조회 구간으로 바꿔요. month는 최근 30일, year는 KST 기준 올해 1월 1일부터예요. */
 export function resolveWrappedRange(period: WrappedPeriod, now = new Date()): { from: Date; to: Date; label: string } {
 	if (period === 'month') return { from: new Date(now.getTime() - 30 * DAY_MS), to: now, label: '최근 30일' };
 	if (period === 'year') {

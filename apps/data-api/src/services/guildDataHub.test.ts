@@ -5,10 +5,6 @@ import { hub, type GuildDataFailureReason, type GuildDataPendingMeta, type Guild
 const REQUEST_ID = 'c9a1e0b2-4e6f-4a3d-8c2b-1f2e3d4c5b6a';
 const OTHER_REQUEST_ID = 'a1b2c3d4-e5f6-4748-a9b0-c1d2e3f4a5b6';
 
-/**
- * 허브의 requestGuildData()와 같은 조립을 테스트용으로 만들어요 —
- * 메타데이터를 register 전에 심고, 상관은 hub.correlate가 담당해요.
- */
 function makeRegistry(capacity = 10) {
 	const pendingMeta = new Map<string, GuildDataPendingMeta>();
 	const pending = new PendingRequestPool<GuildDataResult>({
@@ -45,11 +41,9 @@ describe('guildDataHub pending correlation', () => {
 		const first = registry.register(REQUEST_ID, 'guild-1', 'channels', 3_000);
 		expect(registry.size).toBe(1);
 
-		// 상한 초과 — 등록되지 않고 즉시 실패해요 (대기 요청 누수 방지)
 		await expect(registry.register(OTHER_REQUEST_ID, 'guild-1', 'channels', 3_000)).resolves.toEqual({ ok: false, reason: 'timeout' });
 		expect(registry.size).toBe(1);
 
-		// 첫 요청은 여전히 유효해요
 		expect(registry.handleRaw(JSON.stringify({ requestId: REQUEST_ID, guildId: 'guild-1', kind: 'channels', channels: [] }))).toBe('resolved');
 		await expect(first).resolves.toEqual({ ok: true, channels: [] });
 	});
@@ -61,7 +55,6 @@ describe('guildDataHub pending correlation', () => {
 		const assertion = expect(promise).resolves.toEqual({ ok: false, reason: 'timeout' });
 		await vi.advanceTimersByTimeAsync(3_000);
 		await assertion;
-		// 타임아웃 뒤엔 pending에서 제거됨
 		expect(registry.size).toBe(0);
 	});
 
@@ -95,7 +88,6 @@ describe('guildDataHub pending correlation', () => {
 		registry.register(REQUEST_ID, 'guild-1', 'channels', 3_000);
 
 		expect(registry.handleRaw('not-json')).toBe('malformed');
-		// 스키마 위반 — kind 누락
 		expect(registry.handleRaw(JSON.stringify({ requestId: REQUEST_ID, guildId: 'guild-1' }))).toBe('malformed');
 		expect(registry.size).toBe(1);
 	});
@@ -110,7 +102,6 @@ describe('guildDataHub pending correlation', () => {
 		);
 		expect(registry.size).toBe(1);
 
-		// 알 수 없는 응답이 와도 원래 요청은 타임아웃 시각을 유지해요
 		const assertion = expect(promise).resolves.toEqual({ ok: false, reason: 'timeout' });
 		await vi.advanceTimersByTimeAsync(3_000);
 		await assertion;
@@ -135,7 +126,6 @@ describe('guildDataHub pending correlation', () => {
 				})
 			)
 		).toBe('resolved');
-		// 이미 해소된 requestId — 중복 응답은 무시해요
 		expect(registry.handleRaw(JSON.stringify({ requestId: REQUEST_ID, guildId: 'guild-1', kind: 'channels', channels: [] }))).toBe('unmatched');
 		expect(registry.size).toBe(0);
 		return assertion;

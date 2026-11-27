@@ -5,7 +5,6 @@ import type { extractTrackData } from './trackData.ts';
 type Tx = Prisma.TransactionClient;
 type TrackData = ReturnType<typeof extractTrackData>;
 
-/** ISRC를 새로 알게 된 Track에 함께 쓰는 필드 */
 export function isrcFields(isrc: string | null, source: 'lavalink' | 'recording', at: Date) {
 	return isrc ? { isrc, isrcSource: source, isrcCheckedAt: at } : {};
 }
@@ -15,12 +14,6 @@ async function advisoryLock(tx: Tx, key: string): Promise<void> {
 	await tx.$queryRaw`SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtext(${key}))) AS l`;
 }
 
-/**
- * Track을 같은 녹음 묶음(Recording)에 연결해요. 규칙은 `@sirubot/utils/trackIdentity`예요.
- * 1. ISRC가 같은 묶음 → 2. 같은 녹음 키 중 길이 ±3초 → 3. 새 묶음.
- * 외부 조회는 하지 않아요 (재생 경로). ISRC가 없는 곡은 data-api isrcEnricher가 나중에 채우고 묶음을 합쳐요.
- * 아티스트·제목이 없어 키를 만들 수 없고 ISRC도 없으면 null (차트 밖).
- */
 export async function linkRecording(tx: Tx, data: TrackData, now: Date): Promise<string | null> {
 	const identity = trackIdentity({ title: data.title, author: data.artist, durationMs: data.duration, isrc: data.isrc, sourceName: data.source });
 	const { isrc, recordingKey: key } = identity;
@@ -64,14 +57,12 @@ export async function linkRecording(tx: Tx, data: TrackData, now: Date): Promise
 		where: { id: data.id },
 		data: {
 			recordingId: recording.id,
-			// 이미 아는 곡의 다른 업로드면 묶음의 ISRC를 물려받아 외부 조회를 건너뛰어요.
 			...(!isrc && recording.isrc ? isrcFields(recording.isrc, 'recording', now) : {})
 		}
 	});
 	return recording.id;
 }
 
-/** 재생 1회를 묶음에 반영해요: 누적 +1, 더 정식인 소스면 대표값 교체, 사람이 고른 곡이면 일별 롤업 +1. */
 export async function countRecordingPlay(
 	tx: Tx,
 	recordingId: string,

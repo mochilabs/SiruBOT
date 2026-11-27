@@ -5,7 +5,6 @@ const envSchema = z
 	.object({
 		PORT: z.coerce.number().default(3003),
 		STORAGE_DATA_DIR: z.string().default('./data'),
-		// 디스코드가 임베드 이미지를 가져가는 주소라 https 공개 도메인이어야 해요.
 		STORAGE_PUBLIC_URL: z.string().url(),
 		STORAGE_AUTH_KEY: z.string().optional(),
 		AUTH_KEY: z.string().optional()

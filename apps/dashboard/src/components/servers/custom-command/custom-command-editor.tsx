@@ -38,7 +38,6 @@ import { PERMISSION_OPTIONS, StepsEditor } from "./custom-command-steps-editor";
 import { useCommandAssistant } from "./use-command-assistant";
 import { useCustomCommandEditor } from "./use-custom-command-editor";
 
-/** "AI 도우미" 라벨 — 모바일 토글과 PC 정적 라벨이 같은 내용을 써요 */
 function ChatPanelLabel() {
 	return (
 		<span className="space-y-0.5">
@@ -52,20 +51,12 @@ function ChatPanelLabel() {
 
 interface CustomCommandEditorProps {
 	guildId: string;
-	/** null이면 새로 만들기 */
 	command: CustomCommandSummary | null;
-	/** 실행 예시 표시용 접두사 */
 	prefix: string;
 	onClose: () => void;
-	/** 저장 성공 시 서버가 돌려준 최신 상태를 부모에 전달해요 */
 	onSaved: (state: CustomCommandsState) => void;
 }
 
-/**
- * 커스텀 명령어 편집기 — 폼(이름·설명·실행 제한·스텝 조립)과 AI 채팅으로 구성해요.
- * PC에서는 폼 + 채팅 두 칸이고, 좁은 화면에서는 채팅이 접이식 섹션으로 위에 놓여요.
- * 폼 상태·저장은 useCustomCommandEditor, AI 채팅은 useCommandAssistant가 맡아요.
- */
 export function CustomCommandEditor({
 	guildId,
 	command,
@@ -147,7 +138,6 @@ export function CustomCommandEditor({
 				if (!isOpen) requestClose();
 			}}
 		>
-			{/* 기본 폭(sm:max-w-sm)과 높이 제한을 벗어나려면 sm:도 같이 덮어야 해요 */}
 			<DialogContent className="flex h-[calc(100dvh-1rem)] w-[calc(100%-2rem)] max-w-6xl flex-col gap-4 overflow-hidden sm:h-[90dvh] sm:max-w-6xl">
 				<DialogHeader>
 					<DialogTitle>{command ? "커스텀 명령어 수정" : "새 커스텀 명령어"}</DialogTitle>
@@ -156,11 +146,8 @@ export function CustomCommandEditor({
 					</DialogDescription>
 				</DialogHeader>
 
-				{/* 폼 + AI 채팅 — 좁은 화면에선 한 칸, PC에선 두 칸 (왼쪽 폼, 오른쪽 채팅) */}
 				<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
-					{/* 폼 (왼쪽) */}
 					<div className="space-y-4 lg:col-start-1 lg:row-start-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
-						{/* 실행 방식 — 생성 시점에 정해지고 바뀌지 않아요 */}
 						<Field
 							label="실행 방식"
 							description={
@@ -233,7 +220,6 @@ export function CustomCommandEditor({
 							/>
 						</Field>
 
-						{/* 실행 제한 */}
 						<Field
 							label="실행 제한"
 							description={
@@ -314,7 +300,6 @@ export function CustomCommandEditor({
 							</div>
 						</Field>
 
-						{/* 스텝 블록 조립 */}
 						<div className="space-y-2">
 							<div className="flex items-center justify-between">
 								<p className="text-sm font-bold text-foreground">
@@ -343,7 +328,6 @@ export function CustomCommandEditor({
 						</div>
 					</div>
 
-					{/* AI 채팅 (오른쪽) — 좁은 화면에선 접이식 섹션, PC에선 항상 보여요 */}
 					<div className="order-first flex flex-col gap-2 rounded-menu bg-muted/20 p-3 lg:order-none lg:col-start-2 lg:row-start-1 lg:min-h-0">
 						<Button
 							variant="outline"

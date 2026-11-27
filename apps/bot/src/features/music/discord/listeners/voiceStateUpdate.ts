@@ -14,7 +14,6 @@ import { inGuildTheme } from '../../../../lib/guildThemeScope.ts';
 	event: Events.VoiceStateUpdate
 })
 export class VoiceStateUpdateListener extends Listener {
-	/** 음성 채널이 비었을 때 퇴장 유예(ms) — 기본 5분, lib/config.ts */
 	private get LEAVE_TIMEOUT_MS(): number {
 		return getConfig().playback.leaveTimeoutMs;
 	}
@@ -53,7 +52,6 @@ export class VoiceStateUpdateListener extends Listener {
 	private checkEmptyChannel(channel: VoiceState['channel'], guildId: string, player: CustomPlayer) {
 		if (!channel) return;
 
-		// Non-bot members that are actually listening (not deafened)
 		const listeningMembers = channel.members.filter((m) => !m.user.bot && !m.voice.deaf);
 
 		if (listeningMembers.size === 0) {
@@ -61,7 +59,6 @@ export class VoiceStateUpdateListener extends Listener {
 
 			this.clearTimer(guildId);
 
-			// 타이머 소유자는 container.voiceLeaveTimers — 종료 때 stop()이 남은 퇴장 타이머를 해제해요
 			this.container.voiceLeaveTimers.set(
 				guildId,
 				async () => {

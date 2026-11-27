@@ -20,7 +20,6 @@ export function usePlaylists() {
 	const { status } = useSession();
 	const toast = useToast();
 
-	// 세션 만료 리다이렉트·인증 게이트는 useAuthedSWR가 담당해요 — 로그인 후 이 화면으로 돌아와요
 	const { data: listData, error: listError, mutate: mutateList, isLoading: listLoading } = useAuthedSWR<{ playlists: Playlist[] }>("/api/playlists", "/playlists");
 
 	const playlists = useMemo(() => {
@@ -34,7 +33,6 @@ export function usePlaylists() {
 
 	const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
 
-	// 활성 id가 없거나 목록에서 사라졌으면(삭제 등) 즐겨찾기 → 첫 항목으로 다시 골라요
 	useEffect(() => {
 		if (!listData) return;
 		if (playlists.length === 0) {
@@ -70,7 +68,6 @@ export function usePlaylists() {
 	const [trackInput, setTrackInput] = useState("");
 	const [loadingAddTrack, setLoadingAddTrack] = useState(false);
 
-	// 키 입력 1회당 요청이 나가지 않도록 400ms 디바운스 (search-input.tsx와 같은 패턴)
 	const debouncedTrackInput = useDebounce(trackInput.trim(), 400);
 
 	const { data: searchData, error: searchError, isLoading: searchLoadingApi } = useSWR<SearchTracksResponse>(
@@ -80,11 +77,10 @@ export function usePlaylists() {
 		{ keepPreviousData: true }
 	);
 	const searchedTracks = useMemo(() => searchData?.tracks ?? [], [searchData?.tracks]);
-	// 디바운스가 아직 따라오지 못한 타이핑 중에도 로딩으로 표시해요
 	const searchLoading = searchLoadingApi || trackInput.trim() !== debouncedTrackInput;
 
 	const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
-	// 순서 변경 요청은 한 번에 하나씩만 보내요 (연타 시 낙관 상태가 서버 값으로 되돌아가 깜빡이는 것 방지)
+	// 연타 시 낙관적 상태 깜빡임 방지
 	const reorderingRef = useRef(false);
 	const [reordering, setReordering] = useState(false);
 
@@ -232,7 +228,6 @@ export function usePlaylists() {
 		setLoadingAddTrack(false);
 	};
 
-	/** 트랙 삭제 확인 모달을 열어요 (window.confirm 대신 ConfirmDeleteModal 같은 모달 확인 패턴) */
 	const handleRemoveTrack = (position: number, title: string) => {
 		if (!activePlaylistId) return;
 		setRemoveTrackTarget({ position, title });
@@ -243,7 +238,6 @@ export function usePlaylists() {
 		const { position } = removeTrackTarget;
 		setLoadingSubmit(true);
 		const data = await callApi(`/api/playlists/${activePlaylistId}/tracks?position=${position}`, { method: "DELETE" }, { success: "곡을 삭제했어요.", failure: "곡을 삭제하지 못했어요." });
-		// 요청이 끝난 뒤에 닫아 진행 중 표시와 대상 제목을 유지해요
 		setRemoveTrackTarget(null);
 		if (data) {
 			mutateDetail();
@@ -264,7 +258,7 @@ export function usePlaylists() {
 
 		mutateDetail({ playlist: activePlaylist!, tracks: reindexed }, { revalidate: false });
 
-		// 실패해도 finally 대신 호출 뒤 무조건 재검증 — 낙관적 업데이트를 실제 서버값으로 정리해요.
+		// 실패해도 서버 값으로 복구하기 위해 항상 재검증
 		await callApi(`/api/playlists/${activePlaylistId}/reorder`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },

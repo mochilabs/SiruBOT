@@ -12,7 +12,6 @@ const commandName = (key: string) => key.slice('commands:'.length);
 const devCommands = new Set(commandPieces.filter((p) => p.category === '개발').map((p) => commandName(p.key)));
 const publicCommands = new Set(commandPieces.filter((p) => p.category !== '개발').map((p) => commandName(p.key)));
 const listed = BOT_MODULES.flatMap((m) => m.commands);
-/** music·play·skip·stop은 음악 서브커맨드 카탈로그로 설명을 그려요 */
 const CATALOG_DRAWN = new Set(['music', 'play', 'skip', 'stop']);
 
 const ctx = (overrides: Partial<HelpContext> = {}): HelpContext => ({

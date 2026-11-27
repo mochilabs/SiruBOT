@@ -49,7 +49,6 @@ export function AdminDashboard() {
 
 	return (
 		<div className="space-y-6">
-			{/* 모바일/태블릿 가로 탭 */}
 			<div className="lg:hidden">
 				<Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AdminTabKey)}>
 					<TabsList className="w-full justify-start overflow-x-auto scrollbar-none">
@@ -68,7 +67,6 @@ export function AdminDashboard() {
 				</Tabs>
 			</div>
 
-			{/* 데스크톱 사이드바 + 본문 */}
 			<div className="hidden lg:flex lg:items-start lg:gap-8">
 				<ServerFeatureSidebar
 					items={ADMIN_TABS}

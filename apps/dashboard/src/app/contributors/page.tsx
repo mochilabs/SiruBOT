@@ -15,7 +15,6 @@ export const metadata: Metadata = {
   description: "시루봇을 함께 만들어 나가는 모든 기여자를 소개해요.",
 };
 
-/** GitHub 기여자 응답에서 쓰는 필드만 골라요 */
 interface Contributor {
   login: string;
   avatar_url: string;
@@ -24,7 +23,6 @@ interface Contributor {
   type: string;
 }
 
-/** 주간 커밋 통계(stats/commit_activity)의 한 주 — days는 일~토 7칸이에요 */
 interface CommitWeek {
   week: number;
   days: number[];
@@ -32,7 +30,6 @@ interface CommitWeek {
 
 async function fetchContributors(): Promise<Contributor[]> {
   const all: Contributor[] = [];
-  // per_page 100의 최대 10페이지를 넘어보며 전체 기여자를 모아요 ("전부" 요약)
   for (let page = 1; page <= 10; page++) {
     const res = await fetch(`https://api.github.com/repos/${REPO}/contributors?per_page=100&page=${page}`, {
       headers: { Accept: "application/vnd.github+json" },
@@ -47,11 +44,7 @@ async function fetchContributors(): Promise<Contributor[]> {
   return all;
 }
 
-/**
- * 최근 1년 주간 커밋 통계. GitHub stats API는 첫 요청에 202(계산 중)를 줘요 —
- * 백그라운드 계산이 끝날 시간을 주고 짧게 대기한 뒤 재시도해요(즉시 재요청은 또 202를 받음).
- * 2회 재시도 후에도 준비 안 됐으면 null을 돌려 히트맵만 숨겨요(fail-open).
- */
+// GitHub stats API는 첫 요청에 202(계산 중)를 반환할 수 있어 대기 후 재시도 (2회 실패 시 fail-open)
 async function fetchCommitActivity(): Promise<CommitWeek[] | null> {
   for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetch(`https://api.github.com/repos/${REPO}/stats/commit_activity`, {
@@ -59,7 +52,6 @@ async function fetchCommitActivity(): Promise<CommitWeek[] | null> {
       next: { revalidate: 86400 },
     });
     if (res.status === 202) {
-      // GitHub이 통계를 계산 중 — 잠시 대기 후 재시도(계산 완료 시간을 줘야 200을 받아요)
       const { promise, resolve } = Promise.withResolvers<void>();
       setTimeout(resolve, 1500);
       await promise;
@@ -98,10 +90,7 @@ function CommitHeatmap({ weeks }: { weeks: CommitWeek[] | null }) {
           총 {total.toLocaleString()}커밋 · {fmt(startDate)} ~ {fmt(endDate)}
         </p>
       </div>
-      {/* 가로 스크롤은 이 히트맵 안에만 — 페이지 오버플로우로 새지 않게.
-          모바일 초기 뷰는 최신 주(오른쪽 끝)에 맞춰요(클라이언트 ref 스크롤). */}
       <CommitHeatmapGrid weeks={weeks} />
-      {/* 범례 — 색만으로 상태를 전달하지 않게 텍스트 병행 */}
       <div className="mt-3 flex items-center gap-2 text-2xs text-muted-foreground">
         <span>적음</span>
         <CommitHeatmapLegend />

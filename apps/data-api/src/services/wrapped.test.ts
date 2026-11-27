@@ -11,7 +11,6 @@ const track = (id: string, patch: Partial<WrappedTrackInfo> = {}): WrappedTrackI
 	...patch
 });
 
-// KST = UTC+9 — 2026-03-01T15:00Z는 KST 3월 2일 0시예요.
 const kst = (day: number, hour: number) => new Date(Date.UTC(2026, 2, day, hour - 9));
 
 describe('summarizeWrapped', () => {
@@ -39,7 +38,7 @@ describe('summarizeWrapped', () => {
 		);
 		expect(stats.uniqueTracks).toBe(2);
 		expect(stats.topTracks[0]).toMatchObject({ plays: 3, thumbnail: 'https://i.ytimg.com/x.jpg' });
-		expect(stats.totalMinutes).toBe(12); // 4곡 × 3분
+		expect(stats.totalMinutes).toBe(12);
 		expect(stats.topArtists[0]).toEqual({ artist: 'artist', plays: 3 });
 	});
 
@@ -86,7 +85,6 @@ describe('rankingOf', () => {
 	});
 	it('last place is 100% and ties share the same rank via the higher count', () => {
 		expect(rankingOf(10, 9)).toEqual({ pool: 10, rank: 10, topPercent: 100 });
-		// 공동 1위 두 명: 둘 다 higher=0 → rank 1
 		expect(rankingOf(10, 0)?.rank).toBe(1);
 	});
 });

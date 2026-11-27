@@ -18,7 +18,6 @@ const patchSchema = z.object({
 	goodbye: greetingConfigSchema.nullable().optional(),
 });
 
-/** Prisma Json? 컬럼 읽기 — 공용 스키마 검증으로 깨진 저장값은 null로 취급해요 (UI가 기본값을 깔아요) */
 function readConfig(value: unknown): GreetingConfig | null {
 	if (value === null || value === undefined) return null;
 	return validateGreetingConfig(value);
@@ -29,7 +28,6 @@ async function readPair(id: string): Promise<GreetingPair> {
 	return { welcome: readConfig(guild?.welcome), goodbye: readConfig(guild?.goodbye) };
 }
 
-/** JSON 컬럼 쓰기 — null 리셋은 DB NULL로 기록해요 (읽기는 null, 봇·UI는 기본값으로 폴백해요) */
 function asJsonWrite(value: GreetingConfig | null | undefined) {
 	return value === null ? Prisma.DbNull : value;
 }
@@ -48,11 +46,6 @@ export const GET = createGuildApiHandler({
 	},
 });
 
-/**
- * 인사 설정 저장 — 저장값이 없는 길드는 upsert로 Guild 행을 만들어요 (settings 라우트와 같은 방식).
- * null은 기본값 사용으로 저장해요 (봇도 Json 컬럼이 비어 있으면 자기 기본값으로 동작해요).
- * 저장 후 인사 설정 캐시 무효화를 봇 프로세스에 브로드캐스트해요 (settings 라우트와 같은 방식).
- */
 export const PATCH = createGuildApiHandler({
 	role: "manage",
 	rate: WRITE_RATE,
@@ -77,7 +70,6 @@ export const PATCH = createGuildApiHandler({
 
 			const pair = await readPair(guildId);
 
-			// 저장 성공 후 인사 설정 캐시 무효화 (fire-and-forget) — 실패해도 봇의 60초 TTL 폴백이 최신값을 읽어요.
 			notifyGuildSettingsChanged(guildId).catch((error) => {
 				console.warn(`Failed to notify guild settings change (guild ${guildId}):`, error);
 			});

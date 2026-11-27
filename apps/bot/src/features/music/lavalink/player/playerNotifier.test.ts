@@ -29,7 +29,6 @@ vi.mock('@sapphire/framework', () => ({
 	}
 }));
 
-/** PlayerNotifier가 받는 LavalinkDeps 역할 */
 const deps = {
 	logger: { getSubLogger: () => mocks.logger },
 	guildService: { getGuild: mocks.guild },
@@ -66,7 +65,6 @@ interface TestMessage {
 }
 
 function applyAttachments(result: TestMessage, payload: { files: AttachmentBuilder[]; attachments?: { id: string }[] }) {
-	// discord.js의 실제 변환을 사용해 files: []가 기존 첨부를 제거하는 동작도 검증한다.
 	const target = { client: { options: {} } } as unknown as Message;
 	const body = new MessagePayload(target, { files: payload.files, attachments: payload.attachments?.map((file) => ({ ...file })) }).resolveBody()
 		.body!;
@@ -125,7 +123,6 @@ function card(trackKey = 'a') {
 	};
 }
 
-// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
 beforeEach(() => setConfigForTesting(makeTestConfig()));
 afterEach(() => setConfigForTesting(null));
 
@@ -229,7 +226,6 @@ describe('non-blocking player notifications', () => {
 		const current = player();
 		await notifier.sendController(current);
 		notifier.updateController(current);
-		// debounce 타이머 1개 + 진행 틱 인터벌 1개가 걸려 있어요
 		expect(vi.getTimerCount()).toBeGreaterThanOrEqual(2);
 
 		await notifier.stop();
@@ -346,7 +342,7 @@ describe('non-blocking player notifications', () => {
 		vi.useFakeTimers();
 		mocks.pinned.mockResolvedValue('channel');
 		const rendering = pending<ReturnType<typeof card> | null>();
-		mocks.render.mockReturnValue(rendering.promise); // 첫 카드 요청이 진행 중
+		mocks.render.mockReturnValue(rendering.promise);
 		const editing = pending<TestMessage>();
 		const notifier = new PlayerNotifier(deps);
 		const current = player();
@@ -360,7 +356,6 @@ describe('non-blocking player notifications', () => {
 		editing.resolve(message('message-1'));
 		rendering.resolve(null);
 		await vi.advanceTimersByTimeAsync(0);
-		// 파괴 뒤에는 진행 중이던 edit/카드가 끝나도 새 이미지 요청을 하지 않는다.
 		expect(mocks.render).toHaveBeenCalledTimes(1);
 		expect(current.controller).toBeNull();
 	});
@@ -392,14 +387,11 @@ describe('non-blocking player notifications', () => {
 		await notifier.sendController(current);
 		(current.controller!.edit as Mock).mockRejectedValue({ code: 10008 });
 		Object.defineProperty(current, 'position', { value: 1000 });
-		// 10008 복구 경로의 pinned 재확인만 늦춘다 — 그 사이에 컨트롤러가 삭제되면 재생성하지 않는다.
 		const recheck = pending<string | null>();
-		mocks.pinned
-			.mockResolvedValueOnce('channel') // updateControllerNow 본문의 pinned 조회
-			.mockReturnValueOnce(recheck.promise); // catch 복구 분기의 재확인
+		mocks.pinned.mockResolvedValueOnce('channel').mockReturnValueOnce(recheck.promise);
 		notifier.updateController(current);
 		await vi.advanceTimersByTimeAsync(300);
-		expect(mocks.pinned).toHaveBeenCalledTimes(4); // send 2회(패널 조회 포함) + update 2회
+		expect(mocks.pinned).toHaveBeenCalledTimes(4);
 		await notifier.deleteController(current);
 		recheck.resolve('channel');
 		await vi.advanceTimersByTimeAsync(0);

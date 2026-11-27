@@ -32,15 +32,9 @@ function writeBest(score: number) {
 	try {
 		localStorage.setItem(BEST_KEY, String(score));
 	} catch {
-		// 저장 실패는 무시해요
 	}
 }
 
-/**
- * 404 모니터 속 미니게임 — 시루(네모)가 달려오는 404 블록을 뛰어넘어요.
- * 스페이스/위 화살표/화면 터치로 점프하고, Esc나 닫기 버튼으로 모니터를 꺼요.
- * 색은 캔버스가 CSS 변수를 직접 읽어 테마를 따라가요.
- */
 export function NotFoundGame({ onExit }: { onExit: () => void }) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const [phase, setPhase] = useState<Phase>("ready");
@@ -114,7 +108,6 @@ export function NotFoundGame({ onExit }: { onExit: () => void }) {
 			ctx.fillRect(0, GROUND, W, 2);
 			ctx.globalAlpha = 1;
 
-			// 장애물 — 404 블록
 			for (const o of obstacles) {
 				ctx.fillStyle = muted;
 				ctx.beginPath();
@@ -122,7 +115,6 @@ export function NotFoundGame({ onExit }: { onExit: () => void }) {
 				ctx.fill();
 			}
 
-			// 시루 — 둥근 네모와 눈
 			ctx.fillStyle = accent;
 			ctx.beginPath();
 			ctx.roundRect(PLAYER_X, y, SIZE, SIZE, 7);
@@ -171,7 +163,6 @@ export function NotFoundGame({ onExit }: { onExit: () => void }) {
 				for (const o of obstacles) o.x -= speed * dt;
 				obstacles = obstacles.filter((o) => o.x + o.w > -10);
 
-				// 충돌 — 살짝 너그럽게(2px)
 				const hit = obstacles.some((o) => PLAYER_X + SIZE - 2 > o.x && PLAYER_X + 2 < o.x + o.w && y + SIZE - 2 > GROUND - o.h);
 				setScore(Math.floor(distance / 10));
 				if (hit) {

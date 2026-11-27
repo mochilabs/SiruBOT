@@ -15,10 +15,6 @@ const actionSchema = z
     }
   });
 
-/**
- * 나눔 종료(지금 추첨)·취소·다시 뽑기 — 결과 발표는 봇 토큰이 필요해서 data-api → Redis로 봇에 위임해요.
- * 나눔이 이 서버 것인지와 상태(진행 중·종료)는 봇이 확인해 한국어 사유로 돌려줘요.
- */
 export const POST = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,

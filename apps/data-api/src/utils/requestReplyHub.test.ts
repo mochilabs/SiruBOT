@@ -5,7 +5,6 @@ import { wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { sharedCache } from './cache.ts';
 import { createRequestReplyHub } from './requestReplyHub.ts';
 
-/** HubSubscriber를 가로채 onMessage·start·stop 호출만 관찰해요 — Redis 연결 없이 구독 메시지 경로를 검증해요 */
 const subscriberState = vi.hoisted(() => ({
 	options: null as null | { name: string; channel: string; onMessage: (message: string, channel: string) => void },
 	start: vi.fn(async () => undefined),
@@ -117,12 +116,10 @@ describe('createRequestReplyHub', () => {
 		const { options } = subscriberState;
 		expect(options?.channel).toBe('test:response');
 
-		// 서명 없는 위조 본문은 상관하지 않아요
 		options?.onMessage(reply(REQUEST_ID), 'test:response');
 		expect(logger.warn).toHaveBeenCalledWith('Rejected test response with invalid signature');
 		expect(hub.status().pending).toBe(1);
 
-		// 올바른 서명 메시지는 상관해요
 		options?.onMessage(wrapRedisMessage('shared-key', { requestId: REQUEST_ID, guildId: GUILD_ID }), 'test:response');
 		await expect(promise).resolves.toEqual({ ok: true });
 	});
@@ -144,7 +141,6 @@ describe('createRequestReplyHub', () => {
 		expect(second).toEqual({ ok: false, reason: 'timeout' });
 		expect(hub.status().pending).toBe(1);
 
-		// 용량 초과로 정리된 요청의 메타는 남지 않아 늦은 응답도 unmatched예요
 		expect(hub.correlate(reply(OTHER_REQUEST_ID))).toBe('unmatched');
 		expect(hub.correlate(reply(REQUEST_ID))).toBe('resolved');
 		await expect(first).resolves.toEqual({ ok: true });
@@ -158,7 +154,6 @@ describe('createRequestReplyHub', () => {
 		await expect(hub.request(call())).resolves.toEqual({ ok: false, reason: 'redis_unavailable' });
 		expect(hub.status().pending).toBe(0);
 		expect(logger.warn).toHaveBeenCalledWith(`Test request publish failed (${GUILD_ID}): boom`);
-		// 메타가 정리돼 늦게 도착한 응답은 무시돼요
 		expect(hub.correlate(reply(REQUEST_ID))).toBe('unmatched');
 	});
 

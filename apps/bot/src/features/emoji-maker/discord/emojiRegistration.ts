@@ -5,12 +5,10 @@ const MAX_EMOJIS_REACHED = 30008;
 const MISSING_PERMISSIONS = 50013;
 const INVALID_FORM_BODY = 50035;
 
-/** 서버 이모지를 만들 수 있는 권한 — 새 권한(CreateGuildExpressions)이나 예전 관리 권한 둘 중 하나면 돼요. */
 export function canCreateEmoji(permissions: Readonly<PermissionsBitField>): boolean {
 	return permissions.has(PermissionFlagsBits.CreateGuildExpressions) || permissions.has(PermissionFlagsBits.ManageGuildExpressions);
 }
 
-/** 등록 전에 사람과 봇 권한을 함께 확인해요. 문제가 없으면 null, 있으면 안내 문구예요. */
 export function emojiPermissionProblem(member: GuildMember, me: GuildMember | null): string | null {
 	if (!canCreateEmoji(member.permissions)) return `${emoji('lock')} 서버 이모지를 등록하려면 **표현 만들기** 또는 **표현 관리** 권한이 필요해요.`;
 	if (!me || !canCreateEmoji(me.permissions))
@@ -18,7 +16,6 @@ export function emojiPermissionProblem(member: GuildMember, me: GuildMember | nu
 	return null;
 }
 
-/** 서버 이모지를 만들고 마크업(`<:name:id>`)을 돌려줘요. 실패하면 사용자에게 보여줄 문구를 담아 던져요. */
 export async function createGuildEmoji(guild: Guild, image: Buffer, name: string, reason: string): Promise<string> {
 	try {
 		const created = await guild.emojis.create({ attachment: image, name, reason });

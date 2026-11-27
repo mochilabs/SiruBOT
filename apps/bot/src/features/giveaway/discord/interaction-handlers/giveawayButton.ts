@@ -7,10 +7,6 @@ import { giveawayNoticeView } from '../views/giveawayViews.ts';
 
 type GiveawayAction = NonNullable<ReturnType<typeof giveawayId.decode>>;
 
-/**
- * 나눔 카드 버튼 — `giveaway:v1:enter:{id}`는 참여, 이미 참여한 사람이 다시 누르면 취소 확인(`leave`)을 보여줘요.
- * 참여는 DB insert 한 번이고, 카드 숫자는 서비스가 10초에 한 번만 고쳐요.
- */
 export default class GiveawayButtonHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
 		super(ctx, { ...options, interactionHandlerType: InteractionHandlerTypes.Button });

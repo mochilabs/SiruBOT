@@ -7,7 +7,6 @@ const INTERVAL_MS = 1_000;
 const START_MESSAGE = '테스트 폴러를 시작해요.';
 const BREAKER_OPEN_MESSAGE = `테스트 폴러가 ${BREAKER_THRESHOLD}틱 연속 실패: 봉쇄해요.`;
 
-/** 테스트용 최소 폴러: pollOnce 호출 수와 결과만 조작해요. */
 class FakePoller extends SubscriptionPoller {
 	public pollCalls = 0;
 	public outcome: PollOutcome;
@@ -54,7 +53,6 @@ function makePoller(outcome: PollOutcome, overrides: { acquireLock?: () => Promi
 	return { poller, acquireLock, info, error };
 }
 
-/** 폴러를 켜고 ticks번의 틱이 지나가게 해요 (첫 즉시 틱 + interval마다 1틱). */
 async function runTicks(poller: FakePoller, ticks: number): Promise<void> {
 	poller.start();
 	await vi.advanceTimersByTimeAsync(0);
@@ -144,7 +142,6 @@ describe('PollingLoop', () => {
 		expect(onError).toHaveBeenCalledTimes(1);
 		expect((onError.mock.calls[0] as unknown as [Error])[0].message).toBe('치명 장애');
 		expect(loop.isRunning).toBe(false);
-		// 다시 시동하면 새 세대로 돌아요.
 		loop.start();
 		await vi.advanceTimersByTimeAsync(0);
 		expect(tick).toHaveBeenCalledTimes(2);
@@ -159,16 +156,16 @@ describe('PollingLoop', () => {
 		});
 		const loop = new PollingLoop({ name: 'test', intervalMs: INTERVAL_MS, tick });
 		loop.start();
-		expect(tick).toHaveBeenCalledTimes(1); // 즉시 틱이 몸통을 점유 중
+		expect(tick).toHaveBeenCalledTimes(1);
 		loop.stop();
-		loop.start(); // 몸통이 진행 중이므로 건너뛰고 다음 틱만 예약해요.
+		loop.start();
 		expect(tick).toHaveBeenCalledTimes(1);
 		await vi.advanceTimersByTimeAsync(2 * INTERVAL_MS);
-		expect(tick).toHaveBeenCalledTimes(1); // gate가 안 열렸으니 몸통은 계속 점유 상태
+		expect(tick).toHaveBeenCalledTimes(1);
 		release();
-		await vi.advanceTimersByTimeAsync(0); // 이전 세대 몸통 종료: 세대가 달라 예약은 무시돼요.
+		await vi.advanceTimersByTimeAsync(0);
 		await vi.advanceTimersByTimeAsync(INTERVAL_MS);
-		expect(tick).toHaveBeenCalledTimes(2); // 새 세대 타이머 연쇄만 살아 있어요.
+		expect(tick).toHaveBeenCalledTimes(2);
 		loop.stop();
 		await vi.advanceTimersByTimeAsync(3 * INTERVAL_MS);
 		expect(tick).toHaveBeenCalledTimes(2);
@@ -212,33 +209,33 @@ describe('SubscriptionPoller', () => {
 		expect(error).toHaveBeenCalledTimes(1);
 		expect(error).toHaveBeenCalledWith(BREAKER_OPEN_MESSAGE);
 		await vi.advanceTimersByTimeAsync(3 * INTERVAL_MS);
-		expect(poller.pollCalls).toBe(BREAKER_THRESHOLD); // 봉쇄 중: 도메인 폴링 없음
-		fakeNow += BREAKER_COOLDOWN_MS + 1; // 쿨다운 종료
+		expect(poller.pollCalls).toBe(BREAKER_THRESHOLD);
+		fakeNow += BREAKER_COOLDOWN_MS + 1;
 		await vi.advanceTimersByTimeAsync(INTERVAL_MS);
-		expect(poller.pollCalls).toBe(BREAKER_THRESHOLD + 1); // half-open 재시도
+		expect(poller.pollCalls).toBe(BREAKER_THRESHOLD + 1);
 		poller.stop();
 	});
 
 	it('keeps consecutive failures across skipped ticks and resets them on a successful tick', async () => {
 		const fakeNow = 1_700_000_000_000;
 		const first = makePoller('failed', { now: () => fakeNow });
-		await runTicks(first.poller, 4); // 실패 4연속
+		await runTicks(first.poller, 4);
 		first.poller.outcome = 'skipped';
-		await vi.advanceTimersByTimeAsync(INTERVAL_MS); // 건너뛴 틱은 실패 계정에 영향을 주지 않아요
+		await vi.advanceTimersByTimeAsync(INTERVAL_MS);
 		first.poller.outcome = 'failed';
-		await vi.advanceTimersByTimeAsync(INTERVAL_MS); // 5번째 실패: 브레이커 개방
+		await vi.advanceTimersByTimeAsync(INTERVAL_MS);
 		expect(first.poller.pollCalls).toBe(6);
 		first.poller.outcome = 'ok';
 		await vi.advanceTimersByTimeAsync(2 * INTERVAL_MS);
-		expect(first.poller.pollCalls).toBe(6); // 봉쇄 중이라 성공 틱도 폴링 자체를 건너뛰어요
+		expect(first.poller.pollCalls).toBe(6);
 		first.poller.stop();
 
 		const second = makePoller('failed', { now: () => fakeNow });
-		await runTicks(second.poller, 4); // 실패 4연속
+		await runTicks(second.poller, 4);
 		second.poller.outcome = 'ok';
-		await vi.advanceTimersByTimeAsync(INTERVAL_MS); // 성공: 카운트 리셋
+		await vi.advanceTimersByTimeAsync(INTERVAL_MS);
 		second.poller.outcome = 'failed';
-		await vi.advanceTimersByTimeAsync(4 * INTERVAL_MS); // 실패 4연속: 브레이커 미개방
+		await vi.advanceTimersByTimeAsync(4 * INTERVAL_MS);
 		expect(second.poller.pollCalls).toBe(9);
 		second.poller.stop();
 	});

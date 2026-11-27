@@ -1,10 +1,3 @@
-/**
- * 프로필 카드 렌더러(Takumi) — 대시보드 디자인 언어(tokens.ts)를 따르는 세 가지 템플릿이에요. (`dark` 프리셋은 dashboard와 같은 모양이고, `ticket`은 profileCardTicket.tsx가 그려요.)
- *  - dashboard: 대시보드 다크 서피스 + 브랜드 핑크 강조
- *  - light:     대시보드 라이트 테마(핑크 틴트 흰 카드)
- *  - aura:      배너(없으면 아바타)에서 따온 색 번짐 배경 + 대표색 강조 — 서버 태그/역할 칩도 그 색을 따라가요
- * 높이는 내용(역할 칩·최근 곡 수)에 따라 달라요. 그림자는 비싸서 쓰지 않고, 경계선과 서피스 단차로 층을 나눠요.
- */
 import type { CSSProperties, ReactNode } from 'react';
 import { CARD_FONT, type CardTokens, createAsyncLru, hexToRgba, mixHex, RADIUS, stripEmoji, T, themedTokens, W } from '@sirubot/cards';
 import { THEME_PRESET_DEFAULT, THEME_PRESET_HEX, normalizeThemePreset } from '@sirubot/utils/guildSettingsContract';
@@ -17,7 +10,6 @@ export type ProfileCardVariant = 'dashboard' | 'light' | 'aura';
 
 export interface ProfileCardInput {
 	variant: ProfileCardVariant;
-	/** 서버 테마 프리셋 — 다크 계열 카드의 색을 정해요. 비우면 기본(분홍). */
 	themePreset?: string;
 	displayName: string;
 	username: string;
@@ -51,24 +43,18 @@ export const STATUS_COLOR: Record<ProfileCardInput['status'], string> = {
 
 export interface Theme {
 	background: string;
-	/** 카드 안 패널 */
 	panel: string;
-	/** 패널 안 더 깊은 단 */
 	panelInner: string;
 	border: string;
 	foreground: string;
 	muted: string;
-	/** 숫자·강조 텍스트 */
 	strong: string;
 	accent: string;
-	/** accent 위 글자 */
 	onAccent: string;
-	/** 칩 배경/글자 */
 	chipBg: string;
 	chipText: string;
 }
 
-/** 다크 테마 — 토큰은 서버 테마에서 유도해요 (분홍=기본이면 대시보드 다크 토큰 그대로). */
 export function darkTheme(t: CardTokens): Theme {
 	return {
 		background: t.background,
@@ -87,7 +73,6 @@ export function darkTheme(t: CardTokens): Theme {
 
 export const DARK: Theme = { ...darkTheme(T), border: 'rgba(163, 125, 137, 0.35)' };
 
-/** 대시보드 라이트 토큰(globals.css :root)을 옮긴 값 */
 export const LIGHT: Theme = {
 	background: '#fff9f9',
 	panel: '#ffffff',
@@ -102,9 +87,7 @@ export const LIGHT: Theme = {
 	chipText: '#4f1c2a'
 };
 
-/** 이미지는 같은 URL이면 다시 받지 않아요 — 아바타·썸네일 공용 */
 export const loadImage = createAsyncLru<string>(96, (url) => fetchImageDataUri(url));
-/** aura 배경: 배너/아바타 → 초소형 번짐 이미지 + 대표색 */
 const loadBackdrop = createAsyncLru<PreparedArtwork>(32, async (url) => prepareArtwork(await fetchImageDataUri(url), 64));
 
 export const ellipsis = { display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const satisfies CSSProperties;
@@ -168,7 +151,6 @@ export function Thumb({ uri, size, accent }: { uri: string | null; size: number;
 }
 
 export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer> {
-	// 다크 계열(dashboard/aura)만 서버 테마를 따라가요. 분홍(기본)은 기존 DARK 그대로예요.
 	const themeAccent = THEME_PRESET_HEX[normalizeThemePreset(input.themePreset)];
 	const base =
 		input.variant === 'light'
@@ -178,14 +160,12 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 				: darkTheme(themedTokens(themeAccent, THEME_PRESET_HEX[THEME_PRESET_DEFAULT]));
 	const tracks = input.topTracks.slice(0, 3);
 
-	// 이미지는 한 번에 받아요. 실패한 것은 null이라 자리표시자로 그려요.
 	const [avatarUri, nowUri, ...trackUris] = await Promise.all([
 		input.avatarUrl ? loadImage(input.avatarUrl) : null,
 		input.nowPlaying?.thumbnailUrl ? loadImage(input.nowPlaying.thumbnailUrl) : null,
 		...tracks.map((t) => (t.thumbnailUrl ? loadImage(t.thumbnailUrl) : null))
 	]);
 
-	// aura: 배너가 있으면 배너, 없으면 아바타에서 배경과 대표색을 얻어요.
 	let backdrop: PreparedArtwork | null = null;
 	if (input.variant === 'aura') {
 		backdrop = (input.bannerUrl ? await loadBackdrop(input.bannerUrl) : null) ?? (input.avatarUrl ? await loadBackdrop(input.avatarUrl) : null);
@@ -209,7 +189,6 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 	const statusColor = STATUS_COLOR[input.status];
 	const intro = stripEmoji(input.intro);
 
-	// 스탯 타일 — 값이 있는 것만
 	const tiles: { icon: IconName; value: string; label: string }[] = [
 		{ icon: 'list-music', value: `${input.playlistCount.toLocaleString('ko-KR')}개`, label: '플레이리스트' },
 		{ icon: 'music', value: `${input.requestedCount.toLocaleString('ko-KR')}곡`, label: '신청한 곡' }
@@ -217,7 +196,6 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 	if (input.listenText) tiles.push({ icon: 'history', value: stripEmoji(input.listenText), label: '청취 시간' });
 	if (input.checkinStreak && input.checkinStreak > 0) tiles.push({ icon: 'sparkles', value: `${input.checkinStreak}일`, label: '연속 출석' });
 
-	// 날짜 — 계정 생성 / 서버 가입
 	const dates = (
 		[
 			['계정 생성', input.createdText],
@@ -255,7 +233,6 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 				</>
 			) : null}
 			<Box style={{ position: 'relative', flexDirection: 'column', width: '100%', padding: PAD, boxSizing: 'border-box' }}>
-				{/* 헤더 — 아바타(액센트 링) + 이름·핸들·상태·소개 */}
 				<Box style={{ alignItems: 'center' }}>
 					<Box
 						style={{
@@ -355,7 +332,6 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 					</Box>
 				) : null}
 
-				{/* 음악 패널 — 지금 재생 중 + 자주 신청한 곡 */}
 				{hasMusic ? (
 					<Box
 						style={{

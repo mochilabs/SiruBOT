@@ -23,7 +23,6 @@ describe("unionBox / boxFromPoints / boxesIntersect", () => {
 
 describe("snapBox", () => {
   it("가운데가 카드 중앙선 근처면 정확히 중앙으로 붙고 세로 가이드를 줘요", () => {
-    // 폭 100 박스의 가운데 = 596 → 중앙 600까지 +4
     const result = snapBox({ x: 546, y: 100, w: 100, h: 50 }, [], CARD, 8);
     expect(result.dx).toBe(4);
     expect(result.guides).toContainEqual({ axis: "x", pos: 600, from: 0, to: 675 });
@@ -43,7 +42,6 @@ describe("snapBox", () => {
 
   it("다른 레이어의 가장자리·가운데에 붙고, 가이드가 두 박스를 이어요", () => {
     const other = { x: 300, y: 400, w: 200, h: 100 };
-    // 움직이는 박스의 왼쪽(303)이 다른 레이어의 왼쪽(300)에 붙고, 세로는 멀어요
     const result = snapBox({ x: 303, y: 50, w: 60, h: 60 }, [other], CARD, 8);
     expect(result.dx).toBe(-3);
     const guide = result.guides.find((item) => item.axis === "x" && item.pos === 300);
@@ -52,7 +50,6 @@ describe("snapBox", () => {
 
   it("두 축을 따로 붙여요", () => {
     const result = snapBox({ x: 552, y: 290, w: 100, h: 100 }, [], CARD, 8);
-    // 가운데 (602, 340) → (600, 337.5)
     expect(result.dx).toBe(-2);
     expect(result.dy).toBe(-2.5);
     expect(result.guides.map((guide) => guide.axis).sort()).toEqual(["x", "y"]);
@@ -60,7 +57,6 @@ describe("snapBox", () => {
 
   it("가장 가까운 후보를 골라요", () => {
     const result = snapBox({ x: 106, y: 0, w: 20, h: 20 }, [{ x: 100, y: 300, w: 10, h: 10 }, { x: 105, y: 300, w: 10, h: 10 }], CARD, 8);
-    // 왼쪽 106 → 105가 더 가까움 (-1)
     expect(result.dx).toBe(-1);
   });
 });

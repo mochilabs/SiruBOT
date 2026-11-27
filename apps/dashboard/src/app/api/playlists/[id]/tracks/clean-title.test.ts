@@ -1,4 +1,3 @@
-// 플레이리스트 트랙 라우트 회귀 계약 — noembed 제목 정규화 정규식의 단일 소스를 잠가요.
 import { describe, expect, it } from "vitest";
 
 import { cleanYoutubeTitle } from "./clean-title";

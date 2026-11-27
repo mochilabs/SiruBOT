@@ -1,11 +1,5 @@
 import type { AppLogger } from '../../../lib/appLogger.ts';
 
-/**
- * 이모지 설명을 영어로 옮겨요. 생성 모델의 텍스트 인코더(CLIP)가 영어만 제대로 알아들어서,
- * 한글이 섞인 설명은 AI 채팅과 같은 OpenAI 호환 엔드포인트로 짧은 영어 문구로 바꿔 보내요.
- * LLM이 꺼져 있거나 실패하면 원문을 그대로 써요 — 번역 실패로 생성까지 막지는 않아요.
- */
-
 const TRANSLATE_TIMEOUT_MS = 15_000;
 const MAX_PROMPT_LENGTH = 200;
 const HANGUL = /\p{Script=Hangul}/u;
@@ -24,7 +18,6 @@ export interface TranslatorLlmConfig {
 
 export interface PromptTranslatorDeps {
 	logger: AppLogger;
-	/** 모델이나 URL이 비어 있으면 null(번역 off). */
 	getLlmConfig: () => TranslatorLlmConfig | null;
 }
 
@@ -37,7 +30,6 @@ export interface PromptTranslator {
 	toEnglish(text: string): Promise<TranslatedPrompt>;
 }
 
-/** 모델 답에서 생각 토큰·따옴표·여러 줄을 걷어내고 첫 줄만 남겨요. */
 export function cleanTranslation(raw: string): string {
 	const withoutThink = raw.replace(/<think>[\s\S]*?<\/think>/gi, '');
 	const firstLine = withoutThink.split('\n').find((line) => line.trim()) ?? '';

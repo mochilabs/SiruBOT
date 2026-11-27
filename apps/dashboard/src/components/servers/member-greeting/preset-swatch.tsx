@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { greetingPresetBackgroundPlan } from "@sirubot/utils/greetingCardDesign";
 
-/** 프리셋 그라디언트 스와치 — 서버 렌더러와 같은 그라디언트 데이터(공용 계약)를 작은 캔버스로 그려요 */
 export function PresetSwatch({ id }: { id: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {

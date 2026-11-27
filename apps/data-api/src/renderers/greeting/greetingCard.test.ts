@@ -26,7 +26,6 @@ function expectPngSize(buffer: Buffer, width: number, height: number): void {
 	expect(buffer.readUInt32BE(20)).toBe(height);
 }
 
-/** 애니메이션 WebP 헤더 — 캔버스 크기(VP8X), 프레임 수(ANMF), 반복 횟수(ANIM, 0 = 무한)를 읽어요 */
 function webpInfo(buffer: Buffer): { width: number; height: number; frames: number; loop: number } {
 	expect(buffer.subarray(0, 4).toString()).toBe('RIFF');
 	expect(buffer.subarray(8, 12).toString()).toBe('WEBP');
@@ -120,7 +119,6 @@ describe('renderGreetingCard — GIF 배경', () => {
 		};
 		const card = await renderGreetingCard(image, context);
 		expect(card.contentType).toBe('image/webp');
-		// GIF 한 바퀴(1초, 10프레임)가 카드 한 바퀴예요. 인코더가 같은 모양이 이어지는 프레임을 합쳐서 GIF 프레임 수만큼 나와요
 		const info = webpInfo(card.buffer);
 		expect(info).toMatchObject({ width: OUT_W, height: OUT_H, loop: 0 });
 		expect(info.frames).toBeGreaterThan(1);

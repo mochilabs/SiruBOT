@@ -19,7 +19,6 @@ export const ohaasaTool: AiTool = {
 	execute: async (args, ctx) => {
 		const daily = await fetchOhaasaKo();
 		let zodiacArg = String(args.zodiac ?? '').trim();
-		// 지정이 없으면 프로필 생일로 자동 결정해요
 		if (!zodiacArg && ctx?.userId) {
 			const profile = await getUserProfile(ctx.userId).catch(() => null);
 			if (profile?.birthMonth != null && profile?.birthDay != null) {

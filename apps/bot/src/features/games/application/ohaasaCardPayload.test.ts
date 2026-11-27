@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { buildOhaasaCardRequest, buildOhaasaTopCardRequest, splitOhaasaLucky } from './ohaasaCardPayload.ts';
 import type { HoroscopeData } from '../../../services/types.ts';
 
-/** 오하아사 카드 payload — 럭키 분리와 "설명 없는 요약 payload" 계약을 검증해요. */
-
 function target(overrides: Partial<HoroscopeData> = {}): HoroscopeData {
 	return {
 		rank: 3,

@@ -1,6 +1,3 @@
-// createGuildApiHandler 회귀 계약 — 게이트 순서(인가 → 레이트리밋 → 스키마 → 핸들러)와
-// role별 게이트 라우팅, rate: null 명시 면제, rateKey 오버라이드를 잠가요.
-// api-guards/rate-limit은 전부 모킹하고 래퍼의 동선만 검증해요.
 import { NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";

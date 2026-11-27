@@ -8,7 +8,6 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     background_color: "#2b2023",
-    // 다크 --surface-1 (모바일 탭바와 같은 색)
     theme_color: "#2b2023",
     icons: [
       {

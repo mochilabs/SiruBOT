@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useGuildChannels, useGuildRoles } from "@/hooks/use-guild-settings";
 import type { SocialPlatform } from "@/types/social";
 
-/** 미리보기에 쓸 샘플 알림 — 선택한 소스의 이름으로 진짜 같은 문장을 만들어요. */
 export interface TemplateSample {
 	platform: SocialPlatform;
 	sourceId: string;
@@ -20,7 +19,6 @@ export interface TemplateSample {
 	author: string;
 }
 
-/** 미리보기용 자리 표시 URL: 실제 방송 주소를 흉내 내지 않도록 플랫폼 형태만 갖춰요 (R-38) */
 export const SAMPLE_URLS: Record<SocialPlatform, string> = {
 	youtube: "https://www.youtube.com/watch?v=VIDEO_ID",
 	twitch: "https://www.twitch.tv/CHANNEL",
@@ -41,17 +39,11 @@ interface TemplateEditorProps {
 	disabled?: boolean;
 }
 
-/**
- * 알림 메시지 템플릿 편집기 — 변수 치환 버튼과 채널·역할 멘션 삽입, 실시간 미리보기를 갖춰요.
- * 멘션 토큰(<#id>, <@&id>)은 그대로 저장되고 Discord가 렌더링해요. 서버가 전송 시
- * allowed_mentions 화이트리스트를 만들어서 원치 않는 핑이 나가지 않아요.
- */
 export function TemplateEditor({ guildId, value, onChange, sample, disabled = false }: TemplateEditorProps) {
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const [mentionChannel, setMentionChannel] = useState("");
 	const [mentionRole, setMentionRole] = useState("");
 
-	// 미리보기에서 토큰을 읽을 수 있게 채널·역할 이름을 가져와요 — SWR 중복 요청은 자동으로 합쳐져요
 	const { channels } = useGuildChannels(guildId);
 	const { roles } = useGuildRoles(guildId);
 
@@ -90,7 +82,6 @@ export function TemplateEditor({ guildId, value, onChange, sample, disabled = fa
 
 	const issue = socialTemplateIssue(value);
 
-	// 멘션 토큰은 미리보기에서 사람이 읽는 이름으로 바꿔 보여요 — 전송 본문은 그대로예요
 	const preview = useMemo(() => {
 		const rendered = renderSocialContent(value, sampleEvent);
 		return rendered

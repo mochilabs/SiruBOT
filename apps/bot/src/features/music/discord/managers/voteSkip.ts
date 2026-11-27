@@ -6,12 +6,10 @@ import { voteSkipId } from '../customIds.ts';
 import { notice } from '../../../../lib/notice.ts';
 import { createComponentSession, type ComponentSession } from '../../../../lib/componentSession.ts';
 
-/** 투표 메시지의 수명 — 이 시간이 지나면 투표가 닫혀요. */
 const VOTE_TIME_MS = 30_000;
 
 export interface ShowVoteSkipOptions {
 	interaction: ChatInputCommandInteraction<'cached'>;
-	/** 투표 ID — use case가 `request`에서 돌려준 값이에요 (인터랙션 ID). */
 	voteId: string;
 	votes: number;
 	requiredVotes: number;
@@ -19,10 +17,6 @@ export interface ShowVoteSkipOptions {
 	nextTrack?: Track;
 }
 
-/**
- * 투표 건너뛰기 메시지를 띄우고 버튼 누름을 수집해요. 허용 판정·집계·건너뛰기는 `container.voteSkip`(application/voteSkip.ts)이 맡고,
- * 여기서는 use case가 돌려준 결과를 디스코드 메시지로 그려요.
- */
 export async function showVoteSkip(options: ShowVoteSkipOptions): Promise<void> {
 	const { interaction, voteId, currentTrack, nextTrack } = options;
 	const customId = voteSkipId.encode('vote', { interactionId: voteId });
@@ -35,7 +29,6 @@ export async function showVoteSkip(options: ShowVoteSkipOptions): Promise<void> 
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	} catch (error) {
-		// 메시지를 못 보냈으면 투표도 열리지 않은 셈이라 바로 닫아요.
 		container.voteSkip.closeVote(voteId);
 		throw error;
 	}

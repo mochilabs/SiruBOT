@@ -43,7 +43,6 @@ export function AddTrackModal({
 	const isUrl = isYoutubeUrl(trackInput);
 	const [keyboardLayout, setKeyboardLayout] = useState<{ top: number; height: number } | null>(null);
 	const initialViewportHeight = useRef<number | null>(null);
-	/** 지금 추가 요청을 보낸 행 — 이 행만 로딩으로 보여요 */
 	const [addingId, setAddingId] = useState<string | null>(null);
 	useEffect(() => {
 		if (!loading) setAddingId(null);

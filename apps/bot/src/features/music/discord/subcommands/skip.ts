@@ -18,7 +18,6 @@ import { showVoteSkip } from '../managers/voteSkip.ts';
 export const name = 'skip';
 export const ko = '건너뛰기';
 export const description = '현재 재생 중인 곡을 건너뛰어요.';
-/** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Skip the current track.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'MemberListenable', 'SongPlaying'];
 
@@ -28,7 +27,6 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 	return named;
 }
 
-/** 옵션만 붙여요 — `/건너뛰기`처럼 top-level 커맨드로 승격할 때 같은 옵션 정의를 재사용해요 */
 export function withOptions<T extends SlashCommandSubcommandBuilder | SlashCommandOptionsOnlyBuilder>(builder: T): void {
 	builder
 		.addBooleanOption((option) =>
@@ -55,10 +53,6 @@ export async function autocomplete(interaction: AutocompleteInteraction): Promis
 	await respondQueuedTracks(interaction);
 }
 
-/**
- * `/건너뛰기` — 허용 판정과 투표는 `container.voteSkip`(application/voteSkip.ts)이 맡고,
- * 여기서는 인터랙션을 평범한 요청으로 바꾸고 결과를 디스코드 메시지로 그려요.
- */
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
 	const player = container.audio.getPlayer(interaction.guildId);
 	const currentTrack = player?.queue.current as Track | undefined;

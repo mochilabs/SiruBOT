@@ -16,7 +16,6 @@ import { QueueList } from "./live-queue-list";
 import { LyricsPanel } from "./lyrics-panel";
 import { NowPlaying } from "./now-playing-card";
 
-/** 라이브 탭 공통 셸 — 다른 설정 탭과 같은 패널 카드 + 헤더 */
 function LivePanel({ children, compact = false }: { children: ReactNode; compact?: boolean }) {
   return (
     <Card padding="lg" className="gap-5 p-4 sm:gap-6 sm:p-6 overflow-visible">
@@ -45,7 +44,6 @@ function LiveLoading({ compact }: { compact: boolean }) {
   );
 }
 
-/** 데이터가 없는 상태 — 길드에 플레이어가 없거나 playerHub 미구독 */
 function LiveEmpty({ detail, compact }: { detail?: string; compact: boolean }) {
   return (
     <LivePanel compact={compact}>
@@ -76,24 +74,20 @@ export default function PlayerLiveTab({
   compact = false,
 }: {
   guildId: string;
-  /** 음악 플레이어 페이지처럼 이미 맥락이 있는 곳에서 "라이브" 헤더와 안내 문구를 숨겨요 */
   compact?: boolean;
 }) {
   return <LivePlayerSession key={guildId} guildId={guildId} compact={compact} />;
 }
 
 function LivePlayerSession({ guildId, compact }: { guildId: string; compact: boolean }) {
-  /** SSE 실패(미지원/장애) 시 폴백하는 폴링 모드와 상태를 구분해요. */
   const [mode, setMode] = useState<"stream" | "polling">("stream");
   const [liveData, setLiveData] = useState<LivePayload | null>(null);
   const [connected, setConnected] = useState(false);
-  /** 첫 SSE 이벤트 전 잠깐은 경고 배너 없이 기다려요 (정상 연결에서 배너가 깜빡이지 않게) */
   const [connectGraceOver, setConnectGraceOver] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setConnectGraceOver(true), 4000);
     return () => clearTimeout(timer);
   }, []);
-  /** 마지막 상태 수신 시각 — 스냅샷 이후 경과를 보간하는 기준 */
   const [receivedAt, setReceivedAt] = useState<number>(Date.now());
 
   // 폴링 폴백 + 초기 데이터 — 항상 구독해 키/훅 순서를 유지해요 (stream 모드에선 0초 폴링).
@@ -107,12 +101,10 @@ function LivePlayerSession({ guildId, compact }: { guildId: string; compact: boo
     refreshInterval: mode === "polling" ? FALLBACK_POLL_INTERVAL_MS : 0,
   });
 
-  // polling 모드의 snapshotAt도 receivedAt으로 통일 — swr 데이터가 바뀌면 수신 시각을 기록해요.
   useEffect(() => {
     if (swrData) setReceivedAt(Date.now());
   }, [swrData]);
 
-  // 실시간 스트림 — data-api → dashboard 프록시를 거친 SSE를 구독해요.
   useEffect(() => {
     if (mode !== "stream" || !guildId) return;
 
@@ -129,27 +121,23 @@ function LivePlayerSession({ guildId, compact }: { guildId: string; compact: boo
         setLiveData(payload);
         setConnected(true);
       } catch {
-        // 잘못된 프레임 — 무시하고 다음 스냅샷을 기다려요.
       }
     });
     source.onerror = () => {
       if (closed) return;
-      // data를 한 번도 못 받았거나 EventSource가 영구 종료(CLOSED=2)된 경우 폴링으로 폴백해요
       const closedState = typeof EventSource.CLOSED === "number" ? EventSource.CLOSED : 2;
       if (!gotData || source.readyState === closedState) {
         setMode("polling");
       } else {
-        setConnected(false); // 일시 단절은 EventSource 내장 재연결에 맡긴다
+        setConnected(false);
       }
     };
 
     return () => { closed = true; source.close(); };
   }, [mode, guildId]);
 
-  // 표시 데이터 — polling 모드에선 SWR 데이터를 사용해요.
   const data = mode === "stream" ? liveData ?? swrData : swrData;
 
-  // 폴링 사이 progress 부드럽게 보간 (SSE 수신 사이 진행바 1초 보간)
   const [, tickState] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => tickState((v) => v + 1), 1000);

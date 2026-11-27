@@ -5,7 +5,6 @@ import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { GreetingMessagePort } from '../../greeting/index.ts';
 import type { BirthdayDiscordPort } from '../application/birthdayService.ts';
 
-/** 멤버 카드 렌더 — 인사 카드와 같은 data-api 경로예요 (`container.dataApi.renderMemberCard`) */
 export type RenderBirthdayCard = (
 	guildId: string,
 	kind: GreetingCardKind,
@@ -17,17 +16,14 @@ export interface BirthdayDiscordDeps {
 	getClient: () => Client;
 	logger: AppLogger;
 	renderMemberCard: RenderBirthdayCard;
-	/** 인사 메시지와 같은 컴포넌트 구성 — 컨테이너·컴포넌트 목록 레이아웃과 강조색을 그대로 써요 */
 	messages: GreetingMessagePort;
 }
 
-/** 멤버 조회 한 번에 요청하는 사용자 수 (게이트웨이 요청 상한) */
 const MEMBER_FETCH_CHUNK = 100;
 
 const isUnknown = (error: unknown) =>
 	typeof error === 'object' && error !== null && 'code' in error && (error.code === 10007 || error.code === 10011 || error.code === 10013);
 
-/** 생일 축하 서비스의 Discord 어댑터 — 멤버 조회, 카드 메시지 전송, 생일 역할 부여·회수를 맡아요 */
 export function createBirthdayDiscord(deps: BirthdayDiscordDeps): BirthdayDiscordPort {
 	return {
 		async fetchMembers(guildId, userIds) {

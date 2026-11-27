@@ -50,7 +50,6 @@ function setup(opts: { jobs?: ScheduledJob[][]; guilds?: string[]; stopTimeoutMs
 	return { db, logger, scheduler };
 }
 
-/** finish()가 보낸 마지막 결과 갱신 (stale 복구 호출은 status:'running' 조건이라 구분돼요) */
 const lastResult = (db: ReturnType<typeof setup>['db']) => {
 	const calls = db.scheduledJob.updateMany.mock.calls as unknown as Array<[{ where: Record<string, unknown>; data: Record<string, unknown> }]>;
 	return calls.filter(([arg]) => arg.where.id === 'j1').at(-1)?.[0];
@@ -155,7 +154,6 @@ describe('stale 복구', () => {
 			where: { status: 'running', lockedAt: { lt: new Date(NOW.getTime() - JOB_STALE_AFTER_MS) }, guildId: { in: ['g1'] } },
 			data: { status: 'pending', lockedBy: null, lockedAt: null }
 		});
-		// 복구 뒤에 가져가기가 이어져요
 		expect(db.$queryRaw).toHaveBeenCalledOnce();
 	});
 

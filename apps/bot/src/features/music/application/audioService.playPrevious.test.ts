@@ -24,7 +24,6 @@ const track = (id: string) => ({ encoded: id, info: { identifier: id } });
 
 describe('playPrevious', () => {
 	it('previous는 최신 곡이 [0]인 스택이라 가장 최근에 들은 곡부터 되돌린다', async () => {
-		// lavalink-client는 곡이 끝날 때 previous.unshift(current)로 쌓아요: C를 듣기 전 A → B 순서로 들었다.
 		const player = {
 			guildId: 'g',
 			transitionState: {},

@@ -7,11 +7,9 @@ import { ApplicationIntegrationType, AttachmentBuilder, AutocompleteInteraction,
 import { fetchWeather, GatewayDomainError, type DataApiClient, type WeatherCardRequest } from '../../services/dataApiClient.ts';
 import type { WeatherResult, WeatherScope } from '@sirubot/utils/weather';
 
-/** 채널별 최근 조회 위치 — 자동완성 후보 상한 (길드 공용 기록이에요) */
 const RECENT_LOCATION_LIMIT = 20;
 const recentLocations = new Map<string, string[]>();
 
-/** 최근 성공 위치를 채널 단위로 남겨 자동완성 후보로 써요 (프로세스 메모리, 재시작 시 초기화) */
 function rememberLocation(channelId: string, location: string): void {
 	const key = location.trim();
 	if (!key) return;
@@ -20,7 +18,6 @@ function rememberLocation(channelId: string, location: string): void {
 	recentLocations.set(channelId, next);
 }
 
-/** 자동완성 후보 — 최근 조회 위치 + 현재 입력 접두 필터 */
 function suggestLocations(channelId: string, typed: string): string[] {
 	const needle = typed.trim().toLowerCase();
 	const recent = recentLocations.get(channelId) ?? [];
@@ -94,7 +91,6 @@ function buildContainer(result: WeatherResult) {
 	return notice(lines.join('\n'));
 }
 
-/** 이미지 카드에 그릴 필드만 추려요 — data-api weatherCardSchema 입력 모양이에요. */
 function toCardRequest(result: WeatherResult): WeatherCardRequest {
 	return {
 		scope: result.scope,
@@ -123,13 +119,11 @@ function toCardRequest(result: WeatherResult): WeatherCardRequest {
 	};
 }
 
-/** 이미지 대체 텍스트(스크린 리더용) — 텍스트 카드의 핵심 줄을 그대로 써요. */
 function buildAltText(result: WeatherResult): string {
 	const lines = result.scope === 'now' ? buildNowLines(result) : result.scope === 'week' ? buildWeekLines(result) : buildForecastLines(result);
 	return lines.join('\n').slice(0, 1000);
 }
 
-/** 이미지 카드 — 위치·범위·관측 시각까지 이미지에 있어서 텍스트는 붙이지 않아요. 렌더 실패 시 null. */
 async function buildImageReply(dataApi: DataApiClient, result: WeatherResult) {
 	const png = await dataApi.renderWeatherCard(toCardRequest(result)).catch(() => null);
 	if (!png) return null;
@@ -236,7 +230,6 @@ export class WeatherCommand extends Command {
 		try {
 			result = await fetchWeather(location, scope);
 		} catch (error) {
-			// 게이트웨이(data-api) 경유라 도메인 오류는 GatewayDomainError로 변환돼 도착해요
 			if (error instanceof GatewayDomainError) {
 				throw new UserError({
 					identifier: error.identifier,
@@ -247,10 +240,8 @@ export class WeatherCommand extends Command {
 			throw error;
 		}
 
-		// 성공한 조회만 자동완성 후보로 남겨요 — 오타·없는 지명이 후보에 섞이지 않게
 		rememberLocation(interaction.channelId, location);
 
-		// 이미지 카드가 기본이고, data-api가 렌더에 실패하면 기존 텍스트 카드로 폴백해요
 		const image = await buildImageReply(this.container.dataApi, result);
 		if (image) {
 			await interaction.editReply({ files: image.files, components: [image.container], flags: [MessageFlags.IsComponentsV2] });

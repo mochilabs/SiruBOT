@@ -12,7 +12,6 @@ vi.mock('../../../services/guildSettings/chatPolicy.ts', async (orig) => ({ ...(
 const mocks = vi.hoisted(() => ({
 	logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 	ttsService: { synthesize: vi.fn() },
-	// announce 방식은 길드 설정 3택으로 결정돼요 — clearAnnounceQueue는 interrupt 모드 전용이에요
 	mixerService: { getState: vi.fn(), announce: vi.fn(), clearAnnounceQueue: vi.fn() },
 	audioService: { ensurePlayback: vi.fn() },
 	guildService: {},
@@ -261,7 +260,6 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 
-		// 첫 메시지는 즉시 합성(프리셋 없음) — 두 번째가 병합 창을 여는데, 이때 프리셋이 배치에 저장된다
 		await service.handleMessage(makeMessage(), '첫 발화');
 		await flushAsync();
 		await service.handleMessage(makeMessage(), '배치 시작', { enabled: true, voice: 'melo:KR', channel: 'both', emotion: 'neutral' });
@@ -283,7 +281,6 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 		await service.handleMessage(makeMessage(), '첫 메시지');
 		await flushAsync();
 		await service.handleMessage(makeMessage(), '배치 시작');
-		// flush 타이머를 돌리지 않고 시계만 앞으로 넘긴다 — 배치가 열려 있는데 창이 지난 상태
 		vi.setSystemTime(Date.now() + TTS_MERGE_WINDOW_MS + 1000);
 
 		await service.handleMessage(makeMessage(), '창 밖 입력');

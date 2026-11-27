@@ -101,7 +101,6 @@ function CustomCommandsPanel({ guildId }: { guildId: string }) {
   };
 
   const handleDelete = async (command: CustomCommandSummary) => {
-    // 첫 클릭은 무장(4초 자동 해제), 두 번째 클릭이 실제 삭제예요
     if (!requestDelete(command.id)) return;
     try {
       const res = await fetch(
@@ -161,7 +160,6 @@ function CustomCommandsPanel({ guildId }: { guildId: string }) {
         }
       />
 
-      {/* 접두사 설정 */}
       <Field
         htmlFor="cc-prefix"
         label="접두사"
@@ -180,7 +178,6 @@ function CustomCommandsPanel({ guildId }: { guildId: string }) {
         />
       </Field>
 
-      {/* 명령어 목록 */}
       {commands.length === 0 ? (
         <EmptyState
           icon={SquareSlash}

@@ -18,7 +18,6 @@ const TVASAHI_ZODIAC_MAP: Record<string, string> = {
 	uo: '12'
 };
 
-/** 일본 시간 기준 운세 날짜 (오전 7시 이전이면 전날) */
 function getHoroscopeDate(): Date {
 	const now = new Date();
 	const japanTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
@@ -117,7 +116,6 @@ function parseHoroscopeText(text: string): { content: string; lucky: string } {
 	};
 }
 
-/** 오늘의 오하아사 원문 — JSON API 우선, 주말/실패 시 TV아사히 크롤링 */
 export async function fetchOhaasaRaw(): Promise<DailyHoroscope> {
 	const todayStr = getTodayDateString();
 	const todayCompact = todayStr.replace(/\//g, '');
@@ -168,7 +166,6 @@ export async function fetchOhaasaRaw(): Promise<DailyHoroscope> {
 	return { date: dateStr, source, translated: false, horoscopes: parsed };
 }
 
-/** 캐시 키 — 봇의 기존 Redis 키(`ohaasa:ko:YYYYMMDD`)와 호환돼요 */
 export function ohaasaCacheKey(date: string): string {
 	return `ohaasa:ko:${date.replace(/\//g, '')}`;
 }

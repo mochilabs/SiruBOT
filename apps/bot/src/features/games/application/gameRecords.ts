@@ -1,33 +1,25 @@
 import { Prisma, type PrismaClient } from '@sirubot/prisma';
 import { emoji } from '@sirubot/utils';
 
-/** 지원하는 게임 ID (기록을 쓰는 게임만) */
 const GAME_IDS = ['rps', 'guess', 'attendance'] as const;
 export type GameId = (typeof GAME_IDS)[number];
 
-/** 전적 결과 */
 export type GameResult = 'win' | 'loss' | 'draw' | 'checkin';
 
 interface RpsStats {
 	wins: number;
 	losses: number;
 	draws: number;
-	/** 현재 연승 (0이면 연승 없음) */
 	streak: number;
-	/** 역대 최고 연승 */
 	best: number;
 }
 
 interface CheckinState {
-	/** 오늘 이미 출석했는지 */
 	checkedIn: boolean;
-	/** 연속 출석 일수 (오늘 출석 전이면 어제까지의 스트릭) */
 	streak: number;
-	/** 마지막 출석일 (KST, YYYY-MM-DD) */
 	lastDay: string | null;
 }
 
-/** KST 기준 날짜 키 (YYYY-MM-DD) */
 function kstDayKey(date: Date = new Date()): string {
 	const parts = new Intl.DateTimeFormat('en-CA', {
 		timeZone: 'Asia/Seoul',
@@ -39,24 +31,20 @@ function kstDayKey(date: Date = new Date()): string {
 	return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
-/** KST 기준 어제 날짜 키 */
 function kstYesterdayKey(): string {
 	return kstDayKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
 }
 
-/** 출석 중복 방지 락에 쓰는 Redis 면 — 연결 전(또는 없음)이면 보호 없이 락을 획득한 것으로 봐요. */
 export interface GameLockStore {
 	setCacheValueNX(key: string, value: string, ttlSeconds: number): Promise<boolean>;
 }
 
 export interface GameRecordsDeps {
 	db: PrismaClient;
-	/** redisStore는 부팅 중 늦게 만들어지므로 호출 시점에 읽어요 */
 	getLockStore: () => GameLockStore | undefined;
 }
 
 export function createGameRecords({ db, getLockStore }: GameRecordsDeps) {
-	/** GameRecord의 FK(User) 보장을 위해 유저 행이 없으면 생성해요. */
 	async function ensureUser(userId: string): Promise<void> {
 		await db.user.upsert({
 			where: { id: userId },
@@ -65,7 +53,6 @@ export function createGameRecords({ db, getLockStore }: GameRecordsDeps) {
 		});
 	}
 
-	/** 게임 결과 1건을 기록해요. */
 	async function recordGameResult(userId: string, game: GameId, result: GameResult, meta?: Prisma.InputJsonValue): Promise<void> {
 		await ensureUser(userId);
 		await db.gameRecord.create({
@@ -73,7 +60,6 @@ export function createGameRecords({ db, getLockStore }: GameRecordsDeps) {
 		});
 	}
 
-	/** 가위바위보 전적 집계 (최근 5000건 기준) */
 	async function getRpsStats(userId: string): Promise<RpsStats> {
 		const records = await db.gameRecord.findMany({
 			where: { userId, game: 'rps' },
@@ -111,7 +97,6 @@ export function createGameRecords({ db, getLockStore }: GameRecordsDeps) {
 		return { wins, losses, draws, streak, best };
 	}
 
-	/** 숫자맞히기 개인 최고 기록 (몇 번 만에 맞혔는지). 없으면 null */
 	async function getGuessBest(userId: string): Promise<number | null> {
 		const wins = await db.gameRecord.findMany({
 			where: { userId, game: 'guess', result: 'win' },
@@ -129,7 +114,6 @@ export function createGameRecords({ db, getLockStore }: GameRecordsDeps) {
 		return best;
 	}
 
-	/** 출석 상태 조회 */
 	async function getCheckinState(userId: string): Promise<CheckinState> {
 		const last = await db.gameRecord.findFirst({
 			where: { userId, game: 'attendance' },
@@ -142,23 +126,17 @@ export function createGameRecords({ db, getLockStore }: GameRecordsDeps) {
 		return { checkedIn: lastDay === kstDayKey(), streak, lastDay };
 	}
 
-	/**
-	 * 출석 체크. 오늘 이미 했으면 { checkedIn: true }.
-	 * 연속 출석이면 streak+1, 끊겼으면 1부터.
-	 * 읽기→쓰기 사이 동시 실행이 중복 streak을 부여할 수 있어 Redis NX 락으로 원자화한다.
-	 * Redis 없으면 보호 불가. 기존 동작(락 획득한 것으로 간주)을 유지한다.
-	 */
 	async function doCheckin(userId: string): Promise<{ checkedIn: boolean; streak: number }> {
 		const today = kstDayKey();
 		const state = await getCheckinState(userId);
 		if (state.lastDay === today) return { checkedIn: true, streak: state.streak };
 
-		// 이미 오늘 락이 선점됐으면 중복 기록 방지
+		// 읽기→쓰기 사이 동시 출석의 중복 streak을 막기 위해 Redis NX 락으로 직렬화해요
 		const store = getLockStore();
 		const lockKey = `attendance/lock/${userId}/${today}`;
 		const acquired = (await store?.setCacheValueNX(lockKey, '1', 60 * 60 * 24 * 2)) ?? true;
 		if (!acquired) {
-			// 락은 선점됐지만 레코드가 아직 안 보이는 진행 중 구간. 기록된 streak로 응답
+			// 락은 선점됐지만 레코드가 아직 커밋되지 않은 구간
 			const retry = await getCheckinState(userId);
 			return { checkedIn: true, streak: retry.streak };
 		}
@@ -173,7 +151,6 @@ export function createGameRecords({ db, getLockStore }: GameRecordsDeps) {
 
 export type GameRecords = ReturnType<typeof createGameRecords>;
 
-/** 출석 스트릭 뱃지 이모지 */
 export function streakBadge(streak: number): string {
 	if (streak >= 365) return emoji('gem');
 	if (streak >= 100) return emoji('crown');

@@ -90,7 +90,6 @@ const ICONS = {
   giveaways: <Gift size={14} />,
   "role-panels": <ShieldCheck size={14} />,
 } as const;
-// 탭 목록(키·라벨)은 server-tabs.ts가 단일 소스예요 — loading.tsx 스켈레톤도 여기를 따라가요
 const TABS = SERVER_TABS.map((item) => ({ ...item, icon: ICONS[item.key] }));
 function NotManageable() {
   return (
@@ -110,13 +109,6 @@ function NotManageable() {
   );
 }
 
-/**
- * 서버 대시보드 셸 — PC(lg+)는 기능 사이드바 + 설정 패널, 모바일은 현재 기능 버튼 + 바텀시트(ServerMobileNav)를 써요.
- * 탭/사이드바는 패널을 숨기기만 해(언마운트하지 않아) 편집 중인 입력값이 보존되고,
- * 패널은 Tabs 안에서 한 번만 렌더돼 두 내비게이션이 같은 상태를 공유해요(중복 마운트·중복 요청 방지).
- * 데스크톱에서는 탭 스트립만 숨기고(listClassName) 사이드바를 띄워요.
- * 토스트는 root layout의 전역 <Toaster />가 렌더해요 — 페이지별 Provider 두지 않아요.
- */
 export function ServerDashboard({
   guildId,
   manageable,
@@ -127,9 +119,7 @@ export function ServerDashboard({
   guildId: string;
   manageable: boolean;
   guildName: string | null;
-  /** PC 사이드바 맨 위에 붙는 서버 선택기 */
   switcher?: React.ReactNode;
-  /** 모바일 기능 선택 버튼과 같은 줄에 붙는 서버 선택기 */
   mobileSwitcher?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -137,12 +127,9 @@ export function ServerDashboard({
   const searchParams = useSearchParams();
   const initialTab = resolveServerTab(searchParams.get("tab"));
   const [tab, setTab] = useState<ServerTabKey>(initialTab);
-  // 한 번이라도 방문한 탭만 마운트하여 초기 진입 번들/요청을 최소화하고, 방문한 탭은 상태를 보존해요
   const [visitedTabs, setVisitedTabs] = useState<Set<ServerTabKey>>(() => new Set([initialTab]));
-  /** 저장하지 않은 변경이 있어 이동이 보류된 대상 탭 — 값이 있으면 확인 다이얼로그가 떠요 */
   const [pendingTab, setPendingTab] = useState<ServerTabKey | null>(null);
   const [savingBeforeLeave, setSavingBeforeLeave] = useState(false);
-  /** 변경 취소 시 해당 탭 패널을 새로 마운트해 편집 중이던 값을 버려요 */
   const [panelResets, setPanelResets] = useState<Partial<Record<ServerTabKey, number>>>({});
   const { settings, saving: savingModules, save: saveSettings } = useGuildSettings(guildId, manageable);
   const disabledModules = useMemo(() => sanitizeDisabledModules(settings?.disabledModules), [settings?.disabledModules]);
@@ -172,7 +159,6 @@ export function ServerDashboard({
   const selectTab = (value: string) => {
     const nextTab = resolveServerTab(value);
     if (nextTab === tab) return;
-    // 저장하지 않은 변경이 있으면 저장하거나 취소하기 전에는 다른 탭으로 못 가요
     if (hasUnsavedActiveSettings()) {
       setPendingTab(nextTab);
       return;
@@ -190,7 +176,6 @@ export function ServerDashboard({
       notifyApiError(err, "모듈을 켜지 못했어요.");
     }
   };
-  // 저장 바의 "취소" — 현재 탭 패널을 새로 마운트해 편집 중이던 값을 버려요
   useEffect(
     () => registerSettingsDiscardHandler(() => setPanelResets((prev) => ({ ...prev, [tab]: (prev[tab] ?? 0) + 1 }))),
     [tab],
@@ -210,7 +195,6 @@ export function ServerDashboard({
         commitTab(pendingTab);
         setPendingTab(null);
       } else {
-        // 저장 실패는 각 패널이 토스트로 알렸어요 — 이동하지 않고 편집 상태를 유지해요
         setPendingTab(null);
       }
     } finally {
@@ -234,7 +218,6 @@ export function ServerDashboard({
             className="w-full"
             aria-label="서버 설정 패널"
           >
-            {/* 모바일 기능 네비게이션 — 현재 기능 한 줄 버튼, 누르면 그룹별 전체 목록이 바텀시트로 열려요 */}
             <ServerMobileNav items={navItems} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} trailing={mobileSwitcher} />
             {activeDisabledModule && (
               <div

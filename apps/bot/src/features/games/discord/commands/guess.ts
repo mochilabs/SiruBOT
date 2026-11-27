@@ -48,7 +48,6 @@ export class GuessCommand extends Command {
 		}
 
 		const raw = interaction.options.getString('input', true).trim();
-		// 세션은 길드 단위로 분리해요 — 다른 서버에서 시작한 게임이 이어지면 안 돼요.
 		const sessionKey = `${interaction.guildId}:${interaction.user.id}`;
 
 		if (raw === '시작' || raw.toLowerCase() === 'start') {

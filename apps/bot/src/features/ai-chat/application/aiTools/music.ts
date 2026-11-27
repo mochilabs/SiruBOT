@@ -25,7 +25,6 @@ function requireVoice(ctx: AiToolContext): { guildId: string; voiceChannelId: st
 	return { guildId, voiceChannelId: ctx.voiceChannelId };
 }
 
-/** 슬래시 커맨드의 DJOrAlone precondition과 동일한 검사 — 서버 컨텍스트 + member 필요 */
 async function requireDjOrAlone(ctx: AiToolContext, port: Pick<MusicToolPort, 'checkDJOrAlone'>): Promise<void> {
 	const guildId = requireGuild(ctx);
 	if (!ctx.member) throw new Error('DM에서는 음악을 제어할 수 없어요.');
@@ -33,7 +32,6 @@ async function requireDjOrAlone(ctx: AiToolContext, port: Pick<MusicToolPort, 'c
 	if (!allowed) throw new Error('이 작업은 DJ 역할을 가지고 있거나, 채널에 혼자 있을 때만 사용 가능해요.');
 }
 
-/** 음악 제어 도구를 만들어요 — 의존성은 deps로 받아요 */
 export function createMusicTools(
 	deps: Pick<
 		AiToolDeps,

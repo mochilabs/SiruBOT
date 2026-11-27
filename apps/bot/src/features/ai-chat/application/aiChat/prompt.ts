@@ -7,12 +7,8 @@ import * as guildPlayback from '../../../../services/guildSettings/playback.ts';
 
 const CHANNEL_CONTEXT_LIMIT = 20;
 
-/** 프롬프트 맥락 조립이 쓰는 의존성 — client·플레이어는 호출 시점에 읽어요 */
 type PromptDeps = Pick<AiChatDeps, 'getClient' | 'guildService' | 'getPlayer'>;
 
-/**
- * 기본 페르소나 — 페르소나 교체/유저 커스텀 기능 없이 고정된 시루 캐릭터 프롬프트만 사용합니다.
- */
 const SYSTEM_PROMPT = [
 	'# Role',
 	'당신은 디스코드 봇 **시루(SiruBOT)** 이에요. 디스코드 텍스트 채널에서 사용자와 대화하는 캐릭터로, 기본 언어는 한국어예요.',

@@ -44,10 +44,9 @@ const { getPlayer, checkDJOrAlone, reapplyMixerFilter, enqueueTrack, skip, getOr
 		search: vi.fn()
 	}));
 
-// 필터 프리셋(features/music/discord/utils/filterPresets.ts)은 아직 container.mixerService를 직접 읽어요
+// 필터 프리셋(features/music/discord/utils/filterPresets.ts)은 container.mixerService를 직접 읽어요
 vi.mock('@sapphire/framework', () => ({ container: { mixerService: { reapplyMixerFilter } } }));
 
-// 곡 추가 유스케이스는 실제 구현에 모의 audioService 함수를 꽂아서 쓴다 (정책 + 신호 계약을 함께 검증).
 const musicPlay = createMusicPlay({
 	access: { getBotVoiceChannelId: () => null, getDjRoleId: async () => null },
 	getOrCreatePlayer: (guildId, voiceChannelId, textChannelId, options) =>
@@ -61,7 +60,6 @@ const musicPlay = createMusicPlay({
 	ensurePlayback: (player) => ensurePlayback(player)
 });
 
-// 음악 포트: 실제 헬퍼를 쓰고 인가·대기열 정리처럼 외부와 닿는 것만 모의로 바꿔요
 const musicPort = {
 	actorFromMember: () => actor,
 	checkDJOrAlone,

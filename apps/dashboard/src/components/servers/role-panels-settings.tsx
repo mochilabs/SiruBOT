@@ -103,7 +103,6 @@ const IMAGE_POSITION_LABELS: Record<RolePanelImagePosition, string> = {
   bottom: "버튼 아래",
 };
 
-/** 봇 기본 강조색 — packages/utils DEFAULT_COLOR_HEX와 같은 값이에요 (멤버 인사 탭도 같은 리터럴을 써요). */
 const DEFAULT_ACCENT_COLOR_HEX = "#ffdaff";
 
 const BUTTON_STYLES = ["secondary", "primary", "success", "danger"] as const;
@@ -148,7 +147,6 @@ export function RolePanelsSettings({ guildId }: { guildId: string }) {
   } = useGuildRoles(guildId, true);
 
   const [busyId, setBusyId] = useState<string | null>(null);
-  // 펼친 패널 — 아직 건드리지 않았으면(null) 첫 패널만 펼쳐요
   const [expandedIds, setExpandedIds] = useState<Set<string> | null>(null);
 
   const handleCreate = useCallback(async () => {
@@ -329,7 +327,6 @@ function RolePanelCard({
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // 포인터 높이에 걸린 행 번호 — 목록 위·아래로 벗어나면 맨 앞·맨 뒤로 봐요
   const rowIndexAt = (clientY: number) => {
     const rects = rowRefs.current
       .slice(0, buttons.length)
@@ -447,7 +444,6 @@ function RolePanelCard({
   const handleSave = async () => {
     setSaving(true);
     try {
-      // 역할 유효성 검증은 서버(PUT)가 봇에 확인해요 — 부여 불가 역할이면 400으로 사유를 돌려줘요.
       const filled = buttons.filter((b) => b.roleId);
       const badEmoji = filled.find(
         (b) => b.emoji && !isValidRolePanelEmoji(b.emoji),
@@ -477,7 +473,6 @@ function RolePanelCard({
         buttons: buttons
           .filter((b) => b.roleId)
           .map((b, index) => ({
-            // 서버에 이미 있는 버튼만 id를 보내요 — id가 유지돼야 게시된 메시지의 버튼이 계속 동작해요.
             ...(b.id.startsWith("temp-") ? {} : { id: b.id }),
             roleId: b.roleId,
             label: b.label,
@@ -511,7 +506,6 @@ function RolePanelCard({
     }
   };
 
-  // 미리보기에서 갤러리 이미지를 놓을 자리 — 섬네일이면 갤러리는 없어요.
   const galleryPosition =
     imageUrl && imageLayout === "gallery" ? imagePosition : null;
   const galleryPreview = imageUrl ? (
@@ -835,7 +829,6 @@ function RolePanelCard({
                     )}
                   >
                     <div className="flex shrink-0 items-center">
-                      {/* 마우스·터치 모두 포인터 이벤트로 끌어요 — 키보드는 옆의 위/아래 버튼을 써요 */}
                       <span
                         onPointerDown={(event) => {
                           if (saving || buttons.length < 2) return;

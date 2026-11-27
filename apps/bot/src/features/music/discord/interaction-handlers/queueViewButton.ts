@@ -10,10 +10,6 @@ import { clampQueuePage, decodeQueueButtonId, QUEUE_VIEW_MESSAGES, type QueueBut
 
 type ParsedQueueButton = { view: QueueButtonView };
 
-/**
- * 대기열 목록(ephemeral)의 버튼 — 이전/다음 페이지, 선택한 곡 재생, 선택한 곡 제거.
- * 화면 상태는 customId(queueViewId)에만 있고 플레이어에는 저장하지 않아요.
- */
 export default class QueueViewButtonHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
 		super(ctx, {
@@ -36,7 +32,6 @@ export default class QueueViewButtonHandler extends InteractionHandler {
 	}
 
 	public async run(interaction: ButtonInteraction<'cached'>, { view }: ParsedQueueButton) {
-		// 다른 사람의 클릭도 안내해요 — 대기열 목록은 연 사람만 쓸 수 있어요.
 		if (view.ownerId !== interaction.user.id) {
 			await this.replyEphemeral(interaction, QUEUE_VIEW_MESSAGES.notOwner);
 			return;
@@ -99,7 +94,6 @@ export default class QueueViewButtonHandler extends InteractionHandler {
 		const totalPages = Math.max(1, Math.ceil(remaining.length / QUEUE_PAGE_SIZE));
 		const page = clampQueuePage(view.page, totalPages);
 
-		// 대기열 목록(ephemeral) 메시지를 갱신한다 (컨트롤러가 아님).
 		await interaction
 			.editReply({
 				components: [remaining.length === 0 ? queueEmpty() : queueList({ player, page, totalPages, authorId: view.ownerId })],
@@ -110,8 +104,7 @@ export default class QueueViewButtonHandler extends InteractionHandler {
 	}
 
 	private async handleJumpTo(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, trackIndex: number) {
-		// 새 곡의 trackStart가 컨트롤러를 새로 보내므로 컨트롤러 edit는 생략하고,
-		// 대기열 목록(ephemeral) 메시지만 첫 페이지로 새로고침한다.
+		// trackStart가 새 컨트롤러를 보내므로 대기열 목록만 새로고침한다.
 		await interaction.deferUpdate();
 		await this.container.mixerService.skip(player, trackIndex + 1);
 

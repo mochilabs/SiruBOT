@@ -2,12 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { ohaasaCardSchema, ohaasaTopCardSchema } from '../../routes/ohaasaCardSchema.ts';
 import { renderOhaasaCard, renderOhaasaTopCard, starsForRank } from './ohaasaCard.tsx';
 
-/**
- * 운세 카드 스모크 — 요약 카드(운세 설명·럭키 컬러 미포함) 크기 시그니처와
- * 카드 입력 스키마 계약(설명/컬러 필드 부재)을 검증해요.
- */
-
-/** PNG 매직 + IHDR 너비/높이(각각 16/20 바이트 오프셋 big-endian) */
 function expectPngSize(buffer: Buffer, width: number, height: number): void {
 	expect([buffer[0], buffer[1], buffer[2], buffer[3]]).toEqual([137, 80, 78, 71]);
 	expect(buffer.readUInt32BE(16)).toBe(width);
@@ -34,7 +28,6 @@ describe('renderOhaasaCard', () => {
 
 	it('배경을 칠하지 않는 알파 채널 PNG예요', async () => {
 		const buffer = await renderOhaasaCard({ ...base, luckyItem: '핑크색' });
-		// IHDR 색상 타입(오프셋 25) 6 = RGBA — 투명 배경을 보존해요
 		expect(buffer[25]).toBe(6);
 	});
 

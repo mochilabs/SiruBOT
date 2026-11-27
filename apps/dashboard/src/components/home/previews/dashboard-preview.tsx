@@ -9,10 +9,8 @@ import { motionBase } from "@/components/motion/durations";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
-
 type Value = boolean | string | number;
 
-/** 설정 컨트롤 — 실제 대시보드 폼처럼 스위치·선택 칩·슬라이더를 만져볼 수 있어요. from → to 는 자동 재생 연출용 값 */
 type Control =
 	| { kind: "toggle"; id: string; name: string; from: boolean; to: boolean }
 	| { kind: "choice"; id: string; name: string; options: string[]; from: string; to: string }
@@ -78,13 +76,11 @@ const STEP_MS = 1500;
 
 const controlKey = (tabId: string, controlId: string) => `${tabId}.${controlId}`;
 
-/** 슬라이더 값 표기 — 0은 "끄기"/"제한 없음"처럼 읽혀요 */
 function formatSlider(control: Extract<Control, { kind: "slider" }>, value: number) {
 	if (value === 0) return control.id === "limit" ? "제한 없음" : "끄기";
 	return `${value}${control.unit}`;
 }
 
-/** 값 표시는 위로 밀려 올라가며 바뀌어요 */
 function AnimatedValue({ text }: { text: string }) {
 	return (
 		<span className="relative inline-flex overflow-hidden">
@@ -137,11 +133,6 @@ function ControlRow({ control, value }: { control: Control; value: Value }) {
 	);
 }
 
-/**
- * 대시보드 프리뷰 — 좌측 설정 탭이 자동 순환하고, 오른쪽 패널에선 커서가 각 항목으로 가서
- * 클릭하면 값이 바뀐 뒤 "저장됨"이 떠요. 조작 UI가 아니라 "웹에서 바꾸는 장면"만 추상적으로 보여줘요.
- * 화면에 보일 때만 재생돼요(useInView). 탭을 누르면 그 탭부터 다시 재생해요.
- */
 export function DashboardPreview() {
 	const [activeTab, setActiveTab] = useState(0);
 	const [cursorRow, setCursorRow] = useState<number | null>(null);
@@ -166,7 +157,6 @@ export function DashboardPreview() {
 				for (const control of current.controls) next[controlKey(current.id, control.id)] = control[pick];
 				return next;
 			});
-		// reduced-motion에선 커서 없이 바뀐 결과만 보여줘요
 		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
 			setAll("to");
 			return undefined;
@@ -206,7 +196,6 @@ export function DashboardPreview() {
 	}, [activeTab, inView]);
 
 	return (
-		// 다른 기능 프리뷰와 같은 바깥 프레임(테두리 + 머리줄)에 담아요. 안은 Discord가 아니라 웹 대시보드라 surface 토큰을 써요
 		<div ref={ref} className="relative overflow-hidden rounded-card border border-border-subtle bg-card">
 			<div className="flex items-center gap-2 border-b border-border-subtle px-4 py-2.5">
 				<LayoutDashboard size={14} className="text-muted-foreground" aria-hidden />
@@ -254,7 +243,6 @@ export function DashboardPreview() {
 							</m.div>
 						</AnimatePresence>
 
-						{/* 가짜 커서 — 장식이라 스크린리더에서 숨겨요. 실제 컨트롤 위치를 재서 정확히 그 위에 멈춰요 */}
 						<m.div
 							aria-hidden
 							className="pointer-events-none absolute top-0 left-0 z-10"

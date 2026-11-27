@@ -1,4 +1,3 @@
-// notify 회귀 계약 — ApiError의 서버 메시지 우선, 401/403 재시도 안내 제외, 저장 성공 부제 고정을 잠가요.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const toastMock = vi.hoisted(() => ({

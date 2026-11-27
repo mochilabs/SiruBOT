@@ -3,20 +3,16 @@ import { getLogger } from './logger.ts';
 
 const logger = getLogger('cache');
 
-// Redis 키 플러딩 상한: 유니크 키 카디널리티가 임계값을 넘으면 새 키 쓰기를 거부해요 (캐시 미스로 동작, 서비스는 계속).
 const MAX_KEYS = 50_000;
-// 카디널리티 Set은 만료 추적이 안 되므로 주기적으로 비워 재수렴시켜요.
 const CARDINALITY_RESET_MS = 60 * 60 * 1000;
 
 const memory = new Map<string, { value: string; expiresAt: number }>();
 
-/** Redis 공유 캐시. Redis 없으면 프로세스 메모리 폴백 (단일 레플리카 가정). */
 export class SharedCache {
 	private client: RedisClientType | null = null;
 	private memoryHits = 0;
 	private redisHits = 0;
 	private misses = 0;
-	// 프로세스가 본 유니크 캐시 키 집계 (set 시점에만 추가)
 	private keyCardinality = new Set<string>();
 	private cardinalityTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -29,17 +25,15 @@ export class SharedCache {
 			const client = createClient({ url });
 			client.on('error', (error) => logger.error('redis error, falling back to memory:', String(error)));
 			client.once('ready', () => {
-				// 종료(disconnect)와 경합해 클라이언트가 이미 교체됐다면 뒤늦게 상태를 올리지 않아요
+				// Ignore late ready event if disconnect() already replaced this client.
 				if (this.client !== client) return;
 				this.startCardinalityTimer();
 				logger.info('Connected to Redis');
 			});
 			this.client = client;
-			// 최초 연결은 백그라운드로 돌아가요 — Redis가 data-api보다 늦게 떠도 부팅을 막지 않아요.
-			// 재시도는 클라이언트의 내장 무한 재시도(지수 백오프 상한 ~2초)에 맡기고, 준비(isReady) 전까지 소비자는 메모리 폴백으로 동작해요.
+			// Connect in background so slow Redis does not block startup.
 			logger.info('Connecting to Redis in background (memory fallback until ready)');
 			void client.connect().catch((error) => {
-				// 내장 재시도 정책이 포기해야만 도달해요 (기본 정책은 무한 재시도) — 메모리 폴백 유지
 				logger.warn('Redis connect failed, using in-memory cache:', String(error));
 				if (this.client === client) this.client = null;
 			});
@@ -58,7 +52,7 @@ export class SharedCache {
 			if (client.isReady) {
 				await client.close().catch(() => null);
 			} else if (client.isOpen) {
-				// 연결 도중엔 close()가 멈출 수 있어 소켓을 즉시 파괴해요 (stopPlayerHub와 같은 논리)
+				// Destroy socket immediately when not ready; close() can hang mid-connect.
 				client.destroy();
 			}
 		}
@@ -78,7 +72,6 @@ export class SharedCache {
 		}
 	}
 
-	/** set 전에 카디널리티 게이트 — 상한 초과 시 새 키 쓰기 거부(캐시 미스로 동작) */
 	private admissionGate(key: string): boolean {
 		const isNew = !this.keyCardinality.has(key);
 		if (isNew && this.keyCardinality.size >= MAX_KEYS) {
@@ -93,22 +86,19 @@ export class SharedCache {
 		return this.client?.isReady === true;
 	}
 
-	/** Pub/Sub 등 전용 연결이 필요한 소비자를 위한 클라이언트 접근자 (duplicate해서 쓸 것) */
 	public getClient(): RedisClientType | null {
 		return this.client?.isReady ? this.client : null;
 	}
 
 	public async get(key: string): Promise<string | null> {
-		// 가드는 isReady 기준이에요 — 연결 도중(isOpen만 true)에 명령을 내면 오프라인 큐에서 영원히 대기하므로, 준비 전엔 메모리 폴백으로 처리해요.
+		// Require isReady; commands issued while only isOpen queue indefinitely.
 		if (this.client?.isReady) {
 			try {
 				const value = await this.client.get(key);
 				if (value != null) this.redisHits++;
 				else this.misses++;
 				return value;
-			} catch {
-				// Redis 장애 → 메모리 폴백
-			}
+			} catch {}
 		}
 		const entry = memory.get(key);
 		if (!entry) {
@@ -130,11 +120,8 @@ export class SharedCache {
 			try {
 				await this.client.set(key, value, { EX: ttlSeconds });
 				return;
-			} catch {
-				// 폴백
-			}
+			} catch {}
 		}
-		// 메모리 폴백 상한: 먼저 만료된 엔트리를 정리하고, 그래도 넘치면 가장 오래된 것(삽입 순서 첫 항목)을 삭제해요.
 		if (memory.size >= MAX_KEYS) {
 			const now = Date.now();
 			for (const [k, entry] of memory) {
@@ -149,7 +136,6 @@ export class SharedCache {
 		memory.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
 	}
 
-	/** 분산 락 (번역 단일화용). Redis 없으면 항상 획득 성공. */
 	public async acquireLock(key: string, ttlSeconds: number): Promise<boolean> {
 		if (this.client?.isReady) {
 			try {

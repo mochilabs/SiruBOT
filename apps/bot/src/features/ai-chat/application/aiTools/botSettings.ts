@@ -39,16 +39,13 @@ function resolveChannel(guild: Guild, input: string): GuildBasedChannel {
 	const mentionMatch = /^<#([^>]+)>$/.exec(trimmed);
 	const rawId = mentionMatch ? mentionMatch[1]! : trimmed;
 
-	// 1. Direct ID lookup
 	const byId = guild.channels.cache.get(rawId);
 	if (byId) return byId;
 
-	// 2. Name lookup (with or without '#')
 	const cleanName = trimmed.replace(/^#/, '').toLowerCase();
 	const byName = guild.channels.cache.find((c) => c.name.toLowerCase() === cleanName);
 	if (byName) return byName;
 
-	// 3. Partial match
 	const partial = guild.channels.cache.find((c) => c.name.toLowerCase().includes(cleanName));
 	if (partial) return partial;
 
@@ -84,23 +81,19 @@ function resolveRole(guild: Guild, input: string): Role {
 	const mentionMatch = /^<@&([^>]+)>$/.exec(trimmed);
 	const rawId = mentionMatch ? mentionMatch[1]! : trimmed;
 
-	// 1. Direct ID lookup
 	const byId = guild.roles.cache.get(rawId);
 	if (byId) return byId;
 
-	// 2. Name lookup (with or without '@')
 	const cleanName = trimmed.replace(/^@/, '').toLowerCase();
 	const byName = guild.roles.cache.find((r) => r.name.toLowerCase() === cleanName);
 	if (byName) return byName;
 
-	// 3. Partial match
 	const partial = guild.roles.cache.find((r) => r.name.toLowerCase().includes(cleanName));
 	if (partial) return partial;
 
 	throw new Error(`'${input}' 역할을 찾을 수 없어요. 역할 이름이나 멘션을 확인해 주세요.`);
 }
 
-/** 확인 창에 보여줄 항목 이름 — 도구 스키마의 인자 이름과 같아요 */
 const BOT_SETTING_LABELS: Record<string, string> = {
 	default_text_channel: '기본 텍스트 채널',
 	default_voice_channel: '기본 음성 채널',
@@ -121,7 +114,6 @@ const BOT_SETTING_LABELS: Record<string, string> = {
 	counting_channel: '숫자 세기 채널'
 };
 
-/** 봇 설정 도구를 만들어요 — 의존성은 deps로 받아요 */
 export function createBotSettingsTools(
 	deps: Pick<AiToolDeps, 'guildService' | 'tempVoice' | 'getClient' | 'musicPort' | 'syncTextChannelPanel'>
 ): AiTool[] {

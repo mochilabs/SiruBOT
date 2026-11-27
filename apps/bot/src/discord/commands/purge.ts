@@ -6,8 +6,6 @@ import { emoji } from '@sirubot/utils';
 import { findMessagesToPurge, MAX_AGE_MS } from '../utils/purgeMessages.ts';
 import { confirmAction } from '../../lib/confirmation.ts';
 
-/** Discord bulk-delete API는 14일이 지난 메시지를 삭제할 수 없어요 */
-
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'purge',

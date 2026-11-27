@@ -1,13 +1,3 @@
-/**
- * siru_moji(텍스트→16×16 이모지 생성 서비스) 클라이언트.
- *
- * `POST /v1/generate/stream`으로 진행 상황(대기열 순서·단계별 미리보기)을 NDJSON으로 받다가
- * 마지막 `done` 이벤트의 PNG(base64) n장을 돌려줘요. 서버가 스트리밍을 모르면(404) `POST /v1/generate`로 한 번에 받아요.
- * 인증은 다른 내부 서비스처럼 `Authorization` 헤더에 키 원문을 넣어요(Bearer 없음).
- * 서버는 생성을 한 번에 하나씩 처리하고 대기열이 차면 503을 줘요 — 그건 'busy'로 구분해요.
- */
-
-/** 생성 1건의 타임아웃 — GPU면 1~2초, CPU 폴백이면 10초 안팎이라 대기열을 감안해 넉넉히 잡아요. */
 const MOJI_TIMEOUT_MS = 45_000;
 
 export interface MojiConfig {
@@ -17,13 +7,10 @@ export interface MojiConfig {
 
 export interface MojiDrawing {
 	images: Buffer[];
-	/** 같은 seed + 설명이면 같은 그림이 나와요. */
 	seed: number;
-	/** 서버가 실제로 쓴 장치 — 'webgpu' 또는 'cpu' */
 	device: string;
 }
 
-/** 생성 진행 상황 — queued는 앞에 다른 생성이 있을 때만 와요. preview는 후보를 가로로 이은 PNG예요. */
 export type MojiProgress = { type: 'queued'; ahead: number } | { type: 'start' } | { type: 'step'; step: number; total: number; preview: Buffer };
 
 export type MojiErrorCode = 'not_configured' | 'busy' | 'unavailable' | 'bad_response';
@@ -40,14 +27,12 @@ export class MojiError extends Error {
 }
 
 export interface MojiClientDeps {
-	/** 호출할 때마다 읽어요 — SIRU_MOJI_URL이 없으면 null(기능 off). */
 	getMojiConfig: () => MojiConfig | null;
 }
 
 export interface GenerateOptions {
 	n?: number;
 	seed?: number;
-	/** 진행 이벤트마다 불려요. 던져도 생성은 계속돼요(로그는 호출자가 남겨요). */
 	onProgress?: (progress: MojiProgress) => void;
 }
 
@@ -73,7 +58,6 @@ async function failFromResponse(res: Response): Promise<never> {
 	throw new MojiError('unavailable', `siru_moji responded ${res.status}${detail ? ` ${detail}` : ''}`);
 }
 
-/** NDJSON 본문을 줄 단위로 읽어요. 청크 경계에서 잘린 줄은 다음 청크와 이어 붙여요. */
 async function* ndjsonLines(body: ReadableStream<Uint8Array>): AsyncGenerator<unknown> {
 	const decoder = new TextDecoder();
 	let buffer = '';

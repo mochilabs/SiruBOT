@@ -15,9 +15,7 @@ export interface ServerFeatureItem {
   key: string;
   label: string;
   icon?: React.ReactNode;
-  /** group이 바뀌는 지점에는 헤더 없이 얇은 구분선만 그려요 */
   group?: string;
-  /** 소속 모듈이 꺼져 있으면 흐리게 표시해요 (클릭은 유지해서 설정 확인·켜기 가능) */
   dimmed?: boolean;
 }
 
@@ -26,13 +24,10 @@ interface ServerFeatureSidebarProps {
   active: string;
   onSelect: (key: string) => void;
   groupLabels?: Readonly<Record<string, string>>;
-  /** 사이드바 맨 위에 붙는 영역 — 서버 선택기 */
   header?: React.ReactNode;
-  /** 폴더처럼 접고 펼 수 있는 그룹 — 활성 항목이 든 그룹은 기본으로 열려요 */
   collapsibleGroups?: readonly string[];
 }
 
-/** 데스크톱 사이드바·모바일 시트가 같이 쓰는 그룹 라벨 — SectionLabel에 들여쓰기만 조정해요 */
 export function ServerNavGroupLabel({
   first,
   children,
@@ -53,11 +48,6 @@ export function ServerNavGroupLabel({
   );
 }
 
-/**
- * PC(lg+) 전용 기능 사이드바 — 플레이리스트 사이드바와 같은 "카드 + 목록" 언어를 써서
- * 대시보드 안에서 새 패턴을 만들지 않아요. 모든 메뉴를 평평하게 보여주고 그룹 경계에
- * 라벨 구분선을 그려요. 활성 항목은 spring 인디케이터로 표시해요.
- */
 export function ServerFeatureSidebar({
   items,
   active,
@@ -66,7 +56,6 @@ export function ServerFeatureSidebar({
   header,
   collapsibleGroups = [],
 }: ServerFeatureSidebarProps) {
-  // 사용자가 직접 토글한 그룹만 기록해요 — 없으면 "활성 항목이 들어 있는가"가 기본값이에요
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const activeGroup = items.find((item) => item.key === active)?.group;
   const isOpen = (group?: string) =>

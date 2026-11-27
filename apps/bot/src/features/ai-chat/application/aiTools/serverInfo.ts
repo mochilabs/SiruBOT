@@ -1,7 +1,6 @@
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool } from './types.ts';
 
-/** 서버 정보 도구를 만들어요 — 의존성은 deps로 받아요 */
 export function createServerInfoTool(deps: Pick<AiToolDeps, 'db' | 'getClient'>): AiTool {
 	return {
 		name: 'server_info',

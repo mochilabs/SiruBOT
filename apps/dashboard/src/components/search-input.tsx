@@ -65,7 +65,6 @@ export function SearchInput({
 			/>
 
 			{value && (
-				// ghost variant — icon variant의 shadow-control-boundary가 덮어쓰기에도 남아서 링처럼 보였어요
 				<Button
 					variant="ghost"
 					onClick={clear}

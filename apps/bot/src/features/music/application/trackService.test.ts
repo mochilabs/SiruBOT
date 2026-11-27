@@ -26,7 +26,6 @@ const db = {
 	guildTrackHistory: { create: mocks.historyCreate }
 } as never;
 
-// $transaction 콜백의 tx는 db와 동일한 모델 계층을 노출한다.
 const txShape = {
 	$queryRaw: mocks.queryRaw,
 	track: { upsert: mocks.trackUpsert, update: mocks.trackUpdate },
@@ -68,7 +67,6 @@ describe('TrackService.recordPlay', () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		// $transaction은 콜백을 받아 즉시 실행하고, tx는 db 모델 계층을 그대로 노출한다.
 		mocks.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(txShape));
 		mocks.trackUpsert.mockResolvedValue({ recordingId: null });
 		mocks.recordingFindUnique.mockResolvedValue(null);
@@ -89,7 +87,6 @@ describe('TrackService.recordPlay', () => {
 		expect(mocks.userUpsert).toHaveBeenCalledWith({ where: { id: 'user-1' }, create: { id: 'user-1' }, update: {} });
 		expect(mocks.historyCreate).toHaveBeenCalledWith({ data: { guildId: 'g-1', trackId: 'id-1', userId: 'user-1' } });
 
-		// 곡 upsert는 totalPlays 증가와 메타 갱신을 포함해야 한다.
 		const trackArgs = mocks.trackUpsert.mock.calls[0][0] as { create: { totalPlays: number }; update: { totalPlays: { increment: number } } };
 		expect(trackArgs.create.totalPlays).toBe(1);
 		expect(trackArgs.update.totalPlays.increment).toBe(1);
