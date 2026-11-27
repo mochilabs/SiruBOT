@@ -104,7 +104,7 @@ describe('loadConfig — 기본값 (선택 키가 전부 없을 때)', () => {
 		expect(config.search).toEqual({ searxngEnabled: true, searxngBaseUrl: undefined });
 		expect(config.mixer).toEqual({ callTimeoutMs: 5000, confirmTimeoutMs: 5000 });
 		expect(config.autoplay).toEqual({ highSimilarity: 0.75, lowSimilarity: 0.2 });
-		expect(config.notifier).toEqual({ debounceMs: 300, progressTickMs: 5000 });
+		expect(config.notifier).toEqual({ debounceMs: 300, progressTickMs: 5000, operationTimeoutMs: 20_000 });
 		expect(config.playback).toEqual({ maxConsecutiveErrors: 3, leaveTimeoutMs: 300000 });
 		expect(config.tempVoice.emptyGraceMs).toBe(30000);
 	});

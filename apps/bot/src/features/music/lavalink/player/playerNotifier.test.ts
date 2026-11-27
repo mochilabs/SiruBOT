@@ -430,6 +430,85 @@ describe('non-blocking player notifications', () => {
 		await vi.waitFor(() => expect(mocks.edits).toHaveBeenCalledTimes(1));
 	});
 
+	it('runs a queued send before further updates even while updates keep arriving', async () => {
+		vi.useFakeTimers();
+		const notifier = new PlayerNotifier(deps);
+		const current = player();
+		await notifier.sendController(current);
+		const editing = pending<TestMessage>();
+		(current.controller!.edit as Mock).mockReturnValue(editing.promise);
+		Object.defineProperty(current, 'position', { value: 1000, configurable: true });
+		notifier.updateController(current);
+		await vi.advanceTimersByTimeAsync(300);
+		expect(mocks.edits).not.toHaveBeenCalled();
+		expect(current.controller!.edit).toHaveBeenCalledTimes(1);
+
+		const sent = notifier.sendController(current);
+		for (let i = 2; i < 6; i++) {
+			Object.defineProperty(current, 'position', { value: i * 1000, configurable: true });
+			notifier.updateController(current);
+			await vi.advanceTimersByTimeAsync(300);
+		}
+		editing.resolve(message('message-1'));
+		await sent;
+		expect(mocks.send).toHaveBeenCalledTimes(2);
+		expect(current.messageId).toBe('message-2');
+		// No edit of the old controller slipped in between the slow edit and the queued send.
+		expect(mocks.edits).not.toHaveBeenCalled();
+	});
+
+	it('posts only the newest of several queued automatic sends', async () => {
+		const posting = pending<TestMessage>();
+		mocks.send.mockReturnValueOnce(posting.promise);
+		const notifier = new PlayerNotifier(deps);
+		const current = player();
+		const first = notifier.sendController(current);
+		await vi.waitFor(() => expect(mocks.send).toHaveBeenCalledTimes(1));
+		const rest = [notifier.sendController(current), notifier.sendController(current), notifier.sendController(current)];
+		const stale = message('stale');
+		posting.resolve(stale);
+		await Promise.all([first, ...rest]);
+		expect(stale.delete).toHaveBeenCalledTimes(1);
+		expect(mocks.send).toHaveBeenCalledTimes(2);
+		expect(current.messageId).toBe('message-1');
+	});
+
+	it('replaces an older slash reply with a newer one but never lets an automatic send swallow it', async () => {
+		const notifier = new PlayerNotifier(deps);
+		const current = player();
+		const posting = pending<TestMessage>();
+		mocks.send.mockReturnValueOnce(posting.promise);
+		const blocker = notifier.sendController(current);
+		await vi.waitFor(() => expect(mocks.send).toHaveBeenCalledTimes(1));
+		const older = { deferred: true, editReply: vi.fn(), deleteReply: vi.fn().mockResolvedValue(undefined), channelId: 'channel' };
+		const newer = { deferred: true, editReply: vi.fn().mockResolvedValue(message('newer')), deleteReply: vi.fn(), channelId: 'channel' };
+		const olderRun = notifier.sendController(current, older as unknown as ChatInputCommandInteraction);
+		const newerRun = notifier.sendController(current, newer as unknown as ChatInputCommandInteraction);
+		const autoRun = notifier.sendController(current);
+		posting.resolve(message('blocker'));
+		await Promise.all([blocker, olderRun, newerRun, autoRun]);
+		expect(older.editReply).not.toHaveBeenCalled();
+		expect(older.deleteReply).toHaveBeenCalledTimes(1);
+		expect(newer.editReply).toHaveBeenCalledTimes(1);
+		expect(newer.deleteReply).not.toHaveBeenCalled();
+	});
+
+	it('releases the guild queue when a Discord call never settles', async () => {
+		setConfigForTesting(makeTestConfig({ NOTIFIER_OPERATION_TIMEOUT_MS: '1000' }));
+		vi.useFakeTimers();
+		mocks.send.mockReturnValueOnce(new Promise(() => {}));
+		const notifier = new PlayerNotifier(deps);
+		const current = player();
+		const stuck = notifier.sendController(current);
+		await vi.advanceTimersByTimeAsync(0);
+		const next = notifier.sendController(current);
+		await vi.advanceTimersByTimeAsync(1000);
+		await Promise.all([stuck, next]);
+		expect(mocks.send).toHaveBeenCalledTimes(2);
+		expect(current.messageId).toBe('message-1');
+		expect(mocks.logger.warn).toHaveBeenCalledWith(expect.stringContaining('releasing the queue'));
+	});
+
 	it('removes a deferred loading response and propagates a failed send', async () => {
 		const error = new Error('Discord request failed');
 		const interaction = { deferred: true, editReply: vi.fn().mockRejectedValue(error), deleteReply: vi.fn().mockResolvedValue(undefined) };
