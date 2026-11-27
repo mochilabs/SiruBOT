@@ -21,11 +21,7 @@ export interface ManagedRedisSubscriberOptions {
 	reconnectMaxDelayMs?: number;
 }
 
-/**
- * Subscriber connections can't run normal commands, so the RedisStore connection can't be reused.
- * start and reconnect failures never throw; it retries with its own backoff (default 5s → 60s).
- * Call stop() before redisStore.disconnect() on shutdown.
- */
+// Dedicated subscriber connection; call stop() before disconnecting the main Redis store.
 export class ManagedRedisSubscriber {
 	private subscriber: RedisClientType | null = null;
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -39,7 +35,6 @@ export class ManagedRedisSubscriber {
 		this.maxDelay = options.reconnectMaxDelayMs ?? 60_000;
 	}
 
-	/** 연결+전체 채널 구독 성공 후 연결 종료('end') 전까지 true예요 — 요청 시점 가용성 판단용 (소켓이 아니라 구독 완료 기준) */
 	public get isSubscribed(): boolean {
 		return this.subscriber !== null;
 	}
@@ -57,7 +52,7 @@ export class ManagedRedisSubscriber {
 			client = createClient({ url: this.options.url }) as RedisClientType;
 			const connecting = client;
 			connecting.on('error', (error) => this.options.logger.warn(`${this.options.name} 구독 오류: ${error.message}`));
-			// node-redis reconnects itself but not after 'end', so this is the safety net
+			// node-redis does not auto-reconnect after 'end'.
 			connecting.on('end', () => {
 				if (this.subscriber === connecting) {
 					this.subscriber = null;
@@ -70,7 +65,6 @@ export class ManagedRedisSubscriber {
 				await connecting.subscribe(binding.channel, (raw) => binding.onMessage(raw));
 			}
 
-			// stop() came before connect finished: close immediately so no subscriber lingers after shutdown
 			if (this.stopped) {
 				await connecting.quit().catch(() => undefined);
 				return;
@@ -81,13 +75,11 @@ export class ManagedRedisSubscriber {
 		} catch (error) {
 			this.subscriber = this.subscriber === previous ? null : this.subscriber;
 			this.options.logger.warn(`${this.options.name} 구독 실패, 재연결 예약: ${error instanceof Error ? error.message : String(error)}`);
-			// avoid leaving an open socket when subscribe fails after connect
 			if (client && client !== this.subscriber && client.isOpen) {
 				client.destroy();
 			}
 			await this.scheduleReconnect();
 		} finally {
-			// close the connection being replaced to avoid a socket leak
 			if (previous && previous !== this.subscriber) {
 				await previous.quit().catch(() => undefined);
 			}

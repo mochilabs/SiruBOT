@@ -1,10 +1,3 @@
-/**
- * One table for help categories, usage metrics and per-server module toggling. The dashboard imports it via the `@sirubot/utils/modules` subpath.
- * - `commands`: slash command piece `name`s (English); a bot test checks them against the real pieces.
- * - `componentNamespaces`: `defineCustomId` namespaces, used to group button/select usage by module.
- * - `messageFeatures`: features driven by messages or events rather than commands; metric key `msg:{id}`.
- */
-
 export type BotModuleId = 'music' | 'community' | 'ai' | 'fun' | 'utility' | 'admin';
 
 export interface MessageFeature {
@@ -16,14 +9,11 @@ export interface BotModule {
 	readonly id: BotModuleId;
 	readonly label: string;
 	readonly emoji: string;
-	/** App emoji name inside Discord (`emoji(name, fallback)`); the dashboard uses the unicode `emoji`. */
 	readonly appEmoji: string;
-	/** Help select description, 100 characters max. */
 	readonly description: string;
 	readonly commands: readonly string[];
 	readonly componentNamespaces: readonly string[];
 	readonly messageFeatures: readonly MessageFeature[];
-	/** The management module can't be turned off. */
 	readonly toggleable: boolean;
 }
 
@@ -125,17 +115,14 @@ export function commandModule(commandName: string): BotModuleId | null {
 	return MODULE_BY_COMMAND.get(commandName) ?? null;
 }
 
-/** 모듈이 꺼져 있어도 항상 실행되는 슬래시 명령 — 도움말은 끈 뒤에도 켜는 방법을 알려줘야 하고, 개인정보 삭제는 막을 수 없어요. */
 export const ALWAYS_ALLOWED_COMMANDS: readonly string[] = ['help', 'privacy'];
 export const ALWAYS_ALLOWED_NAMESPACES: readonly string[] = ['help', 'onboarding'];
 
-/** Drops unknown ids and non-disableable modules, dedupes, and orders by the module table. */
 export function sanitizeDisabledModules(input: readonly string[] | null | undefined): BotModuleId[] {
 	const wanted = new Set(input ?? []);
 	return BOT_MODULES.filter((m) => m.toggleable && wanted.has(m.id)).map((m) => m.id);
 }
 
-/** A non-disableable module counts as on even if listed. */
 export function isModuleDisabled(disabledModules: readonly string[] | null | undefined, moduleId: BotModuleId): boolean {
 	return getBotModule(moduleId).toggleable && (disabledModules ?? []).includes(moduleId);
 }
@@ -158,18 +145,15 @@ export function moduleDisabledMessage(moduleId: BotModuleId): string {
 	return `이 서버에서는 ${getBotModule(moduleId).label} 기능이 꺼져 있어요. 관리자는 /설정에서 켤 수 있어요.`;
 }
 
-/** 사용 지표 feature 키 접두어. `cmd:music.play`, `ns:controller`, `msg:greeting`, `playback:track_error`, `onboarding:sent` */
 export const USAGE_FEATURE_PREFIXES = ['cmd', 'ns', 'msg', 'playback', 'onboarding'] as const;
 export type UsageFeaturePrefix = (typeof USAGE_FEATURE_PREFIXES)[number];
 
-/** Fits the DB column. */
 export const USAGE_FEATURE_MAX_LENGTH = 64;
 
 export function usageFeatureKey(prefix: UsageFeaturePrefix, name: string): string {
 	return `${prefix}:${name}`.slice(0, USAGE_FEATURE_MAX_LENGTH);
 }
 
-/** Playback failures group under music, onboarding under util; null for unknown keys. */
 export function featureModule(feature: string): BotModuleId | null {
 	const sep = feature.indexOf(':');
 	if (sep < 0) return null;

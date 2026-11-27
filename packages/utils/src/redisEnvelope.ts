@@ -1,10 +1,6 @@
-// Anyone with Redis access can publish, so senders sign with HMAC-SHA256 and receivers verify, blocking forged requests and replies.
-// Envelope: `{ body, sig }` where `body` is the payload JSON kept as an opaque string, so re-serialization can't break the signature.
-// Key: `REDIS_AUTH_KEY ?? AUTH_KEY`, shared by the bot and data-api. Without a key it runs unsigned (dev/standalone; production always has AUTH_KEY).
-// A side that has a key rejects unsigned messages (fail-closed), so keys must match on both sides at deploy.
+// HMAC-SHA256 signed { body, sig } envelope; fail-closed when signingKey is set.
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-/** Empty string means no signing. */
 export function resolveRedisSigningKey(env: Record<string, string | undefined>): string {
 	const redisKey = (env.REDIS_AUTH_KEY ?? '').trim();
 	if (redisKey) return redisKey;
@@ -18,7 +14,6 @@ export function wrapRedisMessage(signingKey: string, payload: unknown): string {
 	return JSON.stringify({ body, sig });
 }
 
-/** Null on a missing or mismatched signature or a malformed envelope. Without a key it returns the raw message unverified. */
 export function unwrapRedisMessage(signingKey: string, raw: string): string | null {
 	if (!signingKey) return raw;
 	let envelope: unknown;

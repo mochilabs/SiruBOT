@@ -13,9 +13,9 @@ describe('hexColorToInt', () => {
 	});
 
 	it('형식이 아니면 undefined — 호출부는 기본색으로 폴백해요', () => {
-		expect(hexColorToInt('ffdaff')).toBeUndefined(); // # 없음
-		expect(hexColorToInt('#fff')).toBeUndefined(); // 3자리
-		expect(hexColorToInt('#gggggg')).toBeUndefined(); // 비hex
+		expect(hexColorToInt('ffdaff')).toBeUndefined();
+		expect(hexColorToInt('#fff')).toBeUndefined();
+		expect(hexColorToInt('#gggggg')).toBeUndefined();
 		expect(hexColorToInt('')).toBeUndefined();
 	});
 });

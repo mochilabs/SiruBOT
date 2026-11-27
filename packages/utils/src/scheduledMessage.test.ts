@@ -71,7 +71,7 @@ describe('시각', () => {
 	});
 
 	it('첫 실행 시각에서 반복 규칙을 만들어요', () => {
-		const first = kst('2026-12-25T09:30:00'); // 금요일
+		const first = kst('2026-12-25T09:30:00');
 		expect(buildRecurrence('none', first)).toBeUndefined();
 		expect(buildRecurrence('daily', first)).toEqual({ type: 'daily', time: '09:30' });
 		expect(buildRecurrence('weekly', first)).toEqual({ type: 'weekly', weekday: 5, time: '09:30' });
@@ -133,10 +133,8 @@ describe('checkNewScheduledMessage', () => {
 	});
 
 	it('반복 예약은 이후 회차끼리의 충돌도 찾아요', () => {
-		// 기존: 매일 09:00. 새 것: 12-27 09:05 한 번 → 첫 회차는 달라도 12-27 09:00 회차와 5분 차이
 		const daily = existing({ recurrence: { type: 'daily', time: '09:00' }, runAt: kst('2026-12-25T09:00:00') });
 		expect(check({ runAt: kst('2026-12-27T09:05:00'), existing: [daily] })).toMatchObject({ code: 'interval' });
-		// 새 반복이 기존 한 번짜리와 며칠 뒤에 겹치는 경우
 		const once = existing({ runAt: kst('2026-12-28T09:00:00') });
 		expect(check({ runAt: kst('2026-12-25T09:05:00'), recurrence: { type: 'daily', time: '09:05' }, existing: [once] })).toMatchObject({
 			code: 'interval'

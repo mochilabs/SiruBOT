@@ -1,14 +1,8 @@
 import { z } from 'zod';
 import { DEFAULT_GREETINGS, GREETING_TEMPLATES, greetingConfigSchema, type GreetingConfig, type GreetingKind } from './memberGreeting.js';
 
-// Birthdays are month/day only (`User.birthMonth`/`birthDay`); year and age are never stored.
-// Only members who opted in per server (`BirthdayOptIn`) are celebrated.
-// The card reuses `GreetingConfig` so the greeting renderer and editor work unchanged.
-// A `ScheduledJob` (kind `birthday_daily`) runs once a day per server; all dates and times are Asia/Seoul (fixed UTC+9).
-
 export const BIRTHDAY_DAILY_KIND = 'birthday_daily';
 export const BIRTHDAY_DEFAULT_SEND_TIME = '09:00';
-/** Beyond this, names collapse to "외 N명". */
 export const BIRTHDAY_NAMES_SHOWN = 3;
 const DISPLAY_NAME_MAX = 64;
 
@@ -28,7 +22,6 @@ export function kstDateOf(date: Date): KstDate {
 	return { year: kst.getUTCFullYear(), month: kst.getUTCMonth() + 1, day: kst.getUTCDate() };
 }
 
-/** KST date; string comparison is date order. */
 export function kstDateString(date: Date): string {
 	const { year, month, day } = kstDateOf(date);
 	const p = (n: number) => String(n).padStart(2, '0');
@@ -54,7 +47,6 @@ const SEND_TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 export const sendTimeSchema = z.string().regex(SEND_TIME_PATTERN, '시각은 09:00처럼 적어 주세요.');
 
-/** Minutes after midnight; null for a malformed value. */
 export function parseSendTime(time: string): number | null {
 	const match = SEND_TIME_PATTERN.exec(time);
 	return match ? Number(match[1]) * 60 + Number(match[2]) : null;
@@ -65,19 +57,16 @@ export function sendAtOnKstDate(date: KstDate, sendTime: string): Date {
 	return new Date(Date.UTC(date.year, date.month - 1, date.day, 0, minutes) - KST_OFFSET_MS);
 }
 
-/** Strictly after `now`. */
 export function nextSendAt(now: Date, sendTime: string): Date {
 	const today = sendAtOnKstDate(kstDateOf(now), sendTime);
 	return today.getTime() > now.getTime() ? today : new Date(today.getTime() + DAY_MS);
 }
 
-/** Same time a day later (KST has no DST, so 24h); skips ahead to the next slot after `now` if the bot was down past it. */
 export function nextDailyRun(ranAt: Date, now: Date, sendTime: string): Date {
 	const next = sendAtOnKstDate(kstDateOf(new Date(ranAt.getTime() + DAY_MS)), sendTime);
 	return next.getTime() > now.getTime() ? next : nextSendAt(now, sendTime);
 }
 
-/** The day after enabling: nothing is sent on the day it's turned on. */
 export function firstActiveDate(now: Date): string {
 	return kstDateString(new Date(now.getTime() + DAY_MS));
 }
@@ -93,7 +82,6 @@ export function shouldCelebrate(gate: CelebrationGate): boolean {
 	return gate.lastCelebratedOn !== gate.today;
 }
 
-/** Up to 3 names comma-separated, then "A, B, C 외 N명"; stays within the renderer's 64-character cap. */
 export function formatBirthdayNames(names: readonly string[]): string {
 	const shown = names.slice(0, BIRTHDAY_NAMES_SHOWN);
 	const rest = names.length - shown.length;
@@ -123,23 +111,17 @@ function buildDefaultBirthdayCard(): GreetingConfig {
 	};
 }
 
-/** 생일 축하 카드 기본값 — 컨페티 파티 템플릿에 생일 프리셋 배경을 얹었어요. 여러 명이면 {유저}는 멘션 목록, {유저이름}은 이름 목록이에요 */
 export const DEFAULT_BIRTHDAY_CARD: GreetingConfig = buildDefaultBirthdayCard();
 
-/** 카드 종류별 기본 설정 — 대시보드 편집기가 "이미지 켜기"·초기화에 써요 */
 export const DEFAULT_CARD_CONFIGS: Record<GreetingCardKind, GreetingConfig> = {
 	...DEFAULT_GREETINGS,
 	birthday: DEFAULT_BIRTHDAY_CARD
 };
 
 export interface BirthdaySettings {
-	/** Also holds `enabled` and `channelId`. */
 	card: GreetingConfig;
-	/** "HH:mm" KST */
 	sendTime: string;
-	/** 생일 당일에 줄 역할 — 다음 날 회수해요 */
 	roleId: string | null;
-	/** Null if never enabled. */
 	activeFrom: string | null;
 }
 
@@ -160,7 +142,6 @@ export const BIRTHDAY_SETTINGS_DEFAULTS: BirthdaySettings = {
 	activeFrom: null
 };
 
-/** Sets `activeFrom` to the next day when switching on, keeps it while already on, clears it when off. */
 export function nextActiveFrom(previous: { enabled: boolean; activeFrom: string | null }, nextEnabled: boolean, now: Date): string | null {
 	if (!nextEnabled) return null;
 	return previous.enabled && previous.activeFrom ? previous.activeFrom : firstActiveDate(now);

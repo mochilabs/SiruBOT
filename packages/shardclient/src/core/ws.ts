@@ -39,9 +39,7 @@ export class ShardWebSocket {
 					this.ws.removeAllListeners();
 					this.ws.on('error', () => {}); // swallow trailing errors so they don't surface as unhandled
 					this.ws.terminate();
-				} catch {
-					// the old socket is being discarded anyway
-				}
+				} catch {}
 				this.ws = null;
 			}
 

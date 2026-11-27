@@ -14,9 +14,7 @@ const RECONNECT_BASE_DELAY_MS = 1_000;
 export type ShardClientOptions = {
 	logger: ILogger;
 	serverURL: string;
-	/** Discord token sent in IDENTIFY */
 	authToken?: string;
-	/** Sent as the Authorization header when connecting to the shard manager */
 	authKey?: string;
 };
 
@@ -89,7 +87,6 @@ export class ShardClient {
 				this.logger.info('Successfully re-identified with shard manager');
 				return;
 			} catch (error) {
-				// A rejected claim is retried like any other failure; only the logged cause differs.
 				const cause =
 					error instanceof NoShardsAvailableError
 						? 'shard manager rejected the shard claim (still held by another process, or invalid IDs)'

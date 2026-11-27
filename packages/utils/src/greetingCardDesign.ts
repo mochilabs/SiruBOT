@@ -1,16 +1,10 @@
-// Single source of preset hex values and scrim color for the data-api Takumi renderer and the dashboard preview; diverging colors break the visual contract.
-// Data and pure functions only (each runtime keeps its own canvas calls). The dashboard imports it via the subpath.
-
 export interface GreetingPresetGradient {
 	base: string;
-	/** Bottom-left. */
 	from: string;
-	/** Top-right. */
 	to: string;
 	glow: string;
 }
 
-/** Brand gradients are the identity of these presets; changing a value changes the visual contract. */
 export const GREETING_PRESET_GRADIENTS: Record<string, GreetingPresetGradient> = {
 	rose: { base: '#3d2328', from: '#d1608a', to: '#ff85c1', glow: '#ffe4f0' },
 	plum: { base: '#1a0e12', from: '#231317', to: '#4d2a35', glow: '#ffb3d9' },
@@ -37,14 +31,12 @@ export function hexToRgba(hex: string, alpha: number): string {
 	return `rgba(${r},${g},${b},${alpha})`;
 }
 
-/** Unknown ids fall back to DEFAULT_PRESET_ID (plum). */
 function presetGradient(id: string | null | undefined): GreetingPresetGradient {
 	return (id && GREETING_PRESET_GRADIENTS[id]) || GREETING_PRESET_GRADIENTS[DEFAULT_PRESET_ID];
 }
 
 export interface GreetingPresetBackgroundPlan {
 	base: string;
-	/** From (0, card height) to (card width, 0); stops are [offset, color]. */
 	linear: { x0: number; y0: number; x1: number; y1: number; stops: readonly (readonly [number, string])[] };
 	glow: { cx: number; cy: number; radius: number; stops: readonly (readonly [number, string])[] };
 	scrim: string;

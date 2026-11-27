@@ -1,12 +1,6 @@
 import { z } from 'zod';
 import { redisIdSchema } from './redisChannels.js';
 
-/**
- * 봇 관리자(운영자) 제어 request/reply 공용 계약 — dashboard, data-api, bot이 함께 쓴다.
- * 대시보드 관리자 패널(/admin)에서 봇 내부의 Lavalink 노드 상태 조회·노드 재연결·앱 이모지 동기화·
- * Sapphire 스토어 리로드를 수행할 때 data-api가 BOT_ADMIN_REQUEST_CHANNEL로 퍼블리시하고,
- * 대표 봇 프로세스(shard 0 보유)가 BOT_ADMIN_RESPONSE_CHANNEL로 응답한다.
- */
 export const botAdminKindSchema = z.enum(['nodes-status', 'node-reconnect', 'node-disconnect', 'emojis-list', 'emojis-sync', 'reload-stores']);
 export type BotAdminKind = z.infer<typeof botAdminKindSchema>;
 

@@ -15,12 +15,10 @@ const children = (node: CardElement): CardChild[] => {
 };
 const style = (node: CardChild): Record<string, string | number> => (node as CardElement).props.style ?? {};
 
-/** 루트의 자식 중 배경(4개 이하)을 뺀 레이어 노드 — 프리셋 배경은 4장, 업로드 배경은 1장이에요 */
 function layerNodes(node: CardElement, backgroundCount = 4): CardElement[] {
 	return children(node).slice(backgroundCount) as CardElement[];
 }
 
-/** 텍스트 노드의 실제 글자 */
 function textOf(node: CardElement): string | null {
 	const inner = children(node)[0] as CardElement | null | undefined;
 	return inner ? (inner.props.children as string) : null;
@@ -35,7 +33,6 @@ describe('greetingCard — 좌표 계약', () => {
 	it('아바타는 x/y %를 중심으로 지름 size, 링은 6px 더 크게 놓여요', () => {
 		const root = greetingCard(image([{ id: 'a', type: 'avatar', x: 25, y: 50, size: 200, ringColor: '#ffffff' }]), vars);
 		const [avatar] = layerNodes(root);
-		// 중심 (300, 337.5), 링 지름 212
 		expect(style(avatar!)).toMatchObject({ left: 300 - 106, top: 337.5 - 106, width: 212, height: 212, backgroundColor: '#ffffff' });
 	});
 
@@ -126,13 +123,10 @@ describe('greetingCard — 텍스트', () => {
 		layerNodes(greetingCard(image([{ id: 't', type: 'text', x, y: 40, size: 40, color: '#ffffff', bold: true, align, text: '안녕' }]), vars))[0]!;
 
 	it('가까운 가장자리까지의 폭으로 최대 폭을 제한하고 align에 따라 기준점을 잡아요', () => {
-		// x=50% → cx 600, maxW = 2*600 - 64 = 1136
 		expect(style(text('center', 50))).toMatchObject({ left: 600 - 568, width: 1136, justifyContent: 'center' });
 		expect(style(text('left', 50))).toMatchObject({ left: 600, justifyContent: 'flex-start' });
 		expect(style(text('right', 50))).toMatchObject({ left: 600 - 1136, justifyContent: 'flex-end' });
-		// x=8% → cx 96, maxW = max(120, 192 - 64) = 128
 		expect(style(text('left', 8))).toMatchObject({ left: 96, width: 128 });
-		// 가장자리에 아주 가까우면 최소 폭 120
 		expect(style(text('left', 1))).toMatchObject({ width: 120 });
 	});
 
@@ -189,7 +183,6 @@ describe('greetingCard — 배경', () => {
 		const root = greetingCard(image([], 'rose'), vars);
 		const [base, linear, glow, scrim] = children(root);
 		expect(style(base!).backgroundColor).toBe('#3d2328');
-		// canvas 그라디언트 (0,675)→(1200,0)와 같은 벡터: CSS 각도 atan2(1200, 675)
 		expect(style(linear!).backgroundImage).toBe('linear-gradient(60.64deg, #d1608a 0%, #ff85c1 100%)');
 		expect(style(glow!).backgroundImage).toBe(
 			'radial-gradient(circle 660px at 936px 148.5px, rgba(255,228,240,0.2) 0%, rgba(255,228,240,0) 100%)'
@@ -219,9 +212,7 @@ describe('greetingCard — 모든 템플릿', () => {
 		for (const template of GREETING_TEMPLATES) {
 			const node = greetingCard(template.image, vars);
 			expect(node.type).toBe('div');
-			// 숨김이 없는 템플릿은 배경 4장 + 레이어 수만큼 자식이 있어요
 			expect(children(node)).toHaveLength(4 + template.image.layers.filter((layer) => !layer.hidden).length);
-			// Takumi에 넘길 순수 데이터예요 — 함수·순환이 없어야 해요
 			expect(() => JSON.stringify(node)).not.toThrow();
 		}
 	});
@@ -291,7 +282,6 @@ describe('greetingCard — 텍스트 효과', () => {
 		expect(outer(wrapped)).toMatchObject({ width: 300, left: 450, height: Math.ceil(30 * 1.2 * 2) });
 		expect(inner(wrapped)).toMatchObject({ maxWidth: 300, textAlign: 'center', maxHeight: 72, overflow: 'hidden', textOverflow: 'ellipsis' });
 		expect(inner(wrapped)).not.toHaveProperty('whiteSpace');
-		// 줄 수 제한이 없으면 높이를 자르지 않아요
 		expect(inner(text({ maxWidth: 300 }))).not.toHaveProperty('maxHeight');
 	});
 
@@ -337,7 +327,6 @@ describe('greetingCard — 아바타 옵션', () => {
 		expect(style(content(avatar({ shape: 'rounded' }))).borderRadius).toBe(44);
 		expect(style(ring(avatar({ shape: 'rounded', cornerRadius: 30, ringWidth: 10 })))).toMatchObject({ borderRadius: 40 });
 		expect(style(ring(avatar({ shape: 'square' }))).borderRadius).toBe(0);
-		// 이미지가 있어도 같은 반경으로 잘라요
 		expect(style(content(avatar({ shape: 'rounded', cornerRadius: 30 }), 'data:image/png;base64,AAAA')).borderRadius).toBe(30);
 	});
 

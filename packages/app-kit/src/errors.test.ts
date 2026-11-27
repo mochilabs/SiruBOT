@@ -3,8 +3,6 @@ import Fastify from 'fastify';
 import { ZodError, z } from 'zod';
 import { registerAppErrorHandler, toHttpErrorResponse, zodIssuesMessage } from './errors.ts';
 
-// 에러 계약 회귀 테스트 — 4apps 공용 { error: 코드, message: 한국어 } shape를 잠가요.
-
 function zodError(): ZodError {
 	return z.object({ id: z.string() }).safeParse({ id: 1 }).error!;
 }

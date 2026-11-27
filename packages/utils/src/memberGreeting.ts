@@ -2,72 +2,50 @@ import { z } from 'zod';
 
 import { type GifTiming, parseGifDataUriTiming } from './gifTiming.js';
 
-// Stored as-is in the Prisma Guild.welcome / goodbye Json? columns. Fields added later carry defaults so older stored values still validate.
-
-// Card coordinate contract shared by renderer and editor: layer x/y are % of the card with a center anchor; size/width/height are px on the 1200×675 canvas.
 export const GREETING_CARD_W = 1200;
 export const GREETING_CARD_H = 675;
-/** Only the rendered PNG shrinks (to 800×450); stored coordinates are % based, so no data migration is needed. */
 export const GREETING_RENDER_SCALE = 2 / 3;
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const SNOWFLAKE = /^\d{17,20}$/;
 // Standard base64 alphabet only (not URL-safe).
 const DATA_URI = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
-/** Backgrounds accept animated GIF; image layers don't. */
 const BACKGROUND_DATA_URI = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/;
-const DATA_URI_MAX_LENGTH = 1_500_000; // characters including the prefix, about 1.1MB binary
+const DATA_URI_MAX_LENGTH = 1_500_000;
 
-/** 텍스트 레이어 — 템플릿 변수를 포함할 수 있는 문자열 1개 */
 export type GreetingTextLayer = {
 	id: string;
 	type: 'text';
 	x: number;
 	y: number;
-	size: number; // 폰트 px
+	size: number;
 	color: string;
 	bold: boolean;
 	align: 'left' | 'center' | 'right';
 	text: string;
-	/** 회전(도, 시계 방향) — 텍스트 기준점(x, y) 중심. 기본 0 */
 	rotation?: number;
-	/** 글자 굵기 단계 — 있으면 `bold`보다 우선해요. 없으면 bold ? 900 : 600 (예전 저장값과 같은 모양) */
 	weight?: GreetingTextWeight;
-	/** 글자 간격 px (음수면 좁혀요). 기본 0 */
 	letterSpacing?: number;
-	/** 줄 간격 배수 (글자 크기 대비). 기본 1.25 */
 	lineHeight?: number;
-	/** 최대 폭 px — 넘치는 글은 `overflow` 방식으로 처리해요. 없으면 카드 가장자리까지의 폭 안에서 한 줄 말줄임(예전 동작) */
 	maxWidth?: number;
-	/** maxWidth를 넘을 때: 'wrap' 자동 줄바꿈, 'ellipsis' 한 줄 말줄임. maxWidth가 있으면 기본 'wrap' */
 	overflow?: GreetingTextOverflow;
-	/** 'wrap'일 때 최대 줄 수 — 넘치면 마지막 줄을 말줄임표로 잘라요. 없으면 제한 없음 */
 	maxLines?: number;
-	/** 그림자 — 생략하면 예전 기본 그림자, null이면 그림자 없음 */
 	shadow?: GreetingShadow | null;
-	/** 외곽선 — 생략하거나 null이면 없음 */
 	stroke?: GreetingTextStroke | null;
-	/** 그라디언트 글자 — 있으면 `color` → `gradient.to`로 칠해요 (단색은 생략 또는 null) */
 	gradient?: GreetingTextGradient | null;
-	/** 움직임 — 생략하면 정지. 하나라도 있으면 카드가 애니메이션 WebP로 나가요 */
 	animation?: GreetingAnimation;
-	/** 숨김 레이어 — 렌더러가 건너뛴다 (에디터 보임/숨김 토글이 저장돼요) */
 	hidden?: boolean;
 };
 
-/** 글자 굵기 단계 — 대시보드 미리보기와 서버 렌더가 같은 정적 폰트를 쓰는 값만 허용해요 */
 export const GREETING_TEXT_WEIGHTS = [400, 600, 700, 900] as const;
 export type GreetingTextWeight = (typeof GREETING_TEXT_WEIGHTS)[number];
 
 export const GREETING_TEXT_OVERFLOWS = ['wrap', 'ellipsis'] as const;
 export type GreetingTextOverflow = (typeof GREETING_TEXT_OVERFLOWS)[number];
 
-/** 그림자·글로우 — 색은 #RRGGBB, 투명도는 따로 둬요 */
 export type GreetingShadow = {
 	color: string;
-	/** 0~1 */
 	opacity: number;
-	/** 흐림 반경 px */
 	blur: number;
 	offsetX: number;
 	offsetY: number;
@@ -75,28 +53,20 @@ export type GreetingShadow = {
 
 export type GreetingTextStroke = { color: string; width: number };
 
-/** 그라디언트 글자 끝색과 방향 (0° = 왼→오른쪽, 90° = 위→아래, 시계 방향. 기본 0) */
 export type GreetingTextGradient = { to: string; angle?: number };
 
-/** 아바타 레이어 — 멤버 아바타(원형 + 링) */
 export type GreetingAvatarLayer = {
 	id: string;
 	type: 'avatar';
 	x: number;
 	y: number;
-	size: number; // 지름 px
+	size: number;
 	ringColor: string;
-	/** 모양 — 기본 'circle'. 'rounded'는 둥근 사각형(`cornerRadius`), 'square'는 각진 사각형 */
 	shape?: GreetingAvatarShape;
-	/** 'rounded'일 때 모서리 반경 px (기본 size의 22%) */
 	cornerRadius?: number;
-	/** 링 두께 px — 0이면 링 없음. 기본 6 */
 	ringWidth?: number;
-	/** 그림자 — 생략하면 없음 */
 	shadow?: GreetingShadow | null;
-	/** 글로우(빛 번짐) — 링 바깥으로 번지는 빛이에요. 생략하면 없음 */
 	glow?: GreetingGlow | null;
-	/** 움직임 — 생략하면 정지. 하나라도 있으면 카드가 애니메이션 WebP로 나가요 */
 	animation?: GreetingAnimation;
 	hidden?: boolean;
 };
@@ -104,10 +74,8 @@ export type GreetingAvatarLayer = {
 export const GREETING_AVATAR_SHAPES = ['circle', 'rounded', 'square'] as const;
 export type GreetingAvatarShape = (typeof GREETING_AVATAR_SHAPES)[number];
 
-/** 글로우 — 오프셋 없는 번짐. spread로 번지는 범위를 키워요 */
 export type GreetingGlow = { color: string; opacity: number; blur: number; spread: number };
 
-/** 이미지 레이어 — 사용자 업로드 스티커/로고 (dataURI) */
 export type GreetingImageLayer = {
 	id: string;
 	type: 'image';
@@ -116,34 +84,23 @@ export type GreetingImageLayer = {
 	width: number;
 	height: number;
 	dataUri: string;
-	opacity: number; // 0~1
-	/** 회전(도, 시계 방향) — 이미지 중심 기준. 기본 0 */
+	opacity: number;
 	rotation?: number;
-	/** 움직임 — 생략하면 정지. 하나라도 있으면 카드가 애니메이션 WebP로 나가요 */
 	animation?: GreetingAnimation;
 	hidden?: boolean;
 };
 
-/**
- * 레이어 움직임 프리셋 — 렌더러가 CSS 키프레임으로 바꿔요 (사용자 CSS 입력은 받지 않아요).
- * float 위아래 둥실 · drift 대각선 이동 · sway 좌우 흔들림(회전) · spin 한 바퀴 회전 · pulse 커졌다 작아짐 · twinkle 깜빡임
- */
 export const GREETING_ANIMATIONS = ['float', 'drift', 'sway', 'spin', 'pulse', 'twinkle'] as const;
 export type GreetingAnimationKind = (typeof GREETING_ANIMATIONS)[number];
 
 export type GreetingAnimation = {
 	type: GreetingAnimationKind;
-	/** 한 바퀴(반복 주기) 길이 ms */
 	durationMs: number;
-	/** 시작 위상 어긋남 ms — 여러 레이어가 같이 움직이지 않게 서로 엇갈리게 해요 (반복 주기 안에서 순환) */
 	delayMs: number;
-	/** 움직임 세기 0~1 — 이동 거리·각도·배율에 곱해요 */
 	intensity: number;
 };
 
-/** 애니메이션 카드 길이 상한(ms) — 렌더 시간·WebP 용량 상한 */
 export const GREETING_ANIMATION_MAX_MS = 5000;
-/** 애니메이션 WebP 프레임 속도 */
 export const GREETING_ANIMATION_FPS = 20;
 
 const greetingAnimationSchema = z.object({
@@ -153,14 +110,9 @@ const greetingAnimationSchema = z.object({
 	intensity: z.number().min(0).max(1)
 });
 
-/** 도형 종류 — 렌더러가 SVG로 그려요 */
 export const GREETING_SHAPES = ['rect', 'circle', 'triangle', 'diamond', 'hexagon', 'star', 'heart'] as const;
 export type GreetingShapeKind = (typeof GREETING_SHAPES)[number];
 
-/**
- * 도형 레이어 — 장식용 도형. 필수 필드(shape·x·y·width·height·color·opacity)만으로 예전처럼 단색 도형이 되고,
- * 선택 필드로 회전·모서리 둥글기·그라디언트·테두리·윤곽선만 그리기·흐림(글로우)을 더할 수 있어요 (전부 생략 가능 — 하위 호환).
- */
 export type GreetingShapeLayer = {
 	id: string;
 	type: 'shape';
@@ -170,53 +122,36 @@ export type GreetingShapeLayer = {
 	width: number;
 	height: number;
 	color: string;
-	opacity: number; // 0~1
-	/** 회전(도, 시계 방향) — 도형 중심 기준. 기본 0 */
+	opacity: number;
 	rotation?: number;
-	/** 사각형 모서리 둥글기 px — shape가 rect일 때만 써요. 기본 0 */
 	radius?: number;
-	/** 그라디언트 끝색 — 있으면 color → gradientTo로 칠해요 */
 	gradientTo?: string | null;
-	/** 그라디언트 각도(도, 0 = 왼→오른, 90 = 위→아래, 시계 방향). 기본 45(좌상→우하) */
 	gradientAngle?: number;
-	/** 테두리 색 — strokeWidth가 0보다 클 때만 그려요 */
 	strokeColor?: string | null;
-	/** 테두리 두께 px. 기본 0 */
 	strokeWidth?: number;
-	/** false면 안쪽을 비우고 테두리만 그려요. 기본 true */
 	filled?: boolean;
-	/** 흐림 반경 px — 글로우·빛 번짐 장식용. 기본 0 */
 	blur?: number;
-	/** 움직임 — 생략하면 정지. 하나라도 있으면 카드가 애니메이션 WebP로 나가요 */
 	animation?: GreetingAnimation;
 	hidden?: boolean;
 };
 
 export type GreetingLayer = GreetingTextLayer | GreetingAvatarLayer | GreetingImageLayer | GreetingShapeLayer;
 
-/** 인사 카드 이미지 설정 — 배경(프리셋 또는 업로드) + 위에 쌓는 레이어 배열(순서 = z-order) */
 export type GreetingImage = {
 	background: { presetId: string | null; dataUri: string | null };
 	layers: GreetingLayer[];
 };
 
-/** 배경이 움직이는 GIF(프레임 2개 이상)면 그 타이밍을 돌려줘요. 아니면 null이에요. */
 function backgroundGifTiming(image: GreetingImage): GifTiming | null {
 	const timing = parseGifDataUriTiming(image.background.dataUri);
 	return timing && timing.frames > 1 ? timing : null;
 }
 
-/** True means the card renders as animated WebP. */
 export function hasGreetingAnimation(image: GreetingImage): boolean {
 	return backgroundGifTiming(image) !== null || image.layers.some((layer) => !layer.hidden && layer.animation !== undefined);
 }
 
-/**
- * Loop length L; the renderer snaps each layer period to L / n so the WebP repeats seamlessly.
- * - Layers only: longest period, capped at 5s.
- * - GIF background: a whole multiple of the GIF loop nearest the longest layer period, capped at 5s. A GIF loop of 5s or more is cut at 5s (the GIF jumps at the repeat).
- * - Neither: 0.
- */
+// Snaps animation loop to a multiple of GIF duration (capped at 5s) so WebP loops cleanly.
 export function greetingAnimationDurationMs(image: GreetingImage): number {
 	let layersMs = 0;
 	for (const layer of image.layers) {
@@ -231,7 +166,6 @@ export function greetingAnimationDurationMs(image: GreetingImage): number {
 	return gif.durationMs * loops;
 }
 
-/** 'components' sends the component list without a container, so the accent color (a container-only property) can't apply. */
 export type GreetingLayout = 'container' | 'components';
 
 export const GREETING_LAYOUTS = ['container', 'components'] as const;
@@ -239,20 +173,16 @@ export const GREETING_LAYOUTS = ['container', 'components'] as const;
 export type GreetingConfig = {
 	version: 2;
 	enabled: boolean;
-	channelId: string | null; // 대상 텍스트 채널
-	template: string; // 봇 메시지 본문. 변수: {유저} {유저이름} {서버} {멤버수}
+	channelId: string | null;
+	template: string;
 	useImage: boolean;
-	image: GreetingImage | null; // useImage가 true일 때만 유효
-	/** 메시지 레이아웃 — 기본 'container' */
+	image: GreetingImage | null;
 	layout: GreetingLayout;
-	/** 컨테이너 강조색(#RRGGBB) — null이면 봇 기본색. layout이 'components'면 무시돼요 */
 	accentColor: string | null;
 };
 
-/** 인사 종류 — Guild 컬럼 이름(welcome/goodbye)과 렌더러 분기에 모두 쓴다 */
 export type GreetingKind = 'welcome' | 'goodbye';
 
-// zod 스키마
 const position = { x: z.number().min(0).max(100), y: z.number().min(0).max(100) };
 
 const shadowSchema = z.object({
@@ -350,7 +280,6 @@ const shapeLayerSchema = z.object({
 
 const greetingLayerSchema = z.discriminatedUnion('type', [textLayerSchema, avatarLayerSchema, imageLayerSchema, shapeLayerSchema]);
 
-// The renderer draws presets in code, so presetId must be a known preset.
 const greetingImageSchema = z.object({
 	background: z.strictObject({
 		presetId: z
@@ -370,7 +299,6 @@ export const greetingConfigSchema = z
 		template: z.string().max(500),
 		useImage: z.boolean(),
 		image: greetingImageSchema.nullable(),
-		// defaults keep previously stored values valid
 		layout: z.enum(GREETING_LAYOUTS).default('container'),
 		accentColor: z.string().regex(HEX_COLOR).nullable().default(null)
 	})
@@ -378,13 +306,11 @@ export const greetingConfigSchema = z
 		error: 'useImage가 true일 때 image는 필수예요.'
 	});
 
-/** Null when invalid; callers fall back to defaults. */
 export function validateGreetingConfig(value: unknown): GreetingConfig | null {
 	const result = greetingConfigSchema.safeParse(value);
 	return result.success ? result.data : null;
 }
 
-/** Shared by the default welcome config and the classic-center preset. */
 const CLASSIC_CENTER_LAYERS: GreetingLayer[] = [
 	{ id: 'avatar', type: 'avatar', x: 50, y: 20, size: 180, ringColor: '#ffffff' },
 	{ id: 'title', type: 'text', x: 50, y: 44, size: 44, color: '#ffffff', bold: true, align: 'center', text: '{유저이름} 님 반가워요!' },
@@ -471,7 +397,6 @@ function textLayer(
 	};
 }
 
-/** 컨페티 조각 — [종류, x%, y%, 크기, 색, 회전] */
 const CONFETTI: readonly [GreetingShapeKind, number, number, number, string, number][] = [
 	['star', 8, 14, 46, '#fff0d6', 12],
 	['triangle', 17, 30, 34, '#ffd166', -24],
@@ -491,7 +416,6 @@ const CONFETTI: readonly [GreetingShapeKind, number, number, number, string, num
 	['hexagon', 68, 92, 26, '#ffd166', 16]
 ];
 
-/** 별밤 — [x%, y%, 크기, 불투명도, 회전] */
 const STARS: readonly [number, number, number, number, number][] = [
 	[8, 12, 22, 0.9, 0],
 	[18, 28, 14, 0.6, 12],
@@ -842,7 +766,6 @@ const STATIC_TEMPLATES: readonly GreetingTemplate[] = [
 	}
 ];
 
-/** Periods (4000, 2000) divide the 4s card loop so the WebP repeats seamlessly; delays stagger the layers. */
 type AnimationRule = (index: number) => GreetingAnimation;
 const anim = (type: GreetingAnimationKind, durationMs: number, delayMs = 0, intensity = 0.5): GreetingAnimation => ({
 	type,
@@ -918,7 +841,6 @@ export const PRESET_BACKGROUNDS: readonly PresetBackground[] = [
 
 const PRESET_BACKGROUND_IDS: readonly string[] = PRESET_BACKGROUNDS.map((preset) => preset.id);
 
-/** {유저} becomes a mention only in bot messages; image cards can't draw mentions and fall back to the display name (`usableInImage`). */
 export function renderGreetingTemplate(
 	template: string,
 	vars: { mention?: string | null; displayName: string; guildName: string; memberCount: number }

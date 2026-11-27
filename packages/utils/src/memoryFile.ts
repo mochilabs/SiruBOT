@@ -1,6 +1,3 @@
-// Format layer only (parser and renderer); caps (bot: 40 total, data-api: 40 per section) and legacy array conversion belong to each app.
-// Node apps only, via the `@sirubot/utils` barrel.
-
 export type MemoryCategory = 'facts' | 'preferences' | 'commitments';
 
 export type MemorySections = Record<MemoryCategory, string[]>;
@@ -16,11 +13,7 @@ const SECTION_TITLES: Record<MemoryCategory, string> = {
 const MEMORY_FILE_INTRO = '<!-- 시루가 모아둔 장기 기억: 오래가는 사실·선호·약속만. 일상 잡담은 남기지 않아요. -->';
 
 export type ParseMemoryMarkdownOptions = {
-	/**
-	 * true (default) drops bullets outside section headers, so data-api tidy doesn't count stray items in LLM output or hand-edited files.
-	 * false is the bot runtime behavior: bullets before any header go to Facts, and bullets under an unlisted `##` heading join the last section.
-	 * Well-formed files behave the same in both modes.
-	 */
+	// false keeps bot runtime tolerance for bullets before/under unlisted headings.
 	strictSections?: boolean;
 };
 
@@ -53,7 +46,6 @@ export function parseMemoryMarkdown(markdown: string, options: ParseMemoryMarkdo
 	return sections;
 }
 
-/** Keeps empty section headers. */
 export function renderMemoryMarkdown(sections: MemorySections): string {
 	const lines = ['# MEMORY.md', '', MEMORY_FILE_INTRO];
 	for (const category of MEMORY_CATEGORIES) {

@@ -1,9 +1,3 @@
-/**
- * Invariants:
- * - Every keyframe set closes (0% = 100%) so loops don't jump.
- * - Rotation always uses 0%/50%/100%: a 0°→360° pair has identical matrices and Takumi would draw a still frame.
- * - Each layer period is L / n for the card loop length L, so the WebP repeats seamlessly.
- */
 import { greetingAnimationDurationMs, type GreetingAnimation, type GreetingAnimationKind, type GreetingImage } from '@sirubot/utils/memberGreeting';
 
 const round = (value: number): number => Math.round(value * 100) / 100;
@@ -36,6 +30,7 @@ function keyframeStops(kind: GreetingAnimationKind, intensity: number): [string,
 				['100%', `transform: rotate(${-deg}deg)`]
 			];
 		}
+		// 0/50/100% needed: Takumi treats 0°→360° as identical matrices (still frame).
 		case 'spin':
 			return [
 				['0%', 'transform: rotate(0deg)'],
@@ -61,13 +56,11 @@ function keyframeStops(kind: GreetingAnimationKind, intensity: number): [string,
 	}
 }
 
-/** Same (kind, intensity) gives the same name so the CSS includes it once; spin ignores intensity. */
 export function animationName(animation: GreetingAnimation): string {
 	const intensity = animation.type === 'spin' ? 0 : Math.round(animation.intensity * 100);
 	return `ga-${animation.type}-${intensity}`;
 }
 
-/** Snaps the period to the nearest divisor of loopMs: 1500ms in a 4000ms loop becomes 4000 / round(4000 / 1500) ≈ 1333ms. */
 export function animationPeriodMs(animation: GreetingAnimation, loopMs: number): number {
 	if (loopMs <= 0) return animation.durationMs;
 	const n = Math.max(1, Math.round(loopMs / animation.durationMs));

@@ -1,5 +1,3 @@
-// Autoplay dedup, chart grouping and ISRC matching share these rules; change them only here or the chart and autoplay disagree on what counts as the same track.
-
 export function normalizeMetadata(value: string): string {
 	return value
 		.normalize('NFKC')
@@ -13,7 +11,7 @@ export function normalizeIsrc(raw: string | null | undefined): string | null {
 	return value && /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(value) ? value : null;
 }
 
-// Only upload decoration is stripped; version markers (Remix, Live, Acoustic, Inst., Sped up) are different recordings and stay.
+// Strip upload decoration only; version markers (Remix, Live, Acoustic, Inst., Sped up) stay.
 const UPLOAD_LABEL =
 	/[\[(【](?:official(?:\s+music)?\s+(?:video|audio)|official\s+(?:mv|m\/v|visualizer|lyric\s+video)|music\s+video|lyrics?(?:\s+video)?|가사|m\/?v|audio|hd|4k|visualizer)[\])】]/giu;
 
@@ -32,7 +30,7 @@ export function normalizeArtist(author: string): string {
 
 const SEPARATOR = /\s+[-–—]\s+/u;
 
-/** YouTube sources only: splitting Spotify's `Song - Remastered 2011` would be wrong. */
+// YouTube only; Spotify titles like "Song - Remastered 2011" must not split.
 export function splitArtistFromTitle(title: string, uploader: string): { artist: string; title: string } {
 	const parts = title.split(SEPARATOR);
 	if (parts.length < 2) return { artist: uploader, title };
@@ -42,7 +40,6 @@ export function splitArtistFromTitle(title: string, uploader: string): { artist:
 	return { artist: left, title: right };
 }
 
-/** Display values: only upload decoration and uploader suffixes are removed; case and symbols stay. */
 export function displayMetadata(input: { title: string; author: string; sourceName?: string | null }): { title: string; artist: string } {
 	const split = input.sourceName?.startsWith('youtube')
 		? splitArtistFromTitle(input.title, input.author)
@@ -67,7 +64,6 @@ export interface TrackIdentity {
 	isrc: string | null;
 	artist: string;
 	title: string;
-	/** Duration is excluded; compare it with durationMatches. */
 	recordingKey: string | null;
 	durationMs: number;
 }
@@ -91,12 +87,10 @@ export function trackIdentity(input: TrackIdentityInput): TrackIdentity {
 	};
 }
 
-/** False when either duration is unknown. */
 export function durationMatches(a: number, b: number, toleranceMs = 3_000): boolean {
 	return a > 0 && b > 0 && Math.abs(a - b) <= toleranceMs;
 }
 
-/** Higher means a more official catalog. */
 export function sourcePriority(source: string | null | undefined): number {
 	const s = source?.toLowerCase() ?? '';
 	if (s.startsWith('spotify') || s.startsWith('applemusic') || s.startsWith('deezer')) return 3;
@@ -105,12 +99,10 @@ export function sourcePriority(source: string | null | undefined): number {
 	return 0;
 }
 
-/** Per guild, per track, per day in period charts. */
 export const CHART_GUILD_DAILY_PLAY_CAP = 5;
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
-/** For Postgres DATE columns. */
 export function kstDay(at: Date = new Date()): Date {
 	const shifted = new Date(at.getTime() + KST_OFFSET_MS);
 	return new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()));

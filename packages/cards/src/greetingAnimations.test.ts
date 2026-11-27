@@ -47,7 +47,7 @@ describe('greetingAnimationCss', () => {
 			const css = greetingAnimationCss(image([shape('a', anim({ type }))]));
 			const zero = /0% \{ ([^}]*) \}/.exec(css)?.[1];
 			const hundred = /100% \{ ([^}]*) \}/.exec(css)?.[1];
-			if (type === 'spin') continue; // 0deg ↔ 360deg는 값이 달라야 해요 — 아래 테스트가 따로 검증
+			if (type === 'spin') continue;
 			expect(zero, type).toBe(hundred);
 		}
 	});
@@ -71,7 +71,6 @@ describe('animationPeriodMs / animationDeclaration', () => {
 		expect(animationPeriodMs(anim({ durationMs: 4000 }), 4000)).toBe(4000);
 		expect(animationPeriodMs(anim({ durationMs: 2000 }), 4000)).toBe(2000);
 		expect(animationPeriodMs(anim({ durationMs: 1500 }), 4000)).toBeCloseTo(4000 / 3, 1);
-		// 한 바퀴보다 긴 주기는 1배로 줄어요
 		expect(animationPeriodMs(anim({ durationMs: 9000 }), 4000)).toBe(4000);
 	});
 
@@ -79,7 +78,6 @@ describe('animationPeriodMs / animationDeclaration', () => {
 		expect(animationDeclaration(anim({ durationMs: 2000, delayMs: 500 }), 2000)).toBe(
 			`${animationName(anim())} 2000ms ease-in-out -500ms infinite`
 		);
-		// 주기보다 큰 지연은 주기 안으로 순환해요
 		expect(animationDeclaration(anim({ durationMs: 2000, delayMs: 2500 }), 2000)).toContain(' -500ms ');
 	});
 
@@ -101,7 +99,6 @@ describe('greetingCard — 움직임 래퍼', () => {
 			/^ga-float-50 2000ms ease-in-out -0ms infinite$|^ga-float-50 2000ms ease-in-out 0ms infinite$/
 		);
 		const inner = kids(wrapper)[0]!;
-		// 안쪽 레이어의 회전·투명도는 그대로예요 — 움직임과 곱해져요
 		expect(style(inner)).toMatchObject({ left: 0, top: 0, opacity: 0.4, transform: 'rotate(30deg)' });
 	});
 

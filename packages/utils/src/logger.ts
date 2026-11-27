@@ -11,9 +11,9 @@ const LOG_LEVEL_MAP: Record<string, number> = {
 };
 
 function resolveMinLevel(): number {
-	if (typeof process === 'undefined' || !process.env) return 3; // Default to info if process.env is not available
+	if (typeof process === 'undefined' || !process.env) return 3;
 	const raw = process.env.LOGLEVEL;
-	if (!raw) return 3; // info
+	if (!raw) return 3;
 	const asNumber = Number(raw);
 	if (!Number.isNaN(asNumber)) return asNumber;
 	return LOG_LEVEL_MAP[raw.toLowerCase()] ?? 3;

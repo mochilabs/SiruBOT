@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from './playerLimits.js';
 import { redisIdSchema } from './redisChannels.js';
 
-// Channels: PLAYER_WEB_REQUEST_CHANNEL / PLAYER_WEB_RESPONSE_CHANNEL (see redisChannels.ts). Failures carry a Korean `error` shown to the user as-is.
 export const playerWebKindSchema = z.enum(['search', 'play', 'control', 'voice-context']);
 export type PlayerWebKind = z.infer<typeof playerWebKindSchema>;
 
@@ -23,7 +22,6 @@ export const playerWebControlActionSchema = z.enum([
 ]);
 export type PlayerWebControlAction = z.infer<typeof playerWebControlActionSchema>;
 
-/** Branch on `code`, not on message text. */
 export const PLAYER_WEB_CODE_SEARCH_EMPTY = 'search_empty';
 
 export const playerWebTrackSchema = z.object({
@@ -37,7 +35,6 @@ export const playerWebTrackSchema = z.object({
 });
 export type PlayerWebTrack = z.infer<typeof playerWebTrackSchema>;
 
-/** Carries userId so the bot can resolve the member, voice channel and permissions. */
 const playerWebRequestBase = z.object({
 	requestId: z.string().uuid(),
 	guildId: redisIdSchema,
@@ -51,7 +48,7 @@ export const playerWebSearchRequestSchema = playerWebRequestBase.extend({
 });
 export type PlayerWebSearchRequest = z.infer<typeof playerWebSearchRequestSchema>;
 
-/** http/https only: other schemes (file:, data:) could make Lavalink fetch from the internal network (SSRF). */
+// http/https only to prevent SSRF via Lavalink.
 export const playerWebPlayUriSchema = z
 	.string()
 	.max(500)
@@ -65,7 +62,6 @@ export const playerWebPlayRequestSchema = playerWebRequestBase.extend({
 export type PlayerWebPlayRequest = z.infer<typeof playerWebPlayRequestSchema>;
 
 const QUEUE_INDEX_MAX = 999;
-/** 24 hours; the bot re-checks against the track length. */
 export const PLAYER_WEB_SEEK_MAX_MS = 86_400_000;
 
 export const playerWebControlRequestSchema = playerWebRequestBase
@@ -116,29 +112,23 @@ export type PlayerWebControlRequest = z.infer<typeof playerWebControlRequestSche
 export const playerWebVoiceContextRequestSchema = playerWebRequestBase.extend({ kind: z.literal('voice-context') });
 export type PlayerWebVoiceContextRequest = z.infer<typeof playerWebVoiceContextRequestSchema>;
 
-/** Loose first-pass parse; kind-specific schemas narrow it later. */
 export const playerWebRequestBaseSchema = playerWebRequestBase;
 export type PlayerWebRequestBase = z.infer<typeof playerWebRequestBase>;
 
 export const playerVoiceContextSchema = z.object({
 	inVoice: z.boolean(),
 	voiceChannelName: z.string().nullable(),
-	/** Null when not connected. Older bot replies without this field are accepted. */
 	botVoiceChannelName: z.string().nullable().optional(),
-	/** Computed with the same policy as actual authorization. */
 	canControl: z.boolean(),
-	/** Always sent; replies without it fail validation. */
 	canPlay: z.boolean()
 });
 export type PlayerVoiceContext = z.infer<typeof playerVoiceContextSchema>;
 
-/** Loose on purpose so new kinds and fields don't break older readers. */
 export const playerWebResponseSchema = z.object({
 	requestId: z.string().uuid(),
 	guildId: redisIdSchema,
 	kind: playerWebKindSchema,
 	error: z.string().optional(),
-	/** Machine-readable failure kind; unknown values are ignored. */
 	code: z.string().optional(),
 	tracks: z.array(playerWebTrackSchema).max(5).optional(),
 	voice: playerVoiceContextSchema.optional()

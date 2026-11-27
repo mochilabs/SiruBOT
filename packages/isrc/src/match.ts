@@ -9,12 +9,7 @@ function artistContains(a: string, b: string): boolean {
 	return a.includes(b) || b.includes(a);
 }
 
-/**
- * Do not loosen these rules: a wrong ISRC merges two different tracks in the chart.
- * - exact: same title + artist (or contributor) + duration within ±3s
- * - strong: same title + duration within ±2s + (partial artist match or provider artist-field hit), and only one distinct ISRC qualifies
- * `terms` must already be normalized (resolveIsrc does this via trackIdentity).
- */
+/** Do not loosen: a wrong ISRC merges distinct tracks in the chart. `terms` must already be normalized. */
 export function pickMatch(terms: IsrcSearchTerms, candidates: IsrcCandidate[]): IsrcMatch | null {
 	if (!terms.title || !terms.artist || terms.durationMs <= 0) return null;
 

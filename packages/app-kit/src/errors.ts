@@ -1,7 +1,6 @@
 import { ZodError } from 'zod';
 import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
-/** 라우트가 직접 처리하지 않아 Fastify가 대신 잡은 에러의 응답 본문이에요. */
 export interface HttpErrorResponse {
 	error: string;
 	message: string;
@@ -37,7 +36,6 @@ export function toHttpErrorResponse(error: unknown): { status: number; body: Htt
 			body: mapped ?? { error: 'bad_request', message: '요청을 처리할 수 없어요.' }
 		};
 	}
-	// 내부 사유는 로그에만 남기고 응답에는 일반 문구만 내려요.
 	return { status: 500, body: { error: 'internal_error', message: INTERNAL_ERROR_MESSAGE } };
 }
 

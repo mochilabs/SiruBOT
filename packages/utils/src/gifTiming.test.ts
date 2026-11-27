@@ -2,14 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { parseGifDataUriTiming, parseGifTiming } from './gifTiming.ts';
 
-/** 최소 GIF — 너비×높이, 전역 색상표 없음, 프레임마다 (그래픽 제어 → 이미지 설명자 → 1바이트 LZW 데이터) */
 function makeGif(width: number, height: number, delaysCs: number[], options: { localTable?: boolean; truncate?: boolean } = {}): Uint8Array {
 	const out: number[] = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61, width & 0xff, width >> 8, height & 0xff, height >> 8, 0x00, 0x00, 0x00];
 	for (const delay of delaysCs) {
-		out.push(0x21, 0xf9, 0x04, 0x00, delay & 0xff, delay >> 8, 0x00, 0x00); // 그래픽 제어
+		out.push(0x21, 0xf9, 0x04, 0x00, delay & 0xff, delay >> 8, 0x00, 0x00);
 		out.push(0x2c, 0, 0, 0, 0, width & 0xff, width >> 8, height & 0xff, height >> 8, options.localTable ? 0x80 : 0x00);
-		if (options.localTable) out.push(0, 0, 0, 255, 255, 255); // 지역 색상표 2색
-		out.push(0x02, 0x02, 0x44, 0x01, 0x00); // LZW 최소 코드 크기 + 서브블록(2바이트) + 끝
+		if (options.localTable) out.push(0, 0, 0, 255, 255, 255);
+		out.push(0x02, 0x02, 0x44, 0x01, 0x00);
 	}
 	out.push(0x3b);
 	const bytes = Uint8Array.from(out);

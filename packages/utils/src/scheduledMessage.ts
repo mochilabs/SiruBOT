@@ -3,9 +3,6 @@ import { nextRunAt, type Recurrence } from './jobRecurrence.js';
 
 export { nextRunAt, type Recurrence } from './jobRecurrence.js';
 
-// Stored as a `ScheduledJob` payload (kind `scheduled-message`); per-server limits come from `ScheduledMessageSettings` (defaults when absent).
-// All times are Asia/Seoul (fixed UTC+9).
-
 export const SCHEDULED_MESSAGE_KIND = 'scheduled-message';
 
 export const SCHEDULED_MESSAGE_CONTENT_MAX = 2000;
@@ -15,7 +12,6 @@ export const SCHEDULED_MESSAGE_MIN_INTERVAL_DEFAULT = 10;
 export const SCHEDULED_MESSAGE_MIN_INTERVAL_LIMIT = 1440;
 export const SCHEDULED_MESSAGE_MIN_LEAD_MS = 60_000;
 export const SCHEDULED_MESSAGE_MAX_LEAD_MS = 366 * 24 * 60 * 60_000;
-/** A recurring run delayed beyond this (bot was down) is skipped. */
 export const SCHEDULED_MESSAGE_MISSED_SKIP_MS = 3 * 60 * 60_000;
 const CONFLICT_HORIZON_MS = 62 * 24 * 60 * 60_000;
 const CONFLICT_MAX_OCCURRENCES = 500;
@@ -26,7 +22,6 @@ const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
 const EVERYONE_PATTERN = /@(everyone|here)/i;
 
-/** @everyone/@here are rejected here and blocked again via allowedMentions at send time. */
 export const scheduledMessageContentSchema = z
 	.string()
 	.trim()
@@ -34,7 +29,6 @@ export const scheduledMessageContentSchema = z
 	.max(SCHEDULED_MESSAGE_CONTENT_MAX, `메시지는 ${SCHEDULED_MESSAGE_CONTENT_MAX}자까지 쓸 수 있어요.`)
 	.refine((text) => !EVERYONE_PATTERN.test(text), '@everyone, @here 멘션은 예약 메시지에 쓸 수 없어요.');
 
-/** KST "YYYY-MM-DD HH:mm" ('T' accepted as separator); null for a bad format or calendar date. */
 export function parseKstDateTime(text: string): Date | null {
 	const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/.exec(text.trim());
 	if (!match) return null;
@@ -61,7 +55,6 @@ export const SCHEDULED_MESSAGE_REPEAT_LABELS: Record<ScheduledMessageRepeat, str
 	monthly: '매월'
 };
 
-/** Weekly uses the first run's weekday; monthly its day of month (a 31st falls on the last day of shorter months). */
 export function buildRecurrence(repeat: ScheduledMessageRepeat, firstRunAt: Date): Recurrence | undefined {
 	const kst = new Date(firstRunAt.getTime() + KST_OFFSET_MS);
 	const p = (n: number) => String(n).padStart(2, '0');
@@ -96,7 +89,6 @@ export function describeRecurrence(rule: Recurrence | undefined): string {
 	}
 }
 
-/** `seriesId` groups the runs of one reservation and is the ID users see. */
 export const scheduledMessagePayloadSchema = z.object({
 	seriesId: z.string().uuid(),
 	channelId: snowflake,
@@ -138,7 +130,6 @@ export const createScheduledMessageSchema = z.object({
 });
 export type CreateScheduledMessageInput = z.infer<typeof createScheduledMessageSchema>;
 
-/** Several rows with one seriesId count as one. */
 export interface ActiveScheduledMessage {
 	seriesId: string;
 	channelId: string;
@@ -161,7 +152,6 @@ function occurrences(first: Date, recurrence: Recurrence | undefined, until: num
 	return list;
 }
 
-/** Checks the time range, per-server cap and same-channel minimum gap across all runs in the next 62 days. Bot and dashboard share this so results agree. */
 export function checkNewScheduledMessage(input: {
 	now: Date;
 	runAt: Date;

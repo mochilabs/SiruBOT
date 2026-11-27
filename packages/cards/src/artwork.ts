@@ -1,8 +1,5 @@
-// Runtime-independent (node and browser). Raster work (`prepareArtwork`) lives in data-api `renderers/shared/artwork.ts`.
-
 export interface PreparedArtwork {
 	art: string;
-	/** 160x100 PNG data URI blurred at this small size: blurring a full-size image is expensive. The card applies cover. */
 	backdrop: string;
 	accent: string | null;
 }
@@ -16,7 +13,6 @@ export interface CropBox {
 
 export const BACKDROP_SIZE = { width: 160, height: 100 } as const;
 
-/** Reads PNG/GIF/JPEG/WebP size from the header only: measuring through the renderer decodes the whole image. Null for unknown formats. */
 export function imageSizeOf(buf: Uint8Array): { width: number; height: number } | null {
 	if (buf.length > 24 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
 		return {
@@ -50,7 +46,6 @@ export function imageSizeOf(buf: Uint8Array): { width: number; height: number } 
 			i += 2 + ((buf[i + 2]! << 8) | buf[i + 3]!);
 		}
 	}
-	// WebP — RIFF....WEBP 뒤 청크(VP8 손실 / VP8L 무손실 / VP8X 확장)에서 크기를 읽어요
 	if (
 		buf.length > 30 &&
 		buf[0] === 0x52 &&
@@ -85,11 +80,7 @@ function rgbToHex(r: number, g: number, b: number): string {
 	return `#${((1 << 24) | (clamp(r) << 16) | (clamp(g) << 8) | clamp(b)).toString(16).slice(1)}`;
 }
 
-/**
- * YouTube thumbnails carry black bars when the video ratio differs, and cover would show them.
- * Skips cropping when under 40% of the original would remain (dark artwork).
- * `pixels` is RGBA (w*h*4); right/bottom are exclusive.
- */
+/** Strips letterbox bars from RGBA pixels (exclusive right/bottom); skips if <40% would remain. */
 export function detectContentBounds(pixels: Uint8Array, w: number, h: number): { left: number; top: number; right: number; bottom: number } {
 	const full = { left: 0, top: 0, right: w, bottom: h };
 	if (w < 4 || h < 4 || pixels.length < w * h * 4) return full;
@@ -121,7 +112,6 @@ export function detectContentBounds(pixels: Uint8Array, w: number, h: number): {
 	return { left, top, right: right + 1, bottom: bottom + 1 };
 }
 
-/** 대표색 — 채도 가중 평균과 가장 무게가 큰 픽셀을 섞어요. 채도 있는 픽셀이 없으면 평균색이에요. 투명뿐이면 null이에요. */
 export function dominantColor(pixels: Uint8Array): string | null {
 	let bestR = 0;
 	let bestG = 0;

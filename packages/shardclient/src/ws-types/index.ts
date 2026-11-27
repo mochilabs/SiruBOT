@@ -19,8 +19,6 @@ export interface WsMessage<T = unknown> {
 	payload: T;
 }
 
-// 페이로드 타입은 아래 zod 스키마에서 z.infer로 뽑아요. 계약은 스키마 한 곳만 고치면 돼요.
-
 export const HelloPayloadSchema = z.object({
 	shardCount: z.number(),
 	shardsPerProcess: z.number(),
@@ -29,14 +27,13 @@ export const HelloPayloadSchema = z.object({
 
 export type HelloPayload = z.infer<typeof HelloPayloadSchema>;
 
-/** 샤드 ID: 0 이상의 정수. 배열 길이 상한은 비정상 요청을 스키마에서 걸러내요 */
 const shardIdSchema = z.number().int().nonnegative();
 const shardIdsSchema = z.array(shardIdSchema).max(MAX_SHARD_IDS);
 
 export const IdentifyPayloadSchema = z.object({
-	token: z.string(), // Auth token for verification
-	shardIds: shardIdsSchema.optional(), // Existing shard IDs for re-identification
-	hostname: z.string().max(255).optional() // Container/process hostname
+	token: z.string(),
+	shardIds: shardIdsSchema.optional(),
+	hostname: z.string().max(255).optional()
 });
 
 export type IdentifyPayload = z.infer<typeof IdentifyPayloadSchema>;

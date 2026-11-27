@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// versionInfo는 git execSync를 모듈 로드 시점이 아니라 첫 getter 호출 시에만 수행해요 —
-// 루트 배럴 import만으로 프로세스가 스폰되지 않는다는 계약을 고정해요.
 const execSync = vi.hoisted(() => vi.fn());
 vi.mock('child_process', () => ({ execSync }));
 

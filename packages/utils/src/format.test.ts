@@ -2,15 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { emojiProgressBar, formatTrack, removeEmojis, volumeToEmoji } from './format.ts';
 import type { Track } from 'lavalink-client';
 
-// appEmoji 맵이 비어 있어요 — 진행바 셀·아이콘은 전부 유니코드 폴백으로 검증해요.
-
 function track(info: Partial<{ title: string; duration: number; isStream: boolean; uri: string }>): Track {
 	return { info: { title: '제목', duration: 65_000, isStream: false, uri: 'https://example.com/t', ...info } } as unknown as Track;
 }
 
 describe('emojiProgressBar', () => {
 	it('0%는 전 셀이 비어 있고 100%는 전 셀이 차요', () => {
-		// 셀은 full-bleed — 좌우에 빈 공간이 없어요.
 		expect(emojiProgressBar(0)).toBe('□□□□□');
 		expect(emojiProgressBar(1)).toBe('■■■■■');
 	});
@@ -30,7 +27,6 @@ describe('emojiProgressBar', () => {
 	});
 
 	it('바 좌우에 빈 공간이 남지 않는다', () => {
-		// 0.3 → start_filled + mid_end_half + mid×2 empty + end_empty
 		const bar = emojiProgressBar(0.3);
 		expect(bar).toBe('■◐□□□');
 		expect(bar.startsWith(' ')).toBe(false);

@@ -8,11 +8,6 @@ const EMOJI_REGEX = /\p{Extended_Pictographic}/gu;
 const EMOJI_COMPONENT_REGEX = /\p{Emoji_Component}/gu;
 const DIGIT_SYMBOL_REGEX = /[\d*#]/;
 
-/**
- * 앱 이모지 진행바 — 5셀(start + mid×3 + end), 셀당 filled/half/empty.
- * 셀 png는 resources/emoji_replacement/pb_*.png (upload-emojis로 앱 이모지 등록).
- * 매핑이 아직 없으면 셀이 유니코드 폴백('■'/'◐'/'□')으로 나와요.
- */
 export function emojiProgressBar(percent: number): string {
 	if (Number.isNaN(percent)) percent = 0;
 	const clamped = Math.min(1, Math.max(0, percent));
@@ -20,10 +15,7 @@ export function emojiProgressBar(percent: number): string {
 	const EMPTY = '□';
 	const HALF = '◐';
 	const FILL = '■';
-	// 셀 폴백은 여백 없이 full-bleed — render-emojis.mjs의 pbPad=0과 같은 규칙이라
-	// 앱 이모지가 미등록(테스트·초기 기동)이어도 바 좌우에 빈 공간이 없어요.
 
-	// 전체 스텝 = 셀 수 × 셀당 스텝. 스텝 s가 속한 셀의 채움 상태로 변환해요.
 	const steps = PROGRESS_BAR_EMOJI_COUNT * PROGRESS_BAR_STEPS_PER_CELL;
 	const s = Math.round(clamped * steps);
 	const stateOf = (i: number): 'filled' | 'half' | 'empty' => {
@@ -36,9 +28,6 @@ export function emojiProgressBar(percent: number): string {
 	const parts: string[] = [];
 	for (let i = 0; i < PROGRESS_BAR_EMOJI_COUNT; i++) {
 		const state = stateOf(i);
-		// 진행바의 마지막 채워진 세그먼트가 mid이고 그 뒤가 비어있으면 mid_end로 라운드 종단을 줘요.
-		// - state가 filled/half(끝단)이고, i가 start(0)도 아니고 마지막 셀도 아닌(mid) 경우에만.
-		// - 나머지 뒤 셀(i+1~)이 모두 empty인지로 "바가 여기서 끝남"을 판정해요.
 		const isMidEnd =
 			state !== 'empty' &&
 			i > 0 &&
@@ -74,7 +63,6 @@ export function removeEmojis(str: string): string {
 	return result.trim();
 }
 
-/** 볼륨 티어 아이콘 — 0은 🔇, 낮은 볼륨(<33)은 🔉, 그 이상(≥33)은 🔊 */
 export function volumeToEmoji(volume: number): string {
 	if (volume < 1) {
 		return emoji('volume_muted');
@@ -108,7 +96,7 @@ export function formatTrack(track: Track, options?: FormatTrackOptions): string 
 		...options
 	};
 
-	// Discord는 마스크 링크 텍스트에 이모지가 있으면 링크로 렌더링하지 않으므로 링크일 땐 항상 이모지를 지운다.
+	// Discord breaks markdown links if the label contains emojis.
 	let formattedTitle = cleanTitle || withMarkdownURL ? removeEmojis(title.trim()) : title.trim();
 
 	if (titleLength && formattedTitle.length > titleLength.maxLength) {

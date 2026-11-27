@@ -1,6 +1,3 @@
-// X, Instagram, TikTok, Reddit, Pixiv and Threads are fixed by swapping to a provider domain; BOOTH builds its own OG embed.
-// Providers are external and can go down, so their domains are constants that can be swapped.
-// The data-api /v1/embed-fix/metadata route and the bot's embedFixGateway share the schemas here.
 import { z } from 'zod';
 
 export const EMBED_FIX_SITES = ['x', 'instagram', 'booth', 'tiktok', 'reddit', 'pixiv', 'threads'] as const;
@@ -24,7 +21,6 @@ export type EmbedFixActiveTranslateLang = Exclude<EmbedFixTranslateLang, 'off'>;
 
 export const embedFixTranslateLangSchema = z.enum(EMBED_FIX_TRANSLATE_LANGS, '지원하는 임베드 번역 언어를 선택해 주세요.');
 
-/** Unknown values become 'off' (no translation). */
 export function normalizeEmbedFixTranslateLang(value: string | null | undefined): EmbedFixTranslateLang {
 	if (typeof value === 'string' && (EMBED_FIX_TRANSLATE_LANGS as readonly string[]).includes(value)) {
 		return value as EmbedFixTranslateLang;
@@ -32,7 +28,6 @@ export function normalizeEmbedFixTranslateLang(value: string | null | undefined)
 	return 'off';
 }
 
-/** Skips the LLM call when fewer than 2 real letters (\p{L}, ignoring links, mentions, digits, emoji) remain, or the text is already mostly the target language. */
 export function shouldTranslateEmbedText(text: string | null | undefined, targetLang: EmbedFixTranslateLang): boolean {
 	if (!text || targetLang === 'off') return false;
 	const cleaned = text
@@ -55,7 +50,6 @@ export function shouldTranslateEmbedText(text: string | null | undefined, target
 
 	const total = letters.length;
 	if (targetLang === 'ko') {
-		// 40%+ Hangul with no Japanese kana counts as already Korean
 		if (hangul / total >= 0.4 && kana === 0) return false;
 		return true;
 	}
@@ -70,16 +64,6 @@ export function shouldTranslateEmbedText(text: string | null | undefined, target
 	return false;
 }
 
-/**
- * Provider domains; replace here if a service dies.
- * - twitter.com → fxtwitter.com (FxEmbed)
- * - x.com → fixupx.com (FxEmbed, x.com 전용)
- * - instagram.com → kkinstagram.com (KKInstagram)
- * - tiktok.com → tnktok.com (fxTikTok)
- * - reddit.com → vxreddit.com (vxReddit)
- * - pixiv.net → www.phixiv.net (Phixiv)
- * - threads.net/threads.com → fixthreads.seria.moe (FixThreads 포크, Embed Fixer 봇이 쓰는 인스턴스)
- */
 export const X_TWITTER_FIX_DOMAIN = 'fxtwitter.com';
 export const X_FIX_DOMAIN = 'fixupx.com';
 export const INSTAGRAM_FIX_DOMAIN = 'kkinstagram.com';
@@ -147,7 +131,6 @@ const PIXIV_LINK_PATTERN = /(?<![\w.-])(?:https?:\/\/)?(?:www\.)?pixiv\.net\/((?
 const THREADS_LINK_PATTERN =
 	/(?<![\w.-])(?:https?:\/\/)?(?:www\.)?threads\.(?:net|com)\/((?:@[A-Za-z0-9_.]{1,30}\/post\/[A-Za-z0-9_-]{5,40})|(?:t\/[A-Za-z0-9_-]{5,40}))/gu;
 
-/** Stops a trailing `)` from a parenthesized link being read as part of the address. */
 function trimTrailingPunctuation(url: string): string {
 	return url.replace(/[)\]}.,;:!?'"…>]+$/u, '');
 }
@@ -156,7 +139,6 @@ function normalizeMatchedUrl(matched: string): string {
 	return trimTrailingPunctuation(/^https?:\/\//iu.test(matched) ? matched : `https://${matched}`);
 }
 
-/** `<https://...>` means the author turned the preview off on purpose. */
 function unmaskWrappedLinks(content: string): string {
 	return content.replace(/<https?:\/\/[^>]+>/gu, ' ');
 }
@@ -225,7 +207,6 @@ export function findEmbedFixLinks(content: string, sites: readonly EmbedFixSite[
 	return found.slice(0, EMBED_FIX_LINK_MAX);
 }
 
-/** Lets data-api recompute the fixed URL instead of trusting a client-sent `fixedUrl`. Null if the pattern doesn't match or it's BOOTH. */
 export function swapEmbedFixUrl(site: EmbedFixSite, original: string): string | null {
 	if (site === 'booth') return null;
 	const rule = EMBED_FIX_URL_RULES[site];
@@ -233,13 +214,11 @@ export function swapEmbedFixUrl(site: EmbedFixSite, original: string): string | 
 	return match ? rule.fixed(match) : null;
 }
 
-/** Headroom over EMBED_FIX_LINK_MAX. */
 const EMBED_FIX_METADATA_LINK_MAX = 4;
 
 export interface EmbedFixMetadataRequestLink {
 	site: EmbedFixSite;
 	url: string;
-	/** Only for x and instagram. */
 	fixedUrl?: string;
 }
 
@@ -257,7 +236,6 @@ export const embedFixMetadataRequestSchema = z.object({
 	translateTo: embedFixTranslateLangSchema.optional()
 });
 
-/** card: build our own Components V2 embed from the metadata; link: resend `fixedUrl` so Discord unfurls it; skip: nothing to recover (private or deleted). */
 export const embedFixResultSchema = z.object({
 	site: embedFixSiteSchema,
 	mode: z.enum(['card', 'link', 'skip']),

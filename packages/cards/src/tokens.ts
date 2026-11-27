@@ -1,20 +1,14 @@
-// Mirrors the dashboard dark theme (globals.css `.dark`). Cards render at 2x, so radii and spacing are doubled.
-// Pick colors from here; to change one, change the dashboard token first.
+// Mirrors the dashboard dark theme (globals.css `.dark`); cards render at 2x so radii and spacing are doubled.
 export const T = {
 	background: '#1f1618',
 	surface1: '#2b2023',
 	surface2: '#3a2c30',
 	foreground: '#fbeeee',
 	mutedForeground: '#b9a4a9',
-	/** 강조 텍스트(`text-primary-text` = accent-foreground) — 숫자·강조 */
 	primaryText: '#ffdada',
-	/** 솔리드 강조(`bg-primary-control`) — 막대 피크, CTA 알약 */
 	brand: '#f98aa0',
-	/** `bg-primary-control` 위의 글자색(`text-primary-control-text`) */
 	brandForeground: '#3a1a22',
-	/** 인터랙티브 경계(3:1) */
 	borderStrong: '#a37d89',
-	/** 오류·LIVE 같은 위험 표시(`destructive`) */
 	destructive: '#ff7b8a'
 } as const;
 
@@ -46,7 +40,6 @@ function hsl(h: number, s: number, l: number): string {
 
 export type CardTokens = { [K in keyof typeof T]: string };
 
-/** Derives dark card tokens from the server accent, tinting background, surface and text with one hue. The default accent returns `T` unchanged so default cards stay pixel-identical. */
 export function themedTokens(accentHex: string, defaultAccentHex: string): CardTokens {
 	if (accentHex.toLowerCase() === defaultAccentHex.toLowerCase()) return T;
 	const h = hueOf(accentHex);

@@ -1,8 +1,5 @@
 import { z } from 'zod';
 
-// Stored as `Giveaway`/`GiveawayEntry`; closing is a `ScheduledJob` (kind `giveaway_end`, payload `{ giveawayId }`).
-// Pure functions only: callers pass in `randomInt`.
-
 export const GIVEAWAY_KIND = 'giveaway_end';
 
 export const GIVEAWAY_PRIZE_MAX = 200;
@@ -10,7 +7,6 @@ export const GIVEAWAY_WINNERS_MAX = 20;
 export const GIVEAWAY_MAX_RUNNING = 10;
 export const GIVEAWAY_MIN_DURATION_MS = 60_000;
 export const GIVEAWAY_MAX_DURATION_MS = 30 * 24 * 60 * 60_000;
-/** Card edits are throttled to this interval because of Discord's edit limits. */
 export const GIVEAWAY_CARD_UPDATE_INTERVAL_MS = 10_000;
 export const GIVEAWAY_CONDITIONS_MAX = 10;
 export const GIVEAWAY_ROLES_PER_CONDITION_MAX = 10;
@@ -24,7 +20,6 @@ const snowflake = z.string().regex(/^\d{17,20}$/, '올바른 ID 형식이 아니
 const roleIds = z.array(snowflake).min(1).max(GIVEAWAY_ROLES_PER_CONDITION_MAX);
 const days = z.number().int().min(1).max(GIVEAWAY_DAYS_MAX);
 
-/** A new condition type needs one schema here and one evaluator in `EVALUATORS`. All conditions must pass. */
 export const giveawayConditionSchema = z.discriminatedUnion('type', [
 	z.object({ type: z.literal('requiredRoles'), roleIds, match: z.enum(['any', 'all']).default('any') }),
 	z.object({ type: z.literal('blockedRoles'), roleIds }),
@@ -41,7 +36,6 @@ export type GiveawayRequirements = z.infer<typeof giveawayRequirementsSchema>;
 
 export const EMPTY_GIVEAWAY_REQUIREMENTS: GiveawayRequirements = { version: 1, conditions: [] };
 
-/** Null when malformed; callers treat that as the safe side, not eligible. */
 export function parseGiveawayRequirements(raw: unknown): GiveawayRequirements | null {
 	const result = giveawayRequirementsSchema.safeParse(raw);
 	return result.success ? result.data : null;
@@ -87,7 +81,6 @@ const EVALUATORS: { [T in GiveawayCondition['type']]: (condition: ConditionOf<T>
 	}
 };
 
-/** No conditions means everyone passes. */
 export function evaluateGiveawayConditions(conditions: readonly GiveawayCondition[], member: GiveawayMemberFacts, now: Date): GiveawayEligibility {
 	const reasons: string[] = [];
 	for (const condition of conditions) {
@@ -129,7 +122,7 @@ export function buildGiveawayConditions(input: {
 	return conditions;
 }
 
-/** Partial Fisher-Yates; returns every candidate when count exceeds them. `randomInt(max)` must be uniform in [0, max) (the bot passes `crypto.randomInt`). */
+// Partial Fisher-Yates; randomInt(max) must be uniform in [0, max).
 export function drawWinners<T>(candidates: readonly T[], count: number, randomInt: (maxExclusive: number) => number): T[] {
 	const pool = [...candidates];
 	const take = Math.min(Math.max(0, Math.floor(count)), pool.length);
@@ -155,7 +148,6 @@ export const giveawayWinnerCountSchema = z
 
 const DURATION_UNITS: Record<string, number> = { d: DAY_MS, 일: DAY_MS, h: 60 * 60_000, 시간: 60 * 60_000, m: 60_000, 분: 60_000 };
 
-/** Accepts "30m", "2h", "1d12h", "1일 2시간 30분"; null if malformed or zero. */
 export function parseGiveawayDuration(text: string): number | null {
 	const source = text.trim().toLowerCase();
 	if (!source) return null;
@@ -174,7 +166,6 @@ export function parseGiveawayDuration(text: string): number | null {
 	return consumed === source.length && total > 0 && Number.isSafeInteger(total) ? total : null;
 }
 
-/** Must end between 1 minute and 30 days out. Returns a message, or null when fine. */
 export function checkGiveawayEnd(now: Date, endsAt: Date): string | null {
 	const lead = endsAt.getTime() - now.getTime();
 	if (lead < GIVEAWAY_MIN_DURATION_MS) return '마감은 지금부터 1분 뒤 이후여야 해요.';

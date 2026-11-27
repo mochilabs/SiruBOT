@@ -2,7 +2,6 @@ import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 export type SentryInitOptions = {
-	/** Defaults to process.env.SENTRY_DSN. */
 	dsn?: string;
 	service?: string;
 	environment?: string;
@@ -11,7 +10,6 @@ export type SentryInitOptions = {
 	profilesSampleRate?: number;
 };
 
-/** No-op without SENTRY_DSN. */
 export function initSentry(options: SentryInitOptions = {}): void {
 	const dsn = options.dsn ?? process.env.SENTRY_DSN;
 
@@ -21,7 +19,7 @@ export function initSentry(options: SentryInitOptions = {}): void {
 	}
 
 	const environment = options.environment ?? process.env.NODE_ENV ?? 'development';
-	// Releases must be unique per deploy, so SENTRY_RELEASE is separate from the display VERSION (e.g. 'beta'); production VERSION is a tag and already unique.
+	// SENTRY_RELEASE is separate from VERSION so each deploy gets a unique release.
 	const release = options.release ?? process.env.SENTRY_RELEASE ?? process.env.VERSION ?? 'unknown';
 	const isProd = environment === 'production';
 
@@ -33,7 +31,6 @@ export function initSentry(options: SentryInitOptions = {}): void {
 		tracesSampleRate: options.tracesSampleRate ?? (isProd ? 0.2 : 1.0),
 		profilesSampleRate: options.profilesSampleRate ?? (isProd ? 0.2 : 1.0),
 		maxBreadcrumbs: 50,
-		// keep tokens and keys out of Sentry
 		beforeSend: (event) => scrubSecrets(event)
 	});
 
@@ -56,13 +53,11 @@ type MinimalLogger = {
 
 const SECRET_KEY_PATTERN = /(authoriz|token|secret|passw|api[-_]?key|credential)/i;
 const BEARER_TOKEN_PATTERN = /(Bearer\s+)\S+/gi;
-/** Credentials inside URLs (webhook paths, `?token=`, userinfo). A key named `url` misses SECRET_KEY_PATTERN, so the value itself is masked. */
 const URL_SECRET_PATTERNS: readonly [RegExp, string][] = [
 	[/(https:\/\/[^\s"'?#]*?\/webhooks\/\d+\/)[^\s"'?#]+/gi, '$1[redacted]'],
 	[/([?&](?:token|key|api_key|apikey|access_token|refresh_token|secret|sig|signature|password)=)[^&\s"']+/gi, '$1[redacted]'],
 	[/(https?:\/\/)[^\s/"'@]+:[^\s/"'@]+@/gi, '$1[redacted]@']
 ];
-/** Events can hold circular references just before serialization. */
 const SCRUB_MAX_DEPTH = 6;
 
 export function maskSecretString(value: string): string {
@@ -87,7 +82,6 @@ export function scrubSecrets<T>(value: T, depth = 0, seen = new WeakSet<object>(
 	return value;
 }
 
-/** unhandledRejection is reported and logged, then the process continues; uncaughtException is reported and logged, then the process exits. */
 export function registerProcessErrorHandlers(logger: MinimalLogger): void {
 	process.on('unhandledRejection', (reason) => {
 		Sentry.captureException(reason);

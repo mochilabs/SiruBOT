@@ -1,5 +1,3 @@
-// Judging stays pure here; the bot's countingChannel listener does the storing.
-
 export interface CountingState {
 	current: number;
 	lastUserId: string | null;
@@ -9,7 +7,6 @@ export interface CountingState {
 export interface CountingAttemptResult {
 	ok: boolean;
 	state: CountingState;
-	/** False if the count was already 0. */
 	reset: boolean;
 	newBest: boolean;
 }
@@ -22,7 +19,6 @@ export function parseCountingMessage(content: string): number | null {
 	return Number(trimmed);
 }
 
-/** Correct is current + 1. The same person can't count twice in a row (blocks solo spam). A wrong count resets to 0. */
 export function evaluateCounting(state: CountingState, attempt: number, userId: string): CountingAttemptResult {
 	if (attempt === state.current + 1 && state.lastUserId !== userId) {
 		const newBest = attempt > state.best;

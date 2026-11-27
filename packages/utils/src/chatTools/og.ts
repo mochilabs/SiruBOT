@@ -1,5 +1,3 @@
-// X metadata comes from the public FxEmbed API (api.fxtwitter.com) and is shared by data-api /v1/embed-fix/metadata and the bot's embedFixGateway.
-
 export interface BoothOgMeta {
 	title: string;
 	description: string;
@@ -41,12 +39,10 @@ function absolutizeUrl(value: string, pageUrl: string): string {
 	}
 }
 
-/** Dropping the pximg resize segment (/c/620x620/) yields the original resolution. */
 export function enlargeBoothImage(url: string): string {
 	return url.replace(/\/c\/\d+x\d+\//u, '/');
 }
 
-/** Null without a title (og:title, else twitter:title). Description is cut to EMBED_FIX_MAX_DESCRIPTION; relative image/video URLs resolve against pageUrl. */
 export function parseOgMeta(html: string, pageUrl: string): OgMeta | null {
 	const og = new Map<string, string>();
 	for (const tagMatch of html.matchAll(/<meta\b[^>]*>/giu)) {
@@ -69,7 +65,6 @@ export function parseOgMeta(html: string, pageUrl: string): OgMeta | null {
 	};
 }
 
-/** Null without a title or image; the image is switched to original resolution. */
 export function parseBoothOg(html: string, pageUrl: string): BoothOgMeta | null {
 	const meta = parseOgMeta(html, pageUrl);
 	if (!meta || !meta.image) return null;
@@ -82,7 +77,6 @@ export interface FxTwitterStatus {
 	authorName: string;
 	authorHandle: string;
 	authorAvatar: string;
-	/** Static photos only: video and GIF tweets go to link mode instead of a card. */
 	photos: string[];
 	hasVideo: boolean;
 	hasPoll: boolean;
@@ -90,11 +84,9 @@ export interface FxTwitterStatus {
 	replyCount: number;
 	retweetCount: number;
 	likeCount: number;
-	/** Unix seconds. */
 	createdAt: number;
 }
 
-/** Null for non-X links. */
 export function fxTwitterApiUrl(original: string): string | null {
 	const replaced = original.replace(/^(?:https?:\/\/)?(?:www\.)?(?:twitter|x)\.com\//iu, 'https://api.fxtwitter.com/');
 	return replaced === original && !/^https:\/\/api\.fxtwitter\.com\//iu.test(replaced) ? null : replaced;
@@ -112,7 +104,7 @@ function toCount(value: unknown): number {
 	return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
-/** Accepts both API shapes: v1 wraps in `tweet`, v2 in `status`, and the repost count is `retweets` or `reposts`. Null for non-200 codes or a missing tweet (deleted or private). */
+// Handles FxEmbed v1 (tweet/retweets) and v2 (status/reposts) shapes.
 export function parseFxTwitterStatus(payload: unknown): FxTwitterStatus | null {
 	if (typeof payload !== 'object' || payload === null) return null;
 	const root = payload as Record<string, unknown>;

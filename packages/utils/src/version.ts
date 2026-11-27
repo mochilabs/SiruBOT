@@ -40,7 +40,7 @@ function getGitBranch(): string {
 
 class VersionInfo {
 	private static instance: VersionInfo;
-	// git 정보는 첫 사용 시점에 계산해요 — 모듈 import만으로 git 프로세스 4회를 스폰하지 않기 위함이에요.
+	// Lazy-evaluated on first getter call to avoid spawning git on import.
 	private gitDirty?: boolean;
 	private gitHash?: string;
 	private gitBranch?: string;

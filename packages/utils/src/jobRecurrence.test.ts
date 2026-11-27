@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { nextRunAt, parseTimeOfDay } from './jobRecurrence.js';
 
-/** KST 시각 문자열 → Date (테스트 가독성용) */
 const kst = (text: string) => new Date(`${text}+09:00`);
 
 describe('parseTimeOfDay', () => {
@@ -26,7 +25,6 @@ describe('nextRunAt daily', () => {
 		expect(nextRunAt({ type: 'daily', time: '00:30' }, kst('2026-11-22T00:00:00'))).toEqual(kst('2026-11-22T00:30:00'));
 	});
 	it('UTC로는 전날인 KST 새벽도 KST 날짜로 계산해요', () => {
-		// 2026-11-21T20:00Z = KST 11-22 05:00
 		expect(nextRunAt({ type: 'daily', time: '09:00' }, new Date('2026-11-21T20:00:00Z'))).toEqual(kst('2026-11-22T09:00:00'));
 	});
 	it('연말을 넘겨요', () => {
@@ -35,7 +33,6 @@ describe('nextRunAt daily', () => {
 });
 
 describe('nextRunAt weekly', () => {
-	// 2026-11-21은 토요일(6)
 	it('이번 주 남은 요일을 골라요', () => {
 		expect(nextRunAt({ type: 'weekly', weekday: 1, time: '09:00' }, kst('2026-11-21T10:00:00'))).toEqual(kst('2026-11-23T09:00:00'));
 	});

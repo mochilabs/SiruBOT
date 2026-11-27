@@ -1,28 +1,20 @@
-// Only method='slash' commands are registered as guild slash commands.
-// When bumping the spec version, extend the schema here and update the bot interpreter, dashboard builder and data-api generation prompt together.
 import { z } from 'zod';
 
-/** v1 is kept for runtime compatibility only. */
 export const CUSTOM_COMMAND_SPEC_VERSION = 2;
 
-/** Includes if sub-steps. */
 export const CUSTOM_COMMAND_MAX_STEPS = 20;
 export const CUSTOM_COMMAND_MAX_STEP_DELAY_SECONDS = 300;
-/** Bounds total run time, which steps × per-step wait would otherwise blow up (includes if sub-steps). */
 export const CUSTOM_COMMAND_MAX_TOTAL_DELAY_SECONDS = 600;
 export const CUSTOM_COMMAND_MAX_PER_GUILD = 20;
-/** Protects the bot's own commands' Discord slots. */
 export const CUSTOM_COMMAND_MAX_SLASH_PER_GUILD = 20;
 export const CUSTOM_COMMAND_MAX_ARGS = 5;
 export const CUSTOM_COMMAND_IF_MAX_SUB_STEPS = 10;
 
-/** Matched as the first token after the prefix, so no whitespace. */
 export const CUSTOM_COMMAND_NAME_MAX_LENGTH = 20;
 export const CUSTOM_COMMAND_NAME_PATTERN = /^\S+$/u;
-/** Discord's application command pattern; validate rejects Latin uppercase separately. */
 export const CUSTOM_COMMAND_SLASH_NAME_PATTERN = /^[-_\p{L}\p{N}]{1,32}$/u;
 
-/** Names used by list replies (`!도움말`) and top-level slash commands. Keep in sync when adding or renaming a top-level command, or prefix commands hijack slash ones. */
+// Keep in sync with top-level slash commands so prefix commands don't shadow them.
 export const CUSTOM_COMMAND_RESERVED_NAMES = [
 	'도움말',
 	'음악',
@@ -58,8 +50,6 @@ const httpsUrlSchema = z
 	.string()
 	.url('이미지 주소가 올바르지 않아요.')
 	.regex(/^https:\/\//u, 'https 주소만 사용할 수 있어요.');
-
-// Same values as the DB column; fixed at creation.
 
 export const customCommandMethodSchema = z.enum(['prefix', 'slash']);
 export type CustomCommandMethod = z.infer<typeof customCommandMethodSchema>;
@@ -117,7 +107,6 @@ export type CustomCommandDesignItem = z.infer<typeof cv2DesignItemSchema>;
 
 const sendMessageStepSchema = z.object({
 	type: z.literal('send_message'),
-	// "text or design" is checked in the spec superRefine so discriminatedUnion members stay plain objects
 	text: z.string().min(1, '메시지를 입력해 주세요.').max(2000, '메시지는 2000자 이하여야 해요.').optional(),
 	design: cv2DesignSchema.optional()
 });
@@ -143,7 +132,6 @@ const deleteTriggerStepSchema = z.object({
 	afterSeconds: z.number().int('삭제 대기는 정수(초)여야 해요.').min(1, '삭제 대기는 1초 이상이에요.').max(60, '삭제 대기는 60초 이하여야 해요.')
 });
 
-/** Conditions look only at the invoker and context; none target other users, to prevent abuse. */
 export const ifConditionSchema = z.discriminatedUnion('kind', [
 	z.object({ kind: z.literal('has_role'), roleId: snowflakeSchema }),
 	z.object({ kind: z.literal('channel_match'), channelId: snowflakeSchema }),
@@ -159,7 +147,6 @@ export const ifConditionSchema = z.discriminatedUnion('kind', [
 ]);
 export type CustomCommandIfCondition = z.infer<typeof ifConditionSchema>;
 
-/** No nested if. */
 export const nonIfStepSchema = z.discriminatedUnion('type', [
 	sendMessageStepSchema,
 	delayStepSchema,
@@ -183,7 +170,6 @@ const ifStepSchema = z.object({
 		.optional()
 });
 
-/** Error messages are Korean: the dashboard shows them to users as-is. */
 export const customCommandStepSchema = z.discriminatedUnion('type', [
 	sendMessageStepSchema,
 	delayStepSchema,
@@ -236,7 +222,7 @@ export const customCommandSpecSchemaV2 = specObjectV2.superRefine((spec, ctx) =>
 			ctx.addIssue({ code: 'custom', message: '보낼 내용(텍스트 또는 디자인)을 입력해 주세요.' });
 		}
 	});
-	// Role actions require an access restriction (anyone could otherwise grab roles). walkSteps recurses into if branches so they can't bypass a top-level check.
+	// Role actions require access restriction; walkSteps checks nested if branches too.
 	let hasRoleAction = false;
 	walkSteps(spec.steps, (step) => {
 		if (step.type === 'add_role' || step.type === 'remove_role') hasRoleAction = true;
@@ -266,11 +252,9 @@ export const customCommandSpecSchemaV1 = z
 		{ message: `대기 시간 합계는 ${CUSTOM_COMMAND_MAX_TOTAL_DELAY_SECONDS}초를 넘길 수 없어요.` }
 	);
 
-/** Stored spec JSON is untrusted: always re-validate before running. Accepts v1 and v2. */
 export const customCommandSpecSchema = z.union([customCommandSpecSchemaV1, customCommandSpecSchemaV2]);
 export type CustomCommandSpec = z.infer<typeof customCommandSpecSchema>;
 
-/** Saved specs are always v2. */
 export const customCommandPayloadSchema = z
 	.object({
 		name: z
@@ -290,7 +274,6 @@ export const customCommandPayloadSchema = z
 	});
 export type CustomCommandPayload = z.infer<typeof customCommandPayloadSchema>;
 
-/** Name/method validation depends on the target command's method, so the route checks it. (zod 4 can't `.partial()` a refined schema.) */
 export const customCommandPatchSchema = z.object({
 	name: z
 		.string()
@@ -305,7 +288,6 @@ export function normalizeCustomCommandName(name: string): string {
 	return name.trim().toLowerCase();
 }
 
-/** Null passes; otherwise a Korean reason. */
 export function validateCustomCommandName(name: string, method: CustomCommandMethod = 'prefix'): string | null {
 	const trimmed = name.trim();
 	if (trimmed.length === 0) return '이름을 입력해 주세요.';
@@ -323,7 +305,6 @@ export function validateCustomCommandName(name: string, method: CustomCommandMet
 	return null;
 }
 
-/** Null passes; otherwise a Korean reason. */
 export function validateCustomCommandPrefix(prefix: string): string | null {
 	if (prefix.length === 0) return '접두사를 입력해 주세요.';
 	if (prefix.length > CUSTOM_COMMAND_PREFIX_MAX_LENGTH) return `접두사는 ${CUSTOM_COMMAND_PREFIX_MAX_LENGTH}자 이하로 입력해 주세요.`;

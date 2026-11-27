@@ -1,4 +1,3 @@
-/** 호출 사이 최소 간격을 지키도록 직렬화해요. 프로바이더 인스턴스마다 하나씩 둬요. */
 export class SerialRateLimiter {
 	private tail: Promise<void> = Promise.resolve();
 	private last = Number.NEGATIVE_INFINITY;

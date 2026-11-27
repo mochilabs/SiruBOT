@@ -1,8 +1,3 @@
-/**
- * Shared by data-api (PNG) and the dashboard preview (SVG) so both render the same card.
- * Follows `@sirubot/utils/memberGreeting`: 1200×675 card, layer x/y in % (center anchor), size/width/height in px.
- * Callers register the fonts; only weights 600 and 900 are used so both runtimes share the static subsets.
- */
 import { greetingPresetBackgroundPlan } from '@sirubot/utils/greetingCardDesign';
 import {
 	greetingAnimationDurationMs,
@@ -30,7 +25,6 @@ export interface GreetingCardVars {
 	displayName: string;
 	guildName: string;
 	memberCount: number;
-	/** Falls back to a '♪' placeholder when absent. */
 	avatar: string | null;
 }
 
@@ -38,10 +32,9 @@ const fill = { position: 'absolute', left: 0, top: 0, width: '100%', height: '10
 
 export function greetingCard(config: GreetingImage, vars: GreetingCardVars): CardElement {
 	const children: CardChild[] = [...backgroundNodes(config.background)];
-	// every layer's period divides the card loop length so the WebP repeats seamlessly
 	const loopMs = greetingAnimationDurationMs(config);
 	for (const layer of config.layers) {
-		if (layer.hidden) continue; // 숨김 레이어는 렌더에서 건너뛰어요
+		if (layer.hidden) continue;
 		children.push(withAnimation(layerNode(layer, vars), layer, loopMs));
 	}
 	return h('div', { position: 'relative', width: GREETING_CARD_W, height: GREETING_CARD_H, overflow: 'hidden', fontFamily: CARD_FONT }, children);
@@ -62,7 +55,6 @@ function backgroundNodes(background: GreetingImage['background']): CardElement[]
 			...fill,
 			backgroundImage: `radial-gradient(circle ${round(glow.radius)}px at ${round(glow.cx)}px ${round(glow.cy)}px, ${glowStops})`
 		}),
-		// scrim keeps the white title readable over the gradient
 		h('div', { ...fill, backgroundColor: plan.scrim })
 	];
 }
@@ -80,10 +72,7 @@ function layerNode(layer: GreetingLayer, vars: GreetingCardVars): CardElement {
 	}
 }
 
-/**
- * The animation goes on an outer div with the same box, so it multiplies with the layer's own rotation/opacity/blur instead of replacing them.
- * Text uses the same (x, y) transform origin as its inner rotation so left/right alignment stays in place.
- */
+/** Wraps the layer in an outer box so animation multiplies with inner rotation/opacity/blur. */
 function withAnimation(node: CardElement, layer: GreetingLayer, loopMs: number): CardElement {
 	if (!layer.animation) return node;
 	const style = (node.props.style ?? {}) as Record<string, string | number>;
@@ -114,7 +103,6 @@ function round(value: number): number {
 
 const DEFAULT_LINE_HEIGHT = 1.25;
 
-/** Without maxWidth the width reaches the nearest card edge (legacy behavior). When wrapping, the height holds maxLines (default 6) lines and text is vertically centered. */
 function textBox(layer: GreetingTextLayer): {
 	left: number;
 	top: number;
@@ -133,7 +121,6 @@ function textBox(layer: GreetingTextLayer): {
 	return { left: round(left), top: round(cy - height / 2), width, height, originX: round(cx - left), originY: round(height / 2), wrap };
 }
 
-/** Transform origin for rotation and animation, in box px. */
 function textAnchorOrigin(layer: GreetingTextLayer): string {
 	const box = textBox(layer);
 	return `${box.originX}px ${box.originY}px`;
@@ -147,7 +134,6 @@ function shadowCss(shadow: GreetingShadow): string {
 	return `${shadow.offsetX}px ${shadow.offsetY}px ${shadow.blur}px ${hexToRgba(shadow.color, shadow.opacity)}`;
 }
 
-/** Gradient text is transparent with `background-clip: text`; outlines use `-webkit-text-stroke` (both work in Takumi native and WASM). */
 function textStyle(layer: GreetingTextLayer, width: number, wrap: boolean): Record<string, string | number> {
 	const style: Record<string, string | number> = {
 		maxWidth: width,
@@ -182,7 +168,6 @@ function textStyle(layer: GreetingTextLayer, width: number, wrap: boolean): Reco
 }
 
 function textNode(layer: GreetingTextLayer, vars: GreetingCardVars): CardElement {
-	// image cards can't render mentions, so {유저} falls back to the display name (renderGreetingTemplate contract)
 	const text = renderGreetingTemplate(layer.text, {
 		displayName: vars.displayName,
 		guildName: vars.guildName,

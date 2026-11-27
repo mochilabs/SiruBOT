@@ -36,7 +36,6 @@ export function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** 프로세스 업타임 — "N일 N시간" / "N시간 N분" / "N분" (대시보드 프로세스·노드 카드에서 승격) */
 export function formatUptime(secondsValue: number): string {
 	const seconds = Math.floor(secondsValue);
 	const days = Math.floor(seconds / 86400);
@@ -47,7 +46,6 @@ export function formatUptime(secondsValue: number): string {
 	return `${minutes}분`;
 }
 
-/** 재생 시간 m:ss 표기 (밀리초 입력) — 분은 0 패딩하지 않고 시간 자리가 없어요 (formatTime과 출력이 다름에 주의) */
 export function formatDuration(ms: number): string {
 	const seconds = Math.floor(ms / 1000);
 	const minutes = Math.floor(seconds / 60);

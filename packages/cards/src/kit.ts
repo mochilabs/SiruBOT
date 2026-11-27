@@ -1,6 +1,3 @@
-// Runtime-independent half of the card kit; node-only code (fonts, native raster, downloads) lives in data-api `renderers/shared/takumiKit.tsx`.
-// Elements are built with `h()` so this package needs no JSX build setup.
-
 export interface CardElement {
 	type: string;
 	props: { style?: Record<string, string | number>; children?: CardChild | CardChild[]; [key: string]: unknown };
@@ -27,13 +24,12 @@ export function stripEmoji(text: string): string {
 		.trim();
 }
 
-/** Async LRU keyed by input; concurrent calls share one promise. Null and failures aren't cached. Skips re-downloading for near-identical re-renders (volume, pause, repeat). */
 export function createAsyncLru<T>(max: number, load: (key: string) => Promise<T | null>): (key: string) => Promise<T | null> {
 	const entries = new Map<string, Promise<T | null>>();
 	return (key) => {
 		const hit = entries.get(key);
 		if (hit) {
-			entries.delete(key); // 최근 사용으로 갱신
+			entries.delete(key);
 			entries.set(key, hit);
 			return hit;
 		}

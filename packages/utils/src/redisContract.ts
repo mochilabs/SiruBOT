@@ -1,5 +1,4 @@
-// Channel strings come from redisChannels.ts and are never minted here: old and new processes run together during a rolling deploy
-// (redisContract.test.ts pins them). `signed` means messages travel in a signed envelope (redisEnvelope); only the settings invalidation broadcast is unsigned.
+// Channel strings come from redisChannels.ts and must stay stable across rolling deploys.
 import { z } from 'zod';
 import { botAdminRequestSchema, botAdminResponseSchema } from './botAdmin.js';
 import { guildDataRequestSchema, guildDataResponseSchema } from './guildData.js';
@@ -35,7 +34,6 @@ import { roleValidationRequestSchema, roleValidationResponseSchema } from './rol
 import { socialWebhookCreateRequestSchema, socialWebhookCreateResponseSchema } from './social.js';
 
 export interface RedisRpcContract<TRequest extends z.ZodType = z.ZodType, TResponse extends z.ZodType = z.ZodType> {
-	/** Log prefix, e.g. '길드 데이터' */
 	readonly name: string;
 	readonly requestChannel: string;
 	readonly responseChannel: string;
@@ -53,7 +51,6 @@ export function defineRedisRpc<TRequest extends z.ZodType, TResponse extends z.Z
 	return Object.freeze({ ...contract });
 }
 
-/** Fields absent from the request stay absent from the reply (botAdmin requests have no guildId). */
 export function pickRpcCorrelation(request: unknown): { requestId: string; guildId?: string; kind?: string } {
 	const source = (typeof request === 'object' && request !== null ? request : {}) as Record<string, unknown>;
 	const correlation: { requestId: string; guildId?: string; kind?: string } = { requestId: String(source.requestId ?? '') };
@@ -106,42 +103,23 @@ export function defineRedisGuildEvent<TSchema extends z.ZodType>(contract: {
 	});
 }
 
-// ───────────────────────── 상태 페이로드 스키마 (봇 → data-api 단방향) ─────────────────────────
-
-/**
- * 봇이 state 채널로 퍼블리시하는 길드별 봇 프로필 상태 — 봇의 BotProfileState와 같은 계약이에요.
- * 형태 검증은 이 zod 스키마가 단일 소스예요 (필드 추가 시 무시되지 않게).
- */
 export const botProfileStateSchema = z.object({
 	guildId: z.string().min(1).max(32),
-	/** 현재 길드 닉네임 — null이면 사용자명으로 표시 중이에요 */
 	nickname: z.string().nullable(),
-	/** 봇 사용자명 — 닉네임 초기화 시 표시할 기본값이에요 */
 	username: z.string(),
-	/** 길드 전용 아바타 URL — 설정 안 됐으면 null (패널은 전역 아바타를 보여줘요) */
 	guildAvatarUrl: z.string().nullable(),
-	/** 길드 전용 배너 URL — 설정 안 됐으면 null */
 	guildBannerUrl: z.string().nullable(),
-	/** 전역(앱) 아바타 URL */
 	globalAvatarUrl: z.string().nullable(),
-	/** 닉네임 변경 가능 여부 — CHANGE_NICKNAME 또는 MANAGE_NICKNAMES */
 	canChangeNickname: z.boolean(),
-	/** 마지막 적용 시도 결과 — 시도가 없으면 null */
 	lastApply: z.object({ ok: z.boolean(), error: z.string().nullable(), at: z.number() }).nullable().default(null),
 	updatedAt: z.number()
 });
 export type BotProfileStatePayload = z.infer<typeof botProfileStateSchema>;
 
-/**
- * 봇이 state 채널로 퍼블리시하는 멤버 인사 테스트 전송 결과.
- * sentAt은 epoch milliseconds(number)가 계약이에요 — 레거시 ISO 문자열은 number로 정규화하고,
- * 없거나 깨졌으면 수신 시각으로 대체해요 (값 타입이 이상해도 결과 전체를 버리지 않게).
- */
 export const memberGreetingTestStateSchema = z.object({
 	requestId: z.string().min(1).max(64),
 	kind: z.enum(['welcome', 'goodbye']),
 	ok: z.boolean(),
-	/** 실패 사유 — 봇이 실패 때만 담고, 없으면 null이에요 */
 	error: z.string().nullable().default(null),
 	sentAt: z
 		.union([
@@ -159,21 +137,14 @@ export const memberGreetingTestStateSchema = z.object({
 });
 export type GreetingTestResult = z.infer<typeof memberGreetingTestStateSchema>;
 
-// ───────────────────────── 트리거 이벤트 페이로드 스키마 (data-api → 봇 단방향) ─────────────────────────
-
-/** 길드 ID — 기존 수신 측 검증(1~32자 문자열)을 그대로 유지해요 */
 const triggerGuildIdSchema = z.string().min(1).max(32);
 
-/** 설정 무효화 — reason은 알려진 값('mixer'·'panel')만 의미가 있고 모르는 값은 무시해요 (거부하지 않아요) */
 export const guildSettingsInvalidateSchema = z.object({ guildId: triggerGuildIdSchema, reason: z.unknown().optional() });
 export const botProfileTriggerSchema = z.object({ guildId: triggerGuildIdSchema });
-/** 멤버 인사 전송 트리거 — requestId가 형식에 어긋나면 값만 버리고 트리거는 처리해요 */
 export const memberGreetingSendSchema = z.object({
 	guildId: triggerGuildIdSchema,
 	requestId: z.string().min(1).max(64).optional().catch(undefined)
 });
-
-// ───────────────────────── RPC 계약 ─────────────────────────
 
 export const guildDataRpc = defineRedisRpc({
 	name: '길드 데이터',
@@ -183,7 +154,6 @@ export const guildDataRpc = defineRedisRpc({
 	responseSchema: guildDataResponseSchema
 });
 
-/** 웹 플레이어 — 요청은 공통부만 검증하고 kind별 상세는 응답자가 해당 스키마로 좁혀요 (그래서 loose예요) */
 export const playerWebRpc = defineRedisRpc({
 	name: '웹 플레이어',
 	requestChannel: PLAYER_WEB_REQUEST_CHANNEL,
@@ -240,9 +210,6 @@ export const roleValidationRpc = defineRedisRpc({
 	responseSchema: roleValidationResponseSchema
 });
 
-// ───────────────────────── 이벤트 계약 ─────────────────────────
-
-/** 길드 설정 캐시 무효화 — data-api가 서명 없이 퍼블리시해요 (대시보드 저장 흐름) */
 export const guildSettingsInvalidateEvent = defineRedisEvent({
 	name: '설정 무효화',
 	channel: GUILD_SETTINGS_INVALIDATE_CHANNEL,

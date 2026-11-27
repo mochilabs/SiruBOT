@@ -13,11 +13,9 @@ describe('themedTokens', () => {
 		const blue = themedTokens('#5b9dff', PINK);
 		expect(blue.brand).toBe('#5b9dff');
 		for (const key of Object.keys(T) as (keyof typeof T)[]) expect(blue[key]).toMatch(/^#[0-9a-f]{6}$/);
-		// 분홍 토큰이 한 값도 섞여 들어오지 않아요 (오류 색만 공통)
 		for (const key of Object.keys(T) as (keyof typeof T)[]) {
 			if (key !== 'destructive') expect(blue[key]).not.toBe(T[key]);
 		}
-		// 배경이 가장 어둡고 글자가 가장 밝아요
 		expect(blue.background < blue.surface1 && blue.surface1 < blue.surface2).toBe(true);
 		expect(blue.foreground > blue.mutedForeground).toBe(true);
 	});

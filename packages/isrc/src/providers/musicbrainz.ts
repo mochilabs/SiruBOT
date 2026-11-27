@@ -33,7 +33,6 @@ function phrase(value: string): string {
 }
 
 export interface MusicBrainzProviderOptions {
-	/** 서비스 식별용. 개인 연락처를 넣지 마세요. */
 	userAgent?: string;
 	limiter?: SerialRateLimiter;
 }

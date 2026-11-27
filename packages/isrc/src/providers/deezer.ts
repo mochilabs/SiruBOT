@@ -8,7 +8,7 @@ const BASE = 'https://api.deezer.com';
 // Deezer allows 50 requests per 5s.
 const MIN_INTERVAL_MS = 120;
 
-// Deezer는 오류도 HTTP 200 + { error }로 돌려줘요 (code 4 = quota).
+// Deezer returns errors as HTTP 200 + { error } (code 4 = quota).
 const searchSchema = z.object({
 	data: z
 		.array(

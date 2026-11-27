@@ -1,30 +1,22 @@
 import { z } from 'zod';
 import { redisIdSchema } from './redisChannels.js';
 
-// customId `rolepanel:grant:<buttonId>:<roleId>` embeds the roleId so an already posted button keeps granting the role it showed,
-// even if an admin later changes the button's role.
-// Posting and validation need the bot token, so they go through Redis request/reply (redisChannels.ts, panelPost.ts).
+// customId embeds roleId so posted buttons keep their original role even if edited later.
 
-/** Discord allows 5 buttons per row × 5 rows. */
 export const ROLE_PANEL_MAX_BUTTONS = 25;
-/** Discord's button label limit. */
 export const ROLE_PANEL_BUTTON_LABEL_MAX = 80;
 export const ROLE_PANEL_TITLE_MAX = 100;
 export const ROLE_PANEL_DESCRIPTION_MAX = 1000;
 export const ROLE_PANEL_NAME_MAX = 100;
-/** `#RRGGBB`; null uses the bot default. */
 export const ROLE_PANEL_ACCENT_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 export const ROLE_PANEL_IMAGE_URL_MAX = 2048;
 
-/** A panel uses one mode or the other. */
 export const rolePanelModes = ['button', 'reaction'] as const;
 export type RolePanelMode = (typeof rolePanelModes)[number];
 export const rolePanelImageLayouts = ['gallery', 'thumbnail'] as const;
 export type RolePanelImageLayout = (typeof rolePanelImageLayouts)[number];
-/** Thumbnails have no position option. */
 export const rolePanelImagePositions = ['top', 'middle', 'bottom'] as const;
 export type RolePanelImagePosition = (typeof rolePanelImagePositions)[number];
-/** Discord allows 20 distinct reaction emoji per message. */
 export const ROLE_PANEL_MAX_REACTIONS = 20;
 
 export const rolePanelButtonStyles = ['secondary', 'primary', 'success', 'danger'] as const;
@@ -41,13 +33,11 @@ export function isValidRolePanelEmoji(value: string): boolean {
 	return UNICODE_EMOJI.test(value) || CUSTOM_EMOJI.test(value);
 }
 
-/** Normalizes reaction-event and stored emoji to one key: custom emoji by id, unicode without the U+FE0F variation selector. */
 export function rolePanelEmojiKey(value: string): string {
 	const custom = /^<a?:\w{2,32}:(\d{17,20})>$/.exec(value);
 	return custom ? custom[1] : value.replaceAll('\uFE0F', '');
 }
 
-/** Returns the violation message or null. In reaction mode a button is a reaction, so each needs a unique emoji. */
 export function validateReactionButtons(buttons: ReadonlyArray<{ emoji?: string | null }>): string | null {
 	if (buttons.length > ROLE_PANEL_MAX_REACTIONS) {
 		return `반응 방식은 역할을 최대 ${ROLE_PANEL_MAX_REACTIONS}개까지 설정할 수 있어요.`;
@@ -78,7 +68,6 @@ export const rolePanelButtonSchema = z.object({
 });
 export type RolePanelButton = z.infer<typeof rolePanelButtonSchema>;
 
-/** New buttons omit the id (the server issues one); existing ones keep theirs so posted customIds stay valid. */
 export const rolePanelButtonInputSchema = rolePanelButtonSchema
 	.omit({ id: true })
 	.partial({ position: true })
@@ -119,7 +108,6 @@ export const rolePanelSchema = z.object({
 });
 export type RolePanel = z.infer<typeof rolePanelSchema>;
 
-/** The list replaces all buttons: it is the final state. */
 export const rolePanelButtonsSchema = z
 	.array(rolePanelButtonInputSchema)
 	.max(ROLE_PANEL_MAX_BUTTONS, `역할 버튼은 최대 ${ROLE_PANEL_MAX_BUTTONS}개까지 설정할 수 있어요.`)
@@ -155,7 +143,6 @@ export const rolePanelUpdateSchema = z
 		buttons: rolePanelButtonsSchema.optional()
 	})
 	.superRefine((value, ctx) => {
-		// with only one of mode/buttons present, the route checks it against the stored value
 		const reason = value.mode === 'reaction' && value.buttons ? validateReactionButtons(value.buttons) : null;
 		if (reason) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['buttons'], message: reason });
 	});
@@ -166,7 +153,6 @@ export const roleValidationRequestSchema = z.object({
 	roleIds: z.array(snowflake).max(ROLE_PANEL_MAX_BUTTONS)
 });
 
-/** `error` carries a Korean message on failure such as a communication fault. */
 export const roleValidationResponseSchema = z.object({
 	requestId: z.string().uuid(),
 	guildId: redisIdSchema,

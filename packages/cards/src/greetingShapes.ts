@@ -14,7 +14,6 @@ function polygon(points: [number, number][]): string {
 	return points.map(([x, y]) => `${round(x)},${round(y)}`).join(' ');
 }
 
-/** Inner radius is 0.45× the outer; starts at the top point. */
 function starPoints(x: number, y: number, w: number, h: number): [number, number][] {
 	const cx = x + w / 2;
 	const cy = y + h / 2;

@@ -60,7 +60,6 @@ describe('playerWeb request contracts', () => {
 	});
 
 	it('rejects non-http(s) play uris (Lavalink 측 내부 fetch SSRF 방지)', () => {
-		// 스킴을 http/https로 제한해요 — file:, data:, ftp: 등은 봇을 거쳐 Lavalink가 가져올 수 있어요.
 		for (const uri of ['file:///etc/passwd', 'data:text/plain,hi', 'ftp://example.com/x']) {
 			expect(playerWebPlayRequestSchema.safeParse({ ...VALID_BASE, kind: 'play', uri }).success).toBe(false);
 		}
@@ -145,7 +144,6 @@ describe('playerWeb response contract', () => {
 		expect(result.success).toBe(true);
 
 		expect(playerVoiceContextSchema.safeParse({ inVoice: 'yes', voiceChannelName: null, canControl: false }).success).toBe(false);
-		// canPlay는 필수예요 — 이전 버전 봇처럼 빠진 응답은 거절해요
 		expect(playerVoiceContextSchema.safeParse({ inVoice: true, voiceChannelName: null, canControl: false }).success).toBe(false);
 		expect(playerWebTrackSchema.safeParse(null as unknown).success).toBe(false);
 	});
