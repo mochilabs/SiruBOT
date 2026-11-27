@@ -62,7 +62,7 @@ export abstract class PendingWriteStore {
 				}
 			} catch (error) {
 				this.logger.warn(`Redis get failed for guild ${guildId}, falling back to cache: ${error}`);
-				this.isRedisConnected = false;
+				this.markOfflineUnlessReady();
 			}
 		}
 		return null;
@@ -106,9 +106,15 @@ export abstract class PendingWriteStore {
 			return removed;
 		} catch (error) {
 			this.logger.warn(`Redis flush failed for ${key}: ${error}`);
-			this.isRedisConnected = false;
+			this.markOfflineUnlessReady();
 			return true;
 		}
+	}
+
+	// A command can fail on a live connection (timeout, OOM, READONLY). Going offline then would never recover,
+	// because only a connect event turns the store back on; the failed write stays pending and is retried instead.
+	private markOfflineUnlessReady(): void {
+		if (!this.redis.isReady) this.isRedisConnected = false;
 	}
 
 	private scheduleFlush(key: string): void {
