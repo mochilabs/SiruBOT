@@ -220,7 +220,7 @@ describe('captions fallback', () => {
 
 	it('adds the video id to the cache key only when present', () => {
 		const q = { title: 'Ditto', artist: 'NewJeans', durationMs: 186_000 };
-		expect(lyricsTrackCacheKey({ ...q, videoId: 'dQw4w9WgXcQ' })).toBe(`${lyricsTrackCacheKey(q)}|dQw4w9WgXcQ`);
+		expect(lyricsTrackCacheKey({ ...q, videoId: 'dQw4w9WgXcQ' })).toBe(`${lyricsTrackCacheKey(q)}|dQw4w9WgXcQ|c2`);
 	});
 });
 

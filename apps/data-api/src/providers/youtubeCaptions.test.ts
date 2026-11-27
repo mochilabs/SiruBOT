@@ -122,6 +122,38 @@ describe('pickCaptionTracks', () => {
 		expect(picked?.original.language_code).toBe('ko');
 		expect(picked?.korean).toBeNull();
 	});
+
+	it('falls back to Korean, then English, when the spoken language track is missing', () => {
+		const zutomayo = 'ずっと真夜中でいいのに。『袖のキルト』MV (ZUTOMAYO - QUILT)';
+		const quilt = [track('zh-Hans'), track('zh-Hant'), track('en'), track('id'), track('ko')];
+		expect(pickCaptionTracks(quilt, zutomayo)).toMatchObject({ original: { language_code: 'ko' }, korean: null });
+		const noKorean = pickCaptionTracks([track('ar'), track('en'), track('ja', 'asr')]);
+		expect(noKorean).toMatchObject({ original: { language_code: 'en' }, korean: null });
+	});
+
+	it('prefers the spoken language track over the fallbacks', () => {
+		const picked = pickCaptionTracks([track('ar'), track('ko'), track('ja')], 'ずっと真夜中でいいのに。『残機』MV');
+		expect(picked).toMatchObject({ original: { language_code: 'ja' }, korean: { language_code: 'ko' } });
+	});
+
+	it('uses the fallbacks when neither an auto-generated track nor the title tells the spoken language', () => {
+		expect(pickCaptionTracks([track('zh-Hans'), track('en')], '残響散歌')?.original.language_code).toBe('en');
+	});
+
+	it('never uses other translations as the original', () => {
+		expect(pickCaptionTracks([track('zh-Hans'), track('ar'), track('id')], 'ずっと真夜中でいいのに。『残機』MV')).toBeNull();
+	});
+});
+
+describe('guessSpokenLanguage', () => {
+	it('reads kana, hangul and Latin-only titles', () => {
+		expect(guessSpokenLanguage('ZUTOMAYO『袖のキルト』')).toBe('ja');
+		expect(guessSpokenLanguage('아이유 - 밤편지')).toBe('ko');
+		expect(guessSpokenLanguage('Rick Astley - Never Gonna Give You Up (Official Video) 4K')).toBe('en');
+		expect(guessSpokenLanguage('残響散歌')).toBeNull();
+		expect(guessSpokenLanguage('عمرو دياب')).toBeNull();
+		expect(guessSpokenLanguage(undefined)).toBeNull();
+	});
 });
 
 describe('pairKoreanLines', () => {

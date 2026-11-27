@@ -129,17 +129,35 @@ export function pairKoreanLines(original: LyricLine[], korean: LyricLine[]): Rec
 }
 
 /**
- * 사람이 올린 자막 트랙 고르기 — 자동 생성(asr)은 쓰지 않아요.
- * 원문은 영상 음성 언어(자동 생성 트랙의 언어)와 같은 트랙, 그 정보가 없으면 한국어가 아닌 첫 트랙이에요.
+ * 자동 생성 트랙이 없을 때 제목 글자로 음성 언어를 짐작해요 — 가나가 있으면 일본어, 한글이 있으면 한국어, 라틴 글자뿐이면 영어.
+ * 한자만 있는 제목은 중국어인지 일본어인지 모르니 짐작하지 않아요.
  */
-export function pickCaptionTracks(tracks: CaptionTrack[]): { original: CaptionTrack; korean: CaptionTrack | null } | null {
+export function guessSpokenLanguage(title: string | undefined): string | null {
+	if (!title) return null;
+	if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(title)) return 'ja';
+	if (/\p{Script=Hangul}/u.test(title)) return 'ko';
+	if (/\p{L}/u.test(title) && !/[^\p{Script=Latin}\P{L}]/u.test(title)) return 'en';
+	return null;
+}
+
+/** 음성 언어 트랙이 없을 때 원문으로 쓰는 차례 — 한국어는 그대로 읽히고, 영어는 번역해 붙여요. 다른 언어 번역 자막은 원문으로 쓰지 않아요 */
+const FALLBACK_SOURCE_LANGS = ['ko', 'en'];
+
+/**
+ * 사람이 올린 자막 트랙 고르기 — 자동 생성(asr)은 쓰지 않아요.
+ * 원문은 영상 음성 언어(자동 생성 트랙의 언어, 없으면 제목으로 짐작) 트랙이 먼저고, 없으면 한국어 → 영어 차례예요.
+ * 그 밖의 언어만 있으면 가사로 쓰지 않아요 — 일본어 노래에 중국어·아랍어 자막이 원문으로 붙던 문제예요.
+ */
+export function pickCaptionTracks(tracks: CaptionTrack[], title?: string): { original: CaptionTrack; korean: CaptionTrack | null } | null {
 	const manual = tracks.filter((t) => t.kind !== 'asr');
-	if (manual.length === 0) return null;
-	const spoken = tracks.find((t) => t.kind === 'asr')?.language_code;
-	const original =
-		(spoken && manual.find((t) => baseLang(t.language_code) === baseLang(spoken))) ||
-		manual.find((t) => baseLang(t.language_code) !== 'ko') ||
-		manual[0]!;
+	const spoken = tracks.find((t) => t.kind === 'asr')?.language_code ?? guessSpokenLanguage(title);
+	const priority = spoken ? [baseLang(spoken), ...FALLBACK_SOURCE_LANGS] : FALLBACK_SOURCE_LANGS;
+	let original: CaptionTrack | undefined;
+	for (const lang of priority) {
+		original = manual.find((t) => baseLang(t.language_code) === lang);
+		if (original) break;
+	}
+	if (!original) return null;
 	const korean = baseLang(original.language_code) === 'ko' ? null : (manual.find((t) => baseLang(t.language_code) === 'ko') ?? null);
 	return { original, korean };
 }
@@ -163,7 +181,7 @@ async function lookupOnRoute(route: OutboundRoute, videoId: string): Promise<Cap
 	const info = await youtube.getInfo(videoId, { client: 'IOS' });
 	assertNotBotChecked(route, info.playability_status);
 	const tracks = (info.captions?.caption_tracks ?? []) as CaptionTrack[];
-	const picked = pickCaptionTracks(tracks);
+	const picked = pickCaptionTracks(tracks, info.basic_info.title);
 	if (!picked) return null;
 	const lines = await fetchTrackLines(route, picked.original);
 	if (lines.length < MIN_LINES) return null;
