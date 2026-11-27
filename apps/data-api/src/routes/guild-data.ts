@@ -11,18 +11,18 @@ import {
 import { resolveRedisSigningKey, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { sharedCache } from '../utils/cache.ts';
 import { metrics } from '../utils/metrics.ts';
-import { sendError, guildIdParams, playerUserIdSchema, replyBotRelayFailure } from './common.ts';
+import { sendError, guildIdParams, playerUserIdSchema, replyBotRelayFailure, type ReplySink } from './common.ts';
 import { DataApiError } from './serveCached.ts';
 import { getBotProfile, botProfileHubStatus, refreshBotProfile } from '../services/botProfileHub.ts';
 import { getGreetingTestResult } from '../services/memberGreetingHub.ts';
 import { requestGuildData, type GuildDataFailureReason } from '../services/guildDataHub.ts';
 import { requestJtcSetup, type JtcSetupResult } from '../services/jtcSetupHub.ts';
 
-function replyGuildDataFailure(reply: { code: (n: number) => any }, reason: GuildDataFailureReason): any {
+function replyGuildDataFailure(reply: ReplySink, reason: GuildDataFailureReason): unknown {
 	return replyBotRelayFailure(reply, reason, { code: 'guild_data_rejected', message: null, fallback: '' });
 }
 
-function requireRedisClient(reply: { code: (n: number) => any }, message: string): NonNullable<ReturnType<typeof sharedCache.getClient>> | null {
+function requireRedisClient(reply: ReplySink, message: string): NonNullable<ReturnType<typeof sharedCache.getClient>> | null {
 	const client = sharedCache.getClient();
 	if (!client) {
 		reply.code(503).send({ error: 'redis_unavailable', message });
@@ -81,7 +81,7 @@ export function registerGuildDataRoutes(fastify: FastifyInstance): void {
 		markerChannelName: z.string().trim().min(1).max(100).optional()
 	});
 
-	function replyJtcSetupResult(reply: { code: (n: number) => any; send: (body: unknown) => any }, result: JtcSetupResult): any {
+	function replyJtcSetupResult(reply: ReplySink, result: JtcSetupResult): unknown {
 		if (result.ok) {
 			return reply.send({ ok: true, markerChannelId: result.markerChannelId ?? null });
 		}

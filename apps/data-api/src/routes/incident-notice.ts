@@ -11,12 +11,12 @@ import {
 import { resolveRedisSigningKey, unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { sharedCache } from '../utils/cache.ts';
 import { metrics } from '../utils/metrics.ts';
-import { sendError } from './common.ts';
+import { sendError, type ReplySink } from './common.ts';
 
 type RedisClient = NonNullable<ReturnType<typeof sharedCache.getClient>>;
 
 // Notice must live in Redis only; in-memory fallback never reaches the bot.
-function requireRedis(reply: { code: (n: number) => any }): RedisClient | null {
+function requireRedis(reply: ReplySink): RedisClient | null {
 	const client = sharedCache.getClient();
 	if (!client) {
 		reply.code(503).send({ error: 'redis_unavailable', message: '장애 공지를 다루려면 Redis가 필요해요. 잠시 후 다시 시도해 주세요.' });

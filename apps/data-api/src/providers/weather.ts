@@ -7,9 +7,20 @@ const AIR_QUALITY_BASE_URL = 'https://air-quality-api.open-meteo.com/v1';
 const WEATHER_TIMEOUT_MS = 15_000;
 const GEO_PER_REQUEST_TIMEOUT_MS = 5_000;
 
+type JsonRecord = Record<string, unknown>;
+
 function toNum(v: unknown): number | null {
 	const n = Number(v);
 	return Number.isFinite(n) ? n : null;
+}
+
+/** Open-Meteo bodies are read leniently: a missing or non-object field reads as an empty record. */
+function asRecord(value: unknown): JsonRecord {
+	return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as JsonRecord) : {};
+}
+
+function seriesAt(series: unknown, index: number): unknown {
+	return Array.isArray(series) ? series[index] : undefined;
 }
 
 function weatherCodeToTextKo(code: number | null): string {
@@ -45,7 +56,7 @@ function pm10GradeKo(ug: number | null): string {
 	return '매우 나쁨';
 }
 
-async function fetchJson(url: URL, signal: AbortSignal, timeoutMs: number): Promise<any> {
+async function fetchJson(url: URL, signal: AbortSignal, timeoutMs: number): Promise<unknown> {
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), timeoutMs);
 	const onAbort = () => controller.abort();
@@ -85,7 +96,7 @@ function buildGeocodeCandidateNames(rawInput: string, geocodeQuery: string, orig
 	return [...seen];
 }
 
-async function geocodeFirstResult(name: string, language: string, signal: AbortSignal): Promise<Record<string, any> | null> {
+async function geocodeFirstResult(name: string, language: string, signal: AbortSignal): Promise<JsonRecord | null> {
 	const q = name.trim();
 	if (!q) return null;
 	const url = new URL(`${GEOCODING_BASE_URL}/search`);
@@ -95,8 +106,9 @@ async function geocodeFirstResult(name: string, language: string, signal: AbortS
 	url.searchParams.set('format', 'json');
 	try {
 		const body = await fetchJson(url, signal, GEO_PER_REQUEST_TIMEOUT_MS);
-		const top = Array.isArray(body?.results) ? body.results[0] : null;
-		return top && typeof top === 'object' ? top : null;
+		const results = asRecord(body).results;
+		const top: unknown = Array.isArray(results) ? results[0] : null;
+		return top && typeof top === 'object' ? (top as JsonRecord) : null;
 	} catch {
 		return null;
 	}
@@ -126,7 +138,7 @@ async function fetchAirQuality(latitude: number, longitude: number, signal: Abor
 	url.searchParams.set('timezone', 'auto');
 	try {
 		const body = await fetchJson(url, signal, GEO_PER_REQUEST_TIMEOUT_MS);
-		const cur = body?.current ?? {};
+		const cur = asRecord(asRecord(body).current);
 		const pm25 = toNum(cur.pm2_5);
 		const pm10 = toNum(cur.pm10);
 		return {
@@ -140,22 +152,22 @@ async function fetchAirQuality(latitude: number, longitude: number, signal: Abor
 	}
 }
 
-function buildDailyDays(daily: any, startIdx: number, length: number): DailyForecastDay[] {
+function buildDailyDays(daily: JsonRecord, startIdx: number, length: number): DailyForecastDay[] {
 	const out: DailyForecastDay[] = [];
-	const dates: string[] = Array.isArray(daily?.time) ? daily.time : [];
+	const dates: unknown[] = Array.isArray(daily.time) ? daily.time : [];
 	for (let i = 0; i < length; i++) {
 		const idx = startIdx + i;
 		if (idx < 0 || idx >= dates.length) continue;
-		const code = toNum(daily?.weather_code?.[idx]);
+		const code = toNum(seriesAt(daily.weather_code, idx));
 		out.push({
 			date: String(dates[idx] ?? ''),
 			weatherCode: code,
 			weatherTextKo: weatherCodeToTextKo(code),
-			tempMin: toNum(daily?.temperature_2m_min?.[idx]),
-			tempMax: toNum(daily?.temperature_2m_max?.[idx]),
-			precipitationProbabilityMaxPct: toNum(daily?.precipitation_probability_max?.[idx]),
-			precipitationSumMm: toNum(daily?.precipitation_sum?.[idx]),
-			windSpeedMaxKmh: toNum(daily?.wind_speed_10m_max?.[idx])
+			tempMin: toNum(seriesAt(daily.temperature_2m_min, idx)),
+			tempMax: toNum(seriesAt(daily.temperature_2m_max, idx)),
+			precipitationProbabilityMaxPct: toNum(seriesAt(daily.precipitation_probability_max, idx)),
+			precipitationSumMm: toNum(seriesAt(daily.precipitation_sum, idx)),
+			windSpeedMaxKmh: toNum(seriesAt(daily.wind_speed_10m_max, idx))
 		});
 	}
 	return out;
@@ -227,17 +239,17 @@ export async function fetchWeather(location: string, scope: WeatherScope = 'now'
 		);
 		url.searchParams.set('timezone', 'auto');
 
-		let body: any;
+		let body: JsonRecord;
 		try {
-			body = await fetchJson(url, controller.signal, WEATHER_TIMEOUT_MS);
+			body = asRecord(await fetchJson(url, controller.signal, WEATHER_TIMEOUT_MS));
 		} catch (e) {
 			if (e instanceof WeatherError) throw e;
 			throw new WeatherError('weather_unreachable', '날씨 서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.');
 		}
 
-		const current = body?.current ?? {};
-		const dailyRaw = body?.daily ?? {};
-		const dayCount = Array.isArray(dailyRaw?.time) ? dailyRaw.time.length : 0;
+		const current = asRecord(body.current);
+		const dailyRaw = asRecord(body.daily);
+		const dayCount = Array.isArray(dailyRaw.time) ? dailyRaw.time.length : 0;
 
 		let daily: DailyForecastDay[] = [];
 		if (scope === 'today') daily = buildDailyDays(dailyRaw, 0, 1);
@@ -255,7 +267,7 @@ export async function fetchWeather(location: string, scope: WeatherScope = 'now'
 		return {
 			localityName,
 			country,
-			timezone: String(body?.timezone ?? timezone),
+			timezone: String(body.timezone ?? timezone),
 			query,
 			temperatureC: toNum(current.temperature_2m),
 			feelsLikeC: toNum(current.apparent_temperature),

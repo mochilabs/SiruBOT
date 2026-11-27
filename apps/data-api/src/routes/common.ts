@@ -5,7 +5,13 @@ import { DataApiError } from './serveCached.ts';
 
 const logger = getLogger('common');
 
-export function sendError(reply: { code: (n: number) => any }, error: unknown): any {
+/** The part of FastifyReply the reply helpers touch, so tests can pass a plain fake. */
+export interface ReplySink {
+	code(statusCode: number): ReplySink;
+	send(body: unknown): unknown;
+}
+
+export function sendError(reply: ReplySink, error: unknown): unknown {
 	if (error instanceof DataApiError) {
 		return reply.code(error.status).send({ error: error.code, message: error.message });
 	}
@@ -24,16 +30,16 @@ export function sendError(reply: { code: (n: number) => any }, error: unknown): 
 	});
 }
 
-export function sendDomainError(reply: { code: (n: number) => any }, error: Error, fallbackCode: string): any {
+export function sendDomainError(reply: ReplySink, error: Error, fallbackCode: string): unknown {
 	const identifier = (error as { identifier?: string }).identifier;
 	return reply.code(400).send({ error: identifier ?? fallbackCode, message: error.message });
 }
 
 export function replyBotRelayFailure(
-	reply: { code: (n: number) => any },
+	reply: ReplySink,
 	reason: 'redis_unavailable' | 'timeout' | 'bot_error',
 	rejected: { code: string; message: string | null | undefined; fallback: string }
-): any {
+): unknown {
 	if (reason === 'redis_unavailable') {
 		return reply.code(503).send({
 			error: 'redis_unavailable',
