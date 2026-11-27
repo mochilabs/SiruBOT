@@ -3,6 +3,13 @@ import { ZODIAC_MAP, type DailyHoroscope, type HoroscopeData } from './types.ts'
 
 const logger = getLogger('ohaasa');
 
+/** One ranking row of the asahi.co.jp horoscope feed. */
+interface OhaasaDetailEntry {
+	ranking_no: string;
+	horoscope_st: string;
+	horoscope_text: string;
+}
+
 const TVASAHI_ZODIAC_MAP: Record<string, string> = {
 	ohitsuji: '01',
 	ousi: '02',
@@ -135,10 +142,10 @@ export async function fetchOhaasaRaw(): Promise<DailyHoroscope> {
 				const item = Array.isArray(rawData) ? rawData[0] : rawData;
 				if (item?.onair_date === todayCompact && Array.isArray(item.detail)) {
 					dateStr = item.onair_date;
-					parsed = (item.detail as any[])
+					parsed = (item.detail as OhaasaDetailEntry[])
 						.sort((a, b) => parseInt(a.ranking_no, 10) - parseInt(b.ranking_no, 10))
 						.map((d) => {
-							const zodiacCode = d.horoscope_st as string;
+							const zodiacCode = d.horoscope_st;
 							const { content, lucky } = parseHoroscopeText(d.horoscope_text);
 							return {
 								rank: parseInt(d.ranking_no, 10),

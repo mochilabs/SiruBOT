@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { PLAYER_WEB_SEEK_MAX_MS, playerWebControlActionSchema, playerWebPlayUriSchema, redisIdSchema } from '@sirubot/utils';
 import { metrics } from '../utils/metrics.ts';
-import { sendError, guildIdParams, playerUserIdSchema, replyBotRelayFailure } from './common.ts';
+import { sendError, guildIdParams, playerUserIdSchema, replyBotRelayFailure, type ReplySink } from './common.ts';
 import { searchLavalinkYoutube } from '../providers/lavalinkSearch.ts';
 import { recordPlaybackEvent, type PlaybackEventType } from '../services/playbackStore.ts';
 import { getPlayerState, playerHubStatus, subscribeSse } from '../services/playerHub.ts';
@@ -66,7 +66,8 @@ export function registerPlayerRoutes(fastify: FastifyInstance, deps: { lavalinkR
 		try {
 			({ guildId } = guildIdParams.parse(request.params));
 		} catch (error) {
-			return sendError(reply, error);
+			sendError(reply, error);
+			return;
 		}
 		reply.hijack();
 		const raw = reply.raw;
@@ -120,7 +121,7 @@ export function registerPlayerRoutes(fastify: FastifyInstance, deps: { lavalinkR
 	});
 	const playerVoiceContextQuery = z.object({ userId: playerUserIdSchema });
 
-	function replyPlayerWebResult(reply: { code: (n: number) => any; send: (body: unknown) => any }, result: PlayerWebResult): any {
+	function replyPlayerWebResult(reply: ReplySink, result: PlayerWebResult): unknown {
 		if (result.ok) {
 			return reply.send({ ok: true, tracks: result.tracks ?? null, voice: result.voice ?? null });
 		}

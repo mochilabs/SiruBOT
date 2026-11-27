@@ -3,11 +3,11 @@ import { z } from 'zod';
 import { redisIdSchema, panelPostTypeSchema } from '@sirubot/utils';
 import { metrics } from '../utils/metrics.ts';
 import { requestPanelPost, requestRoleValidation, type PanelPostResult, type RoleValidationResult } from '../services/panelHub.ts';
-import { replyBotRelayFailure, sendError } from './common.ts';
+import { replyBotRelayFailure, sendError, type ReplySink } from './common.ts';
 
 const snowflake = z.string().regex(/^\d{17,20}$/, '올바른 ID 형식이 아니에요.');
 
-function replyPanelPostResult(reply: { code: (n: number) => any; send: (body: unknown) => any }, result: PanelPostResult): any {
+function replyPanelPostResult(reply: ReplySink, result: PanelPostResult): unknown {
 	if (result.ok) {
 		return reply.send({ ok: true, messageId: result.messageId ?? null, channelId: result.channelId ?? null });
 	}
@@ -18,7 +18,7 @@ function replyPanelPostResult(reply: { code: (n: number) => any; send: (body: un
 	});
 }
 
-function replyRoleValidationResult(reply: { code: (n: number) => any; send: (body: unknown) => any }, result: RoleValidationResult): any {
+function replyRoleValidationResult(reply: ReplySink, result: RoleValidationResult): unknown {
 	if (result.ok) {
 		return reply.send({ ok: true, invalidRoleIds: result.invalidRoleIds });
 	}
