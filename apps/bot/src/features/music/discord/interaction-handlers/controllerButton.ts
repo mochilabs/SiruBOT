@@ -10,6 +10,7 @@ import { CustomPlayer } from '../../lavalink/player/customPlayer.ts';
 import { buildControllerCardPayload } from '../../lavalink/player/controllerPayload.ts';
 import { currentChapterIndex } from '../../lavalink/player/chapters.ts';
 import { errorView } from '../../../../lib/errorView.ts';
+import { thrownCode } from '../../../../lib/thrownError.ts';
 import { GUARD_MESSAGES, guardPlayerAccess, replyGuardError } from '../utils/interactionGuards.ts';
 import { actorFromMember } from '../../application/actor.ts';
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
@@ -106,8 +107,9 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				player.controller = updated;
 			}
 			return true;
-		} catch (error: any) {
-			if (error.code === 10008 || error.code === 10062 || error.code === 40060) return false;
+		} catch (error) {
+			const code = thrownCode(error);
+			if (code === 10008 || code === 10062 || code === 40060) return false;
 			throw error;
 		}
 	}

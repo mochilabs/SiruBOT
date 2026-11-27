@@ -5,6 +5,22 @@ import { ChatServiceError, contentText, type ChatConfig, type ChatMessage, type 
 const REASON_OPEN = '<think>';
 const REASON_CLOSE = '</think>';
 
+// The slice of an OpenAI-compatible /chat/completions body this client reads. Providers differ, so every field is optional.
+interface ChatCompletionToolCall {
+	index?: number;
+	id?: string;
+	function?: { name?: string; arguments?: string };
+}
+
+interface ChatCompletionMessage {
+	content?: string | null;
+	tool_calls?: ChatCompletionToolCall[];
+}
+
+interface ChatCompletionPayload {
+	choices?: { message?: ChatCompletionMessage; delta?: ChatCompletionMessage }[];
+}
+
 export function extractThinkTokens(raw: string): string {
 	let result = '';
 	let insideReason = false;
@@ -110,9 +126,9 @@ export async function streamChatCompletion(
 		const contentType = res.headers.get('content-type') ?? '';
 
 		if (!contentType.includes('text/event-stream')) {
-			let payload: any;
+			let payload: ChatCompletionPayload | null;
 			try {
-				payload = await res.json();
+				payload = (await res.json()) as ChatCompletionPayload | null;
 			} catch (e) {
 				// 읽는 도중 타임아웃/중지가 걸리면 사유를 구분해요
 				if (controller.signal.aborted) throw abortError();
@@ -152,7 +168,7 @@ export async function streamChatCompletion(
 						break;
 					}
 
-					let payload: any;
+					let payload: ChatCompletionPayload | null;
 					try {
 						payload = JSON.parse(data);
 					} catch {
@@ -197,9 +213,9 @@ export async function streamChatCompletion(
 	}
 }
 
-function collectToolCallsFromMessage(message: any): ToolCallRequest[] {
+function collectToolCallsFromMessage(message: ChatCompletionMessage | undefined): ToolCallRequest[] {
 	if (!Array.isArray(message?.tool_calls)) return [];
-	return message.tool_calls.map((tc: any): ToolCallRequest => ({
+	return message.tool_calls.map((tc): ToolCallRequest => ({
 		id: String(tc?.id ?? ''),
 		name: String(tc?.function?.name ?? ''),
 		arguments: String(tc?.function?.arguments ?? '')

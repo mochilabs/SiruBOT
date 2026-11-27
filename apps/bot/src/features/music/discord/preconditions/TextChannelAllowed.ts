@@ -1,6 +1,7 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import type { CommandInteraction, ContextMenuCommandInteraction, Message } from 'discord.js';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
+import { thrownCode, thrownMessage } from '../../../../lib/thrownError.ts';
 
 export class TextChannelAllowed extends AllFlowsPrecondition {
 	public override async messageRun(message: Message) {
@@ -26,10 +27,10 @@ export class TextChannelAllowed extends AllFlowsPrecondition {
 			// fetch 실패를 모두 "채널 삭제"로 간주하지 않음: Unknown Channel(10003)일 때만 설정 초기화
 			const channelExists =
 				this.container.client.channels.cache.get(configuredChannelId) ??
-				(await this.container.client.channels.fetch(configuredChannelId).catch((error: any) => {
-					if (error?.code === 10003 || error?.rawError?.code === 10003) return null;
+				(await this.container.client.channels.fetch(configuredChannelId).catch((error: unknown) => {
+					if (thrownCode(error) === 10003 || thrownCode((error as { rawError?: unknown } | null)?.rawError) === 10003) return null;
 					this.container.logger.warn(
-						`Transient failure fetching configured text channel [${configuredChannelId}] in guild [${guildId}]: ${error?.message ?? error}`
+						`Transient failure fetching configured text channel [${configuredChannelId}] in guild [${guildId}]: ${thrownMessage(error) ?? error}`
 					);
 					return 'transient' as const;
 				}));

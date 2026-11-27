@@ -6,6 +6,7 @@ import { cancelPendingInvalidate, getTargetNextTrack, notifyQueueMutated, type Q
 import { removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 import type { LavalinkDeps } from '../lavalink/deps.ts';
 import { normalizeTrackEncoded } from '../lavalink/trackEncoded.ts';
+import { thrownName } from '../../../lib/thrownError.ts';
 import {
 	MixerRequestError,
 	type ArmRequestOptions,
@@ -74,8 +75,8 @@ export class MixerService {
 				},
 				signal: init?.signal ?? AbortSignal.timeout(this.deps.callTimeoutMs)
 			});
-		} catch (error: any) {
-			if (error?.name === 'AbortError') {
+		} catch (error) {
+			if (thrownName(error) === 'AbortError') {
 				throw new MixerRequestError(504, `mixer ${path} -> request aborted / timeout`);
 			}
 			throw new MixerRequestError(504, `mixer ${path} -> unreachable: ${error instanceof Error ? error.message : String(error)}`);
@@ -126,7 +127,7 @@ export class MixerService {
 			const timer = setTimeout(() => controller.abort(), 2000);
 			try {
 				return await fn(controller.signal);
-			} catch (err: any) {
+			} catch (err) {
 				if (i === 1) throw err;
 				// Do not retry 4xx errors (client faults / protocol fencing)
 				if (err instanceof MixerRequestError && err.status >= 400 && err.status < 500) {

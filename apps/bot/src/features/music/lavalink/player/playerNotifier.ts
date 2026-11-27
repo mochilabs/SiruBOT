@@ -14,6 +14,7 @@ import { normalizeTrackEncoded } from '../trackEncoded.ts';
 import { Guild } from '@sirubot/prisma';
 import { panelIdleView } from '../../discord/views/panelIdle.ts';
 import { withGuildTheme } from '../../../../lib/guildTheme.ts';
+import { thrownCode, thrownMessage } from '../../../../lib/thrownError.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 
 type ControllerOptions = Pick<Guild, 'enableController' | 'volume'>;
@@ -299,8 +300,8 @@ export class PlayerNotifier implements Stoppable {
 				this.ensureProgressTick(player);
 				this.logger.trace(`Updated controller message for guild: ${player.guildId}`);
 			}
-		} catch (error: any) {
-			if (error.code !== 10008) throw error;
+		} catch (error) {
+			if (thrownCode(error) !== 10008) throw error;
 			if (!this.canSend(player, version) || player.messageId !== message.id) return;
 			this.logger.debug(`Unknown message error ignored while updating controller for guild ${player.guildId}`);
 			if (
@@ -465,15 +466,16 @@ export class PlayerNotifier implements Stoppable {
 		});
 	}
 
+	private warnUnlessUnknownMessage(player: CustomPlayer, error: unknown): void {
+		if (thrownCode(error) === 10008) return;
+		this.logger.warn(`Failed to delete controller message for guild ${player.guildId}: ${thrownMessage(error)}`);
+	}
+
 	private async removeController(player: CustomPlayer): Promise<void> {
 		const { controllerMessage, messageId } = this.resetControllerState(player);
 
 		if (controllerMessage?.deletable) {
-			await controllerMessage.delete().catch((error: any) => {
-				if (error.code !== 10008) {
-					this.logger.warn(`Failed to delete controller message for guild ${player.guildId}: ${error.message}`);
-				}
-			});
+			await controllerMessage.delete().catch((error: unknown) => this.warnUnlessUnknownMessage(player, error));
 			return;
 		}
 
@@ -482,11 +484,7 @@ export class PlayerNotifier implements Stoppable {
 			if (channel?.isSendable()) {
 				const message = await channel.messages.fetch(messageId).catch(() => null);
 				if (message?.deletable) {
-					await message.delete().catch((error: any) => {
-						if (error.code !== 10008) {
-							this.logger.warn(`Failed to delete controller message for guild ${player.guildId}: ${error.message}`);
-						}
-					});
+					await message.delete().catch((error: unknown) => this.warnUnlessUnknownMessage(player, error));
 				}
 			}
 		}
