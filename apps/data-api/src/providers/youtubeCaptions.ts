@@ -12,6 +12,10 @@ const MAX_CAPTION_CHARS = 400_000;
 /** 번역 줄을 원문 줄에 붙일 때 허용하는 시작 시각 차이 */
 const PAIR_TOLERANCE_MS = 1_500;
 const MIN_LINES = 4;
+/** 같은 줄이 이 시간 안에 다시 시작하면 한 줄을 쪼개 올린 것으로 보고 합쳐요. 그보다 늦으면 다시 부른 것이라 따로 둬요 */
+const REPEAT_MERGE_WINDOW_MS = 1_500;
+/** 앞 조각이 끝나고 이만큼 넘게 비면 이어진 조각이 아니에요 */
+const REPEAT_MERGE_MAX_GAP_MS = 100;
 const SPAM_MIN_TOKENS = 8;
 const SPAM_MAX_DISTINCT_RATIO = 4;
 const SPAM_MIN_UNIT_REPEATS = 6;
@@ -59,12 +63,22 @@ function isRepeatSpam(text: string): boolean {
 	return REPEATED_UNIT.test(text.replace(/\s+/g, ''));
 }
 
-/** 같은 줄이 연달아 반복되면 첫 줄만 남기고, 그 줄이 마지막 반복이 끝날 때까지 이어지게 해요. */
+/**
+ * 같은 줄을 짧게 쪼개 연달아 올린 조각은 한 줄로 합치고, 그 줄이 마지막 조각이 끝날 때까지 이어지게 해요.
+ * 앞 조각보다 `REPEAT_MERGE_WINDOW_MS` 넘게 늦게 시작하거나 사이가 비면 다시 부른 것이라 따로 둬요 — 다 합치면 싱크가 어긋나요.
+ */
 function collapseRepeatedLines(lines: LyricLine[]): LyricLine[] {
 	const collapsed: LyricLine[] = [];
+	let lastPiece: LyricLine | null = null;
 	for (const line of lines) {
 		const previous = collapsed.at(-1);
-		if (previous?.text !== line.text) {
+		const isSplitPiece =
+			previous?.text === line.text &&
+			lastPiece != null &&
+			line.startMs - lastPiece.startMs <= REPEAT_MERGE_WINDOW_MS &&
+			(lastPiece.endMs == null || line.startMs - lastPiece.endMs <= REPEAT_MERGE_MAX_GAP_MS);
+		lastPiece = line;
+		if (!isSplitPiece) {
 			collapsed.push({ ...line });
 			continue;
 		}
