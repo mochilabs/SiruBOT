@@ -58,21 +58,15 @@ export class YouTubeScheduler extends SubscriptionPoller {
 	}
 
 	protected override async pollOnce(db: PrismaClient, now: number): Promise<PollOutcome> {
-		let rows: { sourcePlatformId: string }[];
-		try {
-			rows = await db.socialSubscription.findMany({ where: { platform: 'youtube', status: 'active' }, select: { sourcePlatformId: true } });
-		} catch (error) {
-			logger.error('유튜브 구독 목록 조회 실패: 이번 틱은 실패로 기록해요:', String(error));
-			return 'failed';
-		}
-		const channelIds = [...new Set(rows.map((row) => row.sourcePlatformId))];
+		const channelIds = await this.loadActiveSourceIds(db, 'youtube', '유튜브');
+		if (!channelIds) return 'failed';
 		if (channelIds.length === 0) return 'skipped';
 
 		let tickFailed = false;
 
 		if (this.callbackUrl && this.hubSecret) {
 			for (const channelId of channelIds) {
-				const lease = await this.loadLease(channelId);
+				const lease = await this.readJsonState<LeaseState>(`${LEASE_KEY_PREFIX}${channelId}`, (s) => typeof s.leaseUntil === 'number');
 				if (lease && lease.leaseUntil - now > RENEW_THRESHOLD_MS) continue;
 				const ok = await subscribeYouTubeChannel({
 					channelId,
@@ -111,16 +105,5 @@ export class YouTubeScheduler extends SubscriptionPoller {
 		}
 
 		return tickFailed ? 'failed' : 'ok';
-	}
-
-	private async loadLease(channelId: string): Promise<LeaseState | null> {
-		const raw = await this.options.redis.get(`${LEASE_KEY_PREFIX}${channelId}`);
-		if (!raw) return null;
-		try {
-			const parsed = JSON.parse(raw) as LeaseState;
-			return typeof parsed.leaseUntil === 'number' ? parsed : null;
-		} catch {
-			return null;
-		}
 	}
 }

@@ -6,6 +6,8 @@ import { getLogger } from '../utils/logger.ts';
 const logger = getLogger('youtubeWebSub');
 
 const USER_AGENT = 'SiruBOT-Social-Notifier/1.0';
+const REQUEST_TIMEOUT_MS = 8_000;
+const CHANNEL_PAGE_TIMEOUT_MS = 10_000;
 
 const YOUTUBE_HUB_URL = 'https://pubsubhubbub.appspot.com/';
 // 유튜브 WebSub 최대 lease(약 5일); 만료 전 스케줄러가 재등록해요.
@@ -40,7 +42,7 @@ export async function subscribeYouTubeChannel(options: {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 			body,
-			signal: AbortSignal.timeout(8_000)
+			signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
 		});
 		if (!response.ok) {
 			logger.warn(`유튜브 hub 등록 실패 (${options.channelId}): HTTP ${response.status}`);
@@ -64,7 +66,7 @@ export function verifyWebSubSignature(rawBody: string, header: string | undefine
 export async function fetchYouTubeUploadsFeed(channelId: string, fetchFn: YouTubeFetchFn = fetch): Promise<string> {
 	const response = await fetchFn(uploadsFeedUrl(channelId), {
 		headers: { 'User-Agent': USER_AGENT, Accept: 'application/atom+xml, application/xml, text/xml, */*' },
-		signal: AbortSignal.timeout(8_000)
+		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
 	});
 	if (!response.ok) throw new Error(`유튜브 피드 fetch 실패: HTTP ${response.status}`);
 	return response.text();
@@ -85,7 +87,7 @@ export async function resolveYouTubeChannel(input: string, fetchFn: YouTubeFetch
 	else if (/^https?:\/\//.test(trimmed)) pageUrl = trimmed;
 	else pageUrl = `https://www.youtube.com/@${encodeURIComponent(trimmed)}`;
 
-	const response = await fetchFn(pageUrl, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(10_000) });
+	const response = await fetchFn(pageUrl, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(CHANNEL_PAGE_TIMEOUT_MS) });
 	if (!response.ok) throw new Error(`유튜브 채널 페이지 조회 실패: HTTP ${response.status}`);
 	const html = await response.text();
 	const channelId = html.match(/"channelId":"(UC[\w-]{22})"/)?.[1] ?? html.match(/channel\/(UC[\w-]{22})/)?.[1];

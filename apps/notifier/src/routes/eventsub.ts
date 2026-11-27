@@ -57,13 +57,9 @@ export async function eventsubRoutes(fastify: FastifyInstance, options: { dispat
 						const event = envelope.event;
 						// 200을 반환하지 않으면 Twitch가 계속 재전송하므로 필드 결손 시에도 200으로 응답해요.
 						if (isStreamOnlineEvent(event)) {
-							void (async () => {
-								try {
-									await options.dispatcher.dispatch(normalizeStreamOnline(event));
-								} catch (error) {
-									logger.warn('stream.online 디스패치 실패:', String(error));
-								}
-							})();
+							void options.dispatcher.dispatch(normalizeStreamOnline(event)).catch((error: unknown) => {
+								logger.warn('stream.online 디스패치 실패:', String(error));
+							});
 						} else {
 							logger.warn('stream.online 이벤트 필드가 불완전해요. 알림을 건너뛸게요.');
 						}

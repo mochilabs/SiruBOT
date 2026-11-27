@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@sirubot/prisma';
+import type { SocialPlatform } from '@sirubot/utils';
 import { getLogger } from '../utils/logger.ts';
 import type { NotifierRedis } from './redis.ts';
 
@@ -63,22 +64,21 @@ export class PollingLoop {
 	private async runTick(generation: number): Promise<void> {
 		if (this.stopped || generation !== this.generation) return;
 		try {
-			if (!this.ticking) {
-				this.ticking = true;
-				try {
-					await this.options.tick();
-				} catch (error) {
-					this.reportError(error);
-					if (this.options.errorPolicy === 'abort') {
-						this.stopped = true;
-						return;
-					}
-				} finally {
-					this.ticking = false;
-				}
-			}
+			if (!this.ticking) await this.tickOnce();
 		} finally {
-			if (!this.stopped && generation === this.generation) this.scheduleNext(generation);
+			this.scheduleNext(generation);
+		}
+	}
+
+	private async tickOnce(): Promise<void> {
+		this.ticking = true;
+		try {
+			await this.options.tick();
+		} catch (error) {
+			this.reportError(error);
+			if (this.options.errorPolicy === 'abort') this.stopped = true;
+		} finally {
+			this.ticking = false;
 		}
 	}
 
@@ -155,4 +155,27 @@ export abstract class SubscriptionPoller {
 	}
 
 	protected abstract pollOnce(db: PrismaClient, now: number): Promise<PollOutcome>;
+
+	/** Distinct source IDs of active subscriptions, or null when the query fails so the tick counts toward the breaker. */
+	protected async loadActiveSourceIds(db: PrismaClient, platform: SocialPlatform, label: string): Promise<string[] | null> {
+		try {
+			const rows = await db.socialSubscription.findMany({ where: { platform, status: 'active' }, select: { sourcePlatformId: true } });
+			return [...new Set(rows.map((row) => row.sourcePlatformId))];
+		} catch (error) {
+			this.config.logger.error(`${label} 구독 목록 조회 실패: 이번 틱은 실패로 기록해요:`, String(error));
+			return null;
+		}
+	}
+
+	/** Reads a JSON state blob from Redis; a missing, unparsable or invalid value reads as null. */
+	protected async readJsonState<T>(key: string, isValid: (state: T) => boolean): Promise<T | null> {
+		const raw = await this.options.redis.get(key);
+		if (!raw) return null;
+		try {
+			const parsed = JSON.parse(raw) as T;
+			return isValid(parsed) ? parsed : null;
+		} catch {
+			return null;
+		}
+	}
 }

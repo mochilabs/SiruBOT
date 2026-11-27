@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 const CHZZK_LIVE_STATUS_URL = 'https://api.chzzk.naver.com/polling/v2/channels';
+const CHZZK_LIVE_DETAIL_URL = 'https://api.chzzk.naver.com/service/v2/channels';
+const CHZZK_SERVICE_URL = 'https://api.chzzk.naver.com/service/v1';
 const CHZZK_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 const REQUEST_TIMEOUT_MS = 8_000;
 const LIVE_IMAGE_TYPE = '1080';
@@ -48,11 +50,15 @@ export class ChzzkApiError extends Error {
 	}
 }
 
-export async function fetchChzzkLiveStatus(channelId: string, fetchFn: FetchFn = fetch): Promise<ChzzkLiveStatus> {
-	const response = await fetchFn(`${CHZZK_LIVE_STATUS_URL}/${encodeURIComponent(channelId)}/live-status`, {
+function chzzkGet(url: string, fetchFn: FetchFn): Promise<Response> {
+	return fetchFn(url, {
 		headers: { 'User-Agent': CHZZK_USER_AGENT, Accept: 'application/json' },
 		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
 	});
+}
+
+export async function fetchChzzkLiveStatus(channelId: string, fetchFn: FetchFn = fetch): Promise<ChzzkLiveStatus> {
+	const response = await chzzkGet(`${CHZZK_LIVE_STATUS_URL}/${encodeURIComponent(channelId)}/live-status`, fetchFn);
 	if (!response.ok) {
 		throw new ChzzkApiError(`chzzk live-status responded ${response.status}`, response.status);
 	}
@@ -71,8 +77,6 @@ export async function fetchChzzkLiveStatus(channelId: string, fetchFn: FetchFn =
 	};
 }
 
-const CHZZK_LIVE_DETAIL_URL = 'https://api.chzzk.naver.com/service/v2/channels';
-
 const liveDetailResponseSchema = z.object({
 	code: z.number().nullish(),
 	content: z
@@ -86,10 +90,7 @@ const liveDetailResponseSchema = z.object({
 /** polling v2 live-status가 이미지 필드를 주지 않아 뱅온 시점에 live-detail로 보완해요 (실패 시 null). */
 export async function fetchChzzkLiveThumbnail(channelId: string, fetchFn: FetchFn = fetch): Promise<string | null> {
 	try {
-		const response = await fetchFn(`${CHZZK_LIVE_DETAIL_URL}/${encodeURIComponent(channelId)}/live-detail`, {
-			headers: { 'User-Agent': CHZZK_USER_AGENT, Accept: 'application/json' },
-			signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-		});
+		const response = await chzzkGet(`${CHZZK_LIVE_DETAIL_URL}/${encodeURIComponent(channelId)}/live-detail`, fetchFn);
 		if (!response.ok) return null;
 		const parsed = liveDetailResponseSchema.safeParse(await response.json());
 		if (!parsed.success) return null;
@@ -100,8 +101,6 @@ export async function fetchChzzkLiveThumbnail(channelId: string, fetchFn: FetchF
 		return null;
 	}
 }
-
-const CHZZK_SERVICE_URL = 'https://api.chzzk.naver.com/service/v1';
 
 const channelSchema = z.object({
 	channelId: z.string().nullish(),
@@ -155,10 +154,10 @@ function normalizeChzzkChannel(channel: z.infer<typeof channelSchema> | null | u
 }
 
 export async function searchChzzkChannels(keyword: string, offset = 0, size = 10, fetchFn: FetchFn = fetch): Promise<ChzzkChannelSummary[]> {
-	const response = await fetchFn(`${CHZZK_SERVICE_URL}/search/channels?keyword=${encodeURIComponent(keyword)}&offset=${offset}&size=${size}`, {
-		headers: { 'User-Agent': CHZZK_USER_AGENT, Accept: 'application/json' },
-		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-	});
+	const response = await chzzkGet(
+		`${CHZZK_SERVICE_URL}/search/channels?keyword=${encodeURIComponent(keyword)}&offset=${offset}&size=${size}`,
+		fetchFn
+	);
 	if (!response.ok) {
 		throw new ChzzkApiError(`chzzk search responded ${response.status}`, response.status);
 	}
@@ -175,16 +174,13 @@ export async function searchChzzkChannels(keyword: string, offset = 0, size = 10
 }
 
 export async function fetchChzzkChannelProfile(channelId: string, fetchFn: FetchFn = fetch): Promise<ChzzkChannelSummary | null> {
-	const response = await fetchFn(`${CHZZK_SERVICE_URL}/channels/${encodeURIComponent(channelId)}`, {
-		headers: { 'User-Agent': CHZZK_USER_AGENT, Accept: 'application/json' },
-		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-	});
+	const response = await chzzkGet(`${CHZZK_SERVICE_URL}/channels/${encodeURIComponent(channelId)}`, fetchFn);
 	if (!response.ok) {
-		throw new Error(`chzzk profile responded ${response.status}`);
+		throw new ChzzkApiError(`chzzk profile responded ${response.status}`, response.status);
 	}
 	const parsed = profileResponseSchema.safeParse(await response.json());
 	if (!parsed.success) {
-		throw new Error('chzzk profile 응답 형식이 예상과 달라요');
+		throw new ChzzkApiError('chzzk profile 응답 형식이 예상과 달라요');
 	}
 	return normalizeChzzkChannel(parsed.data.content, null);
 }

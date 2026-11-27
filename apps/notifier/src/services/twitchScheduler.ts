@@ -10,13 +10,13 @@ const TICK_MS = 60 * 60 * 1000;
 const LOCK_KEY = 'sirubot:social:twitch:scheduler-lock';
 const LOCK_TTL_SECONDS = 3_000;
 const STATE_KEY_PREFIX = 'sirubot:social:twitch:sub:';
+const STATE_TTL_SECONDS = 12 * 24 * 60 * 60;
+// EventSub 구독 수명이 약 10일이라 8일 시점에 새 구독으로 교체해요.
+const RENEWAL_AGE_MS = 8 * 24 * 60 * 60 * 1000;
 
 export function twitchSubscriptionStateKey(broadcasterId: string): string {
 	return `${STATE_KEY_PREFIX}${broadcasterId}`;
 }
-const STATE_TTL_SECONDS = 12 * 24 * 60 * 60;
-// EventSub 구독 수명이 약 10일이라 8일 시점에 새 구독으로 교체해요.
-const RENEWAL_AGE_MS = 8 * 24 * 60 * 60 * 1000;
 
 interface SubscriptionState {
 	subscriptionId: string;
@@ -51,19 +51,16 @@ export class TwitchScheduler extends SubscriptionPoller {
 	}
 
 	protected override async pollOnce(db: PrismaClient, now: number): Promise<PollOutcome> {
-		let rows: { sourcePlatformId: string }[];
-		try {
-			rows = await db.socialSubscription.findMany({ where: { platform: 'twitch', status: 'active' }, select: { sourcePlatformId: true } });
-		} catch (error) {
-			logger.error('트위치 구독 목록 조회 실패: 이번 틱은 실패로 기록해요:', String(error));
-			return 'failed';
-		}
-		const broadcasterIds = [...new Set(rows.map((row) => row.sourcePlatformId))];
+		const broadcasterIds = await this.loadActiveSourceIds(db, 'twitch', '트위치');
+		if (!broadcasterIds) return 'failed';
 		if (broadcasterIds.length === 0) return 'skipped';
 
 		let tickFailed = false;
 		for (const broadcasterId of broadcasterIds) {
-			const state = await this.loadState(broadcasterId);
+			const state = await this.readJsonState<SubscriptionState>(
+				twitchSubscriptionStateKey(broadcasterId),
+				(s) => typeof s.subscriptionId === 'string' && typeof s.createdAt === 'number'
+			);
 			if (state && now - state.createdAt < RENEWAL_AGE_MS) continue;
 			try {
 				const created = await this.client.createStreamOnlineSubscription({
@@ -81,18 +78,6 @@ export class TwitchScheduler extends SubscriptionPoller {
 		}
 
 		return tickFailed ? 'failed' : 'ok';
-	}
-
-	private async loadState(broadcasterId: string): Promise<SubscriptionState | null> {
-		const raw = await this.options.redis.get(twitchSubscriptionStateKey(broadcasterId));
-		if (!raw) return null;
-		try {
-			const parsed = JSON.parse(raw) as SubscriptionState;
-			if (typeof parsed.subscriptionId !== 'string' || typeof parsed.createdAt !== 'number') return null;
-			return parsed;
-		} catch {
-			return null;
-		}
 	}
 
 	private async saveState(broadcasterId: string, state: SubscriptionState): Promise<void> {

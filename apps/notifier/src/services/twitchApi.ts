@@ -7,6 +7,11 @@ export type TwitchFetchFn = (url: string, init?: RequestInit) => Promise<Respons
 
 const TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 const HELIX_BASE = 'https://api.twitch.tv/helix';
+const REQUEST_TIMEOUT_MS = 8_000;
+const EVENTSUB_MAX_CLOCK_SKEW_MS = 10 * 60 * 1000;
+// Refresh the app token this long before Twitch says it expires, but never cache it for less than the floor.
+const TOKEN_REFRESH_MARGIN_MS = 5 * 60 * 1000;
+const TOKEN_MIN_LIFETIME_MS = 60_000;
 
 interface AppTokenResponse {
 	access_token: string;
@@ -38,7 +43,11 @@ export function verifyEventSubSignature(
 	return timingSafeEqual(Buffer.from(expected), Buffer.from(signatureHeader));
 }
 
-export function isEventSubTimestampFresh(messageTimestamp: string, now: number = Date.now(), maxSkewMs: number = 10 * 60 * 1000): boolean {
+export function isEventSubTimestampFresh(
+	messageTimestamp: string,
+	now: number = Date.now(),
+	maxSkewMs: number = EVENTSUB_MAX_CLOCK_SKEW_MS
+): boolean {
 	const timestampMs = Date.parse(messageTimestamp);
 	if (!Number.isFinite(timestampMs)) return false;
 	return Math.abs(now - timestampMs) <= maxSkewMs;
@@ -65,12 +74,12 @@ export class TwitchApiClient {
 			client_secret: this.options.clientSecret,
 			grant_type: 'client_credentials'
 		})}`;
-		const response = await this.fetchFn(url, { method: 'POST', signal: AbortSignal.timeout(8_000) });
+		const response = await this.fetchFn(url, { method: 'POST', signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
 		if (!response.ok) throw new Error(`Twitch app token 발급 실패: HTTP ${response.status}`);
 		const body = (await response.json()) as AppTokenResponse;
 		if (!body.access_token) throw new Error('Twitch app token 응답에 access_token이 없어요.');
 		this.token = body.access_token;
-		this.tokenExpiresAt = Date.now() + Math.max(body.expires_in * 1000 - 5 * 60 * 1000, 60_000);
+		this.tokenExpiresAt = Date.now() + Math.max(body.expires_in * 1000 - TOKEN_REFRESH_MARGIN_MS, TOKEN_MIN_LIFETIME_MS);
 		return this.token;
 	}
 
@@ -88,7 +97,7 @@ export class TwitchApiClient {
 					Authorization: `Bearer ${accessToken}`,
 					...init.headers
 				},
-				signal: AbortSignal.timeout(8_000)
+				signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
 			});
 		let response = await send(await this.getAccessToken());
 		if (response.status === 401) {

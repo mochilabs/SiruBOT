@@ -61,7 +61,10 @@ export class ChzzkPoller extends SubscriptionPoller {
 		let tickFailed = false;
 		for (const channel of channels) {
 			const channelId = channel.sourcePlatformId;
-			const state = await this.loadState(channelId);
+			const state = await this.readJsonState<ChannelState>(
+				`${STATE_KEY_PREFIX}${channelId}`,
+				(s) => typeof s.isLive === 'boolean' && typeof s.lastPolledAt === 'number'
+			);
 			const interval = state?.isLive ? INTERVAL_ONLINE_MS : INTERVAL_OFFLINE_MS;
 			if (state && now - state.lastPolledAt < interval) continue;
 			try {
@@ -125,18 +128,6 @@ export class ChzzkPoller extends SubscriptionPoller {
 			await this.dispatcher.dispatch(event);
 		}
 		await this.saveState(channelId, { isLive: status.isLive, liveId: status.liveId, lastPolledAt: now });
-	}
-
-	private async loadState(channelId: string): Promise<ChannelState | null> {
-		const raw = await this.options.redis.get(`${STATE_KEY_PREFIX}${channelId}`);
-		if (!raw) return null;
-		try {
-			const parsed = JSON.parse(raw) as ChannelState;
-			if (typeof parsed.isLive !== 'boolean' || typeof parsed.lastPolledAt !== 'number') return null;
-			return parsed;
-		} catch {
-			return null;
-		}
 	}
 
 	private async saveState(channelId: string, state: ChannelState): Promise<void> {
