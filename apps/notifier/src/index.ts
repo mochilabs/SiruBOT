@@ -83,7 +83,7 @@ async function main(): Promise<void> {
 		poller.stop();
 		scheduler.stop();
 		twitchScheduler?.stop();
-		hub.stop();
+		await hub.stop();
 		await disconnectDb();
 		await redis.disconnect();
 		await fastify.close();

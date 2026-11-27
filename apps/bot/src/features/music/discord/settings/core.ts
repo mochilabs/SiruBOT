@@ -167,7 +167,7 @@ export const coreActions = {
 
 			const player = services.audio.players.get(guildId);
 			if (player) {
-				player.setRepeatMode(next);
+				await player.setRepeatMode(next);
 				await services.mixerService.clearNext(player).catch(() => null);
 			}
 		},
