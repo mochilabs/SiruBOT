@@ -43,6 +43,23 @@ describe('parseJson3Captions', () => {
 		expect(lines.map((l) => l.text)).toEqual(['I love you I love you', 'Real line']);
 	});
 
+	it('collapses the same line repeated back to back into one that lasts until the last repeat ends', () => {
+		const raw = JSON.stringify({
+			events: [
+				{ tStartMs: 0, dDurationMs: 1000, segs: [{ utf8: 'Hold on' }] },
+				{ tStartMs: 1000, dDurationMs: 1000, segs: [{ utf8: 'one by one' }] },
+				{ tStartMs: 2000, dDurationMs: 1000, segs: [{ utf8: 'one by one' }] },
+				{ tStartMs: 3000, dDurationMs: 1500, segs: [{ utf8: 'one by one' }] },
+				{ tStartMs: 5000, dDurationMs: 1000, segs: [{ utf8: 'Hold on' }] }
+			]
+		});
+		expect(parseJson3Captions(raw)).toEqual([
+			{ startMs: 0, text: 'Hold on', endMs: 1000 },
+			{ startMs: 1000, text: 'one by one', endMs: 4500 },
+			{ startMs: 5000, text: 'Hold on', endMs: 6000 }
+		]);
+	});
+
 	it('returns an empty list for broken input', () => {
 		expect(parseJson3Captions('not json')).toEqual([]);
 		expect(parseJson3Captions('')).toEqual([]);
