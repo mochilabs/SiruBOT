@@ -22,6 +22,17 @@ import type { PlayerNotifier } from '../lavalink/player/playerNotifier.ts';
 
 const MIXER_FILTER_KEY = 'mixer';
 
+/** Fields the mixer plugin may put on an error response; any of them can be missing. */
+interface MixerErrorBody {
+	message?: unknown;
+	lastKnownEpoch?: unknown;
+	v2WindowOpenAt?: unknown;
+}
+
+function numberOrUndefined(value: unknown): number | undefined {
+	return typeof value === 'number' ? value : undefined;
+}
+
 class AutomixUnsupportedError extends Error {
 	constructor() {
 		super('이 Lavalink 서버는 AutoMix를 지원하지 않아요. 믹서 플러그인을 업데이트해 주세요.');
@@ -61,7 +72,7 @@ export class MixerService {
 		player: Player,
 		path: string,
 		init?: { method?: string; body?: string; headers?: Record<string, string>; signal?: AbortSignal }
-	): Promise<any> {
+	): Promise<unknown> {
 		const { base, auth } = this.nodeRest(player);
 		let res: Response;
 		try {
@@ -90,7 +101,7 @@ export class MixerService {
 			throw new MixerRequestError(502, `mixer ${path} -> body read failed: ${error instanceof Error ? error.message : String(error)}`);
 		}
 
-		let body: any = null;
+		let body: unknown = null;
 		try {
 			body = text ? JSON.parse(text) : null;
 		} catch {
@@ -98,9 +109,10 @@ export class MixerService {
 		}
 
 		if (!res.ok) {
-			throw new MixerRequestError(res.status, `mixer ${path} -> ${res.status}: ${body?.message ?? text}`, {
-				lastKnownEpoch: body?.lastKnownEpoch,
-				v2WindowOpenAt: body?.v2WindowOpenAt
+			const errorBody = (typeof body === 'object' && body !== null ? body : {}) as MixerErrorBody;
+			throw new MixerRequestError(res.status, `mixer ${path} -> ${res.status}: ${errorBody.message ?? text}`, {
+				lastKnownEpoch: numberOrUndefined(errorBody.lastKnownEpoch),
+				v2WindowOpenAt: numberOrUndefined(errorBody.v2WindowOpenAt)
 			});
 		}
 		return body;
@@ -471,10 +483,11 @@ export class MixerService {
 
 	public async enableMixerFilter(player: Player): Promise<void> {
 		const fm = player.filterManager;
+		// lavalink-client types only the plugin filters it knows about; the mixer plugin's key is not one of them.
 		fm.data.pluginFilters = {
 			...((fm.data.pluginFilters ?? {}) as Record<string, unknown>),
 			[MIXER_FILTER_KEY]: { guildId: String(player.guildId) }
-		} as any;
+		} as typeof fm.data.pluginFilters;
 		await fm.applyPlayerFilters();
 	}
 
