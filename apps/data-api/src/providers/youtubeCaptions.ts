@@ -59,6 +59,20 @@ function isRepeatSpam(text: string): boolean {
 	return REPEATED_UNIT.test(text.replace(/\s+/g, ''));
 }
 
+/** 같은 줄이 연달아 반복되면 첫 줄만 남기고, 그 줄이 마지막 반복이 끝날 때까지 이어지게 해요. */
+function collapseRepeatedLines(lines: LyricLine[]): LyricLine[] {
+	const collapsed: LyricLine[] = [];
+	for (const line of lines) {
+		const previous = collapsed.at(-1);
+		if (previous?.text !== line.text) {
+			collapsed.push({ ...line });
+			continue;
+		}
+		if (previous.endMs != null && line.endMs != null) previous.endMs = Math.max(previous.endMs, line.endMs);
+	}
+	return collapsed;
+}
+
 /** 업로더 자막(json3)을 줄 목록으로 바꿔요 — 잡음·도배 줄은 버리고 줄바꿈은 공백으로 합쳐요. 앞뒤 기호는 잘라내요. */
 export function parseJson3Captions(raw: string): LyricLine[] {
 	if (raw.length > MAX_CAPTION_CHARS) return [];
@@ -79,7 +93,7 @@ export function parseJson3Captions(raw: string): LyricLine[] {
 		if (!text || isNoiseLine(text) || isRepeatSpam(text)) continue;
 		lines.push({ startMs: event.tStartMs, text, endMs: typeof event.dDurationMs === 'number' ? event.tStartMs + event.dDurationMs : null });
 	}
-	return lines.sort((a, b) => a.startMs - b.startMs);
+	return collapseRepeatedLines(lines.sort((a, b) => a.startMs - b.startMs));
 }
 
 /** 한국어 자막 줄을 시작 시각이 가장 가까운 원문 줄에 붙여요. */
