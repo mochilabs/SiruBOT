@@ -213,6 +213,50 @@ describe('TrackService.recordPlay — 곡 묶음과 차트 롤업', () => {
 	});
 });
 
+describe('TrackService.recordPlay — 일시적 실패 재시도', () => {
+	const warn = vi.fn();
+	let svc: TrackService;
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mocks.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(txShape));
+		mocks.trackUpsert.mockResolvedValue({ recordingId: null });
+		mocks.recordingFindUnique.mockResolvedValue(null);
+		mocks.recordingFindMany.mockResolvedValue([]);
+		mocks.recordingCreate.mockResolvedValue({ id: 'rec-new', isrc: null });
+		mocks.recordingUpdate.mockResolvedValue({ source: 'youtube' });
+		mocks.trackUpdate.mockResolvedValue({});
+		svc = new TrackService({ db, logger: { warn } });
+	});
+
+	it('곡 연결이 P2025로 실패하면 새 트랜잭션으로 한 번 다시 기록하고 경고를 남긴다', async () => {
+		mocks.trackUpdate.mockRejectedValueOnce(Object.assign(new Error('No record was found for an update.'), { code: 'P2025' }));
+
+		await svc.recordPlay('g-1', makeTrack());
+
+		expect(mocks.$transaction).toHaveBeenCalledTimes(2);
+		expect(mocks.historyCreate).toHaveBeenCalledTimes(1);
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('code=P2025'));
+	});
+
+	it('다시 시도해도 실패하면 오류를 그대로 던진다', async () => {
+		const error = Object.assign(new Error('No record was found for an update.'), { code: 'P2025' });
+		mocks.trackUpdate.mockRejectedValue(error);
+
+		await expect(svc.recordPlay('g-1', makeTrack())).rejects.toBe(error);
+		expect(mocks.$transaction).toHaveBeenCalledTimes(2);
+	});
+
+	it('재시도 대상이 아닌 오류는 다시 시도하지 않는다', async () => {
+		const error = Object.assign(new Error('Foreign key constraint failed'), { code: 'P2003' });
+		mocks.historyCreate.mockRejectedValueOnce(error);
+
+		await expect(svc.recordPlay('g-1', makeTrack())).rejects.toBe(error);
+		expect(mocks.$transaction).toHaveBeenCalledTimes(1);
+		expect(warn).not.toHaveBeenCalled();
+	});
+});
+
 describe('formatRecordError', () => {
 	it('Prisma 오류의 code와 meta를 포함한다', () => {
 		const err = new Error('Foreign key constraint violated');
