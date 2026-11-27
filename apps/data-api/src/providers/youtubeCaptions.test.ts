@@ -5,6 +5,8 @@ import { captionFailKey, fetchCaptionLyrics, pairKoreanLines, parseJson3Captions
 
 const track = (language_code: string, kind?: string) => ({ base_url: `https://x/${language_code}`, language_code, kind });
 
+const captions = (texts: string[]) => JSON.stringify({ events: texts.map((utf8, i) => ({ tStartMs: i * 1000, segs: [{ utf8 }] })) });
+
 describe('parseJson3Captions', () => {
 	it('keeps lyric lines in order and drops sound tags and note-only lines', () => {
 		const raw = JSON.stringify({
@@ -20,6 +22,25 @@ describe('parseJson3Captions', () => {
 			{ startMs: 3000, text: 'Never gonna give you up', endMs: 4500 },
 			{ startMs: 5000, text: 'Never gonna let you down', endMs: 6000 }
 		]);
+	});
+
+	it('trims symbols around a line but keeps brackets, quotes and punctuation that belong to the text', () => {
+		const lines = parseJson3Captions(captions(['~ ♡ Hello world ♡ ~', '- "Quoted?" -', '★ (Whispers) hello ★', '… and then!']));
+		expect(lines.map((l) => l.text)).toEqual(['Hello world', '"Quoted?"', '(Whispers) hello', 'and then!']);
+	});
+
+	it('drops lines that repeat the same thing over and over', () => {
+		const lines = parseJson3Captions(
+			captions([
+				'yeah yeah yeah yeah yeah yeah yeah yeah',
+				'아아아아아아아아',
+				'ㅋㅋㅋㅋㅋㅋㅋㅋㅋ',
+				'na na na na na na na na na na',
+				'I love you I love you',
+				'Real line'
+			])
+		);
+		expect(lines.map((l) => l.text)).toEqual(['I love you I love you', 'Real line']);
 	});
 
 	it('returns an empty list for broken input', () => {

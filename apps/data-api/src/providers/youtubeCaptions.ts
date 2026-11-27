@@ -10,6 +10,10 @@ const CAPTION_FAIL_TTL_SECONDS = 6 * 3600;
 const MAX_CAPTION_CHARS = 400_000;
 const PAIR_TOLERANCE_MS = 1_500;
 const MIN_LINES = 4;
+const SPAM_MIN_TOKENS = 8;
+const SPAM_MAX_DISTINCT_RATIO = 4;
+const SPAM_MIN_UNIT_REPEATS = 6;
+const SPAM_MAX_UNIT_LENGTH = 12;
 const CAPTION_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 
 export type CaptionOutcome = { status: 'ok'; captions: CaptionLyrics } | { status: 'none' } | { status: 'error' };
@@ -39,6 +43,16 @@ function isNoiseLine(text: string): boolean {
 	return /^[[(（【].*[\])）】]$/u.test(stripped);
 }
 
+const EDGE_SYMBOLS = /^[\s\p{S}\p{Pd}~〜…·*_#]+|[\s\p{S}\p{Pd}~〜…·*_#]+$/gu;
+const REPEATED_UNIT = new RegExp(`^(.{1,${SPAM_MAX_UNIT_LENGTH}}?)\\1{${SPAM_MIN_UNIT_REPEATS - 1},}$`, 'u');
+
+/** 같은 말을 도배한 줄 — 단어가 거의 다 같거나(`yeah yeah yeah …`), 짧은 조각이 붙어서 반복돼요(`아아아아아아`). */
+function isRepeatSpam(text: string): boolean {
+	const tokens = text.split(/\s+/);
+	if (tokens.length >= SPAM_MIN_TOKENS && new Set(tokens).size * SPAM_MAX_DISTINCT_RATIO <= tokens.length) return true;
+	return REPEATED_UNIT.test(text.replace(/\s+/g, ''));
+}
+
 export function parseJson3Captions(raw: string): LyricLine[] {
 	if (raw.length > MAX_CAPTION_CHARS) return [];
 	let doc: { events?: Json3Event[] };
@@ -54,9 +68,8 @@ export function parseJson3Captions(raw: string): LyricLine[] {
 			.map((seg) => seg.utf8 ?? '')
 			.join('')
 			.replace(/\s*\n\s*/g, ' ')
-			.replace(/^[♪♫♬\s]+|[♪♫♬\s]+$/gu, '')
-			.trim();
-		if (!text || isNoiseLine(text)) continue;
+			.replace(EDGE_SYMBOLS, '');
+		if (!text || isNoiseLine(text) || isRepeatSpam(text)) continue;
 		lines.push({ startMs: event.tStartMs, text, endMs: typeof event.dDurationMs === 'number' ? event.tStartMs + event.dDurationMs : null });
 	}
 	return lines.sort((a, b) => a.startMs - b.startMs);
