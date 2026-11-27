@@ -25,7 +25,6 @@ export { handleMixerNeedNext } from './lavalink/handlers/mixerHandlers.ts';
 export type { LavalinkDeps, LavalinkLogger, LavalinkShardInfo } from './lavalink/deps.ts';
 export { autoPlayRelated, getUserQueuedTracks } from './lavalink/autoPlayRelated.ts';
 export { CustomPlayer } from './lavalink/player/customPlayer.ts';
-export { CurrentBpmCache } from './lavalink/player/currentBpm.ts';
 export { PlayerNotifier } from './lavalink/player/playerNotifier.ts';
 export { NodeSessionStore, RedisStore } from './lavalink/redisStore.ts';
 export { isTtsClip, requesterIdOf, RELATED_TRACK_REQUESTER_ID, TTS_CLIP_REQUESTER_ID } from './lavalink/requester.ts';

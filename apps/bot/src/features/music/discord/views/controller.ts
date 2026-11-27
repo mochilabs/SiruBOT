@@ -1,4 +1,3 @@
-import type { CurrentBpm } from '../../lavalink/player/currentBpm.ts';
 import { emoji, emojiProgressBar, createContainer, formatTrack, formatTime, formatTimeToKorean, removeEmojis, volumeToEmoji } from '@sirubot/utils';
 import {
 	ActionRowBuilder,
@@ -31,7 +30,6 @@ type controllerViewProps = {
 	player: CustomPlayer;
 	volume?: number;
 	nowPlayingCardUrl?: string;
-	currentBpm?: CurrentBpm | null;
 	/** 기본 채널의 상시 패널 — 카드 이미지 아래에 대기 큐·재생 상태 요약을 텍스트로 더 보여준다 */
 	panel?: boolean;
 };
@@ -39,7 +37,7 @@ type controllerViewProps = {
 /** 컨트롤러 미리보기 아래 '대기열 보기' 버튼 — controllerButton 핸들러의 queueView 액션으로 파싱한다. */
 const queueViewCustomId = controllerId.encode('queueView');
 
-export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm, panel = false }: controllerViewProps) {
+export function controllerView({ player, volume, nowPlayingCardUrl, panel = false }: controllerViewProps) {
 	const containerComponent = createContainer();
 
 	// NOWPLAYING 표시는 trackStart 확정 트랙을 본다 (queue.current는 전이 기계가 덮어쓴다).
@@ -168,9 +166,6 @@ export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm, 
 		}
 		const footerSegments = buildFooterSegments(player, volume);
 		if (panel) footerSegments.push(...buildPanelStatusSegments(player));
-		if (currentBpm && currentBpm.identifier === current?.info.identifier && Number.isFinite(currentBpm.bpm) && currentBpm.bpm > 0) {
-			footerSegments.push(`${Number(currentBpm.bpm.toFixed(1))} BPM`);
-		}
 		// 신청자·추천곡 인디케이터는 footer 맨 마지막(볼륨 바로 뒤)에 아이콘과 함께 표시한다.
 		const requesterMention = current ? footerRequesterMention(current) : null;
 		if (requesterMention) {
