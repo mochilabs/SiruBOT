@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ChevronDown, Loader2, Play, Radio, Search, Tv, X } from "lucide-react";
 
 import { ChannelSelect } from "@/components/discord/channel-select";
@@ -181,7 +181,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 
 	const canSubmit = Boolean(resolved && targetChannelId) && !saving;
 
-	const sourceStep = useMemo(() => {
+	const renderSourceStep = () => {
 		if (platform === "chzzk") {
 			return (
 				<div className="flex flex-col gap-2">
@@ -254,8 +254,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 				</Button>
 			</div>
 		);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [platform, keyword, sourceInput, chzzkResults, looking]);
+	};
 
 	const resetPlatform = (next: SocialPlatform) => {
 		setPlatform(next);
@@ -282,7 +281,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 			<ModePicker label="플랫폼" value={platform} options={PLATFORMS} onChange={resetPlatform} />
 
 			<div className="flex flex-col gap-2">
-				{sourceStep}
+				{renderSourceStep()}
 				{resolved ? (
 					<p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
 						선택한 채널:

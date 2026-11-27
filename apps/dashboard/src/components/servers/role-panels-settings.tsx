@@ -1,42 +1,27 @@
 "use client";
 
-import { useCallback, useId, useRef, useState } from "react";
-import type { RolePanelButton } from "@sirubot/utils/rolePanel";
+import { useCallback, useId, useState } from "react";
 import {
   isValidRolePanelEmoji,
   ROLE_PANEL_MAX_BUTTONS,
   ROLE_PANEL_MAX_REACTIONS,
+  type RolePanelButton,
   type RolePanelImageLayout,
   type RolePanelImagePosition,
   type RolePanelMode,
   validateReactionButtons,
 } from "@sirubot/utils/rolePanel";
-import {
-  ChevronDown,
-  ChevronUp,
-  GripVertical,
-  Images,
-  Loader2,
-  Plus,
-  Send,
-  ShieldCheck,
-  Trash2,
-  Upload,
-  X,
-} from "lucide-react";
+import { ChevronDown, Plus, Send, ShieldCheck, Trash2 } from "lucide-react";
 import useSWR from "swr";
 
 import { ChannelSelect } from "@/components/discord/channel-select";
 import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
-import { RoleSelect } from "@/components/discord/role-select";
 import { ConfirmDeleteModal } from "@/components/playlists/confirm-delete-modal";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Field } from "@/components/primitives/field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { COLOR_PRESETS, ColorPicker } from "@/components/ui/color-picker";
-import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -46,14 +31,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ASSET_ALLOWED_MIME } from "@/hooks/use-guild-assets";
 import { useGuildChannels, useGuildRoles } from "@/hooks/use-guild-settings";
 import { toApiError, toError } from "@/lib/api-error";
 import { notifyApiError, notifySaved } from "@/lib/notify";
 import { createApiFetcher } from "@/lib/swr";
 import { cn } from "@/lib/utils";
 
-import { AssetPicker, uploadAssetFile } from "./asset-picker";
+import { RolePanelButtonList } from "./role-panels/role-panel-button-list";
+import { RolePanelImageField } from "./role-panels/role-panel-image-field";
+import { MODE_LABELS, type RolePanelWithButtons } from "./role-panels/role-panel-meta";
+import { RolePanelPreview } from "./role-panels/role-panel-preview";
 import {
   ChannelListError,
   InfoBox,
@@ -63,75 +50,10 @@ import {
   SaveBar,
 } from "./settings-shared";
 
-interface RolePanelWithButtons {
-  id: string;
-  guildId: string;
-  name: string;
-  title: string;
-  description: string;
-  imageUrl: string | null;
-  imageLayout: RolePanelImageLayout;
-  imagePosition: RolePanelImagePosition;
-  accentColor: string | null;
-  mode: RolePanelMode;
-  clickCount: number;
-  channelId: string | null;
-  messageId: string | null;
-  createdAt: string;
-  updatedAt: string;
-  buttons: RolePanelButton[];
-}
-
 const listFetcher = createApiFetcher<RolePanelWithButtons[]>(
   "역할 패널 목록을 불러오지 못했어요.",
   { sessionRetry: true },
 );
-
-const MODE_LABELS: Record<RolePanelMode, string> = {
-  button: "버튼 (클릭해서 받기)",
-  reaction: "반응 (이모지로 받기)",
-};
-
-const IMAGE_LAYOUT_LABELS: Record<RolePanelImageLayout, string> = {
-  gallery: "미디어 갤러리 (큰 이미지)",
-  thumbnail: "섬네일 (제목·안내문 옆)",
-};
-
-const IMAGE_POSITION_LABELS: Record<RolePanelImagePosition, string> = {
-  top: "제목 위",
-  middle: "안내문 아래",
-  bottom: "버튼 아래",
-};
-
-const DEFAULT_ACCENT_COLOR_HEX = "#ffdaff";
-
-const BUTTON_STYLES = ["secondary", "primary", "success", "danger"] as const;
-
-const BUTTON_STYLE_META: Record<
-  RolePanelButton["style"],
-  { label: string; dotClass: string; previewClass: string }
-> = {
-  secondary: {
-    label: "회색 (기본)",
-    dotClass: "bg-muted-foreground/70",
-    previewClass: "bg-surface-3 text-foreground",
-  },
-  primary: {
-    label: "파랑 (강조)",
-    dotClass: "bg-[#5865F2]",
-    previewClass: "bg-[#5865F2] text-white",
-  },
-  success: {
-    label: "초록 (긍정)",
-    dotClass: "bg-success",
-    previewClass: "bg-success text-white",
-  },
-  danger: {
-    label: "빨강 (주의)",
-    dotClass: "bg-destructive",
-    previewClass: "bg-destructive text-destructive-foreground",
-  },
-};
 
 export function RolePanelsSettings({ guildId }: { guildId: string }) {
   const url = `/api/servers/${guildId}/role-panels`;
@@ -323,19 +245,6 @@ function RolePanelCard({
 }) {
   const bodyId = useId();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [overIndex, setOverIndex] = useState<number | null>(null);
-  const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  const rowIndexAt = (clientY: number) => {
-    const rects = rowRefs.current
-      .slice(0, buttons.length)
-      .map((node) => node?.getBoundingClientRect());
-    const first = rects[0];
-    if (!first || clientY < first.top) return 0;
-    const found = rects.findIndex((rect) => rect && clientY >= rect.top && clientY <= rect.bottom);
-    return found === -1 ? buttons.length - 1 : found;
-  };
   const url = `/api/servers/${guildId}/role-panels/${panel.id}`;
   const [name, setName] = useState(panel.name);
   const [title, setTitle] = useState(panel.title);
@@ -343,9 +252,6 @@ function RolePanelCard({
   const [imageUrl, setImageUrl] = useState<string | null>(
     panel.imageUrl ?? null,
   );
-  const [assetPickerOpen, setAssetPickerOpen] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageLayout, setImageLayout] = useState<RolePanelImageLayout>(
     panel.imageLayout ?? "gallery",
   );
@@ -392,54 +298,6 @@ function RolePanelCard({
 
   const maxItems =
     mode === "reaction" ? ROLE_PANEL_MAX_REACTIONS : ROLE_PANEL_MAX_BUTTONS;
-
-  const handleImageUpload = async (file: File | null) => {
-    if (!file) return;
-    setUploadingImage(true);
-    try {
-      const asset = await uploadAssetFile(guildId, file);
-      setImageUrl(asset.url);
-    } catch (err) {
-      notifyApiError(err, "이미지를 업로드하지 못했어요.");
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const addButton = () => {
-    if (buttons.length >= maxItems) return;
-    setButtons((prev) => [
-      ...prev,
-      {
-        id: `temp-${Date.now()}`,
-        roleId: "",
-        label: "",
-        emoji: null,
-        style: "secondary",
-        position: prev.length,
-      },
-    ]);
-  };
-
-  const updateButton = (id: string, partial: Partial<RolePanelButton>) => {
-    setButtons((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, ...partial } : b)),
-    );
-  };
-
-  const moveButton = (from: number, to: number) => {
-    if (from === to || to < 0 || to >= buttons.length) return;
-    setButtons((prev) => {
-      const next = [...prev];
-      const [item] = next.splice(from, 1);
-      if (item) next.splice(to, 0, item);
-      return next;
-    });
-  };
-
-  const removeButton = (id: string) => {
-    setButtons((prev) => prev.filter((b) => b.id !== id));
-  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -505,19 +363,6 @@ function RolePanelCard({
       setSaving(false);
     }
   };
-
-  const galleryPosition =
-    imageUrl && imageLayout === "gallery" ? imagePosition : null;
-  const galleryPreview = imageUrl ? (
-    <div className="overflow-hidden rounded-control bg-surface-2">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={imageUrl}
-        alt="패널 이미지"
-        className="max-h-52 w-full object-cover"
-      />
-    </div>
-  ) : null;
 
   return (
     <div className="rounded-card bg-surface-2 p-4">
@@ -634,166 +479,18 @@ function RolePanelCard({
         />
       </Field>
 
-      <Field
-        label="이미지와 강조색"
-        description="이미지는 선택이에요. (PNG·JPEG·WebP·GIF 최대 8MB) 강조색은 메시지 컨테이너 왼쪽 선 색이에요."
-      >
-        <div className="space-y-4 rounded-card bg-surface-1 p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            {imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={imageUrl}
-                alt="패널 이미지"
-                className="h-14 w-14 shrink-0 rounded-control object-cover"
-              />
-            ) : (
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-control bg-surface-2 text-muted-foreground">
-                <Images size={18} aria-hidden />
-              </div>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={ASSET_ALLOWED_MIME.join(",")}
-              className="sr-only"
-              onChange={(event) => {
-                void handleImageUpload(event.target.files?.[0] ?? null);
-                event.target.value = "";
-              }}
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={saving || uploadingImage}
-              >
-                {uploadingImage ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Upload size={14} />
-                )}
-                {uploadingImage ? "업로드 중…" : "업로드"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAssetPickerOpen(true)}
-                disabled={saving || uploadingImage}
-              >
-                <Images size={14} /> 에셋 보관함
-              </Button>
-              {imageUrl ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setImageUrl(null)}
-                  disabled={saving || uploadingImage}
-                >
-                  <X size={14} /> 제거
-                </Button>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <span className="text-xs font-medium text-muted-foreground">
-                이미지 표시 방식
-              </span>
-              <Select
-                value={imageLayout}
-                onValueChange={(value) =>
-                  value && setImageLayout(value as RolePanelImageLayout)
-                }
-                disabled={saving || !imageUrl}
-              >
-                <SelectTrigger className="w-full" aria-label="이미지 표시 방식">
-                  <SelectValue>
-                    {(value: RolePanelImageLayout) =>
-                      IMAGE_LAYOUT_LABELS[value] ?? value
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(IMAGE_LAYOUT_LABELS) as RolePanelImageLayout[]).map(
-                    (value) => (
-                      <SelectItem key={value} value={value}>
-                        {IMAGE_LAYOUT_LABELS[value]}
-                      </SelectItem>
-                    ),
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <span className="text-xs font-medium text-muted-foreground">
-                이미지 위치
-                {imageLayout === "thumbnail" ? " (섬네일은 고정)" : ""}
-              </span>
-              <Select
-                value={imagePosition}
-                onValueChange={(value) =>
-                  value && setImagePosition(value as RolePanelImagePosition)
-                }
-                disabled={saving || !imageUrl || imageLayout === "thumbnail"}
-              >
-                <SelectTrigger className="w-full" aria-label="이미지 위치">
-                  <SelectValue>
-                    {(value: RolePanelImagePosition) =>
-                      IMAGE_POSITION_LABELS[value] ?? value
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(IMAGE_POSITION_LABELS) as RolePanelImagePosition[]).map(
-                    (value) => (
-                      <SelectItem key={value} value={value}>
-                        {IMAGE_POSITION_LABELS[value]}
-                      </SelectItem>
-                    ),
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-1.5 border-t border-border-subtle pt-4">
-            <span className="text-xs font-medium text-muted-foreground">
-              컨테이너 강조색
-            </span>
-            <div className="flex flex-wrap items-center gap-2">
-              <ColorPicker
-                value={accentColor ?? DEFAULT_ACCENT_COLOR_HEX}
-                label="강조색"
-                disabled={saving}
-                presets={[DEFAULT_ACCENT_COLOR_HEX, ...COLOR_PRESETS]}
-                onChange={setAccentColor}
-              />
-              {accentColor !== null && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={saving}
-                  onClick={() => setAccentColor(null)}
-                >
-                  봇 기본색 사용
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-        <AssetPicker
-          guildId={guildId}
-          open={assetPickerOpen}
-          onClose={() => setAssetPickerOpen(false)}
-          onSelect={(urls) => {
-            if (urls[0]) setImageUrl(urls[0]);
-          }}
-        />
-      </Field>
+      <RolePanelImageField
+        guildId={guildId}
+        saving={saving}
+        imageUrl={imageUrl}
+        onImageUrlChange={setImageUrl}
+        imageLayout={imageLayout}
+        onImageLayoutChange={setImageLayout}
+        imagePosition={imagePosition}
+        onImagePositionChange={setImagePosition}
+        accentColor={accentColor}
+        onAccentColorChange={setAccentColor}
+      />
 
       <Field
         label={`역할 ${mode === "reaction" ? "반응" : "버튼"} (${buttons.length}/${maxItems})`}
@@ -806,210 +503,14 @@ function RolePanelCard({
         {rolesError ? (
           <ChannelListError error={rolesError} onRetry={reloadRoles} />
         ) : (
-          <div className="space-y-3 rounded-menu bg-surface-2 p-3">
-            {buttons.length === 0 ? (
-              <p className="py-2 text-center text-xs text-muted-foreground">
-                아직 추가된 역할이 없어요. 아래 역할 추가 버튼을 눌러 시작해 보세요.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {buttons.map((button, index) => (
-                  <div
-                    key={button.id}
-                    ref={(node) => {
-                      rowRefs.current[index] = node;
-                    }}
-                    className={cn(
-                      "flex flex-wrap items-center gap-2 rounded-control bg-surface-1 p-2 sm:flex-nowrap",
-                      dragIndex === index && "opacity-50",
-                      overIndex === index &&
-                        dragIndex !== null &&
-                        dragIndex !== index &&
-                        "ring-2 ring-ring",
-                    )}
-                  >
-                    <div className="flex shrink-0 items-center">
-                      <span
-                        onPointerDown={(event) => {
-                          if (saving || buttons.length < 2) return;
-                          event.currentTarget.setPointerCapture(event.pointerId);
-                          setDragIndex(index);
-                          setOverIndex(index);
-                        }}
-                        onPointerMove={(event) => {
-                          if (dragIndex !== index) return;
-                          setOverIndex(rowIndexAt(event.clientY));
-                        }}
-                        onPointerUp={(event) => {
-                          if (dragIndex !== index) return;
-                          event.currentTarget.releasePointerCapture(event.pointerId);
-                          const target = rowIndexAt(event.clientY);
-                          setDragIndex(null);
-                          setOverIndex(null);
-                          moveButton(index, target);
-                        }}
-                        onPointerCancel={() => {
-                          setDragIndex(null);
-                          setOverIndex(null);
-                        }}
-                        className={cn(
-                          "flex size-8 touch-none items-center justify-center rounded-control text-muted-foreground select-none",
-                          buttons.length > 1 && !saving
-                            ? "cursor-grab hover:bg-surface-2 hover:text-foreground active:cursor-grabbing"
-                            : "opacity-40",
-                        )}
-                        aria-hidden
-                      >
-                        <GripVertical size={16} />
-                      </span>
-                      <div className="flex flex-col">
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => moveButton(index, index - 1)}
-                          disabled={saving || index === 0}
-                          aria-label={`${button.label.trim() || "역할"} 위로 이동`}
-                        >
-                          <ChevronUp size={14} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => moveButton(index, index + 1)}
-                          disabled={saving || index === buttons.length - 1}
-                          aria-label={`${button.label.trim() || "역할"} 아래로 이동`}
-                        >
-                          <ChevronDown size={14} />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="min-w-[10rem] flex-1">
-                      <RoleSelect
-                        roles={roles}
-                        value={button.roleId || ""}
-                        onChange={(roleId) => {
-                          const matchedRole = roles?.find(
-                            (r) => r.id === roleId,
-                          );
-                          updateButton(button.id, {
-                            roleId,
-                            ...(!button.label.trim() && matchedRole
-                              ? { label: matchedRole.name }
-                              : {}),
-                          });
-                        }}
-                        disabled={saving}
-                        placeholder="역할을 선택해 주세요"
-                      />
-                    </div>
-
-                    <EmojiPicker
-                      value={button.emoji}
-                      onChange={(emoji) => updateButton(button.id, { emoji })}
-                      required={mode === "reaction"}
-                      disabled={saving}
-                      placeholder="이모지"
-                    />
-
-                    <Input
-                      value={button.label}
-                      onChange={(e) =>
-                        updateButton(button.id, { label: e.target.value })
-                      }
-                      maxLength={80}
-                      disabled={saving}
-                      placeholder="버튼 라벨"
-                      aria-label="버튼 라벨"
-                      className="w-32 shrink-0"
-                    />
-
-                    {mode === "button" ? (
-                      <Select
-                        value={button.style}
-                        onValueChange={(value) =>
-                          value &&
-                          updateButton(button.id, {
-                            style: value as RolePanelButton["style"],
-                          })
-                        }
-                        disabled={saving}
-                      >
-                        <SelectTrigger
-                          className="w-36 shrink-0"
-                          aria-label="버튼 색상"
-                        >
-                          <SelectValue>
-                            {(value: RolePanelButton["style"]) => {
-                              const meta =
-                                BUTTON_STYLE_META[value] ??
-                                BUTTON_STYLE_META.secondary;
-                              return (
-                                <span className="flex items-center gap-2">
-                                  <span
-                                    className={cn(
-                                      "size-2.5 shrink-0 rounded-full",
-                                    meta.dotClass,
-                                    )}
-                                    aria-hidden
-                                  />
-                                  <span className="truncate">{meta.label}</span>
-                                </span>
-                              );
-                            }}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {BUTTON_STYLES.map((style) => {
-                            const meta = BUTTON_STYLE_META[style];
-                            return (
-                              <SelectItem key={style} value={style}>
-                                <span className="flex items-center gap-2">
-                                  <span
-                                    className={cn(
-                                      "size-2.5 shrink-0 rounded-full",
-                                      meta.dotClass,
-                                    )}
-                                    aria-hidden
-                                  />
-                                  <span>{meta.label}</span>
-                                </span>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                    ) : null}
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeButton(button.id)}
-                      disabled={saving}
-                      aria-label="버튼 제거"
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between pt-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addButton}
-                disabled={saving || buttons.length >= maxItems}
-              >
-                <Plus size={14} /> 역할 추가
-              </Button>
-              <span className="text-xs text-muted-foreground">
-                최대 {maxItems}개
-              </span>
-            </div>
-
-          </div>
+          <RolePanelButtonList
+            buttons={buttons}
+            onButtonsChange={setButtons}
+            roles={roles}
+            mode={mode}
+            maxItems={maxItems}
+            saving={saving}
+          />
         )}
       </Field>
 
@@ -1017,83 +518,17 @@ function RolePanelCard({
         label="디스코드 미리보기"
         description="게시했을 때 메시지가 이렇게 보여요."
       >
-        <div className="rounded-card bg-discord-embed p-4">
-      <div
-              className="space-y-3 rounded-control border-l-4 bg-surface-1 p-4"
-              style={{ borderColor: accentColor ?? DEFAULT_ACCENT_COLOR_HEX }}
-            >
-        {galleryPosition === "top" ? galleryPreview : null}
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <p className="text-base font-bold text-foreground">
-              {title.trim() || "역할 패널"}
-            </p>
-            {description.trim() ? (
-              <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                {description}
-              </p>
-            ) : null}
-          </div>
-          {imageUrl && imageLayout === "thumbnail" ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={imageUrl}
-              alt="패널 섬네일"
-              className="h-16 w-16 shrink-0 rounded-control object-cover"
-            />
-          ) : null}
-        </div>
-        {galleryPosition === "middle" ? galleryPreview : null}
-        {buttons.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {buttons.map((button) => {
-              const roleName =
-                roles?.find((r) => r.id === button.roleId)?.name ??
-                "역할 미선택";
-              const labelText = button.label.trim() || roleName;
-              const styleMeta =
-                BUTTON_STYLE_META[button.style] ??
-                BUTTON_STYLE_META.secondary;
-
-              if (mode === "reaction") {
-                return (
-                  <span
-                    key={button.id}
-                    className="inline-flex items-center gap-1.5 rounded-control bg-surface-2 px-2 py-1 text-xs text-foreground"
-                  >
-                    <span className="text-sm leading-none">
-                      {button.emoji || "❔"}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {labelText}
-                    </span>
-                  </span>
-                );
-              }
-
-              return (
-                <span
-                  key={button.id}
-                  className={cn(
-                    "inline-flex h-8 items-center gap-1.5 rounded-control px-3 text-xs font-medium",
-                    styleMeta.previewClass,
-                  )}
-                >
-                  {button.emoji ? (
-                    <span className="text-sm leading-none">
-                      {button.emoji}
-                    </span>
-                  ) : null}
-                  <span>{labelText}</span>
-                </span>
-              );
-            })}
-          </div>
-        ) : null}
-        {galleryPosition === "bottom" ? galleryPreview : null}
-      </div>
-
-        </div>
+        <RolePanelPreview
+          title={title}
+          description={description}
+          imageUrl={imageUrl}
+          imageLayout={imageLayout}
+          imagePosition={imagePosition}
+          accentColor={accentColor}
+          mode={mode}
+          buttons={buttons}
+          roles={roles}
+        />
       </Field>
 
       <div className="flex flex-wrap items-center justify-between gap-2">

@@ -28,6 +28,7 @@ export function SearchInput({
 		if (urlQuery !== value) {
 			setValue(urlQuery);
 		}
+		// Mount only: seed the store from the URL once; after that the effect below drives the URL from the store.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
