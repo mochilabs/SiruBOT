@@ -53,6 +53,20 @@ function isRepeatSpam(text: string): boolean {
 	return REPEATED_UNIT.test(text.replace(/\s+/g, ''));
 }
 
+/** 같은 줄이 연달아 반복되면 첫 줄만 남기고, 그 줄이 마지막 반복이 끝날 때까지 이어지게 해요. */
+function collapseRepeatedLines(lines: LyricLine[]): LyricLine[] {
+	const collapsed: LyricLine[] = [];
+	for (const line of lines) {
+		const previous = collapsed.at(-1);
+		if (previous?.text !== line.text) {
+			collapsed.push({ ...line });
+			continue;
+		}
+		if (previous.endMs != null && line.endMs != null) previous.endMs = Math.max(previous.endMs, line.endMs);
+	}
+	return collapsed;
+}
+
 export function parseJson3Captions(raw: string): LyricLine[] {
 	if (raw.length > MAX_CAPTION_CHARS) return [];
 	let doc: { events?: Json3Event[] };
@@ -72,7 +86,7 @@ export function parseJson3Captions(raw: string): LyricLine[] {
 		if (!text || isNoiseLine(text) || isRepeatSpam(text)) continue;
 		lines.push({ startMs: event.tStartMs, text, endMs: typeof event.dDurationMs === 'number' ? event.tStartMs + event.dDurationMs : null });
 	}
-	return lines.sort((a, b) => a.startMs - b.startMs);
+	return collapseRepeatedLines(lines.sort((a, b) => a.startMs - b.startMs));
 }
 
 export function pairKoreanLines(original: LyricLine[], korean: LyricLine[]): Record<string, string> | null {
