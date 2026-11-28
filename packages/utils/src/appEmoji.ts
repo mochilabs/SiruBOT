@@ -23,6 +23,7 @@ const APP_EMOJI_FALLBACKS = {
 	calendar: '📅',
 	cat: '🐱',
 	cd: '💿',
+	dashboard: '🖥️',
 	chapter: '🎬',
 	chapter_l: '🎬',
 	chart: '📊',
