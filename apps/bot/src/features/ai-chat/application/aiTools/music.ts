@@ -5,7 +5,7 @@ import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext } from './types.ts';
 import { musicActor, withAppError } from './musicControlBridge.ts';
 import { inlineValue } from './summary.ts';
-import { searchLyrics } from '../../../../services/dataApiClient.ts';
+import { isLyricsNotFound, searchLyrics } from '../../../../services/dataApiClient.ts';
 import * as guildPlayback from '../../../../services/guildSettings/playback.ts';
 
 const PLATFORM_MAP: Record<string, SearchPlatform> = {
@@ -403,7 +403,8 @@ export function createMusicTools(
 				if (!current) throw new Error('검색어를 입력하거나 곡을 재생 중이어야 해요.');
 				query = `${current.info.author} ${current.info.title}`.replace(/\(.*?\)|\[.*?\]/g, '').trim();
 			}
-			const results = await searchLyrics(query).catch(() => {
+			const results = await searchLyrics(query).catch((error: unknown) => {
+				if (isLyricsNotFound(error)) return [];
 				throw new Error('가사를 검색하는 중 오류가 발생했어요.');
 			});
 			if (!results.length || (!results[0]!.plainLyrics && !results[0]!.syncedLyrics))

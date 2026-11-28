@@ -7,7 +7,8 @@ import { errorView } from '../../lib/errorView.ts';
 import { unexpectedErrorView } from '../../lib/unexpectedErrorView.ts';
 import { presentError } from '../../lib/errorPresenter.ts';
 
-@ApplyOptions<Listener.Options>({ event: Events.InteractionHandlerError })
+// Sapphire 기본 CoreInteractionHandlerError를 같은 이름으로 대체해 같은 오류가 두 번(기본 error + 여기) 남지 않게 해요.
+@ApplyOptions<Listener.Options>({ name: 'CoreInteractionHandlerError', event: Events.InteractionHandlerError })
 export class InteractionHandlerError extends Listener {
 	public override async run(error: Error, { handler, interaction }: InteractionHandlerErrorPayload) {
 		const presentation = presentError(error, `${emoji('tools')} 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`);

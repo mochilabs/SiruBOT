@@ -10,7 +10,9 @@ export const controllerId = defineCustomId({
 		next: {},
 		stop: {},
 		repeat: { mode: field.oneOf(['off', 'track', 'queue'] as const) },
+		// 이전/다음 챕터 버튼. 지금은 chapterPick 셀렉트를 그리고, 배포 전에 떠 있던 컨트롤러 버튼을 위해 디코드만 남겨요.
 		chapter: { direction: field.oneOf(['prev', 'next'] as const) },
+		chapterPick: {},
 		volume: { direction: field.oneOf(['up', 'down'] as const) },
 		queueView: {}
 	}

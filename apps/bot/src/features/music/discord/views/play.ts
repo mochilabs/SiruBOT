@@ -10,7 +10,16 @@ type playViewProps = {
 	queued: boolean;
 	position?: number;
 	totalDuration?: number;
+	/** 대시보드 웹 플레이어에서 들어온 요청이면 푸터로 표시해요 */
+	fromDashboard?: DashboardSource;
 };
+
+/** 대시보드 요청 표시용. url이 있으면 푸터의 "대시보드"를 그 서버 페이지 링크로 걸어요. */
+export type DashboardSource = { url: string | null };
+
+export function dashboardFooter({ url }: DashboardSource): string {
+	return `-# ${emoji('dashboard')} ${url ? `[대시보드](${url})` : '대시보드'}에서 요청했어요`;
+}
 
 export function addTextWithThumbnail(container: ContainerBuilder, textContent: string, thumbnailUrl: string | null): void {
 	const textDisplay = new TextDisplayBuilder().setContent(textContent);
@@ -23,7 +32,7 @@ export function addTextWithThumbnail(container: ContainerBuilder, textContent: s
 	}
 }
 
-export function trackAdded({ track, queued, position, totalDuration }: playViewProps) {
+export function trackAdded({ track, queued, position, totalDuration, fromDashboard }: playViewProps) {
 	const container = createContainer();
 
 	const firstContent = queued
@@ -41,7 +50,7 @@ export function trackAdded({ track, queued, position, totalDuration }: playViewP
 			: requesterId === TTS_CLIP_REQUESTER_ID
 				? '채팅 TTS'
 				: typeof requesterId === 'string' && requesterId
-					? `<@${requesterId}>`
+					? `${emoji('user')} <@${requesterId}>`
 					: null;
 	let artistText = `-# ${emoji('artist')} ${track.info.author}${requesterLabel ? ` ${requesterLabel}` : ''}`;
 
@@ -49,7 +58,7 @@ export function trackAdded({ track, queued, position, totalDuration }: playViewP
 		artistText += ` (${position}개 남음, ${formatTime((totalDuration ?? 0) / 1000)})`;
 	}
 
-	const content = `${firstContent}\n### ${trackText}\n${artistText}`;
+	const content = `${firstContent}\n### ${trackText}\n${artistText}${fromDashboard ? `\n${dashboardFooter(fromDashboard)}` : ''}`;
 	addTextWithThumbnail(container, content, track?.info.artworkUrl);
 
 	return container;
@@ -68,9 +77,10 @@ export function trackAddedProps(player: Player, track: Track): playViewProps {
 type playStartedViewProps = {
 	track: Track;
 	userId: string;
+	fromDashboard?: DashboardSource;
 };
 
-export function playStarted({ track, userId }: playStartedViewProps) {
+export function playStarted({ track, userId, fromDashboard }: playStartedViewProps) {
 	const container = createContainer();
 
 	const trackText = formatTrack(track, {
@@ -78,7 +88,7 @@ export function playStarted({ track, userId }: playStartedViewProps) {
 		withMarkdownURL: true
 	});
 
-	const content = `${emoji('music_note')} <@${userId}>님이 재생을 시작했어요!\n### ${trackText}\n-# ${emoji('artist')} ${track.info.author}`;
+	const content = `${emoji('music_note')} <@${userId}>님이 재생을 시작했어요!\n### ${trackText}\n-# ${emoji('artist')} ${track.info.author}${fromDashboard ? `\n${dashboardFooter(fromDashboard)}` : ''}`;
 	addTextWithThumbnail(container, content, track?.info.artworkUrl);
 
 	return container;

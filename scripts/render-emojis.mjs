@@ -192,6 +192,7 @@ const EMOJI_LUCIDE_MAP = {
   plus: "plus",
   pin: "pin",
   globe: "globe",
+  dashboard: "layout-dashboard",
   mag: "search",
   frame: "frame",
   box: "box",

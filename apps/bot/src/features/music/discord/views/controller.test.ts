@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CustomPlayer } from '../../lavalink/player/customPlayer.ts';
-import { controllerView } from './controller.ts';
+import { chapterWindow, controllerView } from './controller.ts';
 import { repeatEmoji } from './repeat.ts';
 import { controllerId } from '../customIds.ts';
 
@@ -19,7 +19,11 @@ vi.mock('../../lavalink/autoPlayRelated.ts', () => ({
 	remainingUntilQueueEnd: mocks.remaining
 }));
 vi.mock('../../lavalink/player/nowPlaying.ts', () => ({ nowPlayingTrack: mocks.nowPlaying }));
-vi.mock('../../lavalink/player/chapters.ts', () => ({ currentChapter: mocks.chapter, currentChapterIndex: mocks.chapterIndex }));
+vi.mock('../../lavalink/player/chapters.ts', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../../lavalink/player/chapters.ts')>()),
+	currentChapter: mocks.chapter,
+	currentChapterIndex: mocks.chapterIndex
+}));
 vi.mock('../../lavalink/requester.ts', () => ({
 	RELATED_TRACK_REQUESTER_ID: 'related_track',
 	TTS_CLIP_REQUESTER_ID: 'chat_tts_clip'
@@ -127,12 +131,14 @@ describe('controllerView action rows', () => {
 
 	it('챕터가 있으면 챕터 행을 추가한다', () => {
 		mocks.chapterIndex.mockReturnValue(0);
-		const rows = actionRows(controllerJson({ player: player({ chapters: CHAPTERS }) }));
+		const rows = actionRows(controllerJson({ player: player({ chapters: CHAPTERS, chaptersTrackIdentifier: 'vid' }) }));
 
 		expectValidActionRows(rows);
 		expect(rows).toHaveLength(2);
-		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:v1:chapter:prev', 'controller:v1:chapter:next']);
-		expect(rows[1]!.map((button) => button.emoji?.name)).toEqual(['arrow_back', 'arrow_forward']);
+		expect(rows[1]!.map((menu) => menu.custom_id)).toEqual(['controller:v1:chapterPick']);
+		const menu = rows[1]![0] as PlainComponent & { options: { label: string; value: string }[]; placeholder: string };
+		expect(menu.options).toEqual([expect.objectContaining({ label: '1. 1장', value: '0:0:vid' })]);
+		expect(menu.placeholder).toBe('현재 1/1: 1장');
 	});
 
 	it('챕터와 대기열이 있으면 챕터 행과 대기열 보기 행을 만든다', () => {
@@ -142,7 +148,7 @@ describe('controllerView action rows', () => {
 
 		expectValidActionRows(rows);
 		expect(rows).toHaveLength(3);
-		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:v1:chapter:prev', 'controller:v1:chapter:next']);
+		expect(rows[1]!.map((menu) => menu.custom_id)).toEqual(['controller:v1:chapterPick']);
 		expect(rows[2]!.map((button) => button.custom_id)).toEqual(['controller:v1:queueView']);
 	});
 
@@ -336,9 +342,21 @@ describe('controllerView customId round trip', () => {
 			{ action: 'next' },
 			{ action: 'stop' },
 			{ action: 'repeat', mode: 'off' },
-			{ action: 'chapter', direction: 'prev' },
-			{ action: 'chapter', direction: 'next' },
+			{ action: 'chapterPick' },
 			{ action: 'queueView' }
 		]);
+	});
+});
+
+describe('chapterWindow', () => {
+	it('shows every chapter up to 25', () => {
+		expect(chapterWindow(25, 24)).toEqual({ start: 0, end: 25 });
+	});
+
+	it('centers the current chapter when there are more than 25', () => {
+		expect(chapterWindow(40, 20)).toEqual({ start: 8, end: 33 });
+		expect(chapterWindow(40, 2)).toEqual({ start: 0, end: 25 });
+		expect(chapterWindow(40, 39)).toEqual({ start: 15, end: 40 });
+		expect(chapterWindow(40, null)).toEqual({ start: 0, end: 25 });
 	});
 });

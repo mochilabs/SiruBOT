@@ -8,6 +8,8 @@ import {
 	SectionBuilder,
 	SeparatorBuilder,
 	SeparatorSpacingSize,
+	StringSelectMenuBuilder,
+	StringSelectMenuOptionBuilder,
 	TextDisplayBuilder,
 	ThumbnailBuilder
 } from 'discord.js';
@@ -18,11 +20,51 @@ import { controllerId } from '../customIds.ts';
 import { RELATED_TRACK_REQUESTER_ID, TTS_CLIP_REQUESTER_ID } from '../../lavalink/requester.ts';
 import { CustomPlayer } from '../../lavalink/player/customPlayer.ts';
 import { nowPlayingTrack } from '../../lavalink/player/nowPlaying.ts';
-import { currentChapter, currentChapterIndex } from '../../lavalink/player/chapters.ts';
+import { chapterPickValue, currentChapter, currentChapterIndex } from '../../lavalink/player/chapters.ts';
+import { truncateText } from '../../../../lib/text.ts';
 
 const MAX_TRACK_URL_LENGTH = 70;
 
 const QUEUE_PREVIEW_COUNT = 5;
+
+/** 디스코드 셀렉트 메뉴 옵션 상한 */
+const CHAPTER_OPTION_LIMIT = 25;
+
+/** 25개를 넘으면 현재 챕터가 가운데 오도록 25개만 잘라 보여줘요. 컨트롤러는 챕터가 바뀔 때 다시 그려져 창도 따라가요. */
+export function chapterWindow(total: number, currentIndex: number | null): { start: number; end: number } {
+	if (total <= CHAPTER_OPTION_LIMIT) return { start: 0, end: total };
+	const center = currentIndex ?? 0;
+	const start = Math.max(0, Math.min(center - Math.floor(CHAPTER_OPTION_LIMIT / 2), total - CHAPTER_OPTION_LIMIT));
+	return { start, end: start + CHAPTER_OPTION_LIMIT };
+}
+
+/**
+ * 챕터 셀렉트 메뉴. 현재 챕터는 기본 선택값이 아니라 placeholder로 보여줘요 —
+ * 기본 선택된 옵션은 다시 고를 수 없어서, 그러면 지금 챕터를 처음부터 다시 듣기가 막혀요.
+ */
+function chapterSelectRow(player: CustomPlayer): ActionRowBuilder<StringSelectMenuBuilder> | null {
+	const chapters = player.chapters ?? [];
+	if (chapters.length === 0) return null;
+	const currentIndex = currentChapterIndex(player);
+	const { start, end } = chapterWindow(chapters.length, currentIndex);
+	const options = chapters.slice(start, end).map((chapter, offset) => {
+		const index = start + offset;
+		return new StringSelectMenuOptionBuilder()
+			.setLabel(truncateText(`${index + 1}. ${chapter.name || '이름 없는 챕터'}`, 100))
+			.setDescription(`${formatTime(chapter.start / 1000)} ~ ${formatTime(chapter.end / 1000)}`)
+			.setValue(chapterPickValue(index, chapter.start, player.chaptersTrackIdentifier));
+	});
+	const hidden = chapters.length - (end - start);
+	const placeholder =
+		currentIndex === null
+			? `챕터로 이동 (${chapters.length}개)`
+			: `현재 ${currentIndex + 1}/${chapters.length}: ${chapters[currentIndex]!.name}${hidden > 0 ? ` · 근처 ${end - start}개만 보여요` : ''}`;
+	const menu = new StringSelectMenuBuilder()
+		.setCustomId(controllerId.encode('chapterPick'))
+		.setPlaceholder(truncateText(placeholder, 150))
+		.addOptions(options);
+	return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
+}
 
 type controllerViewProps = {
 	player: CustomPlayer;
@@ -76,28 +118,9 @@ export function controllerView({ player, volume, nowPlayingCardUrl, panel = fals
 		})
 	);
 
-	const chapters = player.chapters ?? [];
-	const chapterIndex = chapters.length > 0 ? currentChapterIndex(player) : null;
-	const atChapterStart = chapterIndex !== null && (player.position ?? 0) - chapters[chapterIndex]!.start < 5_000;
-	const chapterPrevButton = new ButtonBuilder()
-		.setCustomId(controllerId.encode('chapter', { direction: 'prev' }))
-		.setLabel('이전 챕터')
-		.setEmoji(emoji('arrow_back'))
-		.setDisabled(chapterIndex === null || (chapterIndex === 0 && atChapterStart));
-	const chapterNextButton = new ButtonBuilder()
-		.setCustomId(controllerId.encode('chapter', { direction: 'next' }))
-		.setLabel('다음 챕터')
-		.setEmoji(emoji('arrow_forward'))
-		.setDisabled(chapterIndex === null || chapterIndex >= chapters.length - 1);
-
-	const utilityRows: ActionRowBuilder<ButtonBuilder>[] = [];
-	if (chapters.length > 0) {
-		utilityRows.push(
-			new ActionRowBuilder<ButtonBuilder>().addComponents(
-				[chapterPrevButton, chapterNextButton].map((button) => button.setStyle(ButtonStyle.Secondary))
-			)
-		);
-	}
+	const utilityRows: ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder>[] = [];
+	const chapterRow = chapterSelectRow(player);
+	if (chapterRow) utilityRows.push(chapterRow);
 	if (nowPlayingCardUrl) {
 		const gallery = new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(nowPlayingCardUrl));
 		containerComponent.addMediaGalleryComponents(gallery);

@@ -1,7 +1,7 @@
 import { container, UserError } from '@sapphire/framework';
 import { emoji, resolveYouTubeVideoId } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageComponentInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
-import { searchLyrics, searchLyricsForTrack } from '../../../../services/dataApiClient.ts';
+import { isLyricsNotFound, searchLyrics, searchLyricsForTrack } from '../../../../services/dataApiClient.ts';
 import { LYRICS_BUTTON_IDS, liveLyricsView, lyricsView } from '../views/lyrics.ts';
 import { buildLiveLyricsText, parseLiveLines, startLiveLoop } from '../utils/liveLyrics.ts';
 import { buildLyricsText, hasTranslation, type LyricsViewMode } from '../utils/lyricsText.ts';
@@ -59,7 +59,13 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	}
 
 	try {
-		const results = current ? await searchLyricsForTrack(current).catch(() => searchLyrics(query)) : await searchLyrics(query);
+		// 가사 없음은 빈 결과로 바꿔 아래 "찾을 수 없었어요" 분기 하나로 처리해요.
+		const results = await (current ? searchLyricsForTrack(current).catch(() => searchLyrics(query)) : searchLyrics(query)).catch(
+			(error: unknown) => {
+				if (isLyricsNotFound(error)) return [];
+				throw error;
+			}
+		);
 
 		if (!results || results.length === 0 || (!results[0].plainLyrics && !results[0].syncedLyrics)) {
 			await interaction.editReply({

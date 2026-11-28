@@ -1,16 +1,15 @@
 import { controllerId } from '../customIds.ts';
-import { InteractionHandler, InteractionHandlerTypes, container } from '@sapphire/framework';
+import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { MessageFlags, type ButtonInteraction, type Message } from 'discord.js';
+import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { queueEmpty, queueList, QUEUE_PAGE_SIZE } from '../views/queue.ts';
 import { RepeatMode } from 'lavalink-client';
 import { stop } from '../views/stop.ts';
 import { getUserQueuedTracks } from '../../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../../lavalink/player/customPlayer.ts';
-import { buildControllerCardPayload } from '../../lavalink/player/controllerPayload.ts';
+import { updateControllerOrFail } from '../utils/controllerRefresh.ts';
 import { currentChapterIndex } from '../../lavalink/player/chapters.ts';
 import { errorView } from '../../../../lib/errorView.ts';
-import { thrownCode } from '../../../../lib/thrownError.ts';
 import { GUARD_MESSAGES, guardPlayerAccess, replyGuardError } from '../utils/interactionGuards.ts';
 import { actorFromMember } from '../../application/actor.ts';
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
@@ -82,65 +81,22 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 	}
 
-	private async buildControllerPayload(player: CustomPlayer, message: Message) {
-		const { components, attachments, files } = await buildControllerCardPayload(container.lavalink, player, {
-			volume: player.volume,
-			textChannelId: message.channelId,
-			message
-		});
-		return {
-			components: [components],
-			attachments,
-			files,
-			flags: [MessageFlags.IsComponentsV2],
-			allowedMentions: { roles: [], users: [] }
-		} as const;
-	}
-
-	private async safeUpdate(interaction: ButtonInteraction<'cached'>, player: CustomPlayer): Promise<boolean> {
-		try {
-			// 채널 설정 조회가 끝나기 전에 interaction을 ACK해 Discord의 3초 제한을 피한다.
-			if (!interaction.deferred) await interaction.deferUpdate();
-			const payload = await this.buildControllerPayload(player, interaction.message);
-			const updated = await interaction.message.edit(payload);
-			if (player.messageId === interaction.message.id) {
-				player.controller = updated;
-			}
-			return true;
-		} catch (error) {
-			const code = thrownCode(error);
-			if (code === 10008 || code === 10062 || code === 40060) return false;
-			throw error;
-		}
-	}
-
-	private async updateControllerOrFail(interaction: ButtonInteraction<'cached'>, player: CustomPlayer): Promise<void> {
-		if (!(await this.safeUpdate(interaction, player))) {
-			await interaction
-				.followUp({
-					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${emoji('error')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
-				})
-				.catch(() => null);
-		}
-	}
-
 	private async handlePause(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
 		await interaction.deferUpdate();
 		await this.container.music.pause(actorFromMember(interaction.member));
-		await this.updateControllerOrFail(interaction, player);
+		await updateControllerOrFail(interaction, player);
 	}
 
 	private async handleResume(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
 		await interaction.deferUpdate();
 		await this.container.music.resume(actorFromMember(interaction.member));
-		await this.updateControllerOrFail(interaction, player);
+		await updateControllerOrFail(interaction, player);
 	}
 
 	private async handleRepeat(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, mode: RepeatMode) {
 		await interaction.deferUpdate();
 		await this.container.music.setRepeat(actorFromMember(interaction.member), mode);
-		await this.updateControllerOrFail(interaction, player);
+		await updateControllerOrFail(interaction, player);
 	}
 
 	private async handleChapter(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, direction: 'prev' | 'next') {
@@ -178,7 +134,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 		await interaction.deferUpdate();
 		await player.seek(target);
-		await this.updateControllerOrFail(interaction, player);
+		await updateControllerOrFail(interaction, player);
 	}
 
 	private async handleVolume(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, direction: 'up' | 'down') {
@@ -197,7 +153,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 		await interaction.deferUpdate();
 		await this.container.music.setVolume(actorFromMember(interaction.member), next);
-		await this.updateControllerOrFail(interaction, player);
+		await updateControllerOrFail(interaction, player);
 	}
 
 	private async handleStop(interaction: ButtonInteraction<'cached'>) {

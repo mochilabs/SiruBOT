@@ -10,11 +10,17 @@ type PlayTrack = Track | UnresolvedTrack;
 type PlayPlaylist = NonNullable<SearchResult['playlist']>;
 type PlayResult = MusicPlayResult<Player, PlayTrack, PlayPlaylist>;
 
-export async function trackPlayFeedback(player: Player, track: PlayTrack, userId: string, wasIdle: boolean): Promise<ContainerBuilder[]> {
+export async function trackPlayFeedback(
+	player: Player,
+	track: PlayTrack,
+	userId: string,
+	wasIdle: boolean,
+	{ fromDashboard }: { fromDashboard?: view.DashboardSource } = {}
+): Promise<ContainerBuilder[]> {
 	if (wasIdle && (await container.audioService.isControllerEnabled(player.guildId))) {
-		return [view.playStarted({ track: track as Track, userId })];
+		return [view.playStarted({ track: track as Track, userId, fromDashboard })];
 	}
-	return [view.trackAdded(view.trackAddedProps(player, track as Track))];
+	return [view.trackAdded({ ...view.trackAddedProps(player, track as Track), fromDashboard })];
 }
 
 export async function editTrackPlayReply(

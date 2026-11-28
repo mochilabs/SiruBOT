@@ -26,6 +26,7 @@ import { canAddTracks, canControlMusic, createMusicAccess, MUSIC_ACCESS_MESSAGES
 import type { MusicRequester } from '../application/play.ts';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 import { publishPlayerState } from '../lavalink/playerStatePublisher.ts';
+import { getConfig } from '../../../lib/config.ts';
 
 type Payload = RedisRpcPayload<typeof playerWebRpc>;
 
@@ -124,7 +125,9 @@ export function createPlayerWebResponder(): RedisBinding {
 					logger,
 					guildId,
 					result.player.textChannelId,
-					await trackPlayFeedback(result.player, track, request.userId, result.wasIdle)
+					await trackPlayFeedback(result.player, track, request.userId, result.wasIdle, {
+						fromDashboard: { url: dashboardServerUrl(guildId) }
+					})
 				);
 			}
 			return {};
@@ -297,6 +300,11 @@ async function fetchMember(guild: Guild | null, userId: string): Promise<GuildMe
 	const cached = guild.members.cache.get(userId);
 	if (cached) return cached;
 	return guild.members.fetch(userId).catch(() => null);
+}
+
+function dashboardServerUrl(guildId: string): string | null {
+	const base = getConfig().links.dashboardUrl;
+	return base ? `${base}/servers/${guildId}` : null;
 }
 
 function botVoiceChannelId(guild: Guild): string | null {
