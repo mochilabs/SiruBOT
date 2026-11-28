@@ -19,10 +19,8 @@ export class GatewayDomainError extends Error {
 
 /** data-api가 가사를 못 찾았다고 답했는지 (오류가 아니라 검색 결과 없음) */
 export function isLyricsNotFound(error: unknown): boolean {
-	return (
-		error instanceof GatewayDomainError &&
-		(error.identifier === 'lyrics_not_found' || error.identifier === 'not_found' || error.identifier === 'data_api_404')
-	);
+	// 가사 라우트가 내는 코드만 봐요. 일반 404(not_found, data_api_404)는 경로·프록시 문제라 실제 실패로 남겨요.
+	return error instanceof GatewayDomainError && error.identifier === 'lyrics_not_found';
 }
 
 export interface LyricsResult {

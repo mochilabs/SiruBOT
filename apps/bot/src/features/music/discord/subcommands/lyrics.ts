@@ -59,7 +59,13 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	}
 
 	try {
-		const results = current ? await searchLyricsForTrack(current).catch(() => searchLyrics(query)) : await searchLyrics(query);
+		// 가사 없음은 빈 결과로 바꿔 아래 "찾을 수 없었어요" 분기 하나로 처리해요.
+		const results = await (current ? searchLyricsForTrack(current).catch(() => searchLyrics(query)) : searchLyrics(query)).catch(
+			(error: unknown) => {
+				if (isLyricsNotFound(error)) return [];
+				throw error;
+			}
+		);
 
 		if (!results || results.length === 0 || (!results[0].plainLyrics && !results[0].syncedLyrics)) {
 			await interaction.editReply({
@@ -165,13 +171,6 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 		startViewSession();
 	} catch (error) {
-		if (isLyricsNotFound(error)) {
-			await interaction.editReply({
-				components: [errorView(`${emoji('error')} **${query}**에 대한 가사를 찾을 수 없었어요.`)],
-				flags: [MessageFlags.IsComponentsV2]
-			});
-			return;
-		}
 		container.logger.error(`[lyrics] lyrics search failed (guild ${interaction.guildId}): ${error}`);
 		throw new UserError({
 			identifier: 'lyrics_search_failed',

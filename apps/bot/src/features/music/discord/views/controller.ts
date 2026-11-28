@@ -20,7 +20,8 @@ import { controllerId } from '../customIds.ts';
 import { RELATED_TRACK_REQUESTER_ID, TTS_CLIP_REQUESTER_ID } from '../../lavalink/requester.ts';
 import { CustomPlayer } from '../../lavalink/player/customPlayer.ts';
 import { nowPlayingTrack } from '../../lavalink/player/nowPlaying.ts';
-import { currentChapter, currentChapterIndex } from '../../lavalink/player/chapters.ts';
+import { chapterPickValue, currentChapter, currentChapterIndex } from '../../lavalink/player/chapters.ts';
+import { truncateText } from '../../../../lib/text.ts';
 
 const MAX_TRACK_URL_LENGTH = 70;
 
@@ -37,10 +38,6 @@ export function chapterWindow(total: number, currentIndex: number | null): { sta
 	return { start, end: start + CHAPTER_OPTION_LIMIT };
 }
 
-function clip(text: string, max: number): string {
-	return text.length > max ? `${text.slice(0, max - 1)}…` : text;
-}
-
 /**
  * 챕터 셀렉트 메뉴. 현재 챕터는 기본 선택값이 아니라 placeholder로 보여줘요 —
  * 기본 선택된 옵션은 다시 고를 수 없어서, 그러면 지금 챕터를 처음부터 다시 듣기가 막혀요.
@@ -53,9 +50,9 @@ function chapterSelectRow(player: CustomPlayer): ActionRowBuilder<StringSelectMe
 	const options = chapters.slice(start, end).map((chapter, offset) => {
 		const index = start + offset;
 		return new StringSelectMenuOptionBuilder()
-			.setLabel(clip(`${index + 1}. ${chapter.name || '이름 없는 챕터'}`, 100))
+			.setLabel(truncateText(`${index + 1}. ${chapter.name || '이름 없는 챕터'}`, 100))
 			.setDescription(`${formatTime(chapter.start / 1000)} ~ ${formatTime(chapter.end / 1000)}`)
-			.setValue(`${index}:${chapter.start}`);
+			.setValue(chapterPickValue(index, chapter.start, player.chaptersTrackIdentifier));
 	});
 	const hidden = chapters.length - (end - start);
 	const placeholder =
@@ -64,7 +61,7 @@ function chapterSelectRow(player: CustomPlayer): ActionRowBuilder<StringSelectMe
 			: `현재 ${currentIndex + 1}/${chapters.length}: ${chapters[currentIndex]!.name}${hidden > 0 ? ` · 근처 ${end - start}개만 보여요` : ''}`;
 	const menu = new StringSelectMenuBuilder()
 		.setCustomId(controllerId.encode('chapterPick'))
-		.setPlaceholder(clip(placeholder, 150))
+		.setPlaceholder(truncateText(placeholder, 150))
 		.addOptions(options);
 	return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
 }

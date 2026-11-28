@@ -19,7 +19,11 @@ vi.mock('../../lavalink/autoPlayRelated.ts', () => ({
 	remainingUntilQueueEnd: mocks.remaining
 }));
 vi.mock('../../lavalink/player/nowPlaying.ts', () => ({ nowPlayingTrack: mocks.nowPlaying }));
-vi.mock('../../lavalink/player/chapters.ts', () => ({ currentChapter: mocks.chapter, currentChapterIndex: mocks.chapterIndex }));
+vi.mock('../../lavalink/player/chapters.ts', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../../lavalink/player/chapters.ts')>()),
+	currentChapter: mocks.chapter,
+	currentChapterIndex: mocks.chapterIndex
+}));
 vi.mock('../../lavalink/requester.ts', () => ({
 	RELATED_TRACK_REQUESTER_ID: 'related_track',
 	TTS_CLIP_REQUESTER_ID: 'chat_tts_clip'
@@ -127,13 +131,13 @@ describe('controllerView action rows', () => {
 
 	it('챕터가 있으면 챕터 행을 추가한다', () => {
 		mocks.chapterIndex.mockReturnValue(0);
-		const rows = actionRows(controllerJson({ player: player({ chapters: CHAPTERS }) }));
+		const rows = actionRows(controllerJson({ player: player({ chapters: CHAPTERS, chaptersTrackIdentifier: 'vid' }) }));
 
 		expectValidActionRows(rows);
 		expect(rows).toHaveLength(2);
 		expect(rows[1]!.map((menu) => menu.custom_id)).toEqual(['controller:v1:chapterPick']);
 		const menu = rows[1]![0] as PlainComponent & { options: { label: string; value: string }[]; placeholder: string };
-		expect(menu.options).toEqual([expect.objectContaining({ label: '1. 1장', value: '0:0' })]);
+		expect(menu.options).toEqual([expect.objectContaining({ label: '1. 1장', value: '0:0:vid' })]);
 		expect(menu.placeholder).toBe('현재 1/1: 1장');
 	});
 

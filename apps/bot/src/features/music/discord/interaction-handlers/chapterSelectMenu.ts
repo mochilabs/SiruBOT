@@ -32,7 +32,7 @@ export default class ChapterSelectMenuHandler extends InteractionHandler {
 		);
 		if (!player) return;
 
-		const target = chapterStartFromPick(player.chapters ?? [], value);
+		const target = chapterStartFromPick(player.chapters ?? [], player.chaptersTrackIdentifier, value);
 		if (target === null) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
