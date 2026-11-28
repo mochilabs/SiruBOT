@@ -305,7 +305,23 @@ describe('castVote: 투표 집계', () => {
 			}
 		});
 		await expect(service.castVote('100000000000000001', 'm0')).rejects.toThrow('boom');
-		await expect(service.castVote('100000000000000001', 'm1')).resolves.toEqual({ kind: 'passed', votes: 3, requiredVotes: 2 });
+		await expect(service.castVote('100000000000000001', 'm1')).resolves.toEqual({ kind: 'passed', votes: 2, requiredVotes: 2 });
+		expect(skipApproved).toHaveBeenCalledTimes(2);
+	});
+
+	it('건너뛰기가 실패하면 방금 투표한 사람이 다시 눌러 재시도할 수 있어요', async () => {
+		let fail = true;
+		const { service, skipApproved } = await started(crowd(4), {
+			skipApproved: async () => {
+				if (fail) {
+					fail = false;
+					throw new Error('boom');
+				}
+				return { skipped: true as const };
+			}
+		});
+		await expect(service.castVote('100000000000000001', 'm0')).rejects.toThrow('boom');
+		await expect(service.castVote('100000000000000001', 'm0')).resolves.toEqual({ kind: 'passed', votes: 2, requiredVotes: 2 });
 		expect(skipApproved).toHaveBeenCalledTimes(2);
 	});
 

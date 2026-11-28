@@ -179,8 +179,9 @@ export function createVoteSkip(deps: VoteSkipDeps): VoteSkipService {
 			try {
 				await deps.music.skipApproved(vote.guildId);
 			} catch (error) {
-				// 실패하면 투표를 다시 열어 두어요 (다음 클릭이 다시 시도해요).
+				// 실패하면 투표를 다시 열고 이 표도 빼요. 그래야 방금 누른 사람이 다시 눌러 재시도할 수 있어요.
 				vote.passing = false;
+				vote.voterIds.delete(userId);
 				throw error;
 			}
 			activeVotes.delete(voteId);
