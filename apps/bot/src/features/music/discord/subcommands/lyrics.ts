@@ -1,7 +1,7 @@
 import { container, UserError } from '@sapphire/framework';
 import { emoji, resolveYouTubeVideoId } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageComponentInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
-import { searchLyrics, searchLyricsForTrack } from '../../../../services/dataApiClient.ts';
+import { isLyricsNotFound, searchLyrics, searchLyricsForTrack } from '../../../../services/dataApiClient.ts';
 import { LYRICS_BUTTON_IDS, liveLyricsView, lyricsView } from '../views/lyrics.ts';
 import { buildLiveLyricsText, parseLiveLines, startLiveLoop } from '../utils/liveLyrics.ts';
 import { buildLyricsText, hasTranslation, type LyricsViewMode } from '../utils/lyricsText.ts';
@@ -165,6 +165,13 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 		startViewSession();
 	} catch (error) {
+		if (isLyricsNotFound(error)) {
+			await interaction.editReply({
+				components: [errorView(`${emoji('error')} **${query}**에 대한 가사를 찾을 수 없었어요.`)],
+				flags: [MessageFlags.IsComponentsV2]
+			});
+			return;
+		}
 		container.logger.error(`[lyrics] lyrics search failed (guild ${interaction.guildId}): ${error}`);
 		throw new UserError({
 			identifier: 'lyrics_search_failed',

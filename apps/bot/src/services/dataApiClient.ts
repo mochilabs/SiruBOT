@@ -17,6 +17,14 @@ export class GatewayDomainError extends Error {
 	}
 }
 
+/** data-api가 가사를 못 찾았다고 답했는지 (오류가 아니라 검색 결과 없음) */
+export function isLyricsNotFound(error: unknown): boolean {
+	return (
+		error instanceof GatewayDomainError &&
+		(error.identifier === 'lyrics_not_found' || error.identifier === 'not_found' || error.identifier === 'data_api_404')
+	);
+}
+
 export interface LyricsResult {
 	trackName: string;
 	artistName: string;
@@ -94,7 +102,7 @@ export async function searchLyrics(query: string): Promise<LyricsResult[]> {
 	const q = query.replace(/\(.*?\)|\[.*?\]/g, '').trim();
 	const data = await gatewayGet<LyricsResult | LyricsResult[]>(`/v1/lyrics?q=${encodeURIComponent(q)}`);
 	const results = Array.isArray(data) ? data : [data];
-	if (!results?.length || !results[0]?.trackName) throw new Error('lyrics not found');
+	if (!results?.length || !results[0]?.trackName) throw new GatewayDomainError('lyrics_not_found', '가사를 찾지 못했어요.');
 	return results;
 }
 
@@ -109,7 +117,7 @@ export async function searchLyricsForTrack(track: {
 	if (track.sourceName) params.set('source', track.sourceName);
 	if (track.videoId) params.set('videoId', track.videoId);
 	const data = await gatewayGet<LyricsResult>(`/v1/lyrics?${params}`);
-	if (!data?.trackName) throw new Error('lyrics not found');
+	if (!data?.trackName) throw new GatewayDomainError('lyrics_not_found', '가사를 찾지 못했어요.');
 	return [data];
 }
 
