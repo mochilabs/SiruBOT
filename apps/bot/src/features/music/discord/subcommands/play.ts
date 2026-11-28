@@ -1,8 +1,8 @@
 import { container } from '@sapphire/framework';
-import { getSimpleYouTubeSuggestions } from '../../../../services/dataApiClient.ts';
 import { AutocompleteInteraction, ChatInputCommandInteraction, type SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandBuilder } from 'discord.js';
 import { SearchPlatform } from 'lavalink-client';
 import { actorFromMember } from '../../application/actor.ts';
+import { respondPlayQuery } from '../utils/autocomplete.ts';
 import { editTrackPlayReply, replyPlaylistPlay } from '../utils/playFeedback.ts';
 
 export const name = 'play';
@@ -46,30 +46,7 @@ export function withOptions<T extends SlashCommandSubcommandBuilder | SlashComma
 }
 
 export async function autocomplete(interaction: AutocompleteInteraction): Promise<void> {
-	const focusedOption = interaction.options.getFocused(true);
-
-	if (focusedOption.name === 'query') {
-		const query = focusedOption.value;
-
-		if (query.length < 2) {
-			const defaultSuggestions = ['인기 음악', '최신 K-POP', '팝송 모음', '힙합 음악', '발라드 명곡', '일본 음악', '클래식 음악', '재즈 음악'];
-			return interaction.respond(defaultSuggestions.map((suggestion) => ({ name: suggestion, value: suggestion })));
-		}
-
-		try {
-			const suggestions = await getSimpleYouTubeSuggestions(query, 25);
-			const autocompleteChoices = suggestions.slice(0, 25).map((suggestion) => ({
-				name: suggestion.length > 100 ? suggestion.substring(0, 97) + '...' : suggestion,
-				value: suggestion.length > 100 ? suggestion.substring(0, 100) : suggestion
-			}));
-			return interaction.respond(autocompleteChoices);
-		} catch {
-			const fallbackSuggestions = [query, `${query} 음악`, `${query} 노래`, `${query} 가사`, `${query} 플레이리스트`];
-			return interaction.respond(fallbackSuggestions.map((suggestion) => ({ name: suggestion, value: suggestion })));
-		}
-	}
-
-	return interaction.respond([]);
+	await respondPlayQuery(interaction, 'play');
 }
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {

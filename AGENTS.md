@@ -38,6 +38,12 @@ Each app's file ends with a **Run and test** section (start, port, health check,
 
 Backend apps run from `dist/`: build first (`yarn workspace @sirubot/<app> build`, or keep `yarn watch` running), then `yarn workspace @sirubot/<app> start`. `docker/docker-compose.yml` starts Redis, PostgreSQL and a plugin-less Lavalink (no YouTube or mixer; `docs/setup-dev.md`).
 
+## Comments
+
+- Prefer code without comments: names, small functions and named constants should make the code read on its own.
+- Comment only complex logic or a non-obvious *why* (a constraint, a workaround, an ordering that matters), kept to a line or two. Key files (entry points, shared contracts) may carry a short header. Never restate what the code does, and don't add doc comments by default.
+- Delete comments that no longer match the code instead of updating them around it.
+
 ## Branches and PRs
 
 - Branch from `beta`. Never commit directly to `beta` or `main`. PR base is **always `beta`** (`main` is the deploy snapshot; fix with `gh pr edit <N> --base beta`).

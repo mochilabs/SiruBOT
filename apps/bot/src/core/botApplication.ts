@@ -50,6 +50,7 @@ import {
 	RedisStore,
 	SponsorBlockService,
 	TrackService,
+	TrackSuggestionService,
 	autoPlayRelated,
 	createMusicAccess,
 	createMusicControl,
@@ -223,6 +224,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.guildService = new GuildService({ db: container.db });
 		setContextThemeResolver(currentGuildTheme);
 		container.trackService = new TrackService({ db: container.db, logger: appLogger });
+		container.trackSuggestions = new TrackSuggestionService({ db: container.db });
 		container.playlistService = new PlaylistService({ db: container.db });
 		container.audioService = new AudioService({
 			logger: appLogger,
