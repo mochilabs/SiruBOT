@@ -22,7 +22,11 @@ export class CountingStateStore implements Stoppable {
 
 	public constructor(private readonly deps: CountingStateDeps) {}
 
-	public async load(guildId: string): Promise<CountingState> {
+	/**
+	 * null means Redis could not be read (not connected, timeout). The caller must skip the message: judging it against
+	 * the empty default and saving would overwrite the real count and best record once Redis is back.
+	 */
+	public async load(guildId: string): Promise<CountingState | null> {
 		const cached = this.memory.get(guildId);
 		if (cached) return cached;
 
@@ -30,7 +34,8 @@ export class CountingStateStore implements Stoppable {
 			.getRedisStore()
 			.getCacheHashFields(countingStateKey(guildId))
 			.catch(() => null);
-		if (fields && fields.current !== undefined) {
+		if (fields === null) return null;
+		if (fields.current !== undefined) {
 			const state: CountingState = {
 				current: Number.parseInt(fields.current, 10) || 0,
 				lastUserId: fields.lastUserId && fields.lastUserId.length > 0 ? fields.lastUserId : null,

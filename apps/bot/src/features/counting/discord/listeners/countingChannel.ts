@@ -37,6 +37,7 @@ export class CountingChannelListener extends Listener {
 
 			this.container.usageRecorder?.record(guildId, usageFeatureKey('msg', 'counting'), message.author.id);
 			const state = await this.container.countingState.load(guildId);
+			if (!state) return;
 			const result = evaluateCounting(state, attempt, message.author.id);
 			this.container.countingState.save(guildId, result.state);
 

@@ -24,7 +24,7 @@ beforeEach(async () => {
 	await flushTick();
 	vi.resetAllMocks();
 	owner = new CountingStateStore(deps);
-	mocks.getCacheHashFields.mockResolvedValue(null);
+	mocks.getCacheHashFields.mockResolvedValue({});
 	mocks.setCacheHashFields.mockResolvedValue(undefined);
 	mocks.deleteCacheValue.mockResolvedValue(undefined);
 });

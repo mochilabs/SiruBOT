@@ -79,7 +79,7 @@ beforeEach(async () => {
 	container.countingState = new CountingStateStore({ getRedisStore: () => container.redisStore });
 	listener = createListener();
 	mocks.getChatToolSettings.mockResolvedValue({ countingEnabled: true, countingChannelId: 'counting-channel' });
-	mocks.getCacheHashFields.mockResolvedValue(null);
+	mocks.getCacheHashFields.mockResolvedValue({});
 	mocks.setCacheHashFields.mockResolvedValue(undefined);
 	mocks.deleteCacheValue.mockResolvedValue(undefined);
 });
@@ -168,6 +168,20 @@ describe('countingChannel 카운팅 규칙 (행동 보존)', () => {
 		expect(JSON.stringify(m.reply.mock.calls)).toContain('5부터 차례로 세야 해요');
 		expect(JSON.stringify(m.reply.mock.calls)).toContain('최고 기록 7');
 		expect(await container.countingState.load(guildId)).toEqual({ current: 0, lastUserId: null, best: 7 });
+	});
+
+	it('Redis를 읽지 못하면 그 메시지를 건너뛰고 기록을 덮어쓰지 않아요', async () => {
+		const guildId = 'redis-down-guild';
+		mocks.getCacheHashFields.mockResolvedValueOnce(null);
+		const m = fakeMessage({ guildId, userId: 'user-2', content: '9' });
+
+		await listener.run(m.message);
+		expect(m.reply).not.toHaveBeenCalled();
+		expect(mocks.setCacheHashFields).not.toHaveBeenCalled();
+
+		mocks.getCacheHashFields.mockResolvedValueOnce({ current: '8', lastUserId: 'user-1', best: '20' });
+		await listener.run(fakeMessage({ guildId, userId: 'user-2', content: '9' }).message);
+		expect(await container.countingState.load(guildId)).toEqual({ current: 9, lastUserId: 'user-2', best: 20 });
 	});
 
 	it('같은 사람이 연속으로 세면 막아요', async () => {
