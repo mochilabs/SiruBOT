@@ -63,7 +63,6 @@ import {
 	createPlaylistPlayback,
 	playbackMessages,
 	handleMixerNeedNext,
-	CurrentBpmCache,
 	createMusicToolPort,
 	type LavalinkDeps,
 	type LavalinkLogger,
@@ -225,8 +224,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			},
 			nowPlayingCards: { cache: new Map(), pending: new Map(), retryAfter: new Map() },
 			playerStatePublishTracker: new Map(),
-			relatedFetchInFlight: new Map(),
-			currentBpm: new CurrentBpmCache()
+			relatedFetchInFlight: new Map()
 		};
 		container.lavalink = lavalink;
 		container.dataApi = createDataApiClient({ logger: appLogger });
@@ -234,7 +232,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.guildService = new GuildService({ db: container.db });
 		// 컨테이너 강조선·앱 이모지가 서버 테마(themePreset)를 따르도록 맥락 훅을 연결해요.
 		setContextThemeResolver(currentGuildTheme);
-		container.trackService = new TrackService({ db: container.db });
+		container.trackService = new TrackService({ db: container.db, logger: appLogger });
 		container.playlistService = new PlaylistService({ db: container.db });
 		container.audioService = new AudioService({
 			logger: appLogger,

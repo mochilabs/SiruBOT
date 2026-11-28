@@ -8,7 +8,6 @@ import { getDisplayNowPlayingCard, type NowPlayingCardAttachment } from './nowPl
 import { controllerView } from '../../discord/views/controller.ts';
 import type { CustomPlayer } from './customPlayer.ts';
 import type { LavalinkDeps } from '../deps.ts';
-import { nowPlayingTrack } from './nowPlaying.ts';
 import { withGuildTheme } from '../../../../lib/guildTheme.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 
@@ -49,8 +48,6 @@ export async function buildControllerCardPayload(
 	const pinned = Boolean(options.textChannelId) && options.textChannelId === panelChannelId;
 	const card = pinned ? getDisplayNowPlayingCard(deps, player) : null;
 
-	const currentIdentifier = nowPlayingTrack(player)?.info.identifier;
-	const currentNode = player.node;
 	// 컨트롤러는 플레이어 이벤트에서 그려져 상호작용 맥락이 없으므로 서버 테마를 직접 싣는다.
 	const components = await withGuildTheme(
 		player.guildId,
@@ -60,18 +57,7 @@ export async function buildControllerCardPayload(
 				player,
 				volume: options.volume,
 				nowPlayingCardUrl: card?.url,
-				panel: pinned,
-				currentBpm: deps.currentBpm.read(
-					player,
-					currentNode,
-					currentIdentifier,
-					(signal) => deps.mixerService.getState(player, signal),
-					() => {
-						if (player.node === currentNode && nowPlayingTrack(player)?.info.identifier === currentIdentifier) {
-							deps.playerNotifier.updateController(player);
-						}
-					}
-				)
+				panel: pinned
 			}),
 		{ fresh: true }
 	);

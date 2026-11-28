@@ -21,8 +21,6 @@ export interface MixerStateResponse {
 	maxTempoChange?: number;
 	beatmatchMinConfidence?: number;
 	adaptiveTransitionsSupported?: boolean;
-	currentTrackBpm?: number | null;
-	currentTrackBpmIdentifier?: string | null;
 	silenceEnabled?: boolean;
 	silenceThresholdDb?: number;
 	tailConfirmMs?: number;
