@@ -14,6 +14,7 @@ import { prettySourceName } from "@/utils";
 
 import { interpolatedPositionMs, ProgressBar } from "./live-progress-bar";
 import { CONTROL_BLOCKED_HINT, sendPlayerCommand, VOICE_CONTEXT_REFRESH_MS } from "./player-command";
+import { useArtworkColor } from "./use-artwork-color";
 import { useVoiceContext } from "./voice-context";
 
 const VOLUME_SEND_DEBOUNCE_MS = 400;
@@ -34,6 +35,7 @@ export function NowPlaying({
   guildId,
 }: NowPlayingProps) {
   const toast = useToast();
+  const artworkColor = useArtworkColor(state.artworkUrl ?? null);
   const unavailable = state.stale || (mode === "stream" && !connected);
   const positionMs = unavailable ? state.positionMs : interpolatedPositionMs(state, receivedAt);
   const [pendingAction, setPendingAction] = useState<
@@ -239,7 +241,18 @@ export function NowPlaying({
   }, [favoritePending, guildId, state.trackUri, toast]);
 
   return (
-    <section className="flex flex-col gap-3 rounded-row bg-surface-2 p-3 sm:p-4">
+    <section className="relative isolate flex flex-col gap-3 overflow-hidden rounded-row bg-surface-2 p-3 sm:p-4">
+      {/* 앨범 색을 아주 옅게만 비춰요 — 배경 톤은 그대로 두고 이 카드 안에서만 보여요 */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 transition-opacity duration-slow"
+        style={{
+          opacity: artworkColor ? 1 : 0,
+          background: artworkColor
+            ? `linear-gradient(135deg, rgb(${artworkColor} / 0.12) 0%, rgb(${artworkColor} / 0.04) 55%, transparent 100%)`
+            : undefined,
+        }}
+      />
       <div className="flex min-w-0 items-center gap-3 sm:gap-4">
         {state.artworkUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
