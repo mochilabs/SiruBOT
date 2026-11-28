@@ -122,22 +122,30 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 		const startLive = async (button: MessageComponentInteraction): Promise<void> => {
 			const lines = liveLines!;
-			const translation = hasTranslation(result) ? result.translation!.lines! : null;
+			const currentTranslation = () => (hasTranslation(result) ? result.translation!.lines! : null);
 			const livePayload = (text: string) => ({
 				components: [liveLyricsView(result.trackName, text)],
 				flags: [MessageFlags.IsComponentsV2 as const]
 			});
-			await button.update(livePayload(buildLiveLyricsText(lines, -1, translation)));
+			await button.update(livePayload(buildLiveLyricsText(lines, -1, currentTranslation())));
+			// 번역이 아직 준비 중이면 실시간 동안 10초마다 다시 불러와 줄에 붙여요. 위 update가 실패하면 타이머를 만들지 않아요.
+			const refreshTimer = setInterval(() => {
+				if (hasTranslation(result) || result.translation?.status !== 'pending' || !current) return;
+				void searchLyricsForTrack(current)
+					.then((fresh) => void (fresh[0] && (result = fresh[0])))
+					.catch(() => null);
+			}, 10_000);
 
 			let liveSession: ComponentSession | undefined;
 			const stop = startLiveLoop({
 				lines,
-				translation,
+				getTranslation: currentTranslation,
 				getPositionMs: () => container.audio.getPlayer(interaction.guildId)?.position ?? null,
 				isSameTrack: () => trackKey(container.audio.getPlayer(interaction.guildId)?.queue.current) === startKey,
 				// 인터랙션 토큰은 15분 뒤 만료되고 타이머 중 서버 색 변경도 반영하기 위해 메시지를 직접 고쳐요.
 				render: (text) => inFreshGuildTheme(interaction.guildId, async () => void (await message.edit(livePayload(text)))),
 				onEnd: async () => {
+					clearInterval(refreshTimer);
 					liveSession?.settle('ended');
 					await inFreshGuildTheme(interaction.guildId, () => message.edit(render())).catch(() => null);
 					startViewSession();

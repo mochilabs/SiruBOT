@@ -1,6 +1,7 @@
 import { findActiveLineIndex, parseLrc, type LyricLine } from '@sirubot/utils/lrc';
 
-export const LIVE_LEAD_MS = 700;
+// 메시지 수정이 Discord에 닿기까지 걸리는 시간만큼 앞서 줄을 넘겨요.
+export const LIVE_LEAD_MS = 300;
 /** 수정 사이 최소 간격 — 채널당 수정 횟수 제한(대략 5초에 5회)을 넘지 않게 해요 */
 export const LIVE_MIN_EDIT_GAP_MS = 1_500;
 export const LIVE_TICK_MS = 500;
@@ -41,7 +42,8 @@ export type LiveEndReason = 'user' | 'track' | 'error';
 
 export interface LiveLoopOptions {
 	lines: ReadonlyArray<LyricLine>;
-	translation: Record<string, string> | null;
+	// 번역은 뒤늦게 준비될 수 있어서 줄을 그릴 때마다 최신 값을 물어봐요.
+	getTranslation: () => Record<string, string> | null;
 	getPositionMs: () => number | null;
 	isSameTrack: () => boolean;
 	render: (text: string) => Promise<void>;
@@ -69,7 +71,7 @@ export function startLiveLoop(options: LiveLoopOptions): (reason?: LiveEndReason
 		if (index === lastIndex || Date.now() - lastEditAt < LIVE_MIN_EDIT_GAP_MS) return;
 		busy = true;
 		try {
-			await options.render(buildLiveLyricsText(options.lines, index, options.translation));
+			await options.render(buildLiveLyricsText(options.lines, index, options.getTranslation()));
 			lastIndex = index;
 			lastEditAt = Date.now();
 		} catch {
