@@ -376,4 +376,17 @@ describe('마감과 추첨', () => {
 		await expect(t.service.reroll(GUILD, id, 1)).rejects.toMatchObject({ kind: 'conflict' });
 		await expect(t.service.reroll(GUILD, 'nope', 1)).rejects.toMatchObject({ kind: 'not_found' });
 	});
+
+	it('다시 뽑기가 겹치면 뒤의 요청을 거절해서 먼저 발표된 당첨자를 지우지 않아요', async () => {
+		const t = setup();
+		const { id } = await t.service.start(startInput({ winnerCount: 1 }));
+		await enterAll(t, id, 4);
+		await t.runJob(id);
+		const [first, second] = await Promise.allSettled([t.service.reroll(GUILD, id, 1), t.service.reroll(GUILD, id, 1)]);
+		expect(first.status).toBe('fulfilled');
+		expect(second).toMatchObject({ status: 'rejected', reason: { kind: 'conflict' } });
+		expect(t.giveaways.get(id)!.winnerIds).toHaveLength(2);
+		await t.service.reroll(GUILD, id, 1);
+		expect(t.giveaways.get(id)!.winnerIds).toHaveLength(3);
+	});
 });

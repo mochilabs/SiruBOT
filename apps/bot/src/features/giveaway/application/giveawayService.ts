@@ -402,10 +402,20 @@ export class GiveawayService implements Stoppable {
 		const winners = giveawayWinnerCountSchema.safeParse(count);
 		if (!winners.success)
 			throw new AppError('invalid_input', winners.error.issues[0]?.message ?? '당첨자 수가 올바르지 않아요.', { ephemeral: true });
+		// 두 번 겹쳐 뽑으면 둘 다 같은 winnerIds를 읽고, 나중 저장이 먼저 발표된 당첨자를 지워요. 행을 읽기 전에 잠가요.
+		if (this.finalizing.has(giveawayId)) throw new AppError('conflict', '다른 추첨이 진행 중이에요. 잠시 뒤 다시 시도해 주세요.', { ephemeral: true });
+		this.finalizing.add(giveawayId);
+		try {
+			return await this.rerollLocked(guildId, giveawayId, winners.data);
+		} finally {
+			this.finalizing.delete(giveawayId);
+		}
+	}
+
+	private async rerollLocked(guildId: string, giveawayId: string, count: number): Promise<{ winnerIds: string[] }> {
 		const row = await this.deps.db.giveaway.findUnique({ where: { id: giveawayId } });
 		if (!row || row.guildId !== guildId) throw new AppError('not_found', '그 나눔을 찾을 수 없어요.', { ephemeral: true });
 		if (row.status !== 'ended') throw new AppError('conflict', '끝난 나눔에서만 다시 뽑을 수 있어요.', { ephemeral: true });
-
 		const requirements = parseGiveawayRequirements(row.requirements);
 		const entries = await this.deps.db.giveawayEntry.findMany({ where: { giveawayId }, select: { userId: true } });
 		const previous = new Set(row.winnerIds);
@@ -414,7 +424,7 @@ export class GiveawayService implements Stoppable {
 			entries.map((e) => e.userId).filter((id) => !previous.has(id)),
 			requirements
 		);
-		const drawn = drawWinners(pool, winners.data, (max) => this.rng(max));
+		const drawn = drawWinners(pool, count, (max) => this.rng(max));
 		if (drawn.length === 0) throw new AppError('conflict', '새로 뽑을 수 있는 참여자가 없어요.', { ephemeral: true });
 
 		const all = [...row.winnerIds, ...drawn];
