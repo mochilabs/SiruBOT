@@ -66,4 +66,11 @@ describe('TrackSuggestionService', () => {
 		await service.getForUser('u1');
 		expect(findMany).toHaveBeenCalledTimes(2);
 	});
+
+	it('shares one query between overlapping calls for the same user', async () => {
+		const { service, findMany } = setup();
+		const [first, second] = await Promise.all([service.getForUser('u1'), service.getForUser('u1')]);
+		expect(first).toBe(second);
+		expect(findMany).toHaveBeenCalledTimes(1);
+	});
 });

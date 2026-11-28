@@ -51,6 +51,7 @@ export interface TrackSuggestionServiceDeps {
 export class TrackSuggestionService {
 	// 자동완성은 키 입력마다 다시 불리므로, 섞은 순서를 잠깐 고정해 목록이 흔들리지 않게 한다.
 	private readonly cache = new Map<string, { expiresAt: number; suggestions: TrackSuggestion[] }>();
+	private readonly inFlight = new Map<string, Promise<TrackSuggestion[]>>();
 
 	public constructor(private readonly deps: TrackSuggestionServiceDeps) {}
 
@@ -59,6 +60,15 @@ export class TrackSuggestionService {
 		const cached = this.cache.get(userId);
 		if (cached && cached.expiresAt > now) return cached.suggestions;
 
+		const pending = this.inFlight.get(userId);
+		if (pending) return pending;
+
+		const request = this.load(userId, now).finally(() => this.inFlight.delete(userId));
+		this.inFlight.set(userId, request);
+		return request;
+	}
+
+	private async load(userId: string, now: number): Promise<TrackSuggestion[]> {
 		const rows = await this.deps.db.guildTrackHistory.findMany({
 			where: { userId },
 			orderBy: { createdAt: 'desc' },

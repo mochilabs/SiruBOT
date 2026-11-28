@@ -69,18 +69,26 @@ interface Choice {
 	value: string;
 }
 
+function clipValue(text: string): string {
+	let clipped = '';
+	for (const char of text) {
+		if (clipped.length + char.length > CHOICE_VALUE_MAX) break;
+		clipped += char;
+	}
+	return clipped;
+}
+
 function historyChoice(track: TrackSuggestion, mode: PlayQueryMode): Choice {
 	const hasArtist = track.artist.length > 0 && track.artist !== UNKNOWN_ARTIST;
-	const query = (hasArtist ? `${track.title} ${track.artist}` : track.title).slice(0, CHOICE_VALUE_MAX);
 	const useUrl = mode === 'play' && /^https?:\/\//.test(track.url) && track.url.length <= CHOICE_VALUE_MAX;
 	return {
 		name: clipChoiceName(hasArtist ? `${track.title} - ${track.artist}` : track.title),
-		value: useUrl ? track.url : query
+		value: useUrl ? track.url : clipValue(hasArtist ? `${track.title} ${track.artist}` : track.title)
 	};
 }
 
 function textChoice(text: string): Choice {
-	return { name: clipChoiceName(text), value: text.slice(0, CHOICE_VALUE_MAX) };
+	return { name: clipChoiceName(text), value: clipValue(text) };
 }
 
 function uniqueChoices(choices: Choice[]): Choice[] {
@@ -97,36 +105,35 @@ function uniqueChoices(choices: Choice[]): Choice[] {
 export async function buildPlayQueryChoices(input: {
 	query: string;
 	mode: PlayQueryMode;
-	history: readonly TrackSuggestion[];
+	loadHistory: () => Promise<readonly TrackSuggestion[]>;
 	fetchSuggestions: (query: string) => Promise<string[]>;
 }): Promise<Choice[]> {
 	const query = input.query.trim();
 	const needle = query.toLocaleLowerCase();
-	const matches = input.history
+	const [history, suggestions] = await Promise.all([input.loadHistory(), query.length < 2 ? Promise.resolve([]) : input.fetchSuggestions(query)]);
+	const matches = history
 		.filter((track) => track.title.toLocaleLowerCase().includes(needle) || track.artist.toLocaleLowerCase().includes(needle))
 		.map((track) => historyChoice(track, input.mode));
 
 	if (query.length < 2) return matches.length > 0 ? uniqueChoices(matches) : DEFAULT_QUERIES.map(textChoice);
 
-	const top = matches.slice(0, HISTORY_MATCH_LIMIT);
-	try {
-		const suggestions = await input.fetchSuggestions(query);
-		return uniqueChoices([...top, ...suggestions.map(textChoice)]);
-	} catch {
-		return uniqueChoices([...top, textChoice(query)]);
-	}
+	const fallback = suggestions.length > 0 ? suggestions : [query];
+	return uniqueChoices([...matches.slice(0, HISTORY_MATCH_LIMIT), ...fallback.map(textChoice)]);
 }
 
 export async function respondPlayQuery(interaction: AutocompleteInteraction, mode: PlayQueryMode): Promise<void> {
 	const focused = interaction.options.getFocused(true);
 	if (focused.name !== 'query') return interaction.respond([]);
 
-	const history = await container.trackSuggestions.getForUser(interaction.user.id).catch(() => []);
 	const choices = await buildPlayQueryChoices({
 		query: String(focused.value),
 		mode,
-		history,
-		fetchSuggestions: (query) => getSimpleYouTubeSuggestions(query, CHOICE_LIMIT)
+		loadHistory: () =>
+			container.trackSuggestions.getForUser(interaction.user.id).catch((error: unknown) => {
+				container.logger.warn(`[autocomplete] play history lookup failed: ${error instanceof Error ? error.message : String(error)}`);
+				return [];
+			}),
+		fetchSuggestions: (query) => getSimpleYouTubeSuggestions(query, CHOICE_LIMIT).catch(() => [])
 	});
 	await interaction.respond(choices);
 }
