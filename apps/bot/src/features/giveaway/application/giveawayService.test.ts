@@ -228,6 +228,15 @@ describe('GiveawayService.enter', () => {
 		expect(await t.service.leave(id, GUILD, user(1))).toBe(true);
 		expect(await t.service.leave(id, GUILD, user(1))).toBe(false);
 	});
+
+	it('마감 시각이 지나면 추첨 전이라도 참여를 취소할 수 없어요', async () => {
+		const t = setup();
+		const { id } = await t.service.start(startInput());
+		await t.service.enter(id, GUILD, user(1), facts());
+		t.advance(2 * 3_600_000);
+		expect(await t.service.leave(id, GUILD, user(1))).toBe(false);
+		expect(t.entries.get(id)?.size).toBe(1);
+	});
 });
 
 describe('카드 갱신 스로틀', () => {

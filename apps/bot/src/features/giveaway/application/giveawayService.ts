@@ -230,7 +230,8 @@ export class GiveawayService implements Stoppable {
 	/** 참여 취소 — 마감 전에만 돼요 */
 	public async leave(giveawayId: string, guildId: string, userId: string): Promise<boolean> {
 		const row = await this.deps.db.giveaway.findUnique({ where: { id: giveawayId } });
-		if (!row || row.guildId !== guildId || row.status !== 'running') return false;
+		// 마감 시각이 지나면 추첨 작업이 아직 안 돌았어도 status는 running이에요. 참여(enter)와 같은 기준으로 막아요.
+		if (!row || row.guildId !== guildId || row.status !== 'running' || row.endsAt.getTime() <= this.now().getTime()) return false;
 		const { count } = await this.deps.db.giveawayEntry.deleteMany({ where: { giveawayId, userId } });
 		if (count > 0) this.requestCardUpdate(giveawayId);
 		return count > 0;
