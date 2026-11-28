@@ -40,6 +40,7 @@ const EXPECTED_PIECES: string[] = [
 	'commands:tts',
 	'commands:weather',
 	'commands:wrapped',
+	'interaction-handlers:chapterSelectMenu',
 	'interaction-handlers:chatCancel',
 	'interaction-handlers:controllerButton',
 	'interaction-handlers:controllerSelectMenu',
