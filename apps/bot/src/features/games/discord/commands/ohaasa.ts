@@ -70,9 +70,11 @@ export class OhaasaCommand extends Command {
 		try {
 			daily = await fetchOhaasaKo();
 		} catch (e) {
+			// 내부 메시지(data-api 상태 코드 등)는 로그에만 남기고 사용자에게는 안내만 보여줘요.
+			this.container.logger.warn(`[ohaasa] fetch failed: ${e instanceof Error ? e.message : String(e)}`);
 			throw new UserError({
 				identifier: 'ohaasa_fetch_failed',
-				message: `${emoji('error')} 운세 정보를 가져오지 못했어요. 잠시 후 다시 시도해 주세요. (${e instanceof Error ? e.message : String(e)})`,
+				message: `${emoji('error')} 운세 정보를 가져오지 못했어요. 잠시 후 다시 시도해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}

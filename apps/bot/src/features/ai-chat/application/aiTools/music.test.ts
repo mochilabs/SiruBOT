@@ -88,9 +88,13 @@ const deps = {
 	getMusicPlay: () => musicPlay as never,
 	getAudio: () => ({ getPlayer }) as never
 };
-vi.mock('../../../../services/dataApiClient.ts', () => ({ searchLyrics: vi.fn() }));
+vi.mock('../../../../services/dataApiClient.ts', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../../../../services/dataApiClient.ts')>()),
+	searchLyrics: vi.fn()
+}));
 
 import { createMusicTools } from './music.ts';
+import { GatewayDomainError, searchLyrics } from '../../../../services/dataApiClient.ts';
 import { createMusicPlay } from '../../../music/application/play.ts';
 
 const musicTools = createMusicTools(deps);
@@ -386,5 +390,19 @@ describe('music_previous ai tool (이전곡 유스케이스 위임)', () => {
 	it('유스케이스의 거절은 안내 문구 그대로 도구 오류가 된다', async () => {
 		music.previous.mockRejectedValue(new AppError('not_found', '<:error:1> 이전에 재생한 곡이 없어요.'));
 		await expect(previousTool.execute({}, ctx)).rejects.toThrow('이전에 재생한 곡이 없어요.');
+	});
+});
+
+describe('music_lyrics ai tool (결과 없음과 실패 구분)', () => {
+	const lyricsTool = tool('music_lyrics');
+
+	it('data-api가 가사 없음으로 답하면 오류가 아니라 찾을 수 없다고 알린다', async () => {
+		vi.mocked(searchLyrics).mockRejectedValue(new GatewayDomainError('lyrics_not_found', '가사를 찾지 못했어요.'));
+		await expect(lyricsTool.execute({ query: '없는 노래' }, ctx)).rejects.toThrow('**없는 노래**에 대한 가사를 찾을 수 없었어요.');
+	});
+
+	it('실제 실패는 검색 오류로 알린다', async () => {
+		vi.mocked(searchLyrics).mockRejectedValue(new GatewayDomainError('upstream_failed', '외부 API 호출에 실패했어요.'));
+		await expect(lyricsTool.execute({ query: '노래' }, ctx)).rejects.toThrow('가사를 검색하는 중 오류가 발생했어요.');
 	});
 });
