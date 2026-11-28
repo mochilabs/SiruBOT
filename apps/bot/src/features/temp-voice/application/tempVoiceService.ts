@@ -228,8 +228,8 @@ export class TempVoiceService implements Stoppable {
 	}
 
 	/**
-	 * null only when Discord says the room is gone or no longer visible. Any other failure (network, rate limit) is
-	 * 'retry': treating it as gone would drop the record and leave the room uncleaned forever.
+	 * Discord가 방이 없거나 볼 수 없다고 답할 때만 null이에요. 네트워크 오류나 rate limit은 'retry'예요.
+	 * 이걸 없는 방으로 보면 기록이 지워지고 방은 끝까지 정리되지 않아요.
 	 */
 	private async fetchRoom(channelId: string): Promise<Channel | null | 'retry'> {
 		try {
