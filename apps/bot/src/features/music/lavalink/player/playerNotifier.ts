@@ -34,12 +34,19 @@ export class PlayerNotifier implements Stoppable {
 	private readonly progressTicks = new Map<string, NodeJS.Timeout>();
 	private readonly controllerVersions = new WeakMap<CustomPlayer, number>();
 	private readonly destroyedPlayers = new WeakSet<CustomPlayer>();
+	/** Only the newest send per guild runs; older queued sends are skipped. Slash replies are tracked apart so an automatic send never swallows one. */
+	private readonly latestSendTickets = new Map<string, { any: number; interaction: number }>();
+	private readonly queuedSends = new Map<string, number>();
+	private sendTicketSequence = 0;
 
 	private get DEBOUNCE_MS(): number {
 		return getConfig().notifier.debounceMs;
 	}
 	private get PROGRESS_TICK_MS(): number {
 		return getConfig().notifier.progressTickMs;
+	}
+	private get OPERATION_TIMEOUT_MS(): number {
+		return getConfig().notifier.operationTimeoutMs;
 	}
 
 	constructor(private readonly deps: LavalinkDeps) {
@@ -76,12 +83,49 @@ export class PlayerNotifier implements Stoppable {
 	}
 
 	public sendController(player: CustomPlayer, interaction?: ChatInputCommandInteraction): Promise<void> {
+		const { guildId } = player;
 		const version = this.controllerVersions.get(player) ?? 0;
-		return this.enqueueControllerOperation(player.guildId, () => this.sendControllerNow(player, interaction, version));
+		const ticket = this.nextSendTicket(guildId, Boolean(interaction));
+		this.queuedSends.set(guildId, (this.queuedSends.get(guildId) ?? 0) + 1);
+		return this.enqueueControllerOperation(guildId, 'send', async () => {
+			this.decrementQueuedSends(guildId);
+			await this.sendControllerNow(player, interaction, version, ticket);
+		});
 	}
 
-	private enqueueControllerOperation(guildId: string, operation: () => Promise<void>): Promise<void> {
-		return enqueueOperation(this.sendChains, guildId, operation);
+	private decrementQueuedSends(guildId: string): void {
+		const remaining = (this.queuedSends.get(guildId) ?? 1) - 1;
+		if (remaining > 0) this.queuedSends.set(guildId, remaining);
+		else this.queuedSends.delete(guildId);
+	}
+
+	private nextSendTicket(guildId: string, forInteraction: boolean): number {
+		const ticket = ++this.sendTicketSequence;
+		const latest = this.latestSendTickets.get(guildId) ?? { any: 0, interaction: 0 };
+		this.latestSendTickets.set(guildId, { any: ticket, interaction: forInteraction ? ticket : latest.interaction });
+		return ticket;
+	}
+
+	private isSuperseded(guildId: string, ticket: number, forInteraction: boolean): boolean {
+		const latest = this.latestSendTickets.get(guildId);
+		if (!latest) return false;
+		return forInteraction ? latest.interaction !== ticket : latest.any !== ticket;
+	}
+
+	/** A stuck Discord call (e.g. a long 429 wait) must not freeze every later controller change in the guild. */
+	private enqueueControllerOperation(guildId: string, label: string, operation: () => Promise<void>): Promise<void> {
+		return enqueueOperation(this.sendChains, guildId, () => {
+			const run = operation();
+			let timer: NodeJS.Timeout | undefined;
+			const timeout = new Promise<void>((resolve) => {
+				timer = setTimeout(() => {
+					this.logger.warn(`Controller ${label} for guild ${guildId} exceeded ${this.OPERATION_TIMEOUT_MS}ms; releasing the queue`);
+					resolve();
+				}, this.OPERATION_TIMEOUT_MS);
+				timer.unref?.();
+			});
+			return Promise.race([run, timeout]).finally(() => clearTimeout(timer));
+		});
 	}
 
 	private canSend(player: CustomPlayer, version: number, interaction?: ChatInputCommandInteraction): boolean {
@@ -99,8 +143,15 @@ export class PlayerNotifier implements Stoppable {
 	private async sendControllerNow(
 		player: CustomPlayer,
 		interaction?: ChatInputCommandInteraction,
-		version = this.controllerVersions.get(player) ?? 0
+		version = this.controllerVersions.get(player) ?? 0,
+		ticket = this.nextSendTicket(player.guildId, Boolean(interaction))
 	): Promise<void> {
+		const superseded = () => this.isSuperseded(player.guildId, ticket, Boolean(interaction));
+		if (superseded()) {
+			this.logger.debug(`Skipping superseded controller send for guild: ${player.guildId}`);
+			if (interaction?.deferred) await interaction.deleteReply().catch(() => null);
+			return;
+		}
 		this.logger.debug(`Sending new controller for guild: ${player.guildId}`);
 
 		try {
@@ -115,6 +166,10 @@ export class PlayerNotifier implements Stoppable {
 			}
 			if (!options.enableController && !interaction) return;
 			if (!this.canSend(player, version, interaction)) return;
+			if (superseded()) {
+				if (interaction?.deferred) await interaction.deleteReply().catch(() => null);
+				return;
+			}
 
 			const pinnedPanel = interaction ? null : await this.fetchPanelMessage(player);
 			if (pinnedPanel) {
@@ -178,9 +233,13 @@ export class PlayerNotifier implements Stoppable {
 				}
 			}
 
-			if (this.destroyedPlayers.has(player) || (this.controllerVersions.get(player) ?? 0) !== version) {
-				await (interaction ? interaction.deleteReply() : message.delete()).catch(() => null);
-				this.canSend(player, version, interaction);
+			const stale = this.destroyedPlayers.has(player) || (this.controllerVersions.get(player) ?? 0) !== version;
+			// A newer send already owns the controller slot; drop this message instead of overwriting the newer one.
+			if (stale || superseded()) {
+				// The newer send edits the same panel message again, so keep it.
+				const keepPanel = !stale && message.id === pinnedPanel?.id;
+				if (!keepPanel) await (interaction ? interaction.deleteReply() : message.delete()).catch(() => null);
+				if (stale) this.canSend(player, version, interaction);
 				return;
 			}
 			player.messageId = message.id;
@@ -231,22 +290,26 @@ export class PlayerNotifier implements Stoppable {
 		this.debounceTimers.set(player.guildId, timer);
 	}
 
+	/**
+	 * Runs one edit per queue turn with the newest pending state. Updates that arrive meanwhile wait at the back of the
+	 * queue behind any sends, so a stream of progress ticks can never starve a new controller.
+	 */
 	private scheduleUpdateDrain(guildId: string): void {
 		if (this.updateDrainQueued.has(guildId)) return;
 		this.updateDrainQueued.add(guildId);
-		void this.enqueueControllerOperation(guildId, async () => {
-			try {
-				while (this.pendingUpdates.has(guildId)) {
-					const player = this.pendingUpdates.get(guildId)!;
-					const revision = this.updateRevisions.get(guildId) ?? 0;
-					this.pendingUpdates.delete(guildId);
-					await this.updateControllerNow(player, false, revision);
-				}
-			} finally {
-				this.updateDrainQueued.delete(guildId);
+		void this.enqueueControllerOperation(guildId, 'update', async () => {
+			this.updateDrainQueued.delete(guildId);
+			const player = this.pendingUpdates.get(guildId);
+			if (!player) return;
+			this.pendingUpdates.delete(guildId);
+			// A queued send renders the newest state anyway.
+			if (this.queuedSends.has(guildId)) return;
+			await this.updateControllerNow(player, false, this.updateRevisions.get(guildId) ?? 0);
+		})
+			.catch((error) => this.logger.error(`Failed to update controller for guild ${guildId}:`, error))
+			.finally(() => {
 				if (this.pendingUpdates.has(guildId) && !this.debounceTimers.has(guildId)) this.scheduleUpdateDrain(guildId);
-			}
-		}).catch((error) => this.logger.error(`Failed to update controller for guild ${guildId}:`, error));
+			});
 	}
 
 	/** Include track identity because card mode puts track info only in the attachment. */
@@ -328,7 +391,7 @@ export class PlayerNotifier implements Stoppable {
 		void resolveNowPlayingCard(this.deps, player)
 			.then((card) => {
 				if (!card) return;
-				return this.enqueueControllerOperation(player.guildId, async () => {
+				return this.enqueueControllerOperation(player.guildId, 'card refresh', async () => {
 					if (this.cardRefreshes.get(player.guildId) !== request || player.messageId !== messageId) return;
 					if (getNowPlayingCardKey(player) !== trackKey) return;
 					await this.updateControllerNow(player, allowDisabled);
@@ -409,7 +472,7 @@ export class PlayerNotifier implements Stoppable {
 	}
 
 	public async syncPanel(guildId: string, previousChannelId: string | null): Promise<void> {
-		await this.enqueueControllerOperation(guildId, async () => {
+		await this.enqueueControllerOperation(guildId, 'panel sync', async () => {
 			try {
 				const oldMessageId = await guildChannels.getTextMessage(this.deps.guildService, guildId);
 				const channelId = await guildChannels.getPanelChannel(this.deps.guildService, guildId);
@@ -507,7 +570,8 @@ export class PlayerNotifier implements Stoppable {
 			}
 		}
 
-		await this.sendController(player);
+		// Track start must not wait for Discord; the queue posts the controller on its own.
+		void this.sendController(player).catch((error) => this.logger.error(`Failed to send controller for guild ${player.guildId}:`, error));
 	}
 
 	public onPlayerUpdate(player: CustomPlayer): void {

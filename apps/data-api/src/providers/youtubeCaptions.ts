@@ -10,6 +10,10 @@ const CAPTION_FAIL_TTL_SECONDS = 6 * 3600;
 const MAX_CAPTION_CHARS = 400_000;
 const PAIR_TOLERANCE_MS = 1_500;
 const MIN_LINES = 4;
+/** 같은 줄이 이 시간 안에 다시 시작하면 한 줄을 쪼개 올린 것으로 보고 합쳐요. 그보다 늦으면 다시 부른 것이라 따로 둬요 */
+const REPEAT_MERGE_WINDOW_MS = 1_500;
+/** 앞 조각이 끝나고 이만큼 넘게 비면 이어진 조각이 아니에요 */
+const REPEAT_MERGE_MAX_GAP_MS = 100;
 const SPAM_MIN_TOKENS = 8;
 const SPAM_MAX_DISTINCT_RATIO = 4;
 const SPAM_MIN_UNIT_REPEATS = 6;
@@ -53,12 +57,22 @@ function isRepeatSpam(text: string): boolean {
 	return REPEATED_UNIT.test(text.replace(/\s+/g, ''));
 }
 
-/** 같은 줄이 연달아 반복되면 첫 줄만 남기고, 그 줄이 마지막 반복이 끝날 때까지 이어지게 해요. */
+/**
+ * 같은 줄을 짧게 쪼개 연달아 올린 조각은 한 줄로 합치고, 그 줄이 마지막 조각이 끝날 때까지 이어지게 해요.
+ * 앞 조각보다 `REPEAT_MERGE_WINDOW_MS` 넘게 늦게 시작하거나 사이가 비면 다시 부른 것이라 따로 둬요 — 다 합치면 싱크가 어긋나요.
+ */
 function collapseRepeatedLines(lines: LyricLine[]): LyricLine[] {
 	const collapsed: LyricLine[] = [];
+	let lastPiece: LyricLine | null = null;
 	for (const line of lines) {
 		const previous = collapsed.at(-1);
-		if (previous?.text !== line.text) {
+		const isSplitPiece =
+			previous?.text === line.text &&
+			lastPiece != null &&
+			line.startMs - lastPiece.startMs <= REPEAT_MERGE_WINDOW_MS &&
+			(lastPiece.endMs == null || line.startMs - lastPiece.endMs <= REPEAT_MERGE_MAX_GAP_MS);
+		lastPiece = line;
+		if (!isSplitPiece) {
 			collapsed.push({ ...line });
 			continue;
 		}
@@ -106,14 +120,28 @@ export function pairKoreanLines(original: LyricLine[], korean: LyricLine[]): Rec
 	return Object.keys(out).length > 0 ? out : null;
 }
 
-export function pickCaptionTracks(tracks: CaptionTrack[]): { original: CaptionTrack; korean: CaptionTrack | null } | null {
+// 한자만 있는 제목은 중국어인지 일본어인지 몰라서 짐작하지 않아요.
+export function guessSpokenLanguage(title: string | undefined): string | null {
+	if (!title) return null;
+	if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(title)) return 'ja';
+	if (/\p{Script=Hangul}/u.test(title)) return 'ko';
+	if (/\p{L}/u.test(title) && !/[^\p{Script=Latin}\P{L}]/u.test(title)) return 'en';
+	return null;
+}
+
+const FALLBACK_SOURCE_LANGS = ['ko', 'en'];
+
+// 음성 언어 트랙이 없고 한국어·영어도 없으면 가사로 쓰지 않아요. 일본어 노래에 중국어·아랍어 번역 자막이 원문으로 붙던 문제예요.
+export function pickCaptionTracks(tracks: CaptionTrack[], title?: string): { original: CaptionTrack; korean: CaptionTrack | null } | null {
 	const manual = tracks.filter((t) => t.kind !== 'asr');
-	if (manual.length === 0) return null;
-	const spoken = tracks.find((t) => t.kind === 'asr')?.language_code;
-	const original =
-		(spoken && manual.find((t) => baseLang(t.language_code) === baseLang(spoken))) ||
-		manual.find((t) => baseLang(t.language_code) !== 'ko') ||
-		manual[0]!;
+	const spoken = tracks.find((t) => t.kind === 'asr')?.language_code ?? guessSpokenLanguage(title);
+	const priority = spoken ? [baseLang(spoken), ...FALLBACK_SOURCE_LANGS] : FALLBACK_SOURCE_LANGS;
+	let original: CaptionTrack | undefined;
+	for (const lang of priority) {
+		original = manual.find((t) => baseLang(t.language_code) === lang);
+		if (original) break;
+	}
+	if (!original) return null;
 	const korean = baseLang(original.language_code) === 'ko' ? null : (manual.find((t) => baseLang(t.language_code) === 'ko') ?? null);
 	return { original, korean };
 }
@@ -136,7 +164,7 @@ async function lookupOnRoute(route: OutboundRoute, videoId: string): Promise<Cap
 	const info = await youtube.getInfo(videoId, { client: 'IOS' });
 	assertNotBotChecked(route, info.playability_status);
 	const tracks = (info.captions?.caption_tracks ?? []) as CaptionTrack[];
-	const picked = pickCaptionTracks(tracks);
+	const picked = pickCaptionTracks(tracks, info.basic_info.title);
 	if (!picked) return null;
 	const lines = await fetchTrackLines(route, picked.original);
 	if (lines.length < MIN_LINES) return null;

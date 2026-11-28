@@ -10,7 +10,6 @@ import type { TrackService } from '../application/trackService.ts';
 import type { MixerService } from '../application/mixerService.ts';
 import type { SponsorBlockService } from '../application/sponsorBlockService.ts';
 import type { PlaybackReporter } from '../application/playbackReporter.ts';
-import type { CurrentBpmCache } from './player/currentBpm.ts';
 import type { CustomPlayer } from './player/customPlayer.ts';
 import type { PlayerNotifier } from './player/playerNotifier.ts';
 import type { NowPlayingCardStore } from './player/nowPlayingCard.ts';
@@ -53,5 +52,4 @@ export interface LavalinkDeps {
 	readonly nowPlayingCards: NowPlayingCardStore;
 	readonly playerStatePublishTracker: PlayerStatePublishTracker;
 	readonly relatedFetchInFlight: Map<string, Promise<Track | null>>;
-	readonly currentBpm: CurrentBpmCache;
 }

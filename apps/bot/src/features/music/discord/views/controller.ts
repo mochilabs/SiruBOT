@@ -1,4 +1,3 @@
-import type { CurrentBpm } from '../../lavalink/player/currentBpm.ts';
 import { emoji, emojiProgressBar, createContainer, formatTrack, formatTime, formatTimeToKorean, removeEmojis, volumeToEmoji } from '@sirubot/utils';
 import {
 	ActionRowBuilder,
@@ -29,13 +28,12 @@ type controllerViewProps = {
 	player: CustomPlayer;
 	volume?: number;
 	nowPlayingCardUrl?: string;
-	currentBpm?: CurrentBpm | null;
 	panel?: boolean;
 };
 
 const queueViewCustomId = controllerId.encode('queueView');
 
-export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm, panel = false }: controllerViewProps) {
+export function controllerView({ player, volume, nowPlayingCardUrl, panel = false }: controllerViewProps) {
 	const containerComponent = createContainer();
 
 	const current = nowPlayingTrack(player);
@@ -149,9 +147,6 @@ export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm, 
 		}
 		const footerSegments = buildFooterSegments(player, volume);
 		if (panel) footerSegments.push(...buildPanelStatusSegments(player));
-		if (currentBpm && currentBpm.identifier === current?.info.identifier && Number.isFinite(currentBpm.bpm) && currentBpm.bpm > 0) {
-			footerSegments.push(`${Number(currentBpm.bpm.toFixed(1))} BPM`);
-		}
 		const requesterMention = current ? footerRequesterMention(current) : null;
 		if (requesterMention) {
 			footerSegments.push(requesterMention);

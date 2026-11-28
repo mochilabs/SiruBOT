@@ -43,7 +43,7 @@ vi.mock('@sapphire/framework', () => ({
 		};
 	},
 	InteractionHandlerTypes: { Button: 'button' },
-	container: { guildService: {}, lavalink: { guildService: {}, currentBpm: { read: () => null } } }
+	container: { guildService: {}, lavalink: { guildService: {} } }
 }));
 vi.mock('../utils/permissionCheck.ts', () => ({
 	checkDJOrAlone: mocks.allowed,

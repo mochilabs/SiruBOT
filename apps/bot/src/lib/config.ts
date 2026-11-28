@@ -147,6 +147,7 @@ export interface Config {
 	readonly notifier: {
 		readonly debounceMs: number;
 		readonly progressTickMs: number;
+		readonly operationTimeoutMs: number;
 	};
 	readonly playback: {
 		readonly maxConsecutiveErrors: number;
@@ -269,7 +270,8 @@ export function loadConfig(env: RawEnv): Config {
 		}),
 		notifier: Object.freeze({
 			debounceMs: numberOr(env.NOTIFIER_DEBOUNCE_MS, 300),
-			progressTickMs: numberOr(env.NOTIFIER_PROGRESS_TICK_MS, 5000)
+			progressTickMs: numberOr(env.NOTIFIER_PROGRESS_TICK_MS, 5000),
+			operationTimeoutMs: numberOr(env.NOTIFIER_OPERATION_TIMEOUT_MS, 20_000)
 		}),
 		playback: Object.freeze({
 			maxConsecutiveErrors: numberOr(env.MAX_CONSECUTIVE_ERRORS, 3),

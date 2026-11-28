@@ -3,6 +3,8 @@ import { Track } from 'lavalink-client';
 import { countRecordingPlay, isrcFields, linkRecording } from './recordingLink.ts';
 import { extractTrackData } from './trackData.ts';
 import { isTtsClip, RELATED_TRACK_REQUESTER_ID } from '../lavalink/requester.ts';
+import type { AppLogger } from '../../../lib/appLogger.ts';
+import { thrownCode } from '../../../lib/thrownError.ts';
 
 export function formatRecordError(error: unknown): string {
 	if (!(error instanceof Error)) return String(error);
@@ -15,6 +17,7 @@ export function formatRecordError(error: unknown): string {
 
 export interface TrackServiceDeps {
 	db: PrismaClient;
+	logger?: Pick<AppLogger, 'warn'>;
 }
 
 export class TrackService {
@@ -100,47 +103,62 @@ export class TrackService {
 		const now = new Date();
 		const countInChart = !isRelatedTrack(track);
 
-		await this.deps.db.$transaction(async (tx) => {
-			const row = await tx.track.upsert({
-				where: { id: data.id },
-				create: {
-					...data,
-					...isrcFields(data.isrc, 'lavalink', now),
-					totalPlays: 1
-				},
-				update: {
-					totalPlays: { increment: 1 },
-					...(data.title && data.title !== '(제목 없음)' ? { title: data.title } : {}),
-					...(data.artist && data.artist !== '(아티스트 정보 없음)' ? { artist: data.artist } : {}),
-					...(data.duration > 0 ? { duration: data.duration } : {}),
-					...(data.thumbnail ? { thumbnail: data.thumbnail } : {}),
-					...isrcFields(data.isrc, 'lavalink', now)
-				},
-				select: { recordingId: true }
-			});
-			const recordingId = row.recordingId ?? (await linkRecording(tx, data, now));
-			if (recordingId) await countRecordingPlay(tx, recordingId, data, { guildId, now, countInChart });
-			await tx.guild.upsert({
-				where: { id: guildId },
-				create: { id: guildId },
-				update: {}
-			});
-			if (userId) {
-				await tx.user.upsert({
-					where: { id: userId },
-					create: { id: userId },
+		const write = () =>
+			this.deps.db.$transaction(async (tx) => {
+				const row = await tx.track.upsert({
+					where: { id: data.id },
+					create: {
+						...data,
+						...isrcFields(data.isrc, 'lavalink', now),
+						totalPlays: 1
+					},
+					update: {
+						totalPlays: { increment: 1 },
+						...(data.title && data.title !== '(제목 없음)' ? { title: data.title } : {}),
+						...(data.artist && data.artist !== '(아티스트 정보 없음)' ? { artist: data.artist } : {}),
+						...(data.duration > 0 ? { duration: data.duration } : {}),
+						...(data.thumbnail ? { thumbnail: data.thumbnail } : {}),
+						...isrcFields(data.isrc, 'lavalink', now)
+					},
+					select: { recordingId: true }
+				});
+				const recordingId = row.recordingId ?? (await linkRecording(tx, data, now));
+				if (recordingId) await countRecordingPlay(tx, recordingId, data, { guildId, now, countInChart });
+				await tx.guild.upsert({
+					where: { id: guildId },
+					create: { id: guildId },
 					update: {}
 				});
-			}
-			await tx.guildTrackHistory.create({
-				data: {
-					guildId,
-					trackId: data.id,
-					userId
+				if (userId) {
+					await tx.user.upsert({
+						where: { id: userId },
+						create: { id: userId },
+						update: {}
+					});
 				}
+				await tx.guildTrackHistory.create({
+					data: {
+						guildId,
+						trackId: data.id,
+						userId
+					}
+				});
 			});
-		});
+
+		try {
+			await write();
+		} catch (error) {
+			if (!isRetryableRecordError(error)) throw error;
+			// Seen once in production: the link update missed the row this transaction had just upserted. A fresh transaction succeeds.
+			this.deps.logger?.warn(`[recordPlay] retrying once (guild ${guildId}, track ${data.id}): ${formatRecordError(error)}`);
+			await write();
+		}
 	}
+}
+
+function isRetryableRecordError(error: unknown): boolean {
+	const code = thrownCode(error);
+	return code === 'P2025' || code === 'P2034';
 }
 
 function isRelatedTrack(track: Track): boolean {
