@@ -9,6 +9,7 @@ export { createMusicPlay, type MusicPlayService, type MusicPlayServiceDeps } fro
 export { PlaybackReporter } from './application/playbackReporter.ts';
 export { PlaylistService } from './application/playlistService.ts';
 export { TrackService } from './application/trackService.ts';
+export { TrackSuggestionService } from './application/trackSuggestions.ts';
 export { AudioService } from './application/audioService.ts';
 export { MixerService } from './application/mixerService.ts';
 export { playbackMessages } from './discord/playbackMessages.ts';

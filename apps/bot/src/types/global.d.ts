@@ -13,6 +13,7 @@ import type {
 	RedisStore,
 	SponsorBlockService,
 	TrackService,
+	TrackSuggestionService,
 	VoteSkipService
 } from '../features/music/index.ts';
 
@@ -31,6 +32,7 @@ declare module '@sapphire/pieces' {
 		musicPlay: import('../features/music/application/play.ts').MusicPlayService;
 		guildService: GuildService;
 		trackService: TrackService;
+		trackSuggestions: TrackSuggestionService;
 		playlistService: PlaylistService;
 		audioService: AudioService;
 		mixerService: MixerService;

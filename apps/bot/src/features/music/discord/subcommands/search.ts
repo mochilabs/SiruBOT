@@ -1,6 +1,5 @@
 import { container } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { getSimpleYouTubeSuggestions } from '../../../../services/dataApiClient.ts';
 import {
 	AutocompleteInteraction,
 	ButtonInteraction,
@@ -15,6 +14,7 @@ import * as view from '../views/search.ts';
 import { createComponentSession, type ComponentSession } from '../../../../lib/componentSession.ts';
 import { errorView } from '../../../../lib/errorView.ts';
 import { actorFromMember } from '../../application/actor.ts';
+import { respondPlayQuery } from '../utils/autocomplete.ts';
 import { editTrackPlayReply } from '../utils/playFeedback.ts';
 import { RESULT_LIMIT, SELECT_TIMEOUT_MS } from '../utils/searchSelect.ts';
 
@@ -59,29 +59,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 }
 
 export async function autocomplete(interaction: AutocompleteInteraction): Promise<void> {
-	const focused = interaction.options.getFocused(true);
-	if (focused.name !== 'query') return interaction.respond([]);
-
-	const query = focused.value;
-	if (query.length < 2) {
-		return interaction.respond([
-			{ name: '인기 음악', value: '인기 음악' },
-			{ name: '최신 K-POP', value: '최신 K-POP' },
-			{ name: '팝송 모음', value: '팝송 모음' }
-		]);
-	}
-
-	try {
-		const suggestions = await getSimpleYouTubeSuggestions(query, 25);
-		return interaction.respond(
-			suggestions.slice(0, 25).map((suggestion) => ({
-				name: suggestion.length > 100 ? suggestion.slice(0, 97) + '...' : suggestion,
-				value: suggestion.length > 100 ? suggestion.slice(0, 100) : suggestion
-			}))
-		);
-	} catch {
-		return interaction.respond([{ name: query, value: query }]);
-	}
+	await respondPlayQuery(interaction, 'search');
 }
 
 /** 셀렉트 메뉴 30초 수집 — 선택한 곡은 유스케이스의 대기열 추가와 재생 보장을 그대로 태운다. */
