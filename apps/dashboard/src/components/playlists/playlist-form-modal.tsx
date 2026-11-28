@@ -12,7 +12,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-/** create는 안내 문구가 있는 빈 폼, edit은 현재 값이 채진 채 표시예요 */
 type PlaylistFormMode = "create" | "edit";
 
 const MODE_COPY: Record<PlaylistFormMode, { title: string; namePlaceholder?: string; descLabel: string; descPlaceholder?: string; submitLabel: string; idPrefix: string }> = {
@@ -44,7 +43,6 @@ interface PlaylistFormModalProps {
 	loading: boolean;
 }
 
-/** 플레이리스트 생성·수정 공용 폼 모달 — 제목/placeholder/제출 문구만 mode로 갈아 끼워요 */
 export function PlaylistFormModal({
 	mode,
 	open,

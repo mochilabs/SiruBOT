@@ -25,7 +25,6 @@ const RANGE_TABS = [
 
 type RangeKey = (typeof RANGE_TABS)[number]["key"];
 
-/** 패널 카드 안의 지표 타일 — 카드 위에 카드를 올리지 않고 surface-2 인셋으로 구분해요 */
 const INSET_TILE = "bg-surface-2 shadow-none";
 
 function rangeLabel(range: RangeKey): string {
@@ -36,20 +35,13 @@ function formatDate(iso: string): string {
   return iso.slice(0, 10).replaceAll("-", ".");
 }
 
-/** 표시 이름 폴백 — 봇 캐시 조회 실패(탈퇴한 멤버 등)면 사용자 ID 앞 6자리 라벨로 표시해요 */
 function requesterLabel(requester: { userId: string; displayName: string | null }): string {
   return requester.displayName ?? `사용자 ${requester.userId.slice(0, 6)}…`;
 }
 
-/** 리스트 항목 스태거 간격(ms) — 10개 항목 기준 마지막 딜레이 405ms */
 const STAGGER_STEP_MS = 45;
-/** 막대 미세 스태거 간격(ms) — 30개(30일) 기준 마지막 딜레이 348ms */
 const BAR_STAGGER_STEP_MS = 12;
 
-/**
- * 뷰포트 진입(triggerOnce) + CSS 전환으로 등장시킨다 — track.tsx AnimatedTrackItem 패턴.
- * framer-motion 개별 래퍼 대신 사용 — 요소 수가 적고(≤10/30개) JS 오버헤드가 낮다.
- */
 function useReveal() {
   return useInView({ triggerOnce: true, threshold: 0.05 });
 }
@@ -174,8 +166,6 @@ function DailyBars({ dailyCounts }: { dailyCounts: StatsServerStatsResponse["dai
 
   return (
     <div className="space-y-2">
-      {/* 컨테이너 1회 트리거 + 인덱스 기반 transitionDelay 미세 스태거 (막대 30개 → 개별 useInView는 비용 과다) */}
-      {/* 값이 title 속성에만 있으면 스크린 리더·터치에서 안 읽혀서 role="img" + aria-label을 함께 걸어요 */}
       <div ref={ref} className="flex h-24 items-end gap-1">
         {dailyCounts.map((entry, index) => (
           <div
@@ -201,7 +191,6 @@ function DailyBars({ dailyCounts }: { dailyCounts: StatsServerStatsResponse["dai
 }
 
 function ServerStatsPanel({ guildId, range }: { guildId: string; range: RangeKey }) {
-  // 다른 패널과 같은 세션 게이트 훅 — 로그인 전 요청을 막고, 세션 만료면 로그인 후 이 화면으로 돌아와요
   const { data, error, isLoading, mutate } = useAuthedSWR<StatsServerStatsResponse>(
     guildId ? `/api/servers/${guildId}/stats?days=${range}` : null,
     `/servers/${guildId}`,

@@ -10,7 +10,6 @@ const mocks = vi.hoisted(() => ({
 
 const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
 
-/** 평범한 가짜 deps로 만든 서비스 — Sapphire·Redis·Discord 없이 돌아가요 */
 const makeService = (over: Partial<TempVoiceServiceDeps> = {}) =>
 	createTempVoiceService({
 		logger,
@@ -22,7 +21,6 @@ const makeService = (over: Partial<TempVoiceServiceDeps> = {}) =>
 		...over
 	});
 
-/** 음성 채널 흉내 — members.filter 결과에 size가 있어야 서비스 코드가 동작해요 */
 function voiceChannel(id: string, humanCount: number) {
 	const members = Array.from({ length: humanCount }, (_, i) => ({ id: `u${i}`, user: { bot: false } }));
 	return {
@@ -69,6 +67,44 @@ describe('TempVoiceService room restore', () => {
 
 		expect(channel.delete).toHaveBeenCalledTimes(1);
 		expect(mocks.deleteCacheHashField).toHaveBeenCalledWith('jtc:rooms:g1', 'room1');
+	});
+
+	it('복구 중 채널 조회가 일시적으로 실패하면 기록을 지우지 않고 유예 뒤 다시 확인해 정리한다', async () => {
+		const channel = voiceChannel('flaky', 0);
+		mocks.getCacheHashFields.mockResolvedValueOnce({ flaky: 'owner1' });
+		mocks.fetchChannel.mockRejectedValueOnce(new Error('ECONNRESET')).mockResolvedValue(channel);
+		const service = makeService();
+
+		await expect(service.restoreRooms()).resolves.toBe(true);
+		expect(mocks.deleteCacheHashField).not.toHaveBeenCalled();
+
+		await vi.advanceTimersByTimeAsync(30_000);
+		expect(channel.delete).toHaveBeenCalledTimes(1);
+		expect(mocks.deleteCacheHashField).toHaveBeenCalledWith('jtc:rooms:g1', 'flaky');
+	});
+
+	it('Unknown Channel(10003)이면 사라진 방으로 보고 기록을 지운다', async () => {
+		mocks.getCacheHashFields.mockResolvedValueOnce({ gone2: 'u1' });
+		mocks.fetchChannel.mockRejectedValueOnce({ code: 10003 });
+		const service = makeService();
+
+		await service.restoreRooms();
+		expect(mocks.deleteCacheHashField).toHaveBeenCalledWith('jtc:rooms:g1', 'gone2');
+	});
+
+	it('빈방 확인 때 조회가 일시적으로 실패하면 추적을 끊지 않고 다시 확인한다', async () => {
+		const channel = voiceChannel('room5', 0);
+		mocks.getCacheHashFields.mockResolvedValueOnce({ room5: 'owner5' });
+		mocks.fetchChannel.mockResolvedValueOnce(channel).mockRejectedValueOnce(new Error('rate limited')).mockResolvedValue(channel);
+		const service = makeService();
+
+		await service.restoreRooms();
+		await vi.advanceTimersByTimeAsync(30_000);
+		expect(channel.delete).not.toHaveBeenCalled();
+		expect(mocks.deleteCacheHashField).not.toHaveBeenCalled();
+
+		await vi.advanceTimersByTimeAsync(30_000);
+		expect(channel.delete).toHaveBeenCalledTimes(1);
 	});
 
 	it('사람이 있는 방은 삭제하지 않고 추적을 유지한다', async () => {

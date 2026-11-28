@@ -20,64 +20,51 @@ model Guild {
   djRoleId      String?
   repeat        String   @default("off")
   related       Boolean  @default(false)
-  // 기본 텍스트 채널(textChannelId): 명령어 허용 채널이자 상시 패널 채널. 패널은 메시지 1개를 edit로 유지한다.
-  // 상시 패널 메시지 ID (채널이 바뀌면 의미가 없어지므로 호출부가 함께 비운다)
   textMessageId   String?
-  // 기본 채널에서 입력한 텍스트를 검색어로 재생할지
   textChannelInputPlay Boolean @default(false)
-  // 입력 재생 모드: "play"(즉시 재생) | "select"(5개 선택)
+  // "play" | "select"
   textChannelMode String  @default("play")
-  // 입력 메시지를 봇이 처리한 뒤 삭제할지 (Manage Messages 권한 필요)
   textChannelDeleteInput Boolean @default(false)
-  // 임시 음성채널(JTC): 마커 채널 입장 시 방 생성. template의 {user}는 방장 이름으로 치환
   jtcEnabled         Boolean @default(false)
   jtcCategoryId      String?
   jtcMarkerChannelId String?
   jtcTemplate        String  @default("{user}의 방")
   jtcUserLimit       Int     @default(0)
-  // 봇 테마 프리셋(pink|blue|purple|green|orange|yellow): 컨테이너 강조선·앱 이모지(name_<프리셋>)·기본 카드 색. 사용자가 색을 직접 정한 기능(역할 패널 등)이 우선해요.
+  // "pink" | "blue" | "purple" | "green" | "orange" | "yellow"
   themePreset   String   @default("pink")
   gaplessEnabled Boolean @default(true)
   crossfadeEnabled Boolean @default(true)
   crossfadeMs   Int      @default(5000)
-  // 볼륨 정규화: 첫 곡이 세션 기준이 되고 이후 곡은 그 라우드니스로 맞춰요. Lavalink mixer 플러그인의 /mixer/normalization.
   normalizationEnabled Boolean @default(false)
   automixEnabled Boolean @default(false)
   automixMaxTempoChange Float @default(0.06)
   automixMinConfidence Float @default(0.30)
-  // TTS 안내 방식 — mixer announce mode와 1:1이에요.
-  // "sequential"(순서대로) | "parallel"(겹쳐서) | "interrupt"(새 안내가 오면 대기 중인 안내를 버리고 최신만).
+  // "sequential" | "parallel" | "interrupt"
   ttsAnnounceMode      String   @default("sequential")
-  // AI 채팅 설정: all(모든 채널) | channels(특정 채널만) | off(끄기). 시스템 프롬프트는 서버별 커스터마이징을 지원하지 않아요 (프롬프트 인젝션 위험).
+  // "all" | "channels" | "off"
   aiMode               String   @default("all")
   aiChannelIds         String[] @default([])
-  // 채팅 TTS: off(기본) | channels(특정 채널만) | all. 채팅 메시지를 음성으로 읽어요. 오케스트레이션은 apps/bot/src/features/tts/application/chatTts.ts.
+  // "off" | "channels" | "all"
   ttsMode              String   @default("off")
   ttsChannelIds        String[] @default([])
-  // 음성 채널 입장 알림: 봇이 있는 음성 채널에 사용자가 들어오면 "OO님이 입장했어요"를 읽어요.
   ttsJoinAnnounce      Boolean  @default(false)
-  // 음성 채널 퇴장 알림: 봇이 있는 음성 채널에서 사용자가 나가면 "OO님이 퇴장했어요"를 읽어요.
   ttsLeaveAnnounce     Boolean  @default(false)
-  // 커스텀 명령어 접두사 — 메시지가 이 문자열로 시작하면 길드 커스텀 명령어로 처리해요. 규칙은 packages/utils/src/customCommand.ts.
   customCommandPrefix String @default("!")
-  // 채팅 유틸: 이모지 확대 — 커스텀 이모지만으로 구성된 메시지를 큰 이미지로 다시 보여줘요 (all | channels | off)
+  // "all" | "channels" | "off"
   emojiEnlargeMode       String   @default("off")
   emojiEnlargeChannelIds String[] @default([])
-  // 채팅 유틸: 메시지 인용 — discord.com/channels/... 링크를 자체 인용 임베드로 보여줘요 (all | channels | off)
+  // "all" | "channels" | "off"
   quoteMode       String   @default("off")
   quoteChannelIds String[] @default([])
-  // 채팅 유틸: 임베드 복구 — X·인스타그램은 fix 도메인으로 재전송, BOOTH는 자체 OG 임베드. 계약은 packages/utils/src/chatTools.ts (all | channels | off)
+  // "all" | "channels" | "off"
   embedFixMode       String   @default("off")
   embedFixChannelIds String[] @default([])
   embedFixSites          String[] @default([])
   embedFixSuppressOriginal Boolean @default(false)
   embedFixTranslateLang    String   @default("off")
-  // 채팅 유틸: 카운팅 채널 — 지정 채널에서 숫자를 순서대로 세고 틀리면 초기화해요
   countingEnabled  Boolean @default(false)
   countingChannelId String?
-  // 서버 관리자가 끈 기능 모듈 id 목록 (packages/utils/src/modules.ts). 비어 있으면 모두 켜짐이고, toggleable이 아닌 모듈은 저장돼도 무시해요.
   disabledModules  String[] @default([])
-  // 멤버 인사: 입장/퇴장 메시지 + 커스텀 카드 이미지 설정. 구조는 packages/utils/src/memberGreeting.ts 타입과 동기화.
   welcome       Json?
   goodbye       Json?
   createdAt     DateTime @default(now())
@@ -98,16 +85,13 @@ model Guild {
   giveaways     Giveaway[]
 }
 
-// 커스텀 명령어 — 대시보드(관리자)가 만드는 접두사 메시지 명령어. 봇의 접두사 리스너가 spec(JSON 스텝 체인)을 순차 실행해요.
-// name은 접두사 뒤 첫 토큰으로 매칭돼요 (공백 불가, 소문자 정규화, 예약어 '도움말' 금지). spec 검증은 packages/utils/src/customCommand.ts의 zod 스키마.
 model CustomCommand {
   id          String   @id @default(uuid())
   guildId     String
   name        String
   description String   @default("")
-  /// 실행 방식 — 'prefix' | 'slash'. 생성 시점에 정해지고 바뀌지 않아요 (packages/utils/src/customCommand.ts의 method 계약).
+  // "prefix" | "slash"
   method      String   @default("prefix")
-  /// 슬래시형 등록 후 Discord application command ID — 증분 동기화(생성/수정/삭제)에 써요.
   applicationCommandId String?
   spec        Json
   createdBy   String
@@ -120,8 +104,6 @@ model CustomCommand {
   @@index([guildId])
 }
 
-/// 길드 이미지 에셋 — S3 스타일 스토리지(apps/storage)에 올린 파일의 메타데이터.
-/// 커스텀 명령어의 섹션 썸네일·미디어 갤러리가 url로 참조해요 (스펙은 https URL 계약 유지).
 model GuildAsset {
   id         String   @id @default(uuid())
   guildId    String
@@ -130,7 +112,6 @@ model GuildAsset {
   name       String
   mimeType   String
   sizeBytes  Int
-  /// 공개 GET URL — 스토리지가 돌려준 URL을 그대로 저장해요
   url        String
   createdBy  String
   createdAt  DateTime @default(now())
@@ -143,25 +124,22 @@ model GuildAsset {
 }
 
 model Track {
-  id          String   @id // YouTube ID, Spotify ID, etc.
+  id          String   @id
   title       String
   artist      String
-  duration    Int      // Duration in milliseconds
+  duration    Int
   thumbnail   String?
   url         String
-  source      String   // 'youtube', 'spotify', 'soundcloud', etc.
+  source      String
   
   totalPlays  Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  /// 정규화된 ISRC (영숫자 12자). Lavalink가 주거나 data-api isrcEnricher가 찾아 채워요.
   isrc          String?
-  /// 'lavalink' | 'recording'(묶음에서 물려받음) | 'deezer' | 'musicbrainz'
+  // "lavalink" | "recording" | "deezer" | "musicbrainz"
   isrcSource    String?
-  /// ISRC 조회를 마친 시각. null이면 아직 조회 전이에요 (isrcEnricher 대상).
   isrcCheckedAt DateTime?
-  /// 같은 녹음 묶음 (차트 단위)
   recordingId   String?
 
   recording      Recording?          @relation(fields: [recordingId], references: [id], onDelete: SetNull)
@@ -172,17 +150,15 @@ model Track {
   @@index([isrcCheckedAt])
 }
 
-/// 같은 녹음(곡) 묶음 — 소스·업로드가 달라도 같은 노래면 하나예요. 규칙: @sirubot/utils/trackIdentity
 model Recording {
   id         String   @id @default(uuid())
-  /// "rec:<artist>|<title>" — 길이는 넣지 않아 unique가 아니에요 (±3초 비교는 코드에서, 생성은 advisory lock으로 직렬화)
+  // "rec:<artist>|<title>" (non-unique; ±3s matched in code)
   key        String
   isrc       String?  @unique
   title      String
   artist     String
-  duration   Int      // ms
+  duration   Int
   thumbnail  String?
-  /// 대표 표시값을 고른 소스 (trackIdentity.sourcePriority로 비교)
   source     String
   totalPlays Int      @default(0)
   createdAt  DateTime @default(now())
@@ -195,7 +171,6 @@ model Recording {
   @@index([totalPlays(sort: Desc)])
 }
 
-/// 기간 차트용 일별 재생 수 (KST 날짜 × 서버). 조회 때 서버당 하루 상한(LEAST)을 걸어요. 자동재생은 쌓지 않아요.
 model RecordingDailyPlay {
   recordingId String
   day         DateTime @db.Date
@@ -208,25 +183,17 @@ model RecordingDailyPlay {
   @@index([day])
 }
 
-/// 서버 생명주기 (온보딩·지표). Guild 설정 행과 수명이 달라 따로 둬요 (나간 뒤에도 남아 재가입을 알아봐요). 외래 키 없음.
 model GuildLifecycle {
   guildId     String    @id
-  /// 마지막으로 들어온 시각
   joinedAt    DateTime
-  /// 마지막으로 나간 시각. 다시 들어오면 null로 돌아가요.
   leftAt      DateTime?
-  /// 안내 메시지를 보낸 시각
   onboardedAt DateTime?
-  /// 처음으로 기능을 쓴 시각 (사용 지표 flush가 채워요)
   firstUseAt  DateTime?
-  /// 들어온 횟수
   joinCount   Int       @default(0)
 
   @@index([joinedAt])
 }
 
-/// 서버별 일별 기능 사용 집계 (KST 날짜). feature 키 규칙은 @sirubot/utils/modules. 사용자 ID는 남기지 않고 고유 사용자 수만 둬요.
-/// 익명 일별 기능 사용 횟수 — 서버·사용자 식별자 없이 KST 날짜×기능 합계만 기록해요
 model FeatureDailyUse {
   day     DateTime @db.Date
   feature String
@@ -236,7 +203,6 @@ model FeatureDailyUse {
   @@index([day])
 }
 
-/// 예약 작업 상태 — pending(대기) → running(봇이 가져감) → done | failed
 enum ScheduledJobStatus {
   pending
   running
@@ -244,20 +210,14 @@ enum ScheduledJobStatus {
   failed
 }
 
-/// 서버별 예약 작업 큐 (예약 메시지·나눔 종료·생일 발송 등의 공통 기반).
-/// 봇의 guildJobScheduler가 15초마다 자기가 가진 서버의 만기 작업을 FOR UPDATE SKIP LOCKED로 가져가요.
-/// 반복 작업은 핸들러가 끝날 때 다음 행을 새로 넣어요. 서버가 지워져도 기록을 남기려고 외래 키는 두지 않아요.
 model ScheduledJob {
   id        String             @id @default(uuid())
   guildId   String
-  /// 핸들러를 고르는 키 (기능이 `register(kind, handler)`로 등록)
   kind      String
   runAt     DateTime
   payload   Json               @default("{}")
   status    ScheduledJobStatus @default(pending)
-  /// 실패한 횟수 (3회째 실패하면 failed)
   attempts  Int                @default(0)
-  /// 가져간 봇 프로세스 ID
   lockedBy  String?
   lockedAt  DateTime?
   lastError String?
@@ -270,11 +230,9 @@ model ScheduledJob {
 }
 
 model User {
-  id          String          @id // Discord user ID
-  // 프로필: 생일(월/일) — 별자리 자동 변환용. 연도는 저장하지 않아요.
+  id          String          @id
   birthMonth  Int?
   birthDay    Int?
-  // 프로필 카드의 한 줄 소개 (120자 이내). 비우면 소개 칸을 생략해요.
   intro       String?         @db.VarChar(120)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
@@ -286,9 +244,8 @@ model User {
   birthdayOptIns BirthdayOptIn[]
 }
 
-// 대시보드 Discord OAuth 토큰 — refresh/access 토큰의 서버측 단일 원본 (저장 전 AES-256-GCM 암호화).
 model UserToken {
-  userId               String   @id // = User.id (Discord 사용자 ID)
+  userId               String   @id
   refreshToken         String
   accessToken          String
   accessTokenExpiresAt DateTime
@@ -298,14 +255,12 @@ model UserToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// 게임 전적/기록 — 모든 미니게임의 영속 저장소 (인메모리 Map 대체).
-// game: 'rps' | 'guess' | 'dice' | 'attendance' | 'quiz'
-// result: 'win' | 'loss' | 'draw' | 'checkin'
-// meta 예시: rps {} / guess { attempts: 3 } / attendance { streak: 7, day: '2026-10-05' }
 model GameRecord {
   id        String   @id @default(uuid())
   userId    String
+  // "rps" | "guess" | "dice" | "attendance" | "quiz"
   game      String
+  // "win" | "loss" | "draw" | "checkin"
   result    String
   meta      Json?
   playedAt  DateTime @default(now())
@@ -319,7 +274,7 @@ model GuildTrackHistory {
   id        String   @id @default(uuid())
   guildId   String
   trackId   String
-  userId    String?  // Who requested the track
+  userId    String?
   createdAt DateTime @default(now())
 
   guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
@@ -361,7 +316,6 @@ model PlaylistTrack {
   @@index([trackId])
 }
 
-// AI 채팅 대화 기록 (채널별 영속화) — guildId는 대시보드 서버 단위 삭제용
 model ChannelChatHistory {
   channelId String   @id
   guildId   String?
@@ -371,8 +325,6 @@ model ChannelChatHistory {
   @@index([guildId])
 }
 
-// 채팅 TTS 사용자 설정 — 길드별 사용자 opt-in(off 기본)과 음성 프리셋(voice/channel)
-// 길드별 발음 사전: term(채팅에 나오는 표기)을 reading(읽을 소리)으로 바꿔서 합성해요. 길드당 상한은 앱에서 지켜요.
 model TtsPronunciation {
   guildId String
   term    String
@@ -386,13 +338,11 @@ model TtsPronunciation {
 model TtsUserSetting {
   guildId String
   userId  String
-  // opt-in: 채팅 낭독 대상에 포함될지 (길드 단위)
   enabled Boolean @default(false)
-  // 음성 프리셋: engine:voice 식별자. null이면 봇 기본 음성 사용
   voice   String?
-  // 스테레오 위치: "both"(가운데) | "left" | "right". lavalink_mixer announce의 channel 값과 1:1이에요.
+  // "both" | "left" | "right"
   channel String  @default("both")
-  // 감정: "neutral" | "happy" | "sad" | "angry" | "whisper". 엔진이 지원하지 않으면 siru_tts가 중립으로 폴백해요.
+  // "neutral" | "happy" | "sad" | "angry" | "whisper"
   emotion String  @default("neutral")
 
   updatedAt DateTime @updatedAt
@@ -400,47 +350,30 @@ model TtsUserSetting {
   @@id([guildId, userId])
 }
 
-// 사용자 메모리 — 에이전트가 memory 도구로 자동 갱신하는 장기/단기 기억
 model UserMemory {
   userId String @id
-  // 장기 기억: Muse식 MEMORY.md 마크다운 (# MEMORY.md + Facts/Preferences/Commitments 섹션)
   longTerm  Json?
-  // 단기 기억: [{ q, a, at, channelId }] — 최근 대화 하이라이트 (최대 8개)
   shortTerm Json?
-  // 단기 기억 압축 요약 — shortTerm이 가득 차면 백그라운드에서 압축된 최근 컨텍스트 (rolling summary)
   shortTermSummary String?
-  // nightly pass(기억 정리 배치) 마지막 수행 시각
   tidiedAt  DateTime?
   updatedAt DateTime @updatedAt
 }
 
-// 소셜 알림 구독 — apps/notifier가 소유하는 도메인이에요 (봇은 웹훅 생성 시점에만 관여).
-// 감지된 이벤트(YT WebSub·TW EventSub 콜백, 치지직 live-status 폴링)는 저장된 웹훅으로
-// 봇을 거치지 않고 직접 POST 돼요. 계약은 packages/utils/src/social.ts.
 model SocialSubscription {
   id               String    @id @default(uuid())
   guildId          String
-  /// 플랫폼 — 'youtube' | 'chzzk' | 'twitch' (social.ts socialPlatformSchema)
+  // "youtube" | "chzzk" | "twitch"
   platform         String
-  /// 플랫폼별 채널 식별자 — YT 채널ID(UC...) / 치지직 채널ID(32-hex) / Twitch 사용자ID
   sourcePlatformId String
-  /// 표시용 채널 이름 — 임베드 author와 대시보드 라벨로 써요
   sourceName       String
-  /// 알림을 받을 디스코드 채널 ID
   targetChannelId  String
-  /// 봇이 생성한 웹훅 식별자 — 전송은 webhookId+token 조합 URL로 POST해요
   webhookId        String
-  /// 웹훅 token — 민감정보: 대시보드 응답에서는 마스킹해요
   webhookToken     String
-  /// content 커스텀 템플릿 — null이면 임베드만 전송. 변수 {title} {url} {author}, 멘션 <#채널ID> <@&역할ID> (social.ts 계약)
   messageTemplate  String?
-  /// 웹훅 메시지 표시명 오버라이드 — null이면 웹훅 기본 이름으로 전송. 생성 시엔 웹훅 이름으로도 지정해요 (Discord 규칙 1~80자)
   webhookName      String?
-  /// 웹훅 메시지 프로필 사진 오버라이드 — null이면 웹훅 기본 아바타로 전송 (Discord가 fetch하는 http/https URL)
   webhookAvatarUrl String?
-  /// 라이브 섬네일 표시 — false면 임베드 이미지 생략. 이벤트에 섬네일이 없으면(Twitch) 항상 생략 (social.ts 계약)
   showThumbnail    Boolean   @default(true)
-  /// 배달 상태 — 'active' | 'failed' | 'disabled'. 연속 5회 실패 또는 웹훅 404/410이면 failed
+  // "active" | "failed" | "disabled"
   status           String    @default("active")
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -451,15 +384,11 @@ model SocialSubscription {
   @@index([status])
 }
 
-// 소셜 이벤트 배달 이력 — (platform, contentId)로 중복 알림을 막는 진실 원천이에요.
-// WebSub/EventSub 중복 콜백, 폴링·RSS 감사 경합, 재시작 후 재전송을 전부 여기서 방어해요.
 model SocialEventLog {
   id          String   @id @default(uuid())
-  /// 이벤트 플랫폼 — 'youtube' | 'chzzk' | 'twitch'
+  // "youtube" | "chzzk" | "twitch"
   platform    String
-  /// 플랫폼별 콘텐츠 식별자 — YT 영상ID / 치지직 liveID / Twitch 방송ID
   contentId   String
-  /// 정규화 이벤트 스냅샷 — social.ts socialEventSchema
   payload     Json
   deliveredAt DateTime @default(now())
 
@@ -467,40 +396,36 @@ model SocialEventLog {
   @@index([deliveredAt])
 }
 
-// 티켓 시스템 설정 — 길드당 1:1 관계. 패널 생성 위치, 티켓 채널 카테고리, 담당자 역할 등을 지정해요.
 model TicketConfig {
   guildId          String   @id
   guild            Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
   enabled          Boolean  @default(false)
-  categoryId       String?  /// 티켓 채널이 생성될 카테고리 ID
-  supportRoleIds   String[] @default([]) /// 티켓 관리/열람 권한을 가질 담당자 역할 ID 목록
-  logChannelId     String?  /// 티켓 종료 시 로그/트랜스크립트 요약이 전송될 채널 ID
-  maxOpenPerUser   Int      @default(1) /// 유저 1명당 동시에 열 수 있는 최대 티켓 수
-  panelChannelId   String?  /// 티켓 오픈 패널 메시지가 게시된 채널 ID
-  panelMessageId   String?  /// 티켓 오픈 패널 메시지 ID
+  categoryId       String?
+  supportRoleIds   String[] @default([])
+  logChannelId     String?
+  maxOpenPerUser   Int      @default(1)
+  panelChannelId   String?
+  panelMessageId   String?
   panelTitle       String   @default("고객지원 티켓")
   panelDescription String   @default("아래 버튼을 눌러 담당자와 1:1 비공개 상담 채널을 개설해요.")
-  ticketCounter    Int      @default(0) /// 티켓 채번용 카운터
+  ticketCounter    Int      @default(0)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
 
-// 개별 티켓 인스턴스 — 생성된 비공개 티켓 채널의 상태와 이력
 model Ticket {
   id           String    @id @default(uuid())
   guildId      String
   guild        Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  channelId    String    @unique /// Discord 상의 비공개 텍스트 채널 ID
-  ticketNumber Int       /// 서버 내 티켓 순번 (예: 1 -> #ticket-0001)
-  ownerId      String    /// 티켓을 연 유저의 Discord ID
-  status       String    @default("open") /// "open" | "closed"
-  claimedById  String?   /// 티켓을 담당하기로 지정한 스태프 ID
-  closedById   String?   /// 티켓을 닫은 유저/스태프 ID
-  closeReason  String?   /// 닫은 사유
-  /// 대화 기록(transcript) 저장 키 — 비공개 버킷 `ticket-transcripts` 아래 `{guildId}/{ticketId}.json.gz`.
-  /// 채널은 마감 후 삭제되므로 대화 원문은 여기에만 남아요. 저장 실패 시 null.
+  channelId    String    @unique
+  ticketNumber Int
+  ownerId      String
+  // "open" | "closed"
+  status       String    @default("open")
+  claimedById  String?
+  closedById   String?
+  closeReason  String?
   transcriptKey String?
-  /// transcript 저장 시각 — 재시도/만료 판정용
   transcribedAt DateTime?
   createdAt    DateTime  @default(now())
   closedAt     DateTime?
@@ -510,23 +435,23 @@ model Ticket {
   @@index([guildId, status])
 }
 
-// 역할 패널(Role Panel) — 길드당 여러 개(1:N)의 셀프 역할 부여 패널. 유저가 버튼을 눌러 자기 역할을 토글해요.
-// 게시된 Discord 메시지(channelId/messageId)는 패널당 1개. clickCount는 패널 단위 총 클릭 수(부여·제거 무관).
-// 계약·customId 규칙은 packages/utils/src/rolePanel.ts.
 model RolePanel {
   id          String   @id @default(uuid())
   guildId     String
-  name        String   /// 관리자 식별용 패널 이름 (대시보드 목록·autocomplete에 표시)
-  title       String   /// 패널 메시지 제목
-  description String   @default("") /// 패널 안내문
-  imageUrl    String?  /// 패널 이미지 URL (선택)
-  imageLayout   String @default("gallery") /// gallery | thumbnail — 이미지를 보여주는 방식
-  imagePosition String @default("middle") /// top | middle | bottom — 갤러리 이미지 위치 (섬네일은 무시)
-  accentColor   String? /// 컨테이너 강조색 #RRGGBB (null = 봇 기본색)
-  mode        String   @default("button") /// button | reaction — 역할을 받는 방식 (버튼 클릭 / 이모지 반응)
-  clickCount  Int      @default(0) /// 패널 단위 총 클릭 수 (성공한 토글마다 +1)
-  channelId   String?  /// 게시된 채널 ID
-  messageId   String?  /// 게시된 패널 메시지 ID
+  name        String
+  title       String
+  description String   @default("")
+  imageUrl    String?
+  // "gallery" | "thumbnail"
+  imageLayout   String @default("gallery")
+  // "top" | "middle" | "bottom"
+  imagePosition String @default("middle")
+  accentColor   String?
+  // "button" | "reaction"
+  mode        String   @default("button")
+  clickCount  Int      @default(0)
+  channelId   String?
+  messageId   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -536,61 +461,48 @@ model RolePanel {
   @@index([guildId])
 }
 
-// 역할 패널의 역할 버튼 — 패널에 노출할 역할 하나와 표시 메타데이터(라벨·이모지·스타일·순서).
 model RolePanelButton {
   id       String   @id @default(uuid())
   panelId  String
-  roleId   String   /// 부여/제거할 역할 snowflake
-  label    String   /// 버튼 라벨
-  emoji    String?  /// 커스텀/유니코드 이모지 (프리렌더 emoji("") 계약)
-  style    String   @default("secondary") /// secondary | primary | success | danger
-  position Int      @default(0) /// 정렬 순서
+  roleId   String
+  label    String
+  emoji    String?
+  // "secondary" | "primary" | "success" | "danger"
+  style    String   @default("secondary")
+  position Int      @default(0)
 
   panel    RolePanel @relation(fields: [panelId], references: [id], onDelete: Cascade)
 
   @@index([panelId])
 }
 
-// 예약 메시지 서버별 상한·간격 — 길드당 1:1이고 행이 없으면 기본값(25개, 10분)이에요. 계약은 packages/utils/src/scheduledMessage.ts.
-// 예약 자체는 ScheduledJob(kind 'scheduled-message')에 저장해요.
 model ScheduledMessageSettings {
   guildId            String   @id
   guild              Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  /// 서버당 활성 예약 상한 (1~100)
   maxActive          Int      @default(25)
-  /// 같은 채널 예약 사이 최소 간격(분, 1~1440)
   minIntervalMinutes Int      @default(10)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
 
-// 스타보드 설정 — 길드당 1:1. channelId가 null이면 꺼진 상태예요. 계약은 packages/utils/src/starboard.ts.
 model StarboardSettings {
   guildId           String   @id
   guild             Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  /// 스타보드 글이 올라갈 채널 ID (null이면 기능 꺼짐)
   channelId         String?
-  /// 세는 이모지 — 유니코드 이모지 또는 서버 커스텀 이모지 마크업(`<:name:id>`)
   emoji             String   @default("⭐")
-  /// 스타보드에 올리는 기준 별 수 (1~50)
   threshold         Int      @default(3)
-  /// 글쓴이 본인이 단 반응은 세지 않아요
   excludeSelf       Boolean  @default(true)
-  /// 연령 제한(NSFW) 채널의 메시지는 올리지 않아요
   excludeNsfw       Boolean  @default(true)
-  /// 스타보드 대상에서 빼는 채널 ID 목록 (최대 25)
   ignoredChannelIds String[] @default([])
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
 
-// 스타보드에 올라간 원문 메시지 — 원문 하나당 스타보드 글 하나. 별 수가 기준 아래로 떨어져도 글은 남기고 count만 갱신해요(D-16).
 model StarboardEntry {
   sourceMessageId    String   @id
   guildId            String
   guild              Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
   sourceChannelId    String
-  /// 스타보드 글이 올라간 채널 — 설정의 채널을 나중에 바꿔도 기존 글을 고칠 수 있게 함께 저장해요
   starboardChannelId String
   starboardMessageId String
   count              Int
@@ -600,25 +512,18 @@ model StarboardEntry {
   @@index([guildId])
 }
 
-// 서버별 생일 축하 설정 — 길드당 1:1. 카드·메시지(`config`)는 인사 카드와 같은 GreetingConfig라서 enabled·channelId도 여기에 있어요.
-// 계약은 packages/utils/src/birthdayCelebration.ts. 실행은 ScheduledJob(kind 'birthday_daily')이 하루에 한 번이에요.
 model BirthdaySettings {
   guildId          String   @id
   guild            Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
   config           Json
-  /// 보내는 시각 "HH:mm" (KST)
   sendTime         String   @default("09:00")
-  /// 생일 당일에 줄 역할 (다음 날 회수)
   roleId           String?
-  /// 켠 다음 날부터 축하해요 (KST "YYYY-MM-DD"). 켠 당일에는 보내지 않아요
   activeFrom       String?
-  /// 마지막으로 축하를 보낸 날 (KST "YYYY-MM-DD") — 같은 날 두 번 보내지 않게 해요
   lastCelebratedOn String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
 
-// 서버별 생일 축하 동의 — 본인이 켠 사람만 그 서버에서 축하해요 (D-17). 생일(월/일)은 User에 있어요.
 model BirthdayOptIn {
   guildId   String
   guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
@@ -630,13 +535,11 @@ model BirthdayOptIn {
   @@index([userId])
 }
 
-// 생일 역할을 준 기록 — 다음 날 정확히 그 사람에게서만 회수하려고 남겨요 (서버당 한 사람 한 행).
 model BirthdayRoleGrant {
   guildId   String
   guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
   userId    String
   roleId    String
-  /// 역할을 준 날 (KST "YYYY-MM-DD") — 이보다 이후 날짜의 회차가 회수해요
   grantedOn String
   createdAt DateTime @default(now())
 
@@ -649,28 +552,21 @@ enum GiveawayStatus {
   cancelled
 }
 
-// 나눔 — 참여 카드(messageId)와 조건(requirements)을 저장해요. 계약은 packages/utils/src/giveaway.ts.
-// 마감은 ScheduledJob(kind 'giveaway_end', payload { giveawayId })이 맡아요.
 model Giveaway {
   id            String          @id @default(uuid())
   guildId       String
   guild         Guild           @relation(fields: [guildId], references: [id], onDelete: Cascade)
   channelId     String
-  /// 참여 카드 메시지 — 게시 직후에 채워져요
   messageId     String?
   prize         String
   winnerCount   Int
   endsAt        DateTime
-  /// 참여 조건 `{ version: 1, conditions: [...] }` — 마감 시점에 다시 확인해요
   requirements  Json            @default("{\"version\":1,\"conditions\":[]}")
   status        GiveawayStatus  @default(running)
-  /// 지금까지 뽑힌 당첨자 (다시 뽑기는 뒤에 이어 붙어요)
   winnerIds     String[]        @default([])
-  /// 마감 때 참여 버튼을 누른 사람 수와 조건을 통과한 사람 수
   entryCount    Int?
   eligibleCount Int?
   endedAt       DateTime?
-  /// 결과 발표를 끝낸 시각 — 비어 있으면 핸들러가 재시도 때 다시 발표해요
   announcedAt   DateTime?
   createdBy     String
   createdAt     DateTime        @default(now())
@@ -680,7 +576,6 @@ model Giveaway {
   @@index([guildId, status])
 }
 
-// 나눔 참여 — 기본 키 (giveawayId, userId)라 중복 참여가 DB에서 막혀요.
 model GiveawayEntry {
   giveawayId String
   giveaway   Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
@@ -690,13 +585,9 @@ model GiveawayEntry {
   @@id([giveawayId, userId])
 }
 
-/// 가사 한국어 번역 — 가사 원문 줄 집합의 해시가 키라 같은 가사는 곡이 달라도 한 번만 번역해요. data-api가 쓰고 읽어요.
 model LyricsTranslation {
-  /// sha256(hex) of 원문 줄 목록 (data-api lyricsTranslation.ts의 lyricsSourceHash)
   sourceHash String   @id
-  /// 원문 줄 → 한국어 번역 `{ "원문": "번역" }`
   lines      Json
-  /// 번역에 쓴 모델
   model      String
   createdAt  DateTime @default(now())
 }

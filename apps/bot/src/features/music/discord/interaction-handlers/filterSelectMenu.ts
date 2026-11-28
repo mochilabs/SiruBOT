@@ -30,7 +30,6 @@ export default class FilterInteractionHandler extends InteractionHandler {
 
 		const selectedPresets = interaction.values;
 
-		// 전체 초기화 후 선택된 필터만 적용
 		await resetAllFilters(player);
 
 		const results = await Promise.allSettled(selectedPresets.map((preset) => applyFilterPreset(player, preset)));
@@ -42,8 +41,7 @@ export default class FilterInteractionHandler extends InteractionHandler {
 			);
 		}
 
-		// nightcore/vaporwave는 timescale을 공유해 나중에 적용된 쪽만 살아남는다.
-		// 실패한 프리셋과 덮어써진 프리셋을 UI에 그대로 두면 실제 상태와 어긋난다.
+		// nightcore/vaporwave는 timescale을 공유하므로 덮어써진/실패한 프리셋은 UI에서 제외한다.
 		const succeededPresets = selectedPresets.filter((_, i) => results[i].status === 'fulfilled');
 		const activePresets = dropLoserFilters(succeededPresets);
 

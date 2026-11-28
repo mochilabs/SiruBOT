@@ -17,7 +17,6 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
-/** 가짜 버튼 — 데모 안에서 눌린 상태만 표현해요 */
 function MockButton({ children, pressed }: { children: React.ReactNode; pressed?: boolean }) {
 	return (
 		<span
@@ -31,7 +30,6 @@ function MockButton({ children, pressed }: { children: React.ReactNode; pressed?
 	);
 }
 
-/** 시루 봇 메시지 — 다른 프리뷰와 같은 Discord 메시지 구조(프로필, 이름, 앱 배지, 시간) */
 function BotMessage({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="flex gap-2.5">
@@ -128,11 +126,6 @@ function VoicePanel({ step }: { step: number }) {
 	);
 }
 
-/**
- * 서버 운영 프리뷰 — 역할 패널, 티켓, 임시 음성 채널을 탭으로 돌려 보여줘요.
- * 탭마다 짧은 단계(0 → 1 → 2)를 재생하고, 고르면 그 탭에서 멈춰요.
- * 단계가 바뀌어도 프레임 높이는 고정이라 아래 레이아웃이 밀리지 않아요.
- */
 export function ServerOpsPreview() {
 	const shouldReduce = useReducedMotion();
 	const { ref, inView } = useInView({ threshold: 0.3 });
@@ -148,7 +141,6 @@ export function ServerOpsPreview() {
 		}
 		setStep(0);
 		const timers = [setTimeout(() => setStep(1), 900), setTimeout(() => setStep(2), 1900)];
-		// 직접 고르지 않았다면 다음 탭으로 넘어가요
 		if (!manual) {
 			timers.push(
 				setTimeout(() => {

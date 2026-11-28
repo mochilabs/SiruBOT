@@ -1,21 +1,8 @@
-/**
- * 커스텀 슬래시 명령어 동기화 — DB의 method='slash' 명령어를 길드 애플리케이션 커맨드로 등록/해제해요.
- *
- * - 대시보드 저장/삭제 → data-api → Redis 무효화 브로드캐스트 → guildSettingsInvalidator가
- *   이 동기화를 불러요. 같은 브로드캐스트를 여러 번 받아도 결과가 같도록(멱등) "가진 것과 DB를
- *   맞춘다" 방식이에요.
- * - 봇 본 커맨드와 충돌하지 않도록 ID 기반 증분 동기화(create/edit/delete)를 써요 —
- *   guild.commands.set(전체 교체)는 본 커맨드를 지우므로 쓰지 않아요.
- * - 잔여 정리(stale delete)는 "우리 DB 행에도 없고 봇 본 커맨드 이름도 아닌" 길드 커맨드만
- *   지워요. 삭제된 행의 applicationCommandId는 행이 사라진 뒤 알 수 없으므로 이 방식으로만 정리돼요.
- * - 실패해도 다음 브로드캐스트에서 재시도돼요 — 절대 프로세스를 크래시시키지 않아요.
- */
 import { ApplicationCommandOptionType, type ApplicationCommandOptionData, type Guild } from 'discord.js';
 import type { PrismaClient } from '@sirubot/prisma';
 import { CUSTOM_COMMAND_MAX_ARGS, CUSTOM_COMMAND_MAX_SLASH_PER_GUILD, normalizeCustomCommandName } from '@sirubot/utils';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 
-/** 문자열·조건의 {argvN}/index에서 인수 사용처를 모아요 */
 function collectArgIndexes(node: unknown, into: number[]): void {
 	if (typeof node === 'string') {
 		for (const match of node.matchAll(/\{argv(\d+)\}/gu)) into.push(Number(match[1]));
@@ -33,7 +20,6 @@ function collectArgIndexes(node: unknown, into: number[]): void {
 	}
 }
 
-/** 스펙이 실제로 쓰는 인수 개수 — {argv3}까지 있으면 4 */
 export function countArgOptions(spec: unknown): number {
 	const indexes: number[] = [];
 	collectArgIndexes(spec, indexes);
@@ -41,7 +27,6 @@ export function countArgOptions(spec: unknown): number {
 	return Math.min(Math.max(...indexes) + 1, CUSTOM_COMMAND_MAX_ARGS);
 }
 
-/** 슬래시 옵션 자동 생성 — argument1..N (전부 선택형 문자열) */
 export function buildSlashOptions(spec: unknown): ApplicationCommandOptionData[] {
 	return Array.from({ length: countArgOptions(spec) }, (_unused, index) => ({
 		name: `argument${index + 1}`,

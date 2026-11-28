@@ -2,51 +2,29 @@ import { MemoryCache } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 
-/**
- * 채팅 TTS(siru_tts 2.0) 클라이언트 — 합성 요청·공개 URL 수신·재시도.
- *
- * `POST /v1/synthesize`에 `return_url: true`를 보내 바이트 대신 재생 URL을 받는다.
- * siru_tts는 신뢰하는 내부망 전용이라 인증 헤더가 없다. 계약은 ../siru_tts/OPENAPI.md와 CLIENT.md.
- * `voice`와 `language`는 함께 보낼 수 없다(400 ambiguous_routing) — 이 클라이언트는 voice만 보내고,
- * voice가 없으면 둘 다 생략해 서버가 텍스트 언어로 목소리를 고르게 한다.
- *
- * 재시도는 CLIENT.md의 502/503/504 규칙을 따르되, 채팅 읽기는 늦게 도착한 음성이 무의미하므로
- * 통합 예산 20초 안에서만 재시도한다.
- */
-
-/** 합성 1건의 통합 예산 — 늦게 도착한 채팅 음성은 의미가 없어 짧게 잡는다 */
 const TTS_SYNTH_BUDGET_MS = 20_000;
-/** readyz 확인 타임아웃 — 예열 확인은 합성보다 가벼운 호출 */
 const TTS_PROBE_TIMEOUT_MS = 5_000;
-/** 음성 카탈로그 캐시 — 패널을 열 때마다 siru_tts를 두드리지 않게 5분간 보관한다 */
 const TTS_VOICES_TTL_MS = 5 * 60_000;
-/** 백오프 기본값 — Retry-After가 있으면 그것을 우선하고, 여기에 지터(0~100ms)를 더한다 */
 const TTS_BACKOFF_BASE_MS = 300;
 
-/** 재생 URL 포맷 — 엔진이 결정한다(Edge/ElevenLabs는 mp3, VOICEVOX/Typecast/CLOVA는 wav) */
 type TtsShareFormat = 'wav' | 'mp3';
 
 export interface TtsClip {
-	/** 무인증 공개 URL — 만료(expiresIn) 전에 재생/announce를 시작해야 한다 */
 	url: string;
 	expiresIn: number;
 	format: TtsShareFormat;
 	cache: 'hit' | 'miss';
 	durationMs: number;
-	/** 서버 경고 코드 — `engine_fallback:<engine>`, `voice_language_mismatch:<lang>` 등 */
 	warnings: string[];
 }
 
-/** 요청 전체에 적용되는 엔진 감정 — 미지원이면 서버가 중립으로 폴백한다 */
 export type TtsEmotion = 'neutral' | 'happy' | 'sad' | 'angry' | 'whisper';
 
-/** 사용자 프리셋 — voice는 engine:voice 식별자 */
 interface TtsSynthOptions {
 	voice?: string;
 	emotion?: TtsEmotion;
 }
 
-/** catalog 항목 — id는 SynthRequest.voice에 그대로 전달 가능한 engine:voice 식별자 */
 export interface TtsVoice {
 	id: string;
 	engine: string;
@@ -64,10 +42,8 @@ export class TtsError extends Error {
 	}
 }
 
-/** TTS 서비스가 쓰는 의존성 — 설정은 호출할 때마다 읽어요 (SIRU_TTS_URL이 없으면 null) */
 export interface TtsConfig {
 	url: string;
-	/** 선택 — 비어 있으면 voice를 생략하고 서버가 텍스트 언어로 고른다 */
 	defaultVoice: string | null;
 }
 
@@ -77,7 +53,6 @@ export interface TtsServiceDeps {
 }
 
 export class TtsService {
-	/** `/readyz` 통과 여부 — 예열 중(503)은 정상이라 다음 합성 시점에 다시 확인한다 */
 	private ready = false;
 	private readonly voiceCache = new MemoryCache<string, TtsVoice[]>({ ttl: TTS_VOICES_TTL_MS, maxSize: 50 });
 
@@ -91,10 +66,6 @@ export class TtsService {
 		return this.deps.getTtsConfig() !== null;
 	}
 
-	/**
-	 * 텍스트를 합성해 공개 URL로 돌려받는다.
-	 * 실패는 전부 TtsError로 던진다 — 호출부는 채널에 알리지 않고 조용히 스킵한다(명세 4.6).
-	 */
 	public async synthesize(text: string, options?: TtsSynthOptions): Promise<TtsClip> {
 		const config = this.deps.getTtsConfig();
 		if (!config) throw new TtsError('not_configured', 'siru_tts is not configured');

@@ -18,7 +18,6 @@ import {
 import { GreetingImageEditor } from "./greeting-image-editor";
 
 interface GreetingImageEditCardProps {
-  /** 다이얼로그 제목용 — "환영"/"작별" */
   heading: string;
   guildId: string;
   guildName: string | null;
@@ -28,7 +27,6 @@ interface GreetingImageEditCardProps {
   onPatch: (next: GreetingConfig) => void;
 }
 
-/** 카드 이미지 편집 진입 카드 — 레이어 편집기를 모달로 열어요 */
 export function GreetingImageEditCard({
   heading,
   guildId,

@@ -19,7 +19,6 @@ async function render(node: ReactNode) {
 
 function Probe() {
 	const switcher = useFeatureSwitcher();
-	// 렌더 중에 바깥 변수를 바꾸지 않고, 커밋 후에 최신 값을 기록해요.
 	useEffect(() => {
 		latest = switcher;
 	});

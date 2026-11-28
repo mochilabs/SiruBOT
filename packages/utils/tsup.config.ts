@@ -1,9 +1,7 @@
 import { createConfig } from '../../scripts/tsup.config.js';
 
 export default createConfig({
-	// 서브패스 export(./time ./sentry ./secretBox ./customCommand ./playerState ./guildData ./memberGreeting ./greetingCardDesign ./redisEnvelope ./social ./playerWeb ./storage ./weather ./delivery ./birthday ./playerLimits ./guildSettingsContract ./trackIdentity ./modules ./brand ./lrc)와 1:1 대응해요.
-	// package.json exports에 서브패스를 추가하면 여기 entry에도 같은 경로를 추가해야 dist/*.d.ts가 생겨요.
-	// 루트(index)는 노드 전용·무거운 의존이 섞이므로, 클라이언트 번들로 들어가는 계약 모듈은 서브패스로만 써요.
+	// Keep in sync with package.json subpath exports for dist/*.d.ts generation.
 	entry: [
 		'src/index.ts',
 		'src/mixerTransition.ts',

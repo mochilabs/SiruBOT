@@ -20,7 +20,6 @@ vi.mock('@sapphire/framework', () => ({
 	InteractionHandlerTypes: { Button: 'button', SelectMenu: 'select-menu' },
 	UserError: class UserError extends Error {}
 }));
-// 음성 채널 조건은 픽스처 멤버로 판정해요 — 권한 보유자(permissions.has)는 원격 권한자로 면제돼요. 정책 자체는 access.test.ts가 검증해요.
 vi.mock('../utils/permissionCheck.ts', () => ({
 	checkDJOrAlone: mocks.allowed,
 	checkInBotVoice: async (
@@ -122,7 +121,6 @@ describe('queue view state is per view, not per player', () => {
 		const viewA = render(player, USER_A, 1);
 		const viewB = render(player, USER_B, 1);
 
-		// A는 두 번 다음 페이지로 넘긴다.
 		const a2 = await click(USER_A, idFor(viewA, 'page').replace(/:\d+$/, ':2'));
 		const a2Rendered = a2.update.mock.calls[0]![0].components[0].toJSON();
 		expect(pageOf(a2Rendered)).toBe(2);
@@ -134,7 +132,6 @@ describe('queue view state is per view, not per player', () => {
 		);
 		expect(pageOf(a3.update.mock.calls[0]![0].components[0].toJSON())).toBe(3);
 
-		// B의 화면은 여전히 1쪽이고, B의 '다음'은 A의 쪽수와 무관하게 2쪽이다.
 		const bNext = await click(
 			USER_B,
 			customIds(viewB)
@@ -157,19 +154,16 @@ describe('queue view state is per view, not per player', () => {
 		const renderedB = selB.update.mock.calls[0]![0].components[0].toJSON();
 		expect(pageOf(renderedB)).toBe(1);
 
-		// B가 자기 선택(#3)을 제거한다 — A의 선택이나 쪽수는 영향 없이 B의 1쪽이 갱신된다.
 		const removed = await click(USER_B, idFor(renderedB, 'rm'));
 		expect(player.queue.tracks.map((track) => track.info.identifier)).not.toContain('id-2');
 		expect(player.queue.tracks).toHaveLength(34);
 		expect(pageOf(removed.editReply.mock.calls[0]![0].components[0].toJSON())).toBe(1);
 
-		// 대기열이 바뀌었으므로 A의 예전 선택은 엉뚱한 곡을 건드리지 않고 거절된다.
 		const staleJump = await click(USER_A, idFor(renderedA, 'jump'));
 		expect(mocks.skip).not.toHaveBeenCalled();
 		expect(staleJump.reply).toHaveBeenCalledTimes(1);
 		expect(player.queue.tracks).toHaveLength(34);
 
-		// A가 다시 선택하면 A의 3쪽 기준으로 동작한다.
 		const reselected = await select(USER_A, idFor(render(player, USER_A, 3), 'sel'), queueSelectionValue(player as never, 25));
 		const removedA = await click(USER_A, idFor(reselected.update.mock.calls[0]![0].components[0].toJSON(), 'rm'));
 		expect(player.queue.tracks.map((track) => track.info.identifier)).not.toContain('id-26');

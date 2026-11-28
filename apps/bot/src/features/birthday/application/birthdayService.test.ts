@@ -7,7 +7,6 @@ const GUILD = '100000000000000001';
 const CHANNEL = '200000000000000001';
 const ROLE = '300000000000000001';
 const user = (n: number) => `4000000000000000${String(n).padStart(2, '0')}`;
-/** KST "YYYY-MM-DD HH:mm"을 UTC Date로 */
 const kst = (text: string) => new Date(`${text.replace(' ', 'T')}:00+09:00`);
 
 interface Settings {
@@ -44,7 +43,7 @@ function setup(options: { now: string; settings?: Partial<Settings> | null; birt
 	}
 	const users = new Map<string, { birthMonth: number | null; birthDay: number | null }>();
 	for (const [id, [m, d]] of Object.entries(options.birthdays ?? {})) users.set(id, { birthMonth: m, birthDay: d });
-	const optIns = new Map<string, number>(); // userId -> order
+	const optIns = new Map<string, number>();
 	(options.optIns ?? []).forEach((id, i) => optIns.set(id, i));
 	const jobs: Job[] = [];
 	const grants = new Map<string, { roleId: string; grantedOn: string }>();
@@ -95,7 +94,6 @@ function setup(options: { now: string; settings?: Partial<Settings> | null; birt
 		}
 	};
 
-	/** 서버에 남은 멤버 — 테스트가 지워서 "나간" 상황을 만들어요 */
 	const present = new Set<string>(optIns.keys());
 	const discord = {
 		fetchMembers: vi.fn(async (_guildId: string, ids: readonly string[]) => {
@@ -128,7 +126,6 @@ function setup(options: { now: string; settings?: Partial<Settings> | null; birt
 		present,
 		optIns,
 		setNow: (text: string) => void (clock = kst(text)),
-		/** 스케줄러가 job을 돌리는 것과 같이 runAt을 담은 행을 넘겨요 */
 		run: (runAt: string) => handler!({ id: 'running-job', guildId: GUILD, kind: 'birthday_daily', runAt: kst(runAt), payload: {} })
 	};
 }
@@ -141,7 +138,7 @@ describe('BirthdayService.handle', () => {
 		const t = setup({
 			now: '2026-11-22 09:00',
 			birthdays: { [user(1)]: [11, 22], [user(2)]: [11, 23], [user(3)]: [11, 22] },
-			optIns: [user(1), user(2)] // user(3)은 생일이 오늘이지만 동의하지 않았어요
+			optIns: [user(1), user(2)]
 		});
 		await t.run('2026-11-22 09:00');
 		expect(celebrated(t)).toEqual([[user(1)]]);
@@ -193,7 +190,6 @@ describe('BirthdayService.handle', () => {
 	});
 
 	it('KST 자정 직후(UTC로는 전날)에도 KST 날짜로 생일을 가려요', async () => {
-		// 11/22 00:30 KST = 11/21 15:30 UTC
 		const t = setup({ now: '2026-11-22 00:30', settings: { sendTime: '00:30' }, birthdays: { [user(1)]: [11, 22] }, optIns: [user(1)] });
 		await t.run('2026-11-22 00:30');
 		expect(celebrated(t)).toEqual([[user(1)]]);
@@ -208,7 +204,6 @@ describe('BirthdayService.handle', () => {
 		});
 		await t.run('2026-11-22 09:00');
 		expect(t.discord.celebrate).not.toHaveBeenCalled();
-		// 다음 회차(11/23)는 예약돼 있고, 그날은 보내요
 		expect(t.jobs).toHaveLength(1);
 		t.setNow('2026-11-23 09:00');
 		await t.run('2026-11-23 09:00');
@@ -222,7 +217,6 @@ describe('BirthdayService.handle', () => {
 		expect(t.jobs).toHaveLength(1);
 		expect(t.jobs[0]!.runAt).toEqual(kst('2026-11-23 09:00'));
 		expect(t.settings.get(GUILD)!.lastCelebratedOn).toBeNull();
-		// 재시도에서는 같은 다음 회차를 중복 예약하지 않아요
 		await t.run('2026-11-22 09:00');
 		expect(t.jobs).toHaveLength(1);
 		expect(t.settings.get(GUILD)!.lastCelebratedOn).toBe('2026-11-22');

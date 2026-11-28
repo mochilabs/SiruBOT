@@ -5,7 +5,7 @@ import { CHOICE_LIMIT, clipChoiceName } from '../../../../lib/autocomplete.ts';
 
 const STATUS_LABEL: Record<GiveawayStatus, string> = { running: '진행 중', ended: '끝남', cancelled: '취소됨' };
 
-/** 서버 관리 권한이 있는 사람에게만 상태에 맞는 나눔을 후보로 보여줘요 (자동완성은 precondition을 거치지 않아요) */
+/** 자동완성은 precondition을 거치지 않아 여기서 직접 권한을 확인해요. */
 export function giveawayAutocomplete(statuses: readonly GiveawayStatus[]) {
 	return async (interaction: AutocompleteInteraction) => {
 		if (!interaction.inCachedGuild() || !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) return interaction.respond([]);

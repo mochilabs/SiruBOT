@@ -1,21 +1,11 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { TICKET_TRANSCRIPT_BUCKET } from '@sirubot/utils';
 
-/**
- * storage 프록시 — 봇·대시보드는 스토리지 주소·키를 몰라도 돼요(data-api만 보유).
- *
- * 용도: 티켓 대화 기록(transcript) 업로드/다운로드. 버킷은 **비공개 버킷 하나로 고정**해
- * 임의 버킷 쓰기를 허용하지 않아요. 키는 `{guildId}/{ticketId}.json.gz` 규칙만 통과해요.
- * 공개 버킷(`guild-assets`)은 기존처럼 대시보드가 storage에 직접 접근해요.
- */
-
 const TRANSCRIPT_KEY_PATTERN = /^\d{17,20}\/[0-9a-f-]{36}\.json\.gz$/;
 const TRANSCRIPT_MAX_BYTES = 16 * 1024 * 1024;
 
 export interface StorageProxyDeps {
-	/** storage base URL — 미설정이면 라우트가 503으로 응답해요 */
 	storageUrl?: string;
-	/** storage 인증 키 (Authorization 헤더 원문, Bearer 없음) */
 	storageAuthKey?: string;
 }
 
@@ -25,7 +15,6 @@ export function registerStorageProxyRoutes(fastify: FastifyInstance, deps: Stora
 
 	const unavailable = (reply: FastifyReply) => reply.code(503).send({ error: 'storage_unavailable', message: '저장소가 설정되지 않았어요.' });
 
-	// gzip 바이트를 그대로 받아요 (본문 파서는 raw buffer)
 	fastify.addContentTypeParser('application/gzip', { parseAs: 'buffer' }, (_request, body, done) => {
 		done(null, body);
 	});

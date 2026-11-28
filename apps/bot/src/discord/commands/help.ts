@@ -3,7 +3,6 @@ import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
 import { runHelpSession } from '../help/helpSession.ts';
 
-/** `/도움말` — 카테고리 데이터는 `help/helpCatalog.ts`, 화면은 `views/help.ts`, 셀렉트 세션은 `help/helpSession.ts`예요. */
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'help',

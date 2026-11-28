@@ -10,16 +10,10 @@ import { cn } from "@/lib/utils";
 
 import type { GuildCardProps } from "./guild-card.types";
 
-/** 소프트 primary 링크 버튼 색 — 새 variant 없이 한 곳에서 공유해요(카드 CTA·빈 상태 CTA) */
 export const SOFT_PRIMARY_LINK_CLASS = "bg-primary/10 text-primary-text hover:bg-primary-control hover:text-primary-control-text";
 
-/** 서버 목록 그리드 — 실제 목록과 스켈레톤이 같은 열·간격을 써야 로드 때 카드가 재배치되지 않아요 */
 export const SERVERS_GRID_CLASS = "grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4";
 
-/**
- * PC(md 이상)는 그리드 카드, 모바일은 한 행 리스트 — 같은 마크업을 반응형 클래스만으로
- * 바꿔요. 모바일 진입 버튼은 h-11(44px) 터치 영역을 가져요.
- */
 export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 	const iconUrl = guild.icon ? discordGuildIconUrl(guild.id, guild.icon) : null;
 
@@ -34,7 +28,6 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					</div>
 				)}
 				<div className="min-w-0">
-					{/* 모바일은 서버 아이콘+이름만 — 설치 표시(아이콘 포함)는 md 이상에서만 */}
 					<h3 className="line-clamp-1 text-base font-extrabold tracking-tight text-foreground md:text-lg">{guild.name}</h3>
 					<div className="mt-0.5 hidden items-center gap-1 md:flex">
 						{guild.isInstalled ? (
@@ -106,7 +99,6 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					<ExternalLink size={14} className="hidden opacity-40 md:inline" />
 				</a>
 			) : (
-				// 초대 링크를 만들 수 없는 서버(R-26) — "#" 데드 링크 대신 비활성 표시
 				<Button
 					disabled
 					variant="secondary"

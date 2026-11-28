@@ -1,5 +1,3 @@
-// storage 회귀 계약 — 키 미설정 시 호출 차단, Authorization은 Bearer 없이 키 원문,
-// data-api·스토리지 실패 메시지 한국어 전달과 404 삭제 성공 취급을 잠가요.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const env = vi.hoisted(() => ({ url: "http://storage.test", authKey: "storage-key" }));

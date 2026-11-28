@@ -16,7 +16,6 @@ export default function PlaylistsLoading() {
 			/>
 
 			<div className="flex flex-col items-start gap-4 lg:flex-row lg:gap-8">
-				{/* 사이드바 스켈레톤 */}
 				<Card padding="md" className="hidden w-full shrink-0 space-y-3 lg:block lg:w-80">
 					<div className="flex items-center justify-between">
 						<SkeletonLine width="6rem" height="h-5" />
@@ -30,7 +29,6 @@ export default function PlaylistsLoading() {
 					</div>
 				</Card>
 
-				{/* 상세 영역 스켈레톤 */}
 				<div className="flex w-full flex-1 flex-col gap-4 lg:min-h-[500px]">
 					<Card padding="md" className="space-y-3">
 						<SkeletonLine width="14rem" height="h-7" />

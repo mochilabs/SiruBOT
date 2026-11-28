@@ -82,7 +82,6 @@ const SEGMENT_OPTIONS: SearchableOption[] = SPONSORBLOCK_SEGMENTS.map(
   (segment) => ({ value: segment, ...SEGMENT_OPTIONS_META[segment] }),
 );
 
-/** 안내 방식 3택 — 봇 `/설정` 오디오 페이지와 같은 값이에요 */
 const ANNOUNCE_MODE_OPTIONS = [
   { value: "sequential", label: "순서대로", hint: "안내가 끝나야 다음 안내가 시작돼요." },
   { value: "parallel", label: "겹쳐서", hint: "여러 안내를 동시에 재생해요." },

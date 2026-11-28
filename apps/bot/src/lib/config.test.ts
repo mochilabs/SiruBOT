@@ -55,7 +55,6 @@ describe('validateEnv — 봇 env 스키마 (fail-closed)', () => {
 	});
 });
 
-/** 기본값 한 줄 — env 값을 얹어 만든 Config에서 필드를 꺼내요. */
 const configWith = (env: RawEnv): Config => loadConfig({ ...validEnv(), ...env });
 
 describe('loadConfig — 필수 키·검증', () => {

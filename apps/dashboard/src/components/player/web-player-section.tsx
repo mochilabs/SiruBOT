@@ -37,7 +37,6 @@ function VoiceStatusBadge({ guildId, compact = false }: { guildId: string; compa
 
 	if (isLoading) return <SkeletonLine width="72px" height="h-6" />;
 	if (error || !data?.voice) {
-		// 봇 미접속·권한 불확실 — 재생 요청은 실패 이유를 응답으로 알려주므로 확정 안내 대신 경고 상태만
 		return (
 			<Badge variant="warning" dot>
 				음성 상태 확인 불가
@@ -71,9 +70,7 @@ function SearchResultRow({
 	onPlay,
 }: {
 	track: TrackSummary;
-	/** 이 곡이 재생 요청 중이에요 — 이 행 버튼만 로딩으로 보여요 */
 	playing: boolean;
-	/** 다른 곡이 요청 중이라 잠시 눌러도 소용없어요 */
 	disabled: boolean;
 	onPlay: (uri: string) => void;
 }) {
@@ -128,13 +125,11 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 	const [searching, setSearching] = useState(false);
 	const [results, setResults] = useState<TrackSummary[] | null>(null);
 	const [searchNotice, setSearchNotice] = useState<string | null>(null);
-	/** 클릭한 트랙 uri — 재생 대기 중 표시. 봇이 상태를 퍼블리시하면 라이브 카드가 이을 거예요 */
 	const [playingUri, setPlayingUri] = useState<string | null>(null);
 	const playPendingRef = useRef(false);
 	const searchAbortRef = useRef<AbortController | null>(null);
 	const lastSearchedRef = useRef<string>("");
 	const { data: voiceData } = useVoiceContext(guildId);
-	// 곡 추가 가능 여부 — 봇이 실제 인가와 같은 정책으로 계산해요. 음성 상태를 아직 못 받은 로딩 중에만 열어 두고 봇의 거절 안내에 맡겨요.
 	const canPlay = voiceData?.voice ? voiceData.voice.canPlay : true;
 
 	const showToastError = useCallback(
@@ -198,7 +193,6 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 				if (controller.signal.aborted) return;
 
 				if (!res.ok) {
-					// 안내 문구가 아니라 오류 코드로 "결과 없음"을 가려요
 					if (body?.code === PLAYER_WEB_CODE_SEARCH_EMPTY) {
 						setResults([]);
 						return;
@@ -228,7 +222,6 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 		[guildId, showToastError, toast],
 	);
 
-	// 타이핑 시 400ms 디바운스 자동 검색 (링크 입력이거나 비어 있으면 초기화)
 	useEffect(() => {
 		if (!trimmedQuery || isPlayableUrl(trimmedQuery)) {
 			searchAbortRef.current?.abort();
@@ -256,7 +249,6 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 			event.preventDefault();
 			if (!trimmedQuery) return;
 
-			// URL이면 검색 없이 바로 재생 — 다시 재생 링크·유튜브 링크를 붙여넣는 가장 빠른 경로예요
 			if (isPlayableUrl(trimmedQuery)) {
 				await playTrack(trimmedQuery);
 				return;
@@ -279,8 +271,6 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 	const showLoading = searching || isTypingDebounce;
 
 	return (
-		// 데스크톱은 왼쪽에 라이브(지금 곡·대기열), 오른쪽 위에 검색, 아래에 기록을 둬요. 오른쪽 열은 스크롤을 따라 붙어 다녀요.
-		// 모바일은 라이브 → 검색 → 기록 순으로 쌓여요.
 		<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-6">
 			<PlayerLiveTab guildId={guildId} compact />
 
@@ -322,7 +312,6 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 							) : null}
 						</InputGroupAddon>
 					</InputGroup>
-					{/* 모바일은 제목 줄 없이 입력창 옆에 접속 상태만 붙여요 */}
 					<span className="shrink-0 sm:hidden">
 						<VoiceStatusBadge guildId={guildId} compact />
 					</span>

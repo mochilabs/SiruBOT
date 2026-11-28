@@ -38,7 +38,6 @@ const STATUS_LABEL: Record<SocialSubscriptionStatus, string> = {
 	disabled: "일시정지"
 };
 
-/** 미리보기 샘플: 소스 이름만 실제 값으로 쓰고 URL은 플랫폼 자리 표시로 보내요 (R-38) */
 export function sampleFor(subscription: SocialSubscription): TemplateSample {
 	if (subscription.platform === "youtube") {
 		return { platform: "youtube", sourceId: subscription.sourcePlatformId, title: "새 영상 제목", url: SAMPLE_URLS.youtube, author: subscription.sourceName };
@@ -53,7 +52,6 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 	const enabled = visible !== false;
 	const { subscriptions, isLoading, error, reload, updateSubscription, removeSubscription } = useSocialAlerts(guildId, enabled);
 	const { channels } = useGuildChannels(guildId, enabled);
-	// 웹훅 프로필 사진 폴백 미리보기용 — 서버(길드) 전용 → 전역 봇 프로필 사진 순서 (봇 프로필 설정과 동일)
 	const { profile: botProfile } = useBotProfile(guildId);
 
 	const [showAdd, setShowAdd] = useState(false);
@@ -62,7 +60,6 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 	const [nameDraft, setNameDraft] = useState("");
 	const [avatarDraft, setAvatarDraft] = useState<string | null>(null);
 	const [showThumbDraft, setShowThumbDraft] = useState(true);
-	// 첫 클릭 무장 → 4초 안에 다시 클릭해야 삭제돼요 (ai·커스텀 명령어 패널과 같은 2클릭 삭제)
 	const { armedId: confirmingId, request: requestDelete } = useConfirmDelete();
 	const [busyId, setBusyId] = useState<string | null>(null);
 	const channelName = (id: string) => channels?.find((channel) => channel.id === id)?.name ?? null;

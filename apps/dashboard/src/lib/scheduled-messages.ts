@@ -16,12 +16,10 @@ import {
 
 import { db } from "@/lib/db";
 
-/** 대시보드에 내려주는 예약 한 건 — 시각은 KST 문자열이에요 */
 export interface ScheduledMessageItem {
   seriesId: string;
   channelId: string;
   content: string;
-  /** 다음(또는 마지막) 실행, "YYYY-MM-DD HH:mm" KST */
   runAt: string;
   repeat: string;
   status: "pending" | "running" | "failed";
@@ -29,7 +27,6 @@ export interface ScheduledMessageItem {
   createdBy: string;
 }
 
-/** 입력 오류(상한·간격 등) — 라우트가 400/409로 바꿔요 */
 export class ScheduledMessageRejected extends Error {
   public constructor(
     message: string,
@@ -64,10 +61,6 @@ export async function getScheduledMessageSettings(
     : SCHEDULED_MESSAGE_SETTINGS_DEFAULTS;
 }
 
-/**
- * 예약 만들기 — 봇의 ScheduledMessageService.create와 같은 검사(`checkNewScheduledMessage`)를 같은 advisory lock 아래에서 해요.
- * 스케줄러가 DB를 읽으니 봇에 알릴 필요는 없어요. 채널 권한은 보낼 때 봇이 확인하고, 실패하면 만든 사람에게 DM으로 알려요.
- */
 export async function createScheduledMessage(
   guildId: string,
   userId: string,
@@ -124,7 +117,6 @@ export async function createScheduledMessage(
   };
 }
 
-/** 예약 목록 — 같은 예약의 회차는 대기 > 실행 중 > 실패 순으로 대표 행 하나만 보여줘요 */
 export async function listScheduledMessages(guildId: string): Promise<ScheduledMessageItem[]> {
   const rows = await db.scheduledJob.findMany({
     where: { guildId, kind: SCHEDULED_MESSAGE_KIND, status: { in: ["pending", "running", "failed"] } },
@@ -155,7 +147,6 @@ export async function listScheduledMessages(guildId: string): Promise<ScheduledM
     .map((entry) => entry.item);
 }
 
-/** 예약 삭제 — 같은 예약의 대기·실패·끝난 회차를 모두 지워요 */
 export async function deleteScheduledMessage(guildId: string, seriesId: string): Promise<boolean> {
   const { count } = await db.scheduledJob.deleteMany({
     where: {

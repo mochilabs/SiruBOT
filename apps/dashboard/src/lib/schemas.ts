@@ -26,13 +26,11 @@ import { z } from "zod";
 const snowflake = z.string().regex(/^\d{17,20}$/, "올바른 ID 형식이 아니에요.");
 const nullableSnowflake = snowflake.nullable();
 
-/** PUT /api/servers/[id]/ai */
 export const aiSettingsSchema = z.object({
 	mode: z.enum(AI_MODES, "모드는 all / channels / off만 가능해요.").optional(),
 	channelIds: z.array(snowflake, "채널 ID 목록이 잘못됐어요.").max(500, "허용 채널은 최대 500개까지 등록할 수 있어요.").optional(),
 });
 
-/** PUT /api/servers/[id]/settings */
 export const guildSettingsSchema = z.object({
 	volume: z
 		.number()
@@ -46,7 +44,6 @@ export const guildSettingsSchema = z.object({
 		.min(TTS_VOLUME_RANGE.min, `볼륨은 ${TTS_VOLUME_RANGE.min} 이상이에요.`)
 		.max(TTS_VOLUME_RANGE.max, `볼륨은 ${TTS_VOLUME_RANGE.max} 이하여야 해요.`)
 		.optional(),
-	/** TTS 낭독 중 음악 볼륨 비율(0~1) — 1이면 낮추지 않아요 */
 	ttsDuckLevel: z
 		.number()
 		.min(TTS_DUCK_LEVEL_RANGE.min, "덕킹 비율은 0 이상이에요.")
@@ -96,9 +93,7 @@ export const guildSettingsSchema = z.object({
 		.max(CROSSFADE_MS_RANGE.max, "크로스페이드는 15초 이하여야 해요.")
 		.optional(),
 	normalizationEnabled: z.boolean().optional(),
-	// TTS 안내 방식 3택 — 봇의 /설정 오디오 페이지와 같은 값이에요
 	ttsAnnounceMode: z.enum(TTS_ANNOUNCE_MODES).optional().default(TTS_ANNOUNCE_MODE_DEFAULT),
-	// 채팅 유틸 — 봇 계약: packages/utils/src/chatTools.ts, 채널 토글: 봇 guildService의 ChatToolSettings
 	emojiEnlargeMode: z.enum(CHAT_TOOL_MODES, "이모지 확대 모드가 잘못됐어요.").optional(),
 	emojiEnlargeChannelIds: z.array(snowflake, "채널 ID 목록이 잘못됐어요.").max(500, "허용 채널은 최대 500개까지 등록할 수 있어요.").optional(),
 	quoteMode: z.enum(CHAT_TOOL_MODES, "메시지 인용 모드가 잘못됐어요.").optional(),
@@ -113,27 +108,15 @@ export const guildSettingsSchema = z.object({
 	embedFixTranslateLang: z.enum(EMBED_FIX_TRANSLATE_LANGS, "임베드 번역 언어가 잘못됐어요.").optional(),
 	countingEnabled: z.boolean().optional(),
 	countingChannelId: nullableSnowflake.optional(),
-	// 봇 테마 프리셋 — 컨테이너 강조선·앱 이모지·기본 카드 색 (봇 계약: packages/utils guildSettingsContract)
-	// 부분 저장(PUT)이 다른 설정 때문에 테마를 기본값으로 덮어쓰지 않게 default를 두지 않아요.
+	// Omit .default() so partial PUTs do not overwrite themePreset.
 	themePreset: z.enum(THEME_PRESETS, "테마가 잘못됐어요.").optional(),
-	// 꺼진 기능 모듈 id (P-06). 모르는 id와 끌 수 없는 모듈(관리)은 라우트가 sanitizeDisabledModules로 버려요.
 	disabledModules: z.array(z.string().max(32, "모듈 ID가 잘못됐어요."), "모듈 목록이 잘못됐어요.").max(BOT_MODULES.length, "모듈 목록이 잘못됐어요.").optional(),
 });
 
-/**
- * 길드 설정 계약의 단일 소스 — 허용 키(GUILD_SETTING_KEYS)·응답 타입(GuildSettings)·기본값
- * (GUILD_SETTINGS_DEFAULTS)이 전부 guildSettingsSchema에서 파생돼요. 한쪽을 고치면 나머지도
- * 컴파일/테스트로 함께 움직이므로 키 드리프트(유효 필드 거부·미등록 키 통과)가 구조적으로 못 생겨요.
- */
 export const GUILD_SETTING_KEYS = Object.keys(guildSettingsSchema.shape);
 
-/** 설정 응답 본문 — 스키마의 optional을 걷어낸 값이에요 (GET·PUT 응답은 항상 전 필드를 내려줘요) */
 export type GuildSettings = Required<z.infer<typeof guildSettingsSchema>>;
 
-/**
- * DB 행이 없을 때 내려주는 기본값 — 키·타입은 스키마에서, 값은 Prisma Guild의 @default와
- * 같아야 해요 (봇 기본값과의 일치는 schemas.test.ts가 스키마 원문으로 검증해요).
- */
 export const GUILD_SETTINGS_DEFAULTS = {
 	volume: 10,
 	ttsVolume: 100,
@@ -176,7 +159,6 @@ export const GUILD_SETTINGS_DEFAULTS = {
 	disabledModules: [],
 } satisfies GuildSettings;
 
-/** POST /api/servers/[id]/jtc/setup */
 export const jtcSetupSchema = z.object({
 	categoryId: snowflake,
 	markerChannelName: z
@@ -187,13 +169,11 @@ export const jtcSetupSchema = z.object({
 		.optional(),
 });
 
-/** 미등록 필드를 조용히 무시하지 말고 알려줘요 (기존 AI 라우트의 동작 유지) */
 function unknownKeys(body: unknown, allowed: readonly string[]): string[] {
 	if (!body || typeof body !== "object" || Array.isArray(body)) return [];
 	return Object.keys(body).filter((key) => !allowed.includes(key));
 }
 
-/** zod 실패 메시지를 한국어 400 응답으로 정리해요 */
 export function zodError(error: z.ZodError): string {
 	const issue = error.issues[0];
 	if (!issue) return "잘못된 요청이에요.";
@@ -203,11 +183,6 @@ export function zodError(error: z.ZodError): string {
 
 export type SettingBodyResult<T> = { ok: true; data: T } | { ok: false; response: NextResponse };
 
-/**
- * 설정 라우트(PUT/PATCH)·api-handler schema 옵션의 본문 검증 공통 흐름 — JSON 파싱·객체 형태·미등록 필드·스키마를
- * 한 번에 검사하고 실패 시 그에 맞는 400 응답을 돌려줘요. 라우트는 결과의 ok만 보면 돼요.
- * `invalidMessage`를 주면 스키마 검증 실패 시 그 고정 메시지를 써요 (api-handler의 invalidMessage 옵션 계약).
- */
 export async function parseSettingBody<S extends z.ZodTypeAny>(
 	request: Request,
 	schema: S,

@@ -7,7 +7,6 @@ import type { AudioService } from './audioService.ts';
 import type { GuildService } from '../../../services/guildService.ts';
 
 type SavedTrack = { track: { title: string; url: string; source: string } };
-/** 목록 재생을 요청한 사람 — 음성 상태(입장 여부·헤드셋)와 검색 요청자 식별만 필요해요 (GuildMember·User가 만족해요). */
 export interface PlaylistRequesterMember {
 	voice: { channelId: string | null; deaf: boolean | null };
 }
@@ -21,19 +20,16 @@ export type PlaylistPlaybackContext = {
 export interface PlaylistPlaybackDeps {
 	guildService: GuildService;
 	audioService: AudioService;
-	/** audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요 */
 	getAudio: () => LavalinkManager<CustomPlayer>;
 }
 
 export type PlaylistPlayback = ReturnType<typeof createPlaylistPlayback>;
 
-/** 저장한 목록 재생 — BotApplication.setupServices가 한 번 만들어 container.playlistPlayback으로 노출해요. */
 export function createPlaylistPlayback(deps: PlaylistPlaybackDeps) {
 	return { playSavedTracks: (context: PlaylistPlaybackContext, tracks: SavedTrack[]) => playSavedTracks(deps, context, tracks) };
 }
 
 async function playSavedTracks(deps: PlaylistPlaybackDeps, context: PlaylistPlaybackContext, tracks: SavedTrack[]): Promise<string> {
-	// 안내는 본인에게만 보여요 (이전 UserError의 ephemeral: true와 같아요)
 	const deny = (kind: ErrorKind, message: string): never => {
 		throw new AppError(kind, message, { ephemeral: true });
 	};

@@ -10,13 +10,8 @@ import * as start from '../subcommands/start.ts';
 
 const SUBCOMMANDS: SubcommandModule[] = [start, reroll, end, cancel];
 
-/** /도움말에서 서브커맨드 멘션을 그릴 때 써요 */
 export const GIVEAWAY_SUBCOMMANDS = subcommandSummaries(SUBCOMMANDS);
 
-/**
- * /나눔 — 시작·다시뽑기·종료·취소 (서버 관리 권한; 서버가 연동 설정에서 다른 역할에 열어 줄 수 있어요).
- * 참여는 카드의 버튼으로 하고, 마감은 예약 작업(giveaway_end)이 처리해요.
- */
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'giveaway',

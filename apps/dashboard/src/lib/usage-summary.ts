@@ -1,10 +1,5 @@
 import { BOT_MODULES, type BotModuleId, featureModule } from "@sirubot/utils/modules";
 
-/**
- * /admin "사용 지표" 탭 집계 — 봇이 익명으로 쌓는 FeatureDailyUse와 GuildLifecycle을 표 3개로 묶어요.
- * DB 조회는 API 라우트가 하고, 여기는 순수 계산만 해요 (테스트하기 쉽게).
- */
-
 export const ACTIVATION_WINDOW_MS = 24 * 60 * 60_000;
 
 export interface LifecycleRow {
@@ -13,20 +8,15 @@ export interface LifecycleRow {
 	leftAt: Date | null;
 }
 
-/** featureDailyUse.groupBy({ by: ["feature"], _sum: { count } }) 결과 한 줄 */
 export interface UsageGroupRow {
 	feature: string;
 	count: number;
 }
 
 export interface ActivationSummary {
-	/** 기간 안에 들어온 서버 수 */
 	joined: number;
-	/** 들어온 뒤 24시간 안에 뭐라도 쓴 서버 수 */
 	activated: number;
-	/** 그중 지금도 남아 있는 서버 수 */
 	stillIn: number;
-	/** activated / joined (0~1). 들어온 서버가 없으면 null */
 	rate: number | null;
 }
 
@@ -48,7 +38,6 @@ export interface UsageSummary {
 	playback: PlaybackUsage[];
 }
 
-/** GET /api/admin/usage 응답 */
 export type AdminUsageResponse = UsageSummary & { activationDays: number; usageDays: number };
 
 export function summarizeActivation(rows: readonly LifecycleRow[]): ActivationSummary {
@@ -61,11 +50,9 @@ export function summarizeActivation(rows: readonly LifecycleRow[]): ActivationSu
 	};
 }
 
-/** 익명 모듈별 전체 사용 횟수. 표 순서는 BOT_MODULES 순서예요. */
 export function summarizeModules(rows: readonly UsageGroupRow[]): ModuleUsage[] {
 	const uses = new Map<BotModuleId, number>();
 	for (const row of rows) {
-		// 재생 실패·온보딩 발송은 사람이 쓴 게 아니라서 모듈 사용에서 빼요
 		if (row.feature.startsWith("playback:") || row.feature === "onboarding:sent") continue;
 		const moduleId = featureModule(row.feature);
 		if (!moduleId) continue;
@@ -79,7 +66,6 @@ export function summarizeModules(rows: readonly UsageGroupRow[]): ModuleUsage[] 
 	}));
 }
 
-/** 재생 이벤트(`playback:{type}`) 유형별 합계. 많은 순서예요. */
 export function summarizePlayback(rows: readonly UsageGroupRow[]): PlaybackUsage[] {
 	const totals = new Map<string, number>();
 	for (const row of rows) {

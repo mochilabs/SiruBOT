@@ -86,7 +86,6 @@ export const POST = createGuildApiHandler({
         });
 
         if (sourceIndex < destinationIndex) {
-          // Shift tracks in between down by 1 (e.g. moving a track from index 2 to index 5)
           await tx.playlistTrack.updateMany({
             where: {
               playlistId,
@@ -95,7 +94,6 @@ export const POST = createGuildApiHandler({
             data: { position: { decrement: 1 } },
           });
         } else {
-          // Shift tracks in between up by 1 (e.g. moving a track from index 5 to index 2)
           await tx.playlistTrack.updateMany({
             where: {
               playlistId,

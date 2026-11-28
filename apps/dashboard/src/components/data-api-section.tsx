@@ -28,8 +28,6 @@ export function DataApiSection() {
         dedupingInterval: 5000,
     });
 
-    // 섹션 헤더를 계속 마운트해 두고 본문만 상태로 갈아끼워요 —
-    // 로딩·실패가 왔다 갔다 해도 화면 구조가 점프하지 않게요.
     const sectionHeader = (
         <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary-text">
@@ -102,7 +100,6 @@ export function DataApiSection() {
                 {errors.length > 0 ? (
                     <ul className="space-y-2 text-sm">
                         {errors.map((e, i) => {
-                            // 노드 이벤트는 곡 오류와 원인이 다르므로(음성 서버 장애 vs 곡 문제) 아이콘·제목으로 구분해요.
                             const isNode = e.type === "node_disconnect" || e.type === "node_error";
                             const detail = isNode
                                 ? [e.type === "node_disconnect" ? "연결 끊김" : "노드 오류", e.reason, e.count > 1 ? `${e.count}회 보고` : null]

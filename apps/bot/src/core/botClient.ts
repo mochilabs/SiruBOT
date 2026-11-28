@@ -23,10 +23,10 @@ export const createBotClient = (shardIds: number[] | 'auto', shardCount: number)
 			GatewayIntentBits.GuildMessages,
 			GatewayIntentBits.Guilds,
 			GatewayIntentBits.GuildVoiceStates,
-			// 고정 채널(commandChannel) 입력을 받으려면 메시지 본문이 필요 — 프리빌리지 인텐트, 개발자 포털에서도 활성화해야 함
+			// 고정 채널(commandChannel) 입력용 프리빌리지 인텐트
 			GatewayIntentBits.MessageContent
 		],
-		// Reaction·User: 재시작 전에 게시한 역할 패널 메시지의 반응 이벤트도 받으려면 partial이 필요해요
+		// 재시작 전 게시된 역할 패널 반응 이벤트 수신에 partial 필요
 		partials: [Partials.Channel, Partials.GuildMember, Partials.Message, Partials.Reaction, Partials.User]
 	});
 };

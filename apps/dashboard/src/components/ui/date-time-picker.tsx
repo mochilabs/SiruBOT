@@ -25,7 +25,6 @@ import {
 } from "@/lib/date-time";
 import { cn } from "@/lib/utils";
 
-/** 선택기 공용 속성 — Field 렌더 프롭의 id·describedBy·invalid를 그대로 받아요 */
 interface PickerBaseProps {
 	id?: string;
 	disabled?: boolean;
@@ -37,18 +36,14 @@ interface PickerBaseProps {
 }
 
 export interface DateTimePickerProps extends PickerBaseProps {
-	/** "YYYY-MM-DDTHH:mm" (시간대 없는 벽시계 값) — 비어 있으면 아직 고르지 않은 상태예요 */
 	value: string;
 	onChange: (value: string) => void;
-	/** 고를 수 있는 가장 이른/늦은 시각 ("YYYY-MM-DDTHH:mm") */
 	min?: string;
 	max?: string;
-	/** 분 목록 간격 (기본 1분) — 현재 값이 간격에 안 맞으면 그 값도 목록에 들어가요 */
 	minuteStep?: number;
 }
 
 export interface TimePickerProps extends PickerBaseProps {
-	/** "HH:mm" */
 	value: string;
 	onChange: (value: string) => void;
 	minuteStep?: number;
@@ -67,8 +62,6 @@ function minuteOptions(step: number, current: number | null): number[] {
 	return options.sort((a, b) => a - b);
 }
 
-/* ------------------------------------------------------------------ 시간 열 ------------------------------------------------------------------ */
-
 interface TimeColumnsProps {
 	hour: number | null;
 	minute: number | null;
@@ -77,14 +70,12 @@ interface TimeColumnsProps {
 	onPick: (hour: number, minute: number) => void;
 }
 
-/** 시·분 두 열 — 각 열은 listbox이고 방향키로 값을 옮겨요 */
 function TimeColumns({ hour, minute, minuteStep, isDisabled, onPick }: TimeColumnsProps) {
 	const minutes = useMemo(() => minuteOptions(minuteStep, minute), [minuteStep, minute]);
 	const hours = useMemo(() => Array.from({ length: 24 }, (_, index) => index), []);
 	const hourRef = useRef<HTMLDivElement>(null);
 	const minuteRef = useRef<HTMLDivElement>(null);
 
-	// 처음 열릴 때만 고른 값을 열 가운데로 옮기고, 이후엔 가려졌을 때만 최소한으로 맞춰요.
 	// scrollIntoView는 페이지·팝업까지 같이 스크롤해서 쓰지 않고, 열(column)의 scrollTop만 직접 바꿔요.
 	const opened = useRef(false);
 	useEffect(() => {
@@ -113,7 +104,6 @@ function TimeColumns({ hour, minute, minuteStep, isDisabled, onPick }: TimeColum
 		const list = kind === "hour" ? hours : minutes;
 		const current = kind === "hour" ? (hour ?? DEFAULT_TIME.hour) : (minute ?? DEFAULT_TIME.minute);
 		let index = Math.max(0, list.indexOf(current)) + delta;
-		// 못 고르는 값은 건너뛰어요
 		while (index >= 0 && index < list.length) {
 			const next = list[index];
 			const blocked = kind === "hour" ? hourDisabled(next) : isDisabled(hour ?? DEFAULT_TIME.hour, next);
@@ -181,8 +171,6 @@ function TimeColumns({ hour, minute, minuteStep, isDisabled, onPick }: TimeColum
 	);
 }
 
-/* ------------------------------------------------------------------ 달력 ------------------------------------------------------------------ */
-
 interface CalendarPanelProps {
 	selected: DateParts | null;
 	today: DateParts;
@@ -191,7 +179,6 @@ interface CalendarPanelProps {
 	onSelect: (date: DateParts) => void;
 }
 
-/** 월 달력 — 방향키·Home/End·PageUp/PageDown으로 움직이는 grid예요 */
 function CalendarPanel({ selected, today, min, max, onSelect }: CalendarPanelProps) {
 	const initial = selected ?? today;
 	const [focusDate, setFocusDate] = useState<DateParts>(initial);
@@ -202,7 +189,6 @@ function CalendarPanel({ selected, today, min, max, onSelect }: CalendarPanelPro
 	const cells = useMemo(() => monthGrid(view.year, view.month), [view.year, view.month]);
 	const outOfRange = (date: DateParts) => (min !== null && compareDates(date, min) < 0) || (max !== null && compareDates(date, max) > 0);
 
-	// 키보드로 옮긴 뒤에만 새 칸으로 포커스를 따라가요 (마우스로 달만 넘길 땐 훔치지 않아요)
 	useEffect(() => {
 		if (!refocus.current) return;
 		refocus.current = false;
@@ -310,13 +296,6 @@ function CalendarPanel({ selected, today, min, max, onSelect }: CalendarPanelPro
 	);
 }
 
-/* ------------------------------------------------------------------ 날짜+시각 ------------------------------------------------------------------ */
-
-/**
- * 날짜·시각 선택기 — 브라우저 기본 `datetime-local` 대신 디자인 시스템 토큰으로 직접 그린 팝오버예요.
- * 값은 시간대 없는 "YYYY-MM-DDTHH:mm" 문자열이라 한국 시간으로 받는 API에 그대로 맞아요.
- * min·max 밖 날짜는 비활성이고, 날짜를 바꿔서 시각이 범위를 벗어나면 가까운 끝으로 맞춰요.
- */
 export function DateTimePicker({
 	id,
 	value,
@@ -387,9 +366,6 @@ export function DateTimePicker({
 	);
 }
 
-/* ------------------------------------------------------------------ 시각만 ------------------------------------------------------------------ */
-
-/** 시각 선택기 — 날짜 없이 "HH:mm"만 골라요 (예: 매일 보내는 시각) */
 export function TimePicker({
 	id,
 	value,

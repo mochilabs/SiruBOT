@@ -8,7 +8,6 @@ const { db, redisStore } = vi.hoisted(() => ({
 	redisStore: { setCacheValueNX: vi.fn() }
 }));
 
-// 이모지 매핑은 스토어 로드 후에야 채워진다. 뱃지 판정 테스트는 이름만 보게 한다
 vi.mock('@sirubot/utils', () => ({ emoji: (name: string) => name }));
 
 import { createGameRecords, streakBadge } from './gameRecords.ts';
@@ -30,7 +29,6 @@ afterEach(() => {
 
 describe('getRpsStats (연승·최고 연승 집계)', () => {
 	it('최근 기록 순서대로 승패무를 집계하고 맨 앞 연승을 스티reak로 본다', async () => {
-		// 최신 기록이 앞: [최신 … 과거]
 		db.gameRecord.findMany.mockResolvedValue([
 			{ result: 'win' },
 			{ result: 'win' },
@@ -53,7 +51,7 @@ describe('getRpsStats (연승·최고 연승 집계)', () => {
 describe('출석 스트릭 (KST 날짜 경계)', () => {
 	it('KST 자정(UTC 15:00) 직전에는 같은 날로 보고 중복 출석을 막는다', async () => {
 		vi.useFakeTimers();
-		vi.setSystemTime(new Date('2026-01-01T14:59:00Z')); // KST 2026-01-01 23:59
+		vi.setSystemTime(new Date('2026-01-01T14:59:00Z'));
 		db.gameRecord.findFirst.mockResolvedValue({ meta: { streak: 3, day: '2026-01-01' } });
 
 		await expect(doCheckin('u1')).resolves.toEqual({ checkedIn: true, streak: 3 });
@@ -62,7 +60,7 @@ describe('출석 스트릭 (KST 날짜 경계)', () => {
 
 	it('KST 자정을 넘기면 어제 출석이어도 스트릭을 이어 붙인다', async () => {
 		vi.useFakeTimers();
-		vi.setSystemTime(new Date('2026-01-01T15:01:00Z')); // KST 2026-01-02 00:01
+		vi.setSystemTime(new Date('2026-01-01T15:01:00Z'));
 		db.gameRecord.findFirst.mockResolvedValue({ meta: { streak: 3, day: '2026-01-01' } });
 
 		await expect(doCheckin('u1')).resolves.toEqual({ checkedIn: false, streak: 4 });
@@ -73,7 +71,7 @@ describe('출석 스트릭 (KST 날짜 경계)', () => {
 
 	it('출석이 끊겼으면 스트릭을 1부터 다시 쌓는다', async () => {
 		vi.useFakeTimers();
-		vi.setSystemTime(new Date('2026-01-01T03:00:00Z')); // KST 2026-01-01 12:00
+		vi.setSystemTime(new Date('2026-01-01T03:00:00Z'));
 		db.gameRecord.findFirst.mockResolvedValue({ meta: { streak: 9, day: '2025-12-29' } });
 
 		await expect(doCheckin('u1')).resolves.toEqual({ checkedIn: false, streak: 1 });
@@ -81,7 +79,7 @@ describe('출석 스트릭 (KST 날짜 경계)', () => {
 
 	it('기록이 전혀 없으면 첫 출석으로 스트릭 1을 남긴다', async () => {
 		vi.useFakeTimers();
-		vi.setSystemTime(new Date('2026-03-10T02:00:00Z')); // KST 2026-03-10 11:00
+		vi.setSystemTime(new Date('2026-03-10T02:00:00Z'));
 
 		await expect(doCheckin('u1')).resolves.toEqual({ checkedIn: false, streak: 1 });
 		expect(db.user.upsert).toHaveBeenCalledWith({ where: { id: 'u1' }, create: { id: 'u1' }, update: {} });

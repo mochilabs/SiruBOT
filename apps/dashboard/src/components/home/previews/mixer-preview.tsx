@@ -8,8 +8,6 @@ import { motionBase } from "@/components/motion/durations";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
-/** 필터 프리셋 표기 — 봇의 FILTER_PRESETS(베이스부스트·나이트코어·베이퍼웨이브·8D·노래방) 기준.
-    나이트코어와 베이퍼웨이브는 속성이 겹쳐 실제로도 동시에 못 켜요 */
 const FILTER_PRESETS = [
 	{ name: "bassboost", label: "베이스부스트", exclusive: null },
 	{ name: "nightcore", label: "나이트코어", exclusive: "speed" },
@@ -18,17 +16,12 @@ const FILTER_PRESETS = [
 	{ name: "karaoke", label: "노래방", exclusive: null }
 ] as const;
 
-/**
- * 타임라인 기하(전체 폭 100 기준 %). 지금 곡 A가 0~62, 스폰서 구간이 32~44.
- * 크로스페이드를 켜면 다음 곡 B가 A의 끝과 겹쳐(54~62) 시작하고, 끄면 틈을 두고(66~) 시작해요.
- */
 const SPONSOR = { left: 32, width: 12 } as const;
 const A_END = 62;
 const B_START_CROSSFADE = 54;
 const B_START_PLAIN = 66;
 const PLAYHEAD_LOOP_SECONDS = 8;
 
-/** 파형 막대 수(밀도 1 기준) — 나이트코어는 촘촘하게, 베이퍼웨이브는 성글게 그려요 */
 const WAVE_BARS_A = 34;
 const WAVE_BARS_B = 24;
 
@@ -47,10 +40,6 @@ interface WaveformProps {
 	className?: string;
 }
 
-/**
- * 파형 한 줄 — 필터 상태를 막대 모양으로 보여줘요.
- * 베이스부스트: 진폭을 키우고 막대를 굵게. 노래방: 큰 봉우리(보컬 대역)를 깎아 평평하게.
- */
 function Waveform({ count, seed, bass, karaoke, className }: WaveformProps) {
 	return (
 		<div className="flex h-full items-center justify-between" aria-hidden>
@@ -70,14 +59,6 @@ function Waveform({ count, seed, bass, karaoke, className }: WaveformProps) {
 	);
 }
 
-/**
- * 믹서 프리뷰 — 토글과 필터가 타임라인을 직접 바꾸는 패널.
- * - 스폰서 스킵: 켜면 재생 헤드가 노란 스폰서 구간을 건너뛰고, 끄면 구간 위를 지나가요.
- * - 크로스페이드: 켜면 다음 곡이 현재 곡과 겹쳐 시작하고, 끄면 사이에 틈이 생겨요.
- * - TTS 겹침: 켜면 노래 위에 음성 말풍선 레인이 나타나요.
- * - 필터: 베이스부스트(파형 확대)·나이트코어(촘촘+빠르게)·베이퍼웨이브(성글게+느리게)·8D(켤 때 한 번 좌우 패닝)·노래방(봉우리 깎임).
- *   봇과 같은 배타 규칙(나이트코어 ↔ 베이퍼웨이브)을 따라요.
- */
 export function MixerPreview() {
 	const shouldReduce = useReducedMotion();
 	const [sponsorSkip, setSponsorSkip] = useState(true);
@@ -95,7 +76,6 @@ export function MixerPreview() {
 	const bStart = crossfade ? B_START_CROSSFADE : B_START_PLAIN;
 	const sponsorEnd = SPONSOR.left + SPONSOR.width;
 
-	// 재생 헤드 — 스킵이 켜져 있으면 스폰서 구간 앞에서 끝으로 빠르게 건너뛰어요.
 	const playheadLeft = sponsorSkip ? ["0%", `${SPONSOR.left}%`, `${sponsorEnd}%`, "100%"] : ["0%", "100%"];
 	const playheadTimes = sponsorSkip ? [0, SPONSOR.left / 100, SPONSOR.left / 100 + 0.01, 1] : [0, 1];
 
@@ -118,7 +98,6 @@ export function MixerPreview() {
 				<p className="text-xs font-extrabold tracking-tighter text-foreground">믹서</p>
 			</div>
 
-			{/* 타임라인 — 토글과 필터 상태가 그대로 그려져요 */}
 			<div
 				className="flex gap-2 rounded-control bg-surface-1 px-3 py-3"
 				role="img"
@@ -152,7 +131,6 @@ export function MixerPreview() {
 						</div>
 					</div>
 
-					{/* 크로스페이드 겹침 구간 — 두 곡이 함께 들리는 폭 */}
 					<div
 						aria-hidden
 						className={cn(
@@ -196,7 +174,6 @@ export function MixerPreview() {
 										<m.span
 											className="absolute top-1/2 -mt-1.5 -ml-1.5 h-3 w-3 rounded-full bg-primary-control"
 											initial={{ left: "50%" }}
-											// 켤 때 한 번만 좌우로 훑고 가운데에 멈춰요 — 반복 모션은 주변 애니메이션과 겹쳐 산만해요
 											animate={shouldReduce ? undefined : { left: ["50%", "6%", "94%", "50%"] }}
 											transition={{ duration: 1.8, ease: "easeInOut", times: [0, 0.3, 0.7, 1] }}
 											style={shouldReduce ? { left: "50%" } : undefined}
@@ -208,7 +185,6 @@ export function MixerPreview() {
 						)}
 					</AnimatePresence>
 
-					{/* 재생 헤드 — 나이트코어는 빠르게, 베이퍼웨이브는 느리게 */}
 					<m.div
 						key={`playhead-${sponsorSkip}-${loopSeconds}`}
 						aria-hidden

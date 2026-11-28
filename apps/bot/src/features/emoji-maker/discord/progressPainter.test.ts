@@ -18,16 +18,16 @@ describe('createProgressPainter', () => {
 
 		painter.paint(edit('stage-1', true), { force: true });
 		await Promise.resolve();
-		painter.paint(edit('frame-a')); // 편집 중 → 버림
+		painter.paint(edit('frame-a'));
 		clock = 900;
-		painter.paint(edit('frame-b')); // 아직 편집 중 → 버림
-		painter.paint(edit('stage-2'), { force: true }); // 앞 편집 뒤에 이어서
+		painter.paint(edit('frame-b'));
+		painter.paint(edit('stage-2'), { force: true });
 		release();
 		await painter.settle();
 		expect(painted).toEqual(['stage-1', 'stage-2']);
 
 		clock = 1000;
-		painter.paint(edit('frame-c')); // 마지막 시작(900)에서 100ms → 버림
+		painter.paint(edit('frame-c'));
 		clock = 1800;
 		painter.paint(edit('frame-d'));
 		await painter.settle();

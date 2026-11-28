@@ -11,22 +11,16 @@ import { mojiId } from '../customIds.ts';
 
 export interface EmojiMakerViewState {
 	description: string;
-	/** 영어로 옮겼거나 이미지에서 만든 설명 — 원문과 다를 때만 보여줘요. */
 	translatedPrompt: string | null;
-	/** 첨부 이미지를 읽어서 그렸는지 */
 	fromImage: boolean;
 	candidateCount: number;
-	/** 후보 번호 → 등록된 이모지 마크업 (`<:name:id>`) */
 	registered: ReadonlyMap<number, string>;
-	/** 'active' 버튼 사용 가능 · 'busy' 다시 그리는 중 · 'expired' 시간이 지나 버튼을 닫음 */
 	phase: 'active' | 'busy' | 'expired';
 	feedback?: string;
 }
 
-/** 첨부 이름 — 뷰의 MediaGallery와 전송부의 AttachmentBuilder가 같은 이름을 써야 이미지가 붙어요. */
 export const candidateFileName = (index: number) => `moji-${index + 1}.png`;
 
-/** 제목과 사용자가 준 설명(또는 첨부 이미지) 한 줄 — 진행 화면과 결과 화면이 같이 써요. */
 export function emojiMakerHeader(description: string, fromImage: boolean): string[] {
 	const text = description.replace(/\n/g, ' ');
 	return [`### ${emoji('sparkle')} 이모지 만들기`, fromImage ? `> 📎 첨부한 이미지${text ? ` · ${text}` : ''}` : `> ${text}`];
@@ -46,7 +40,7 @@ export function emojiMakerView(state: EmojiMakerViewState) {
 	container.addMediaGalleryComponents(gallery);
 
 	const locked = state.phase !== 'active';
-	// 등록할 후보는 셀렉트 메뉴로 골라요. 이미 등록한 후보는 빼고, 다 등록했으면 메뉴를 잠가요(옵션은 최소 1개가 필요해서 자리만 채워요).
+	// Discord 셀렉트 메뉴는 비활성화 상태여도 옵션이 최소 1개 필요해요.
 	const remaining = Array.from({ length: state.candidateCount }, (_, i) => i).filter((i) => !state.registered.has(i));
 	const select = new StringSelectMenuBuilder()
 		.setCustomId(mojiId.encode('pick'))

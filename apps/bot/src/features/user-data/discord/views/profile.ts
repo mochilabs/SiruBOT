@@ -14,7 +14,6 @@ export function birthdaySavedView(month: number, day: number, zodiacText: string
 	);
 }
 
-/** 이 서버에서 생일 축하를 켜거나 끈 결과 — 생일이 없으면 먼저 등록하라고 안내해요 */
 export function birthdayAnnounceView(enabled: boolean, hasBirthday: boolean) {
 	if (!enabled) {
 		return notice(`${emoji('success')} 이 서버에서 생일 축하를 받지 않도록 바꿨어요.`);
@@ -44,12 +43,10 @@ export function introClearedView(cleared: boolean) {
 	return notice(cleared ? `${emoji('trash')} 등록한 소개를 지웠어요.` : `${emoji('info')} 등록한 소개가 없어요.`);
 }
 
-/** 프로필 카드 이미지(첨부 파일)를 보여주는 컨테이너 */
 export function profileCardView(filename: string) {
 	return createContainer().addMediaGalleryComponents((gallery) => gallery.addItems((item) => item.setURL(`attachment://${filename}`)));
 }
 
-/** 이미지 렌더 실패 시 쓰는 텍스트 프로필 폴백 */
 export function profileTextView(lines: string[], avatarUrl: string) {
 	return createContainer().addSectionComponents((s) =>
 		s.addTextDisplayComponents((t) => t.setContent(lines.join('\n'))).setThumbnailAccessory((t) => t.setURL(avatarUrl))

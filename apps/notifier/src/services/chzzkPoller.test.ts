@@ -119,7 +119,6 @@ describe('ChzzkPoller transitions', () => {
 
 	it('fills the thumbnail from live-detail when live-status omits liveImageUrl (2026-10 실측)', async () => {
 		const seed = JSON.stringify({ isLive: false, liveId: null, lastPolledAt: 1_700_000_000_000 - 10 * 60 * 1000 });
-		// 2026-10 실측: polling v2 live-status는 이미지 필드가 없고 liveId·channelName도 없어요.
 		const liveStatusOnly = () =>
 			new Response(JSON.stringify({ code: 200, content: { channelId: CHANNEL_ID, status: 'OPEN', liveTitle: '야간 방송' } }), {
 				status: 200,
@@ -199,7 +198,6 @@ describe('ChzzkPoller transitions', () => {
 			await vi.waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(tick));
 			poller.stop();
 		}
-		// 6번째 틱: 브레이커가 열려 있으면 폴링 자체를 건너뛰어요.
 		poller.start();
 		await settle();
 		poller.stop();
@@ -214,13 +212,10 @@ describe('ChzzkPoller transitions', () => {
 			await vi.waitFor(() => expect(findMany).toHaveBeenCalledTimes(tick));
 			poller.stop();
 		}
-		// 실패로 계정돼야 브레이커가 5틱 후 열리고 6번째 틱은 조회를 건너뛰어요.
-		// (구버전은 DB 오류를 빈 목록으로 삼켜 'skipped'가 되어 브레이커에 잡히지 않았어요.)
 		poller.start();
 		await settle();
 		poller.stop();
 		expect(findMany).toHaveBeenCalledTimes(5);
-		// 실패한 틱은 구독 캐시로 승격되지 않아야 해요.
 		expect(redis.set).not.toHaveBeenCalled();
 	});
 });

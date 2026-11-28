@@ -1,5 +1,3 @@
-// api-error 회귀 계약 — toApiError/toError의 메시지 폴백과 retryable(401/403 제외) 판정을 잠가요.
-// 13개 컴포넌트의 오류 UI가 이 결과에 의존해요.
 import { describe, expect, it } from "vitest";
 
 import { ApiError, toApiError, toError } from "./api-error";

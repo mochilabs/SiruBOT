@@ -1,5 +1,3 @@
-// env.ts 회귀 계약 — 폴백 체인(키 ?? 공유키), 기본 URL, 호출 시점 재해석을 잠가요.
-// admin-ids·token-store 테스트가 런타임에 env를 바꾸고 즉시 반영을 기대하는 계약의 근거지예요.
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
@@ -15,7 +13,6 @@ import {
 } from "./env";
 
 
-/** 이 파일이 만진 env는 테스트마다 원위치해요 — 프로세스에 값을 남기지 않기 위함이에요. */
 const touched = new Map<string, string | undefined>();
 
 afterEach(() => {
@@ -26,7 +23,6 @@ afterEach(() => {
   touched.clear();
 });
 
-/** 이 테스트가 건드리는 env 키 — afterEach에서 원위치할 대상이에요. */
 type EnvKey =
   | "DATA_API_URL"
   | "DATA_API_AUTH_KEY"
@@ -44,7 +40,6 @@ type EnvKey =
   | "DISCORD_CLIENT_ID"
   | "DISCORD_CLIENT_SECRET";
 
-/** 키를 이번 테스트 동안만 바꿔요 — 원본은 touched에 보관해요. */
 function setEnv(key: EnvKey, value: string | undefined): void {
   if (!touched.has(key)) touched.set(key, process.env[key]);
   if (value === undefined) delete process.env[key];

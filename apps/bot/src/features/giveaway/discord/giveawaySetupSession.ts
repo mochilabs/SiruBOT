@@ -47,10 +47,6 @@ interface FormField {
 	maxLength: number;
 }
 
-/**
- * `/나눔 시작` 설정 패널 한 개의 수명 — 값은 메모리에 들고, 버튼·셀렉트·모달로 고칠 때마다 같은 메시지를 다시 그려요.
- * "시작"을 누르면 서비스의 `start`를 부르고(검증은 서비스가 해요), 취소하거나 시간이 지나면 패널을 닫아요.
- */
 export async function runGiveawaySetupSession(interaction: ChatInputCommandInteraction<'cached'>, state: GiveawaySetupState): Promise<void> {
 	const response = await interaction.editReply(giveawaySetupView(state));
 	const guildId = interaction.guildId;
@@ -58,7 +54,6 @@ export async function runGiveawaySetupSession(interaction: ChatInputCommandInter
 	const notify = (target: PanelInput | ModalSubmitInteraction, message: string) =>
 		target.reply({ ...giveawayNoticeView(message), flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral] });
 
-	/** 모달을 띄우고 제출을 기다려요. 시간이 지났으면 null이에요 */
 	async function askForm(from: PanelInput, title: string, fields: FormField[]): Promise<ModalSubmitInteraction | null> {
 		const formId = giveawaySetupId.encode('form', { formId: randomUUID() });
 		await from.showModal(
@@ -82,7 +77,6 @@ export async function runGiveawaySetupSession(interaction: ChatInputCommandInter
 		return from.awaitModalSubmit({ time: FORM_MS, filter: (s) => s.user.id === interaction.user.id && s.customId === formId }).catch(() => null);
 	}
 
-	/** 모달 값이 올바르면 상태에 반영하고 패널을 다시 그려요. 틀렸으면 본인에게만 이유를 알려요 */
 	async function applyForm(submitted: ModalSubmitInteraction, apply: () => SetupParse<unknown>[]): Promise<void> {
 		const failed = apply().find((result) => !result.ok);
 		if (failed && !failed.ok) {

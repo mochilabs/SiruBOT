@@ -27,7 +27,7 @@ describe('parseImageReading', () => {
 
 	it('rejects anything it cannot trust', () => {
 		expect(parseImageReading('a cat')).toBeNull();
-		expect(parseImageReading('{"prompt": "cat"}')).toBeNull(); // nsfw 판정 없음
+		expect(parseImageReading('{"prompt": "cat"}')).toBeNull();
 		expect(parseImageReading('{"nsfw": "no", "prompt": "cat"}')).toBeNull();
 		expect(parseImageReading('{"nsfw": false, "prompt": ""}')).toBeNull();
 		expect(parseImageReading('{"nsfw": false, ')).toBeNull();

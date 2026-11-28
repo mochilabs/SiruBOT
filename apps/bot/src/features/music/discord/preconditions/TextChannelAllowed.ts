@@ -1,6 +1,7 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import type { CommandInteraction, ContextMenuCommandInteraction, Message } from 'discord.js';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
+import { thrownCode, thrownMessage } from '../../../../lib/thrownError.ts';
 
 export class TextChannelAllowed extends AllFlowsPrecondition {
 	public override async messageRun(message: Message) {
@@ -16,23 +17,20 @@ export class TextChannelAllowed extends AllFlowsPrecondition {
 	}
 
 	private async checkChannel(guildId: string | null, channelId: string | null) {
-		if (!guildId || !channelId) return this.ok(); // DMs are handled by other preconditions if needed
+		if (!guildId || !channelId) return this.ok();
 
-		// 길드 설정은 GuildService의 60초 TTL 캐시를 재사용 — 매 명령어마다 DB 조회 방지
 		const configuredChannelId = await guildChannels.getDefaultTextChannel(this.container.guildService, guildId);
 
-		// 1. 설정된 텍스트 채널이 없으면 통과
 		if (!configuredChannelId) return this.ok();
 
 		try {
-			// 2. 설정된 텍스트 채널이 아직 존재하는지 확인 — 캐시 먼저, 없으면 API로
 			// fetch 실패를 모두 "채널 삭제"로 간주하지 않음: Unknown Channel(10003)일 때만 설정 초기화
 			const channelExists =
 				this.container.client.channels.cache.get(configuredChannelId) ??
-				(await this.container.client.channels.fetch(configuredChannelId).catch((error: any) => {
-					if (error?.code === 10003 || error?.rawError?.code === 10003) return null;
+				(await this.container.client.channels.fetch(configuredChannelId).catch((error: unknown) => {
+					if (thrownCode(error) === 10003 || thrownCode((error as { rawError?: unknown } | null)?.rawError) === 10003) return null;
 					this.container.logger.warn(
-						`Transient failure fetching configured text channel [${configuredChannelId}] in guild [${guildId}]: ${error?.message ?? error}`
+						`Transient failure fetching configured text channel [${configuredChannelId}] in guild [${guildId}]: ${thrownMessage(error) ?? error}`
 					);
 					return 'transient' as const;
 				}));

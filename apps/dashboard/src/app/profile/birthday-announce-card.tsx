@@ -14,10 +14,6 @@ import { toast } from "@/components/ui/toast";
 import { discordGuildIconUrl } from "@/lib/discord-cdn";
 import { useAuthedSWR } from "@/lib/swr";
 
-/**
- * 서버별 생일 축하 카드 — 서버마다 "이 서버에서 내 생일 축하받기"를 켜요. 봇 `/프로필 생일축하`와 같은 BirthdayOptIn이에요.
- * 생일을 등록하지 않았거나 서버가 생일 축하를 켜지 않았으면 켜 둬도 축하는 가지 않아요.
- */
 export function BirthdayAnnounceCard({ hasBirthday }: { hasBirthday: boolean }) {
   const guilds = useAuthedSWR<{ guilds: EnrichedGuild[] }>("/api/servers", "/profile");
   const saved = useAuthedSWR<{ guildIds: string[] }>("/api/profile/birthday-guilds", "/profile");

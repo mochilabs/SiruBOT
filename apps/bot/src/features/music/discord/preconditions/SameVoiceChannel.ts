@@ -4,13 +4,11 @@ import { MUSIC_ACCESS_MESSAGES } from '../../application/access.ts';
 import { checkRemoteControl } from '../utils/permissionCheck.ts';
 
 export class SameVoiceChannel extends AllFlowsPrecondition {
-	// 클래스 필드 대신 getter로 렌더 시점에 평가해야 앱 이모지 매핑이 반영돼요.
 	get #message() {
 		return MUSIC_ACCESS_MESSAGES.sameVoiceRequired();
 	}
 	#ephemeral = true;
 
-	/** 봇이 음성 채널에 없거나(연결 전), 사용자와 같은 채널이거나, 원격 권한자(Administrator·서버 관리·DJ 역할)면 통과해요. */
 	public async check(guildId: string, member: GuildMember | null, botChannelId: string | null) {
 		if (!botChannelId) return true;
 		if (!member) return false;

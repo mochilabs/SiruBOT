@@ -4,7 +4,6 @@ import { createGuildApiHandler } from "@/lib/api-handler";
 import { db } from "@/lib/db";
 import { WRITE_RATE } from "@/lib/rate-limit";
 
-/** 이 서버의 AI 대화 기록을 모두 삭제해요 (봇 캐시는 다음 턴에 자동으로 DB와 동기화) */
 export const DELETE = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,

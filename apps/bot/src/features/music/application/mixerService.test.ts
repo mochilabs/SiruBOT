@@ -12,16 +12,13 @@ import * as guildMixer from '../../../services/guildSettings/mixer.ts';
 vi.mock('../../../services/guildSettings/mixer.ts', () => ({
 	getMixerSettings: vi.fn().mockResolvedValue({ gaplessEnabled: true, crossfadeEnabled: true, crossfadeMs: 3000, normalizationEnabled: false })
 }));
-/** 서비스가 받는 lavalink 의존성 역할 — 큐 관측 헬퍼가 mixerService·sponsorBlockService를 여기서 읽어요 */
 const container: Record<string, any> = {
 	logger: { warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
 	guildService: {},
 	playerNotifier: { updateController: vi.fn() },
-	// 이 테스트의 곡은 유튜브가 아니라 동작이 없어요
 	sponsorBlockService: { prefetch: vi.fn(), queueChanged: vi.fn() }
 };
 
-/** 서비스 deps는 아래 container 모의 객체를 그대로 넘겨요 — 서비스가 읽는 값은 같아요 */
 const makeMixerService = () =>
 	new MixerService({
 		logger: container.logger as never,
@@ -39,7 +36,6 @@ function fakePlayer(): Player {
 	} as unknown as Player;
 }
 
-// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
 beforeEach(() => setConfigForTesting(makeTestConfig()));
 afterEach(() => setConfigForTesting(null));
 
@@ -316,7 +312,6 @@ describe('MixerService v2 Protocol Tests', () => {
 		await handleMixerNeedNext(container as never, ttsPlayer, { remainingMs: 2000, currentTrackEncoded: 'tts-enc' });
 		expect(fetchMock).not.toHaveBeenCalled();
 
-		// Now test Crossfade OFF + Gapless OFF with 409 epoch sync retry
 		(guildMixer.getMixerSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
 			gaplessEnabled: false,
 			crossfadeEnabled: false
@@ -366,7 +361,6 @@ describe('MixerService v2 Protocol Tests', () => {
 		const service = makeMixerService();
 		container.mixerService = service as any;
 
-		// DB 조회가 지연되는 동안 전이가 진행돼 current가 바뀐다.
 		let releaseSettings!: () => void;
 		(guildMixer.getMixerSettings as ReturnType<typeof vi.fn>).mockReturnValueOnce(
 			new Promise((resolve) => {
@@ -388,7 +382,6 @@ describe('MixerService v2 Protocol Tests', () => {
 		} as unknown as CustomPlayer;
 
 		const promise = handleMixerNeedNext(container as never, player, { remainingMs: 5000, currentTrackEncoded: 'song-a' });
-		// 전이 완료: current가 다음 곡으로 바뀐다.
 		player.queue.current = { encoded: 'song-b', requester: { id: 'user-1' } } as any;
 		player.queue.tracks.splice(0, player.queue.tracks.length, { encoded: 'song-c', requester: { id: 'user-1' } } as any);
 		releaseSettings();
@@ -416,7 +409,6 @@ describe('MixerService v2 Protocol Tests', () => {
 			}
 		} as unknown as CustomPlayer;
 
-		// Normal advance from A to B in repeatMode=queue rotates A to the back of tracks without bumping epoch
 		commitLocal(container as never, player, trackB, { invalidate: false, bumpEpoch: false });
 		expect(player.queue.current).toBe(trackB);
 		expect(player.relatedTrackHistory.has(trackB)).toBe(true);
@@ -424,7 +416,6 @@ describe('MixerService v2 Protocol Tests', () => {
 		expect(player.currentEpoch).toBe(1);
 		expect(saveMock).toHaveBeenCalled();
 
-		// Single-track queue in repeatMode=queue targets current
 		player.queue.tracks.splice(0, player.queue.tracks.length);
 		expect(getTargetNextTrack(player)).toBe(trackB);
 	});
@@ -473,7 +464,6 @@ describe('MixerService v2 Protocol Tests', () => {
 		const trackB = { encoded: 'enc-b', info: { identifier: 'id-b' }, userData: { uid: 'uid-b' } } as unknown as Track;
 		const trackC = { encoded: 'enc-c', info: { identifier: 'id-c' }, userData: { uid: 'uid-c' } } as unknown as Track;
 
-		// Simulate lavalink-client's queueTrackEnd having shifted B into queue.current and A into previous[0]
 		const player = {
 			...fakePlayer(),
 			node: {
@@ -506,11 +496,9 @@ describe('MixerService v2 Protocol Tests', () => {
 			action: 'PLAY_NOW',
 			encodedTrack: 'enc-b'
 		});
-		// B was played without double-splicing C out of tracks
 		expect(player.queue.current).toBe(trackB);
 		expect(player.queue.tracks).toEqual([trackC]);
 
-		// Clean up pending timer
 		const reqId = (init.headers as Record<string, string>)['Idempotency-Key'];
 		handleMixerOverridden(container as never, player, { epoch: 3, requestId: reqId, action: 'PLAY_NOW' });
 		vi.useRealTimers();

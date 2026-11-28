@@ -1,7 +1,3 @@
-/**
- * 봇 관리자(운영자) 제어 request/reply 허브 — 대시보드 관리자 패널(/admin)의
- * 노드 상태 조회·노드 재연결·앱 이모지 조회/동기화·스토어 리로드 요청을 봇에 전달해 응답을 상관해요.
- */
 import { getLogger } from '../utils/logger.ts';
 import { createRequestReplyHub } from '../utils/requestReplyHub.ts';
 import {

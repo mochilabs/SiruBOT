@@ -6,6 +6,7 @@ import { cancelPendingInvalidate, getTargetNextTrack, notifyQueueMutated, type Q
 import { removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 import type { LavalinkDeps } from '../lavalink/deps.ts';
 import { normalizeTrackEncoded } from '../lavalink/trackEncoded.ts';
+import { thrownName } from '../../../lib/thrownError.ts';
 import {
 	MixerRequestError,
 	type ArmRequestOptions,
@@ -21,6 +22,17 @@ import type { PlayerNotifier } from '../lavalink/player/playerNotifier.ts';
 
 const MIXER_FILTER_KEY = 'mixer';
 
+/** Fields the mixer plugin may put on an error response; any of them can be missing. */
+interface MixerErrorBody {
+	message?: unknown;
+	lastKnownEpoch?: unknown;
+	v2WindowOpenAt?: unknown;
+}
+
+function numberOrUndefined(value: unknown): number | undefined {
+	return typeof value === 'number' ? value : undefined;
+}
+
 class AutomixUnsupportedError extends Error {
 	constructor() {
 		super('이 Lavalink 서버는 AutoMix를 지원하지 않아요. 믹서 플러그인을 업데이트해 주세요.');
@@ -30,18 +42,11 @@ class AutomixUnsupportedError extends Error {
 export interface MixerServiceDeps {
 	logger: AppLogger;
 	guildService: GuildService;
-	/** mixer REST 호출 한 번의 제한 시간(ms) — 설정(`MIXER_CALL_TIMEOUT_MS`)에서 조립 시 넘겨요 */
 	callTimeoutMs: number;
-	/** playerNotifier는 setupAudio에서 만들어져서 호출 시점에 읽어요 */
 	getPlayerNotifier: () => PlayerNotifier;
-	/** 믹서 전이·큐 관측 헬퍼가 쓰는 lavalink 의존성 (container.lavalink) */
 	lavalink: LavalinkDeps;
 }
 
-/**
- * Lavalink mixer-plugin REST client (v2 Protocol).
- * All v2 state transitions and audio controls route through this service.
- */
 export class MixerService {
 	private readonly analysisTargets = new WeakMap<Player, { encoded: string; node: object }>();
 	private readonly transitionCapabilities = new WeakMap<
@@ -52,11 +57,8 @@ export class MixerService {
 		}
 	>();
 	private readonly filterReady = new Set<string>();
-	/** Active overlap state per guild (value = incoming sub track identifier, or null if unknown). */
 	private readonly activeOverlaps = new Map<string, string | null>();
-	/** Guild-isolated Promise serial queue to enforce strict ordering of REST mutations. */
 	private readonly chains = new Map<string, Promise<unknown>>();
-	/** Pending invalidate coalescence per guild. */
 	private readonly pendingInvalidate = new Map<string, { epoch: number; resolve: () => void; reject: (e: Error) => void }>();
 	public constructor(private readonly deps: MixerServiceDeps) {}
 
@@ -70,7 +72,7 @@ export class MixerService {
 		player: Player,
 		path: string,
 		init?: { method?: string; body?: string; headers?: Record<string, string>; signal?: AbortSignal }
-	): Promise<any> {
+	): Promise<unknown> {
 		const { base, auth } = this.nodeRest(player);
 		let res: Response;
 		try {
@@ -84,8 +86,8 @@ export class MixerService {
 				},
 				signal: init?.signal ?? AbortSignal.timeout(this.deps.callTimeoutMs)
 			});
-		} catch (error: any) {
-			if (error?.name === 'AbortError') {
+		} catch (error) {
+			if (thrownName(error) === 'AbortError') {
 				throw new MixerRequestError(504, `mixer ${path} -> request aborted / timeout`);
 			}
 			throw new MixerRequestError(504, `mixer ${path} -> unreachable: ${error instanceof Error ? error.message : String(error)}`);
@@ -99,7 +101,7 @@ export class MixerService {
 			throw new MixerRequestError(502, `mixer ${path} -> body read failed: ${error instanceof Error ? error.message : String(error)}`);
 		}
 
-		let body: any = null;
+		let body: unknown = null;
 		try {
 			body = text ? JSON.parse(text) : null;
 		} catch {
@@ -107,17 +109,15 @@ export class MixerService {
 		}
 
 		if (!res.ok) {
-			throw new MixerRequestError(res.status, `mixer ${path} -> ${res.status}: ${body?.message ?? text}`, {
-				lastKnownEpoch: body?.lastKnownEpoch,
-				v2WindowOpenAt: body?.v2WindowOpenAt
+			const errorBody = (typeof body === 'object' && body !== null ? body : {}) as MixerErrorBody;
+			throw new MixerRequestError(res.status, `mixer ${path} -> ${res.status}: ${errorBody.message ?? text}`, {
+				lastKnownEpoch: numberOrUndefined(errorBody.lastKnownEpoch),
+				v2WindowOpenAt: numberOrUndefined(errorBody.v2WindowOpenAt)
 			});
 		}
 		return body;
 	}
 
-	/**
-	 * Enqueues an operation into the guild's serial Promise chain with 2s timeout and 1 fresh retry.
-	 */
 	public enqueue<T>(guildId: string, fn: (signal: AbortSignal) => Promise<T>): Promise<T> {
 		const prev = this.chains.get(guildId) ?? Promise.resolve();
 		const next = prev.catch(() => {}).then(() => this.attempt(fn));
@@ -139,7 +139,7 @@ export class MixerService {
 			const timer = setTimeout(() => controller.abort(), 2000);
 			try {
 				return await fn(controller.signal);
-			} catch (err: any) {
+			} catch (err) {
 				if (i === 1) throw err;
 				// Do not retry 4xx errors (client faults / protocol fencing)
 				if (err instanceof MixerRequestError && err.status >= 400 && err.status < 500) {
@@ -151,10 +151,6 @@ export class MixerService {
 		}
 		throw new Error('unreachable');
 	}
-
-	// ---------------------------------------------------------------------------
-	// v2 Protocol REST Endpoints
-	// ---------------------------------------------------------------------------
 
 	public async arm(player: CustomPlayer, opts: ArmRequestOptions, idemKey: string = randomUUID()): Promise<unknown> {
 		const gid = String(player.guildId);
@@ -247,14 +243,9 @@ export class MixerService {
 		);
 	}
 
-	/**
-	 * User Skip: advances local queue first (commitLocal) and sends PLAY_NOW override.
-	 * If target position is given, drops tracks up to that index.
-	 */
 	public async skip(player: CustomPlayer, position?: number): Promise<void> {
 		if (typeof position === 'number' && position > 1) {
-			// position은 getUserQueuedTracks 기준 사용자 번호다 — 선예열 추천곡이 남아 있으면
-			// 인덱스가 밀리므로 스플라이스 전에 걷어낸다.
+			// position은 getUserQueuedTracks 기준이라 스플라이스 전에 선예열 추천곡을 먼저 걷어낸다.
 			await removeStaleRelatedTracks(this.deps.lavalink, player);
 			const dropCount = Math.min(position - 1, player.queue.tracks.length);
 			player.queue.tracks.splice(0, dropCount);
@@ -367,11 +358,9 @@ export class MixerService {
 		return (await this.capabilities(player)).outgoingEndPositionSupported === true;
 	}
 	public async clearNext(player: Player, opts?: QueueMutationOptions): Promise<void> {
-		// v2: slot is managed by JIT; clearNext triggers queue mutation observation
 		notifyQueueMutated(this.deps.lavalink, player as CustomPlayer, opts);
 	}
 	public async preloadUpcoming(player: Player, opts?: QueueMutationOptions): Promise<void> {
-		// v2: preloading is JIT-driven via MixerNeedNextTrackEvent
 		notifyQueueMutated(this.deps.lavalink, player as CustomPlayer, opts);
 	}
 
@@ -380,12 +369,9 @@ export class MixerService {
 	}
 
 	public async clearNextLenient(player: Player, opts?: QueueMutationOptions): Promise<void> {
-		// v2: slot is JIT-managed
 		notifyQueueMutated(this.deps.lavalink, player as CustomPlayer, opts);
 	}
-	public async reconcileAfterResume(_player: Player): Promise<void> {
-		// v2: handled by sessionRestore.ts resetV2 call
-	}
+	public async reconcileAfterResume(_player: Player): Promise<void> {}
 	public isPreloaded(_guildId: string): boolean {
 		return false;
 	}
@@ -495,16 +481,13 @@ export class MixerService {
 		});
 	}
 
-	// ---------------------------------------------------------------------------
-	// Configuration & Filters
-	// ---------------------------------------------------------------------------
-
 	public async enableMixerFilter(player: Player): Promise<void> {
 		const fm = player.filterManager;
+		// lavalink-client types only the plugin filters it knows about; the mixer plugin's key is not one of them.
 		fm.data.pluginFilters = {
 			...((fm.data.pluginFilters ?? {}) as Record<string, unknown>),
 			[MIXER_FILTER_KEY]: { guildId: String(player.guildId) }
-		} as any;
+		} as typeof fm.data.pluginFilters;
 		await fm.applyPlayerFilters();
 	}
 
@@ -547,17 +530,12 @@ export class MixerService {
 		this.filterReady.add(gid);
 	}
 
-	/** 플레이어 필터 데이터에 mixer 플러그인 필터가 실려 있는지 — 믹서를 쓰던 플레이어만 true. */
 	public hasMixerFilter(player: Player): boolean {
 		const pluginFilters = player.filterManager?.data?.pluginFilters as Record<string, unknown> | undefined;
 		return Boolean(pluginFilters?.[MIXER_FILTER_KEY]);
 	}
 
-	/**
-	 * 이미 재생 중인 트랙의 필터 체인에 mixer를 다시 넣는다. Lavalink는 재생 중 트랙의 체인을
-	 * filters op만으로 다시 만들지 않으므로, 필터를 재전송한 뒤 현재 위치로 seek해 체인을 재구성한다.
-	 * (노드 이전처럼 트랙이 filters보다 먼저 서버에 간 경우에 쓴다.)
-	 */
+	/** Lavalink는 재생 중 트랙의 필터 체인을 filters op만으로 재구성하지 않으므로 재전송 후 현재 위치로 seek한다. */
 	public async rebuildMixerChain(player: Player): Promise<void> {
 		this.markFiltersStale(player.guildId);
 		await this.ensureMixerFilter(player);
@@ -574,16 +552,12 @@ export class MixerService {
 		this.filterReady.delete(String(guildId));
 	}
 
-	/**
-	 * 대기 중인 안내를 모두 버려요 — `interrupt` 모드에서 새 안내 직전에 호출해 "최신만" 정책을 만들어요.
-	 * (플러그인 `DELETE /mixer/announce/queue`: 활성 안내는 건드리지 않고 대기분만 드롭해요)
-	 */
+	/** 활성 안내는 유지하고 대기 중인 안내 큐만 비운다. */
 	public async clearAnnounceQueue(player: Player): Promise<number> {
 		const result = (await this.rawCall(player, '/mixer/announce/queue', { method: 'DELETE' })) as { cleared?: number } | null;
 		return typeof result?.cleared === 'number' ? result.cleared : 0;
 	}
 
-	/** 현재 재생 중인 안내를 즉시 멈춰요 (`POST /mixer/announce/cancel`). */
 	public async cancelAnnounce(player: Player): Promise<void> {
 		await this.rawCall(player, '/mixer/announce/cancel', { method: 'POST' });
 	}

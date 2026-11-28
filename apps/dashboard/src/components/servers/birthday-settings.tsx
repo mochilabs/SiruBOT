@@ -25,7 +25,6 @@ import { ChannelListError, InfoBox, PanelError, PanelHeader, PanelLoading, SaveB
 
 const fetcher = createApiFetcher<BirthdaySettingsData>("생일 축하 설정을 불러오지 못했어요.", { sessionRetry: true });
 
-/** 생일 축하 탭 — 카드·메시지는 인사 카드 편집기를 그대로 쓰고, 보내는 시각과 생일 역할을 더해요 */
 export function BirthdaySettings({
   guildId,
   visible,

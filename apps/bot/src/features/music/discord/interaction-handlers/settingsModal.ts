@@ -15,7 +15,6 @@ import * as guildMixer from '../../../../services/guildSettings/mixer.ts';
 const MODAL_ACTIONS = ['jtcTemplateModal', 'crossfadeModal', 'automixModal'] as const;
 type ModalAction = (typeof MODAL_ACTIONS)[number];
 
-/** 비어 있으면 null(기존 값 유지), 숫자가 아니면 NaN */
 function parseOptionalNumber(raw: string): number | null {
 	const text = raw.trim().replace(',', '.');
 	return text === '' ? null : Number(text);

@@ -30,20 +30,13 @@ export interface CustomCommandEditorState {
 	setMethod: (next: CustomCommandMethod) => void;
 	setSteps: (next: EditorStep[]) => void;
 	setAccess: (next: CustomCommandAccess | null) => void;
-	/** 저장 payload를 만들기 전의 편집 값 봉투 */
 	draft: EditorDraft;
-	/** AI가 돌려준 스펙을 폼(스텝·실행 제한)에 반영해요 */
 	applySpec: (spec: CustomCommandSpecV2) => void;
-	/** AI 초안의 이름·설명·실행 방식을 폼에 반영해요 — 실행 방식은 새로 만들 때만 따라가요 */
 	applyDraftMetadata: (meta: { name: string; description: string; method: CustomCommandMethod }) => void;
 	saving: boolean;
 	handleSave: () => Promise<void>;
 }
 
-/**
- * 커스텀 명령어 편집기의 폼 상태 + 저장 — 이름·설명·실행 방식·스텝·실행 제한을 들고,
- * 검증(utils의 봇 실행 규칙) 후 생성(POST)/수정(PATCH)으로 저장해요.
- */
 export function useCustomCommandEditor({
 	guildId,
 	command,
@@ -51,11 +44,8 @@ export function useCustomCommandEditor({
 	onSaved,
 }: {
 	guildId: string;
-	/** null이면 새로 만들기 */
 	command: CustomCommandSummary | null;
-	/** 실행 예시 표시용 접두사 */
 	prefix: string;
-	/** 저장 성공 시 서버가 돌려준 최신 상태를 부모에 전달해요 */
 	onSaved: (state: CustomCommandsState) => void;
 }): CustomCommandEditorState {
 	const toast = useToast();
@@ -85,7 +75,6 @@ export function useCustomCommandEditor({
 	const applyDraftMetadata = (meta: { name: string; description: string; method: CustomCommandMethod }) => {
 		setName(meta.name);
 		setDescription(meta.description);
-		// 실행 방식은 새로 만들 때만 초안을 따라가요 — 수정 중에는 바뀌지 않아요
 		if (!command) setMethod(meta.method);
 	};
 
@@ -110,7 +99,6 @@ export function useCustomCommandEditor({
 				{
 					method: command ? "PATCH" : "POST",
 					headers: { "Content-Type": "application/json" },
-					// 실행 방식(method)은 생성 후 불변 — 수정 요청에는 보내지 않아요
 					body: JSON.stringify(
 						command
 							? { name, description, spec: built.spec }

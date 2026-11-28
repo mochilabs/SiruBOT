@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { formatDuration, formatTime, formatTimeToKorean, formatUptime, sleep } from './time.ts';
 
-// formatUptime/formatDuration은 apps/dashboard/src/lib/format.ts에서 승격된 함수예요.
-// 출력 계약(분 미패딩·시간 자리 없음 등)을 여기서 고정해요 — formatTime(format.ts)과 다르게 동작하는 게 의도예요.
-
 describe('sleep', () => {
 	it('resolves after the given delay', async () => {
 		vi.useFakeTimers();

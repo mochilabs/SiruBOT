@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { validateEnv } from './env.ts';
 
-// validateEnv는 process.env를 읽고 키가 없으면 process.exit(1)로 기동을 거부해요 (fail-closed).
-
 const BASE_ENV: Record<string, string | undefined> = {
 	STORAGE_PUBLIC_URL: 'https://cdn.example.com',
 	STORAGE_AUTH_KEY: undefined,

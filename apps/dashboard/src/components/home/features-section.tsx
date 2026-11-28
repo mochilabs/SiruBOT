@@ -16,7 +16,6 @@ import { SocialAlertPreview } from "@/components/home/previews/social-alert-prev
 import { motionSlow } from "@/components/motion/durations";
 import { cn } from "@/lib/utils";
 
-/** 기능 블록 하나 — 텍스트 설명과 데모 한 짝. 데모 프리뷰는 부유 카드 콜라주까지 각자 품고 있어요. */
 interface FeatureBlock {
 	key: string;
 	title: string;
@@ -93,14 +92,12 @@ interface Chapter {
 	blocks: FeatureBlock[];
 }
 
-/** 챕터마다 블록을 한 줄에 하나씩 — 글과 데모가 좌우로 번갈아 놓여요 */
 const CHAPTERS: Chapter[] = [
 	{ title: "음악과 음성", desc: "재생부터 읽어주기까지.", blocks: [B.music, B.playback, B.chatTts] },
 	{ title: "서버 운영", desc: "설정은 한곳에서, 운영은 자동으로.", blocks: [B.ops, B.greeting, B.dashboard] },
 	{ title: "AI와 놀이", desc: "말을 걸고, 알림 받고, 함께 놀아요.", blocks: [B.chat, B.custom, B.social, B.games] }
 ];
 
-/** 제목 — 마스크 안에서 올라와요. 관찰 대상은 클립되지 않는 h4이고, 자식 span이 variants로 따라와요 */
 function MaskedTitle({ children }: { children: string }) {
 	const shouldReduce = useReducedMotion();
 	return (
@@ -120,7 +117,6 @@ function MaskedTitle({ children }: { children: string }) {
 	);
 }
 
-/** 한 줄 — 글과 데모를 좌우로 놓고 세로 가운데로 맞춰요. flip이면 좌우가 바뀌어요 */
 function FeatureRow({ block, flip }: { block: FeatureBlock; flip: boolean }) {
 	const shouldReduce = useReducedMotion();
 	return (
@@ -150,7 +146,6 @@ function FeatureRow({ block, flip }: { block: FeatureBlock; flip: boolean }) {
 	);
 }
 
-/** 챕터 머리 — 제목과 한 줄 설명, 왼쪽에서 그려지는 가는 선 */
 function ChapterHeader({ chapter }: { chapter: Chapter }) {
 	const shouldReduce = useReducedMotion();
 	return (

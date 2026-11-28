@@ -10,10 +10,6 @@ interface BreakerState {
 	openedAt: number;
 }
 
-/**
- * 간이 서킷 브레이커 (프로바이더별).
- * closed → N연속 실패 → open(쿨다운) → half-open(1회 시도) → closed/open
- */
 export class CircuitBreaker {
 	private readonly states = new Map<string, BreakerState>();
 
@@ -32,7 +28,7 @@ export class CircuitBreaker {
 			}
 			return false;
 		}
-		return true; // half-open: 1회 시도 허용 (동시 진입은 dedup이 흡수)
+		return true;
 	}
 
 	public recordSuccess(name: string): void {

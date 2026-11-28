@@ -12,7 +12,6 @@ import { fetchImageAsDataUrl, MAX_IMAGE_BYTES, normalizeImageType } from '../../
 import { requiresConfirmation, TOOL_DENIED_OUTPUT, type ToolConfirmRequest } from './toolConfirmation.ts';
 const MAX_TOOL_ROUNDS = 5;
 
-/** 확인 요청을 보내고 승인 여부를 돌려줘요. 수단이 없거나 던지면 false예요 (fail-closed). */
 async function askConfirmation(
 	deps: Pick<AiChatDeps, 'logger'>,
 	confirm: ((request: ToolConfirmRequest) => Promise<boolean>) | undefined,
@@ -27,19 +26,13 @@ async function askConfirmation(
 	}
 }
 
-// 멀티모달 이미지
 const MAX_IMAGES_PER_MESSAGE = 3;
 
-/** 모델에 보낼 첨부 이미지 — contentType은 내려받은 응답에 형식이 없을 때 쓰는 힌트예요. */
 export interface ChatImage {
 	url: string;
 	contentType: string | null;
 }
 
-/**
- * Discord 첨부파일 중 모델에 보낼 수 있는 이미지만 골라요.
- * PNG·JPEG·WEBP(GIF·SVG 제외) 10MB 이하, 최대 MAX_IMAGES_PER_MESSAGE장.
- */
 export function collectImageUrls(attachments: ReadonlyArray<{ url: string; contentType: string | null; size?: number | null }>): ChatImage[] {
 	return attachments
 		.filter((a) => {
@@ -51,10 +44,7 @@ export function collectImageUrls(attachments: ReadonlyArray<{ url: string; conte
 		.map((a) => ({ url: a.url, contentType: a.contentType }));
 }
 
-/**
- * 첨부 이미지를 `data:` URL로 바꿔요(URL을 그대로 넘기면 Gemini가 `image/*` 형식으로 거절해요, lib/imageDataUrl.ts).
- * 하나가 실패해도 대화는 이어가도록 그 이미지만 빼고 로그를 남겨요.
- */
+/** URL을 그대로 넘기면 Gemini가 `image/*` 형식으로 거절해 `data:` URL로 변환해요. */
 async function toImageDataUrls(deps: Pick<AiChatDeps, 'logger'>, images: readonly ChatImage[] | undefined): Promise<string[]> {
 	if (!images?.length) return [];
 	const results = await Promise.allSettled(images.map((image) => fetchImageAsDataUrl(image.url, image.contentType)));
@@ -65,7 +55,6 @@ async function toImageDataUrls(deps: Pick<AiChatDeps, 'logger'>, images: readonl
 	});
 }
 
-/** 사용자 메시지 content를 문자열 또는 멀티모달 파트 배열로 만들어요. (텍스트가 비면 이미지만 보내요) */
 function buildUserContent(prompt: string, images?: string[]): ChatContent {
 	if (!images?.length) return prompt;
 	const parts: ChatContentPart[] = [];

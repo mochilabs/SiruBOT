@@ -13,7 +13,6 @@ interface ErrorPanelProps {
   className?: string;
 }
 
-/** 페이지 본문 안에 들어가는 오류 안내 — 라우트 오류 화면과 같은 2단 구성(StatusScreen inline)이에요 */
 export function ErrorPanel({
   title = "앗, 문제가 발생했어요",
   message = "데이터를 불러오지 못했어요.",

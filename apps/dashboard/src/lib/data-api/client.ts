@@ -1,17 +1,9 @@
-/**
- * data-api HTTP 프록시 클라이언트 — GET/POST/SSE/이미지 forward와 실패 응답 정리.
- * 서버 전용(env의 AUTH_KEY를 다뤄요). 클라이언트 번들로 절대 노출하지 않아요.
- */
 import { NextResponse } from "next/server";
 
 import { getDataApiEnv } from "@/lib/env";
 
 import type { DataApiForwardFail, DataApiForwardResult, DataApiImageResult, GuildSettingsInvalidateResult } from "./types";
 
-/**
- * 인증 키 미설정 가드 — 키가 없으면 경고를 남기고 null, 있으면 env를 그대로 줘요.
- * data-api 호출 7곳이 이 가드를 통과해 미설정 경로의 로깅이 한곳에서만 정해져요.
- */
 function requireDataApi(): { url: string; authKey: string } | null {
   const env = getDataApiEnv();
   if (env.authKey) return env;
@@ -21,7 +13,6 @@ function requireDataApi(): { url: string; authKey: string } | null {
   return null;
 }
 
-/** forward 실패 응답 정리 — data-api 본문의 message(한국어)를 살리고 없으면 null로 내려요. */
 async function readForwardFail(res: Response): Promise<DataApiForwardFail> {
   const payload = (await res.json().catch(() => null)) as {
     message?: unknown;
@@ -38,10 +29,6 @@ async function readForwardFail(res: Response): Promise<DataApiForwardFail> {
   };
 }
 
-/**
- * data-api GET 프록시 — AUTH_KEY는 서버 전용(env). 클라이언트 번들로 절대 노출하지 않아요.
- * 키가 없으면(또는 공백뿐이면) 실패시키지 않고 null — 무인증 localhost 호출을 안 한다.
- */
 export async function fetchDataApi<T>(path: string): Promise<T | null> {
   const env = requireDataApi();
   if (!env) return null;
@@ -60,11 +47,7 @@ export async function fetchDataApi<T>(path: string): Promise<T | null> {
   }
 }
 
-/**
- * data-api SSE 스트림 프록시 — 인증 헤더를 붙여 upstream Response를 그대로 돌려준다.
- * 미설정이면 null (라우트에서 502 응답으로 변환).
- * SSE는 장기 연결이라 여기엔 AbortSignal.timeout을 걸지 않는다 — 타임아웃이 연결 전체를 잘라버리기 때문.
- */
+// Long-lived SSE stream: omit AbortSignal.timeout.
 export async function openDataApiStream(
   path: string,
 ): Promise<Response | null> {
@@ -84,10 +67,6 @@ export async function openDataApiStream(
   }
 }
 
-/**
- * data-api POST 프록시 (JSON) — AUTH_KEY는 서버 전용(env). 클라이언트 번들로 절대 노출하지 않아요.
- * 키가 없으면 실패시키지 않고 null. 네트워크/HTTP 오류도 null — 호출자가 실패 내성을 결정해요.
- */
 export async function postDataApi<T>(
   path: string,
   body: unknown,
@@ -111,12 +90,6 @@ export async function postDataApi<T>(
   }
 }
 
-/**
- * data-api POST 프록시(JSON) — postDataApi와 달리 실패 상태와 본문 message를 파기하지 않아요.
- * 인사 카드 이미지 라우트처럼 data-api의 형식·용량 안내(400)를 사용자에게 그대로 보여줘야 하는 곳에서 써요.
- * LLM 호출처럼 응답이 오래 걸리는 엔드포인트는 timeoutMs를 넓혀요 (기본 10초).
- * method로 PATCH·DELETE도 보낼 수 있어요 — 본문이 없으면 body를 실어 보내지 않아요.
- */
 export async function forwardDataApiPost<T>(
   path: string,
   body: unknown,
@@ -145,10 +118,6 @@ export async function forwardDataApiPost<T>(
   }
 }
 
-/**
- * data-api GET 프록시 — forwardDataApiPost와 동일한 계약으로 실패 상태와 본문 message(한국어)를 파기하지 않아요.
- * 채널·역할 목록처럼 data-api의 실패 안내(502 봇 무응답·503 Redis 장애)를 사용자에게 그대로 보여줘야 하는 곳에서 써요.
- */
 export async function forwardDataApiGet<T>(
   path: string,
 ): Promise<DataApiForwardResult<T>> {
@@ -168,10 +137,6 @@ export async function forwardDataApiGet<T>(
   }
 }
 
-/**
- * forward* 실패를 대시보드 응답으로 정리 — 4xx는 data-api의 상태와 한국어 message를
- * 그대로 살리고, 5xx/네트워크(502)는 내성 있는 fallback으로 응답해요.
- */
 export function dataApiFailResponse(
   fail: DataApiForwardFail,
   fallback: string,
@@ -180,19 +145,10 @@ export function dataApiFailResponse(
   return NextResponse.json({ error: fail.message ?? fallback }, { status });
 }
 
-/**
- * upstream(data-api) 실패 메시지의 사용자 노출 판정 — Fastify 라우터 미매칭 같은 기술 원문
- * ("Route DELETE:/v1/... not found")이 사용자에게 새는 것을 막아요. 한글 안내로 보이는
- * 메시지만 살리고 그 외는 각 라우트의 한국어 폴백으로 바꿔요.
- */
 export function dataApiUserMessage(message: string | null, fallback: string | null): string | null {
   return message && /[가-힣]/.test(message) ? message : fallback;
 }
 
-/**
- * data-api POST 프록시(이미지) — PNG 등 binary 본문을 ArrayBuffer로 돌려줘요.
- * 응답이 image/*가 아니면 실패로 본다.
- */
 export async function forwardDataApiImage(
   path: string,
   body: unknown,
@@ -201,7 +157,7 @@ export async function forwardDataApiImage(
   if (!env) return { ok: false, status: 503, message: null };
   const { url, authKey } = env;
   try {
-    // 이미지 렌더는 data-api에서 최대 ~20초까지 걸릴 수 있어요 (봇 dataApiClient 기준) — 여유 있게 30초.
+    // Image rendering in data-api can take up to ~20s.
     const res = await fetch(`${url}${path}`, {
       method: "POST",
       cache: "no-store",
@@ -219,14 +175,6 @@ export async function forwardDataApiImage(
   }
 }
 
-/**
- * 길드 설정 변경을 모든 봇 프로세스에 브로드캐스트 — 대시보드 PUT 성공 직후 호출해요.
- * data-api가 Redis 채널로 publish하고 각 봇이 자기 GuildService 캐시를 비워요.
- * 실패(null)여도 봇은 60초 TTL 폴백으로 결국 최신 설정을 읽으니 조용히 넘어가요.
- *
- * `reason: "mixer"` — 믹서(갭리스·크로스페이드) 저장이면 봇이 재생 중인 플레이어에
- * 설정을 바로 밀어 넣어요 (다음 곡까지 기다리지 않아요).
- */
 export async function notifyGuildSettingsChanged(
   guildId: string,
   reason?: "mixer" | "panel",

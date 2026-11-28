@@ -4,11 +4,6 @@ import type { RepeatMode } from 'lavalink-client';
 import type { MemberPermissionPort } from '../../lib/discordPorts.ts';
 import type { GuildSettingsStore } from './store.ts';
 
-/**
- * 재생 정책 설정(볼륨·DJ·반복·연관 재생·컨트롤러·SponsorBlock) CRUD —
- * 읽기는 store.getGuild 캐시를, 쓰기는 store.upsertField 공용 헬퍼를 써요.
- */
-
 export async function updateVolume(store: GuildSettingsStore, guildId: string, volume: number): Promise<Guild> {
 	const guild = await store.upsertField(guildId, 'volume', volume);
 	return guild;
@@ -39,10 +34,8 @@ export async function getTtsDuck(store: GuildSettingsStore, guildId: string) {
 	return guild.ttsDuckLevel;
 }
 
-/** TTS 안내 방식 — mixer announce mode와 1:1. 계약(guildSettingsContract)의 열거값을 그대로 써요. */
 export type TtsAnnounceMode = TtsAnnounceModeSetting;
 
-/** 알 수 없는 값은 sequential로 폴백해요 (계약의 정규화 규칙) */
 export const normalizeAnnounceMode = normalizeTtsAnnounceMode;
 
 export async function getTtsAnnounceMode(store: GuildSettingsStore, guildId: string): Promise<TtsAnnounceMode> {
@@ -102,7 +95,6 @@ export async function setEnableController(store: GuildSettingsStore, guildId: st
 	return guild.enableController;
 }
 
-/** SponsorBlock 카테고리 목록 — playerHandler가 세그먼트를 다시 계산할 때 즉시 최신 값을 읽도록 캐시도 함께 갱신해요. */
 export async function setSponsorBlockSegments(store: GuildSettingsStore, guildId: string, segments: string[]): Promise<string[]> {
 	const guild = await store.upsertField(guildId, 'sponsorBlockSegments', segments);
 	return guild.sponsorBlockSegments;

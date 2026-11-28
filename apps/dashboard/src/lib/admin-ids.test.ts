@@ -1,5 +1,3 @@
-// admin-ids 회귀 계약 — DASHBOARD_ADMIN_IDS 미설정=전원 차단(fail-closed)과 쉼표 파싱을 잠가요.
-// env는 테스트마다 설정·삭제하고, 경고는 한 번만 나가는 플래그도 확인해요.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { isDashboardAdmin } from "./admin-ids";
@@ -48,7 +46,6 @@ describe("isDashboardAdmin — fail-closed allowlist", () => {
 	});
 
 	it("미설정 경고는 프로세스당 한 번만 출력해요", async () => {
-		// 모듈 리셋으로 프로세스 기동 시점(최초 임포트)을 재현해요 — warnedUnset 플래그 검증용
 		vi.resetModules();
 		const fresh = await import("./admin-ids");
 		fresh.isDashboardAdmin("111111111111111111");

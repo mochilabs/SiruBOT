@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isSameEncodedTrack, normalizeTrackEncoded } from './trackEncoded.ts';
 
-/** Lavaplayer 형식 흉내: [4바이트 헤더(flags 1<<30 | 길이)] + 본문 + 마지막 8바이트 position */
 function encode(position: bigint): string {
 	const body = Buffer.alloc(24, 7);
 	body.writeBigUInt64BE(position, body.length - 8);

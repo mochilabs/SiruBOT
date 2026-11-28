@@ -2,11 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requestRoleValidation } from "./panel";
 
-/**
- * 저장 전 역할 부여 가능 여부 검증 — 봇이 "부여 불가"로 판정한 역할이 있으면 400 응답을 돌려줘요.
- * 통신 장애(봇 다운·Redis timeout)는 막지 않고 통과해요 (클릭 시점에 봇이 다시 검증해요).
- * 통과면 null.
- */
+// Fail-open on bot/Redis errors; the bot re-validates on button click.
 export async function rejectUnassignableRoles(
   guildId: string,
   roleIds: string[],

@@ -28,7 +28,6 @@ async function readBounded(provider: string, response: Response): Promise<string
 	return new TextDecoder().decode(result);
 }
 
-/** GET + 크기 상한 + zod 검증. 실패는 모두 IsrcProviderError예요. */
 export async function getJson<T extends z.ZodType>(
 	provider: string,
 	url: URL,

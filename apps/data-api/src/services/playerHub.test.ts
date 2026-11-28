@@ -2,10 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { getPlayerState, handlePlayerStateMessage, subscribeSse } from './playerHub.ts';
 
-/** 서명 계약(SEC-006)의 키 — 서명 케이스만 다시 스터브해요 */
 const SIGNING_KEY = 'player-hub-test-key';
 
-// 서명 키가 없는 구버전 모드를 보장해요 — 로컬/CI 환경의 AUTH_KEY 유무에 테스트 결과가 달라지지 않게.
 beforeEach(() => {
 	vi.stubEnv('REDIS_AUTH_KEY', '');
 	vi.stubEnv('AUTH_KEY', '');
@@ -14,7 +12,6 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-/** 모든 필수 필드를 갖춘 스냅샷 프레임 — ended는 tombstone 테스트에서만 붙여요 */
 function frame(overrides: Record<string, unknown> = {}) {
 	return JSON.stringify({
 		guildId: 'g1',
@@ -91,7 +88,7 @@ describe('handlePlayerStateMessage', () => {
 	});
 });
 
-describe('서명 검증 (SEC-006)', () => {
+describe('서명 검증', () => {
 	beforeEach(() => {
 		vi.stubEnv('REDIS_AUTH_KEY', '');
 		vi.stubEnv('AUTH_KEY', SIGNING_KEY);
@@ -114,7 +111,7 @@ describe('서명 검증 (SEC-006)', () => {
 		expect(getPlayerState('wrongkey-guild')).toBeNull();
 	});
 
-	it('서명 봉투지만 본문이 손상됐으면 거부해요', () => {
+	it('서명은 있지만 본문이 손상됐으면 거부해요', () => {
 		const tampered = JSON.stringify({ body: frame({ guildId: 'tampered-guild' }), sig: '0'.repeat(64) });
 		handlePlayerStateMessage(tampered, 'sirubot:player:tampered-guild');
 		expect(getPlayerState('tampered-guild')).toBeNull();

@@ -17,7 +17,6 @@ export abstract class BaseLavalinkHandler {
 	protected wrapAsyncHandler<T extends (...args: any[]) => Promise<any> | any>(handler: T, context?: string): T {
 		return (async (...args: Parameters<T>) => {
 			try {
-				// 플레이어 이벤트는 상호작용 맥락이 없어서 서버 테마를 여기서 한 번 싣는다 (길드 설정 캐시를 읽는다).
 				const result = await withGuildTheme(
 					extractGuildId(args),
 					async (guildId) => (await this.deps.guildService.getGuild(guildId)).themePreset,
@@ -28,7 +27,6 @@ export abstract class BaseLavalinkHandler {
 			} catch (error) {
 				const errorContext = context ? ` (${context})` : '';
 				this.logger.error(`${this.constructor.name} 오류 발생${errorContext}:`, error);
-				// 로그에만 묻히지 않도록 Sentry에도 보고 — 길드/노드 태그로 추적 가능하게
 				Sentry.withScope((scope) => {
 					scope.setTag('handler', this.constructor.name);
 					if (context) scope.setTag('handler_context', context);
@@ -43,7 +41,6 @@ export abstract class BaseLavalinkHandler {
 	}
 }
 
-/** lavalink 이벤트 인자에서 길드 ID를 best-effort로 추출 */
 function extractGuildId(args: readonly unknown[]): string | undefined {
 	for (const arg of args) {
 		if (arg && typeof arg === 'object' && 'guildId' in arg) {
@@ -54,7 +51,6 @@ function extractGuildId(args: readonly unknown[]): string | undefined {
 	return undefined;
 }
 
-/** lavalink 노드 인자에서 노드 ID를 best-effort로 추출 (LavalinkNode는 options를 가짐) */
 function extractNodeId(args: readonly unknown[]): string | undefined {
 	for (const arg of args) {
 		if (arg && typeof arg === 'object' && 'options' in arg && 'id' in arg) {

@@ -15,10 +15,6 @@ const draftBodySchema = z.object({
     .max(500, "500자 이내로 입력해 주세요."),
 });
 
-/**
- * 커스텀 명령어 AI 초안 — 자연어 설명을 data-api의 LLM으로 JSON 스펙 초안으로 바꿔요.
- * LLM 호출이라 무거운 쓰기(5/min)로 제한하고 타임아웃을 60초로 넓혀요.
- */
 export const POST = createGuildApiHandler({
   role: "manage",
   rate: HEAVY_WRITE_RATE,
@@ -40,7 +36,6 @@ export const POST = createGuildApiHandler({
         );
       }
 
-      // data-api가 이미 검증했지만, 경계를 넘어온 값은 한 번 더 확인해요
       const draft = customCommandPayloadSchema.safeParse(result.data);
       if (!draft.success) {
         return NextResponse.json(

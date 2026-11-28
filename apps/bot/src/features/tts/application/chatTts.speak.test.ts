@@ -1,10 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 
-/**
- * `speakNow` 계약 — `/tts 말하기`가 쓰는 즉석 발화예요.
- * 음악이 있으면 오버레이(announce), 없으면 플레이어 큐 단독 재생으로 갈라지는지 잠가요.
- */
-
 const mocks = vi.hoisted(() => ({
 	synthesize: vi.fn(),
 	announce: vi.fn(),

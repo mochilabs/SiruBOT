@@ -4,10 +4,6 @@ import { useEffect, useRef, useState } from "react";
 
 import { decomposeHangul } from "@/lib/hangul";
 
-/**
- * 한글 자소 분해 타이핑 스트리밍 — 봇 답변이 실제로 타이핑되는 애니메이션.
- * 완료 시 커서만 깜빡여요. `key`를 바꾸면 처음부터 재생돼요.
- */
 export function StreamingTypeText({
 	text,
 	speed = 45,
@@ -61,7 +57,6 @@ export function StreamingTypeText({
 		return () => clearTimeout(timer);
 	}, [visibleCount, composing, text, speed]);
 
-	// 렌더: 완성된 글자들 + 현재 조합 중인 글자의 중간 상태
 	let rendered = text.slice(0, visibleCount);
 	if (visibleCount < text.length) {
 		const states = decomposeHangul(text[visibleCount]);

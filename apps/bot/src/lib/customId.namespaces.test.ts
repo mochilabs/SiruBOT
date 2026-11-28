@@ -3,7 +3,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { registeredCustomIdNamespaces } from './customId.ts';
-// 선언 파일을 모두 불러와 registry를 채워요. 새 선언 파일을 만들면 여기에도 추가해요(아래 스캔 테스트가 빠뜨림을 잡아요).
 import '../features/music/discord/customIds.ts';
 import '../features/music/discord/utils/queueViewId.ts';
 import '../discord/customIds.ts';

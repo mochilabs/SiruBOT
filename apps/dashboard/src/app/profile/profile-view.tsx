@@ -34,7 +34,6 @@ export interface ProfileViewProps {
   attendance: ProfileAttendance;
 }
 
-/** 출석 연속 일수 — 뷰포트 진입 시 카운트업 (작고 조용한 스탯) */
 function StreakCount({ streak }: { streak: number }) {
   const { ref, value } = useCountUp({ end: streak });
 
@@ -54,12 +53,10 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
       <PageHeader title="내 프로필" description={user.name ? `${user.name}님의 프로필이에요.` : undefined} />
 
       <RevealGroup className="grid gap-4 md:grid-cols-2" stagger={0.1}>
-        {/* 생일 카드 */}
         <RevealItem className="h-full">
           <BirthdayCard birthday={birthday} />
         </RevealItem>
 
-        {/* 출석 카드 — 슬림하게 */}
         <RevealItem className="h-full">
           <Card padding="sm" className="h-full min-h-24">
             <CardHeader>
@@ -79,7 +76,6 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
           </Card>
         </RevealItem>
 
-        {/* 오늘의 운세 — 생일 별자리의 오하아사 (data-api 일일 캐시와 동일 데이터) */}
         <RevealItem className="md:col-span-2">
           <Card>
             <CardHeader>
@@ -121,17 +117,14 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
           </Card>
         </RevealItem>
 
-        {/* 서버별 생일 축하 받기 */}
         <RevealItem className="md:col-span-2">
           <BirthdayAnnounceCard hasBirthday={hasBirthday} />
         </RevealItem>
 
-        {/* 서버별 TTS 음성 — 생일 카드처럼 보기/변경 */}
         <RevealItem className="md:col-span-2">
           <TtsVoiceCard />
         </RevealItem>
 
-        {/* 게임 전적 카드 */}
         <RevealItem className="md:col-span-2">
           <Card>
           <CardHeader>
@@ -172,7 +165,6 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
         </RevealItem>
       </RevealGroup>
 
-      {/* 음악 통계 */}
       <div className="mt-6 space-y-3">
         <h2 className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-foreground">
           <ListMusic className="h-5 w-5 text-primary-text" aria-hidden />
@@ -195,7 +187,6 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
           </RevealItem>
         </RevealGroup>
 
-        {/* TOP 5 트랙 */}
         <Card className="mt-2">
           <CardHeader>
             <CardTitle>자주 들은 트랙 TOP 5</CardTitle>

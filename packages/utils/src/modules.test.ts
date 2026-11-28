@@ -54,7 +54,7 @@ describe('featureModule', () => {
 	});
 });
 
-describe('모듈 켜기/끄기 판정 (P-06)', () => {
+describe('모듈 켜기/끄기 판정', () => {
 	it('저장 값에서 모르는 id·관리 모듈·중복을 버리고 모듈 표 순서로 정리해요', () => {
 		expect(sanitizeDisabledModules(['fun', 'admin', 'nope', 'fun', 'music'])).toEqual(['music', 'fun']);
 		expect(sanitizeDisabledModules(null)).toEqual([]);

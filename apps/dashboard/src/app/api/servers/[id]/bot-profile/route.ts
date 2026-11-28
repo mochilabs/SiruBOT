@@ -7,15 +7,10 @@ import type { BotProfilePatch, BotProfileResponse } from "@/types/bot-profile";
 
 /** 아바타 업로드 상한 — 3MiB 파일이면 data URI로 약 4.2MB, data-api 라우트 한도(8MiB) 안이에요 */
 const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
-/** Discord 멤버 닉네임 길이 제한이에요 */
 const MAX_NICKNAME_LENGTH = 32;
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 const MAX_IMAGE_MB = Math.floor(MAX_AVATAR_BYTES / 1024 / 1024);
 
-/**
- * 이미지 파일 검증 — 크기·MIME을 확인하고 base64 data URI로 바꿔요.
- * 실패 사유는 문자열로 돌려주고, 호출한 쪽에서 400으로 응답해요.
- */
 async function toImageDataUri(file: File): Promise<{ dataUri: string } | { error: string }> {
   if (file.size > MAX_AVATAR_BYTES) {
     return { error: `이미지가 너무 커요. 최대 ${MAX_IMAGE_MB}MB까지 올릴 수 있어요.` };
@@ -38,7 +33,6 @@ export const GET = createGuildApiHandler({
   handler: async ({ guildId }) => {
     const data = await fetchDataApi<BotProfileResponse>(`/v1/bot-profile/${guildId}`);
     if (!data) {
-      // data-api 미설정/장애 — SWR 폴백이 "상태 없음" 화면을 그려요.
       return NextResponse.json({ error: "봇 프로필 상태를 불러오지 못했어요." }, { status: 502 });
     }
 
@@ -46,11 +40,6 @@ export const GET = createGuildApiHandler({
   },
 });
 
-/**
- * 봇 프로필 저장 — Discord `PATCH /guilds/{id}/members/@me`로 봇 자기 닉네임·길드 아바타를 바꿔요.
- * 봇 토큰은 대시보드가 모르므로 data-api → Redis → 봇 프로세스로 전달해요.
- * nickname은 빈 문자열이면 null(사용자명 표시로 초기화)로 정규화해요.
- */
 export const PATCH = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,
@@ -63,7 +52,6 @@ export const PATCH = createGuildApiHandler({
 
     const patchBody: BotProfilePatch = { guildId };
 
-    // nickname — 값이 온 경우에만 변경. 빈 문자열/공백은 초기화예요.
     const rawNickname = form.get("nickname");
     if (typeof rawNickname === "string") {
       const nickname = rawNickname.trim();

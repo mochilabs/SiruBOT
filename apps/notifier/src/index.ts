@@ -14,21 +14,18 @@ import { getLogger } from './utils/logger.ts';
 
 const logger = getLogger('index');
 
-// data-api·shardmanager와 같은 패턴: SENTRY_DSN이 없으면 no-op이에요.
 initSentry({ service: 'notifier' });
 registerProcessErrorHandlers(logger);
 
 async function main(): Promise<void> {
 	const env = validateEnv();
 
-	// 서비스 의존성을 먼저 뭉쳐요. 공개 콜백 라우트가 dispatcher를 필요로 해요.
 	const db = await connectDb(env.DATABASE_URL);
 	const redis = new NotifierRedis();
 	await redis.connect(env.REDIS_URL);
 
 	const dispatcher = new SocialDispatcher({ getDb: () => db, redis });
 	const hub = new SocialWebhookHub(redis, resolveRedisSigningKey(process.env), env.REDIS_URL);
-	// 트위치 클라이언트는 login 해석 라우트가 쓸 수 있게 푸시 활성과 무관하게 만들어요.
 	const twitchClient =
 		env.TWITCH_CLIENT_ID && env.TWITCH_CLIENT_SECRET
 			? new TwitchApiClient({ clientId: env.TWITCH_CLIENT_ID, clientSecret: env.TWITCH_CLIENT_SECRET })
@@ -86,7 +83,7 @@ async function main(): Promise<void> {
 		poller.stop();
 		scheduler.stop();
 		twitchScheduler?.stop();
-		hub.stop();
+		await hub.stop();
 		await disconnectDb();
 		await redis.disconnect();
 		await fastify.close();

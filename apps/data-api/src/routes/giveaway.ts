@@ -4,10 +4,6 @@ import { metrics } from '../utils/metrics.ts';
 import { requestGiveawayManage } from '../services/giveawayHub.ts';
 import { replyBotRelayFailure, sendError } from './common.ts';
 
-/**
- * 나눔 관리 라우트 — 대시보드가 나눔 시작·종료·취소·다시 뽑기를 봇에 위임해요.
- * Redis 없으면 503, 봇 미응답이면 502, 봇이 거부 사유(조건·채널 권한 등)를 실어 보내면 400이에요.
- */
 export function registerGiveawayRoutes(fastify: FastifyInstance): void {
 	fastify.post('/v1/internal/giveaway/manage', async (request, reply) => {
 		try {

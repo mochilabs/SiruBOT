@@ -6,7 +6,6 @@ import { animate, m, useReducedMotion } from "framer-motion";
 
 import { motionSlow } from "@/components/motion/durations";
 
-/** 숫자가 0에서 목표값까지 올라가요 — reduced-motion이면 바로 목표값 */
 function CountUp({ to, active }: { to: number; active: boolean }) {
 	const shouldReduce = useReducedMotion();
 	const [value, setValue] = useState(shouldReduce ? to : 0);
@@ -36,11 +35,6 @@ function Row({ command, children }: { command: string; children: React.ReactNode
 	);
 }
 
-/**
- * 게임·생활 프리뷰 — 출석 스트릭, 주사위, 가위바위보, 택배 조회를 한 대화처럼 쌓아 보여줘요.
- * 날씨 카드는 히어로 데모에 이미 나와서 여기서는 빼요.
- * 출석 숫자는 카운트업, 나머지는 차례로 옆에서 들어와요.
- */
 export function GamesLifePreview() {
 	const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.3 });
 	const shouldReduce = useReducedMotion();

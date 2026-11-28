@@ -6,10 +6,8 @@ import { commandMention } from '../../lib/commandMention.ts';
 import { helpId } from '../customIds.ts';
 import { helpCategoryLines, visibleHelpModules, type HelpContext } from '../help/helpCatalog.ts';
 
-/** 카테고리 셀렉트의 customId — 컬렉터가 이 값으로 가려내요 */
 export const helpCategoryCustomId = helpId.encode('category');
 
-/** 셀렉트 값: 모듈 id, 첫 화면은 'home' */
 export type HelpPage = BotModuleId | 'home';
 export const HELP_HOME = 'home' as const;
 
@@ -44,10 +42,6 @@ function homeText(ctx: HelpContext): string {
 	].join('\n');
 }
 
-/**
- * `/도움말` 화면. 첫 화면(home)이나 카테고리 하나를 보여주고, 아래에 카테고리 셀렉트를 둬요.
- * `selectable=false`면 셀렉트를 빼요 (세션이 끝난 뒤 화면).
- */
 export function helpView(page: HelpPage, ctx: HelpContext, selectable = true): ContainerBuilder {
 	const container = createContainer();
 	if (page === HELP_HOME) {
@@ -64,7 +58,6 @@ export function helpView(page: HelpPage, ctx: HelpContext, selectable = true): C
 	return container;
 }
 
-/** 셀렉트 값이 이 사람이 볼 수 있는 페이지인지 확인해요 (관리 카테고리 권한 등) */
 export function parseHelpPage(value: string | undefined, ctx: HelpContext): HelpPage | null {
 	if (value === HELP_HOME) return HELP_HOME;
 	return visibleHelpModules(ctx).find((m) => m.id === value)?.id ?? null;

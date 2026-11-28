@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PROFILE_TICKET_WIDTH, renderProfileCardTicket, type ProfileTicketInput } from './profileCardTicket.tsx';
 
-/** 티켓 프로필 카드 스모크 — PNG 계약과 선택 항목(역할·소개·음악)이 비어도 그려지는지 확인해요. */
-
 function baseInput(): ProfileTicketInput {
 	return {
 		displayName: '시루',

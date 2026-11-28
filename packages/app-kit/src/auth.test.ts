@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createKeyAuthHook, createKeyPreHandler, timingSafeKeyEqual } from './auth.ts';
 
-// auth 훅은 실패 시 401/기동 거부로 이어지는 보안 경로예요 — 분기 계약을 고정해요.
-
 describe('timingSafeKeyEqual', () => {
 	it('같은 키는 true, 다른 키는 false예요', () => {
 		expect(timingSafeKeyEqual('secret-key', 'secret-key')).toBe(true);
@@ -86,25 +84,20 @@ describe('createKeyAuthHook', () => {
 		const hook = fastify.addHook.mock.calls[0]![1] as (req: unknown, reply: unknown) => Promise<void>;
 		const res = { code: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
 
-		// 제외 경로 — 헤더 없이 통과
 		await hook({ url: '/api/health', headers: {} }, res);
 		expect(res.send).not.toHaveBeenCalled();
 
-		// 보호 경로 — 올바른 키 통과 (Authorization 원문, Bearer 없음)
 		await hook({ url: '/x', headers: { authorization: 'secret' } }, res);
 		expect(res.send).not.toHaveBeenCalled();
 
-		// 보호 경로 — 헤더 없으면 401 (preHandler와 같은 한국어 문구)
 		await hook({ url: '/x', headers: {} }, res);
 		expect(res.code).toHaveBeenCalledWith(401);
 		expect(res.send).toHaveBeenCalledWith({ error: '인증 정보가 없어요.' });
 
-		// 보호 경로 — 잘못된 키 401
 		await hook({ url: '/x', headers: { authorization: 'wrong' } }, res);
 		expect(res.code).toHaveBeenLastCalledWith(401);
 		expect(res.send).toHaveBeenLastCalledWith({ error: '인증에 실패했어요.' });
 
-		// 제외 경로도 query string이 붙으면 일치하지 않아요 (정확한 경로 일치만 면제)
 		await hook({ url: '/api/health?x=1', headers: {} }, res);
 		expect(res.code).toHaveBeenLastCalledWith(401);
 	});

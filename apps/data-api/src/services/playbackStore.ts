@@ -1,5 +1,3 @@
-/** 재생 이벤트 수집 — 각 샤드 프로세스의 trackHandler가 fire-and-forget으로 보고해요. */
-
 export type PlaybackEventType =
 	'track_start' | 'track_end' | 'track_stuck' | 'track_error' | 'queue_end' | 'playback_abort' | 'node_disconnect' | 'node_error';
 
@@ -13,15 +11,12 @@ export interface PlaybackEvent {
 	trackId: string | null;
 	reason: string | null;
 	consecutiveErrors: number;
-	/** 병합된 보고 수. 노드 이벤트는 봇 워커마다 같은 장애를 각각 보고하므로 한 항목으로 모아요. */
 	count: number;
 	at: number;
 }
 
 const MAX_EVENTS = 500;
-/** 같은 노드+유형 보고를 하나로 병합하는 시간 창. 워커 fan-in을 한 줄로 접기 위함이에요. */
 const NODE_MERGE_WINDOW_MS = 60_000;
-/** 병합 탐색 범위. 직전 이벤트만 보면 사이에 트랙 이벤트가 끼면 병합을 놓쳐요. */
 const NODE_MERGE_SCAN = 25;
 const events: PlaybackEvent[] = [];
 const counts: Record<PlaybackEventType, number> = {
@@ -34,7 +29,6 @@ const counts: Record<PlaybackEventType, number> = {
 	node_disconnect: 0,
 	node_error: 0
 };
-/** 길드별 마지막 상태 (현재 재생 중 파악용) */
 const lastByGuild = new Map<string, PlaybackEvent>();
 
 function isNodeEvent(event: PlaybackEvent): boolean {

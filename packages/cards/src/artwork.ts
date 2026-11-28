@@ -1,18 +1,9 @@
-/**
- * 아트워크 순수 헬퍼 — 레터박스 감지, 대표색, 색 섞기, 이미지 헤더 크기 읽기예요. 런타임 독립(node·브라우저 공용)이에요.
- * 래스터가 필요한 `prepareArtwork`(Takumi)는 data-api `renderers/shared/artwork.ts`에 있어요.
- */
-
 export interface PreparedArtwork {
-	/** 레터박스를 잘라낸 정사각 PNG data URI (Takumi `<img>`에 그대로 써요) */
 	art: string;
-	/** 카드 배경용 160x100 PNG data URI — 작은 크기에서 한 번 블러해 둬서 카드 크기로 키워도 매끈한 색 번짐이 돼요 (큰 이미지에 블러 필터를 걸면 비싸요). 비율은 유지하고 카드 쪽에서 cover로 맞춰요. */
 	backdrop: string;
-	/** 카드에서 안전하게 쓸 수 있는 밝기로 보정한 대표색 `#rrggbb` */
 	accent: string | null;
 }
 
-/** 원본 좌표계의 자를 영역 */
 export interface CropBox {
 	sx: number;
 	sy: number;
@@ -22,10 +13,6 @@ export interface CropBox {
 
 export const BACKDROP_SIZE = { width: 160, height: 100 } as const;
 
-/**
- * PNG·GIF·JPEG·WebP 헤더에서 크기만 읽어요 (디코딩 없이). 렌더러로 자연 크기를 재면 이미지를 통째로 디코딩해서 느려요.
- * 알 수 없는 형식이면 null이에요.
- */
 export function imageSizeOf(buf: Uint8Array): { width: number; height: number } | null {
 	if (buf.length > 24 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
 		return {
@@ -59,7 +46,6 @@ export function imageSizeOf(buf: Uint8Array): { width: number; height: number } 
 			i += 2 + ((buf[i + 2]! << 8) | buf[i + 3]!);
 		}
 	}
-	// WebP — RIFF....WEBP 뒤 청크(VP8 손실 / VP8L 무손실 / VP8X 확장)에서 크기를 읽어요
 	if (
 		buf.length > 30 &&
 		buf[0] === 0x52 &&
@@ -89,17 +75,12 @@ export function imageSizeOf(buf: Uint8Array): { width: number; height: number } 
 	return null;
 }
 
-/** rgb → '#rrggbb' */
 function rgbToHex(r: number, g: number, b: number): string {
 	const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
 	return `#${((1 << 24) | (clamp(r) << 16) | (clamp(g) << 8) | clamp(b)).toString(16).slice(1)}`;
 }
 
-/**
- * 썸네일 가장자리의 검은 띠를 잘라낸 영역을 구해요. YouTube 썸네일은 영상 비율이 다르면 위아래·좌우에 검은 띠가 들어가서
- * 그대로 cover하면 띠가 보여요. 잘라낸 결과가 원본의 40% 미만이면(어두운 아트워크) 자르지 않아요.
- * pixels는 RGBA(w*h*4)예요. 반환은 0..w, 0..h 좌표 (right/bottom은 포함하지 않는 끝)예요.
- */
+/** Strips letterbox bars from RGBA pixels (exclusive right/bottom); skips if <40% would remain. */
 export function detectContentBounds(pixels: Uint8Array, w: number, h: number): { left: number; top: number; right: number; bottom: number } {
 	const full = { left: 0, top: 0, right: w, bottom: h };
 	if (w < 4 || h < 4 || pixels.length < w * h * 4) return full;
@@ -131,7 +112,6 @@ export function detectContentBounds(pixels: Uint8Array, w: number, h: number): {
 	return { left, top, right: right + 1, bottom: bottom + 1 };
 }
 
-/** 대표색 — 채도 가중 평균과 가장 무게가 큰 픽셀을 섞어요. 채도 있는 픽셀이 없으면 평균색이에요. 투명뿐이면 null이에요. */
 export function dominantColor(pixels: Uint8Array): string | null {
 	let bestR = 0;
 	let bestG = 0;
@@ -176,7 +156,6 @@ export function dominantColor(pixels: Uint8Array): string | null {
 	return rgbToHex((sumR / sumW) * 0.6 + bestR * 0.4, (sumG / sumW) * 0.6 + bestG * 0.4, (sumB / sumW) * 0.6 + bestB * 0.4);
 }
 
-/** 어두운 카드 위 텍스트·칩에 쓸 수 있게 밝기를 보정해요 — 너무 어두우면 밝히고, 너무 밝으면 어둡게 해요. */
 export function normalizeAccent(hex: string): string {
 	const n = parseInt(hex.slice(1), 16);
 	let r = (n >> 16) & 255;
@@ -196,7 +175,6 @@ export function normalizeAccent(hex: string): string {
 	return rgbToHex(r, g, b);
 }
 
-/** 두 색을 섞어요 — t=0이면 a, t=1이면 b */
 export function mixHex(a: string, b: string, t: number): string {
 	const pa = parseInt(a.slice(1), 16);
 	const pb = parseInt(b.slice(1), 16);
@@ -204,7 +182,6 @@ export function mixHex(a: string, b: string, t: number): string {
 	return rgbToHex(ch(16), ch(8), ch(0));
 }
 
-/** `#rrggbb` → `rgba(r, g, b, a)` */
 export function hexToRgba(hex: string, alpha: number): string {
 	const n = parseInt(hex.slice(1), 16);
 	return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;

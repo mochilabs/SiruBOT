@@ -9,11 +9,9 @@ import {
 } from './greetingCardDesign.ts';
 import { PRESET_BACKGROUNDS } from './memberGreeting.ts';
 
-/** 카드 논리 좌표계 — 렌더러·미리보기가 함께 쓰는 크기 */
 const CARD_W = 1200;
 const CARD_H = 675;
 
-/** 계획에서 뽑는 색상 시퀀스 — 바닥색 → 대각 그라디언트 스톱 → 글로우 스톱 (스크림은 별도) */
 function colorSequence(plan: GreetingPresetBackgroundPlan): string[] {
 	return [plan.base, ...plan.linear.stops.map(([, color]) => color), ...plan.glow.stops.map(([, color]) => color)];
 }

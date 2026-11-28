@@ -1,7 +1,6 @@
 import { CUSTOM_COMMAND_ACCENT_COLOR_VALUES, createContainer, createThumbnail, type CustomCommandDesign } from '@sirubot/utils';
 import { ContainerBuilder, MediaGalleryBuilder, MediaGalleryItemBuilder, SectionBuilder, SeparatorBuilder, TextDisplayBuilder } from 'discord.js';
 
-/** CV2 디자인 → 컨테이너 컴포넌트. 텍스트의 인자 치환은 호출부(인터프리터)가 넘겨요. */
 export function customCommandDesignView(design: CustomCommandDesign, substitute: (text: string) => string): ContainerBuilder {
 	const container = new ContainerBuilder();
 	container.setAccentColor(CUSTOM_COMMAND_ACCENT_COLOR_VALUES[design.accentColor ?? 'blue']);
@@ -30,10 +29,6 @@ export function customCommandDesignView(design: CustomCommandDesign, substitute:
 	return container;
 }
 
-/**
- * `!도움말` 목록 — 접두사 명령어 줄(`lines`)이 있으면 나열하고, 등록된 명령어가 없거나
- * 전부 슬래시면 그에 맞는 안내 문구를 보여줘요.
- */
 export function customCommandListView(state: { hasCommands: boolean }, lines: string[]): ContainerBuilder {
 	const container = createContainer();
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## 커스텀 명령어'));

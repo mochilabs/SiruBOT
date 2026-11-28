@@ -11,15 +11,6 @@ import { TtsError } from '../../application/ttsService.ts';
 import { TTS_PRONUNCIATION_MAX_ENTRIES, TTS_PRONUNCIATION_READING_MAX, TTS_PRONUNCIATION_TERM_MAX } from '../../application/ttsPronunciation.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
-/**
- * /tts — 채널 낭독 on/off + 입장 알림 + 사용자 TTS 설정 패널 + 즉석 발화.
- * - 켜기/끄기: 현재 채널의 낭독 정책(길드 ttsMode)을 바꿔요. 채널 전체에 영향을 주므로
- *   서버 관리 권한이 필요해요. 켜기는 실행한 본인의 낭독 opt-in도 함께 켜요.
- * - 설정: 낭독 on/off·음성·위치(왼쪽/가운데/오른쪽) 패널(Components V2 ephemeral). 자기 자신 설정이라
- *   권한이 필요 없어요.
- * - 말하기: 재생 중인 곡 위에(없으면 단독으로) 입력한 문장을 읽어요. /음악 음성 서브커맨드를
- *   TTS 도메인으로 옮긴 것이고, 채팅 낭독과 같은 siru_tts·사용자 프리셋을 씁니다.
- */
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'tts',

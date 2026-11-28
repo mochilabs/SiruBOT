@@ -64,9 +64,7 @@ export class MusicCommand extends Command {
 			const subcommandName = interaction.options.getSubcommand();
 			const subcommand = SUBCOMMANDS.find((s) => s.name === subcommandName);
 			if (subcommand?.autocomplete) return subcommand.autocomplete(interaction);
-		} catch {
-			// 서브커맨드 파싱 실패 시 빈 응답
-		}
+		} catch {}
 		return interaction.respond([]);
 	}
 
@@ -89,8 +87,7 @@ export class MusicCommand extends Command {
 			});
 		}
 
-		// 기존에는 명령어마다 달랐던 precondition을 서브커맨드별로 실행해요.
-		// (하나의 명령어에 합치면서 union으로 걸면 /음악 가사 같은 가벼운 명령어까지 음성 채널을 요구하게 돼요)
+		// union으로 걸면 가벼운 서브커맨드까지 음성 채널을 요구하므로 서브커맨드별로 실행한다.
 		await runSubcommandPreconditions(this, interaction, subcommand.preconditions);
 
 		await subcommand.run(interaction);

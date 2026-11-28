@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { aggregateVoiceServerHistory, parseVoiceServerRows, toPublicVoiceServerHistory, toPublicVoiceServerSummary } from "./voice-server-stats";
 
-// 통계 서버는 외부 서비스라 응답을 신뢰하지 않고 검증해요 — 이 테스트는 검증·집계 계약을 잠가요.
-// measuredRow는 2026-10-17 실측 응답(GET /api/stats/latest)의 한 행이에요.
 const measuredRow = {
 	id: 7,
 	host: "10.0.0.21:2333",

@@ -23,15 +23,11 @@ import {
 export type SettingsMode = SettingsScreen;
 export { SPONSORBLOCK_SEGMENTS };
 
-/** 화면을 이루는 조각 — 텍스트는 화면마다 손으로 쓰고, 컨트롤 줄은 `SETTINGS_ACTIONS`에서 생성해요 */
 type Part =
 	| { text: (guild: Guild, ctx: SettingsViewContext) => string }
 	| { separator: true }
-	/** 표에서 `control.screen`이 이 화면이고 `control.row`가 같은 컨트롤을 표의 순서대로 한 줄에 놓아요. back이면 뒤로가기를 맨 앞에 붙여요. */
 	| { row: string; back?: boolean }
-	/** 뒤로가기만 있는 줄 */
 	| { back: true }
-	/** 음악 하위 페이지 이동 셀렉트 — 현재 화면이 선택돼 있어요 */
 	| { musicNav: true };
 
 const TEXT = (text: (guild: Guild, ctx: SettingsViewContext) => string): Part => ({ text });
@@ -71,7 +67,6 @@ const SCREEN_PARTS: Record<SettingsScreen, Part[]> = {
 		{ row: 'limit' },
 		{ back: true }
 	],
-	// 하위 이동 줄이 늘어 행 5개 한도를 넘으므로 갭리스·정규화·고급 설정 버튼은 한 줄에 놓아요
 	audio: [TEXT(audioText), SEPARATOR, MUSIC_NAV, { row: 'transition' }, { row: 'toggles' }, { row: 'announce' }, { back: true }],
 	ai: [TEXT(aiText), SEPARATOR, { row: 'mode' }, { row: 'actions', back: true }],
 	chatTools: [TEXT(chatToolsText), SEPARATOR, { row: 'tools' }, { row: 'counting' }, { row: 'actions', back: true }]
@@ -131,7 +126,6 @@ function mainText(guild: Guild): string {
 	].join('\n');
 }
 
-/** 첫 화면 요약 한 줄 — 꺼진 모듈 이름만 보여줘요 */
 function moduleSummary(guild: Guild): string {
 	const off = BOT_MODULES.filter((m) => isModuleDisabled(guild.disabledModules, m.id)).map((m) => m.label);
 	return off.length > 0 ? `${off.join(', ')} 꺼짐` : '모두 켜짐';

@@ -44,7 +44,6 @@ const KIND_OPTIONS: Array<{ value: CustomCommandDesignItem["kind"]; label: strin
 	{ value: "media", label: "이미지 갤러리" },
 ];
 
-/** 팔레트 색 → CSS hex — 봇이 보내는 컨테이너 색과 같은 값이에요 */
 function accentHex(color: CustomCommandAccentColor): string {
 	return `#${CUSTOM_COMMAND_ACCENT_COLOR_VALUES[color].toString(16).padStart(6, "0")}`;
 }
@@ -69,13 +68,8 @@ interface CustomCommandDesignerProps {
 	onChange: (design: CustomCommandDesign) => void;
 }
 
-/** 갤러리에 넣을 수 있는 이미지 상한 (스펙의 media urls 제한과 같아요) */
 const MEDIA_URL_LIMIT = 10;
 
-/**
- * CV2 디자이너 — send_message의 design을 조립하고 실제 전송에 가까운 미리보기를 보여줘요.
- * 미리보기는 근사치예요 (디스코드 폰트·마크다운 렌더와 조금 다를 수 있어요).
- */
 export function CustomCommandDesigner({
 	guildId,
 	design,
@@ -83,14 +77,11 @@ export function CustomCommandDesigner({
 	onChange,
 }: CustomCommandDesignerProps) {
 	const toast = useToast();
-	/** 에셋 선택 다이얼로그가 어느 아이템(단일/복수)에 연결됐는지 기억해요 */
 	const [pickerTarget, setPickerTarget] = useState<{ index: number; multiple: boolean } | null>(null);
 
-	// 업로드가 끝나고 반영할 때 이미 다른 편집이 있었으면 덮어쓰지 않도록 최신 design을 비춰봐요
 	const designRef = useRef(design);
 	designRef.current = design;
 
-	// 목록 조작(수정·이동·삭제)은 공용 훅 — 스텝 조립과 같은 동작이에요
 	const { keys: itemKeys, updateItem, moveItem, removeItem } = useListEditor(design.items, (items) =>
 		onChange({ ...designRef.current, items }),
 	);
@@ -99,7 +90,6 @@ export function CustomCommandDesigner({
 		updateItem(index, createDesignItem(kind));
 	};
 
-	/** 업로드·피커 선택으로 받은 주소를 아이템 필드에 반영해요 (media는 10개까지) */
 	const applyUrls = (index: number, kind: "section" | "media", urls: string[]) => {
 		const item = designRef.current.items[index];
 		if (!item) return;
@@ -122,7 +112,6 @@ export function CustomCommandDesigner({
 		}
 	};
 
-	// 숨김 파일 입력 업로드 — 파일을 에셋으로 올리고 돌아온 주소를 applyUrls로 채워요
 	const { uploading, singleFileInputRef, multiFileInputRef, requestUpload, handleUpload } = useDesignUpload(guildId, applyUrls);
 
 	return (
@@ -332,7 +321,6 @@ export function CustomCommandDesigner({
 				구성 요소 추가
 			</Button>
 
-			{/* 업로드용 숨김 파일 입력. 어느 아이템에 연결됐는지는 useDesignUpload가 기억해요 */}
 			<input
 				ref={singleFileInputRef}
 				type="file"
@@ -373,7 +361,6 @@ export function CustomCommandDesigner({
 	);
 }
 
-/** 전송 결과 근사 미리보기 */
 export function DesignPreview({ design }: { design: CustomCommandDesign }) {
 	return (
 		<div className="rounded-menu border border-border bg-surface-1 p-3">
@@ -414,7 +401,6 @@ export function DesignPreview({ design }: { design: CustomCommandDesign }) {
 									<p className="flex-1 whitespace-pre-wrap text-sm text-foreground">
 										{item.content}
 									</p>
-									{/* 사용자가 지정한 임의 https URL이라 next/image remotePatterns로 등록할 수 없어요 */}
 									{/* eslint-disable-next-line @next/next/no-img-element */}
 									<img
 										src={item.thumbnailUrl}

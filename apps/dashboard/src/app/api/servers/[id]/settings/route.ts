@@ -24,7 +24,6 @@ import {
 } from "@/lib/schemas";
 import type { GuildSettings } from "@/types/settings";
 
-/** DB 행이 없어도 기본값을 내려주는 응답 빌더 — 기본값 단일 소스는 GUILD_SETTINGS_DEFAULTS (스키마·Prisma @default와 동일성 검증은 schemas.test.ts) */
 function toSettings(guild: PrismaGuild | null): GuildSettings {
   if (!guild) {
     return GUILD_SETTINGS_DEFAULTS;
@@ -100,7 +99,6 @@ export const PUT = createGuildApiHandler({
       if (!body.ok) return body.response;
 
       const data = normalizeMixerToggles(body.data);
-      // 모르는 id와 끌 수 없는 모듈(관리)은 저장해도 무시해요 — 봇도 읽을 때 같은 규칙으로 걸러요
       if (data.disabledModules) data.disabledModules = sanitizeDisabledModules(data.disabledModules);
       if (Object.keys(data).length > 0) {
         await db.guild.upsert({
@@ -112,9 +110,6 @@ export const PUT = createGuildApiHandler({
 
       const guild = await db.guild.findUnique({ where: { id: guildId } });
 
-      // 저장 성공 후 모든 봇 프로세스의 설정 캐시를 무효화해요 (fire-and-forget).
-      // 실패해도 봇은 60초 TTL 폴백으로 결국 최신 설정을 읽으므로 응답을 막지 않아요.
-      // 믹서(갭리스·크로스페이드) 저장이면 reason을 실어 봇이 재생 중인 플레이어에 바로 적용하게 해요.
       const touchesMixer = MIXER_SETTING_KEYS.some((key) => key in data);
       const touchesPanel = PANEL_SETTING_KEYS.some((key) => key in data);
       notifyGuildSettingsChanged(guildId, touchesMixer ? "mixer" : touchesPanel ? "panel" : undefined).catch((error) => {

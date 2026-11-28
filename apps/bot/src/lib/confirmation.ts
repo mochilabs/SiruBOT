@@ -6,10 +6,6 @@ import { confirmId } from './confirmationId.ts';
 import { ownerOnly } from './ownerOnlyFilter.ts';
 import { notice } from './notice.ts';
 
-/**
- * 확인 창을 띄울 화면 — 슬래시 명령 상호작용이 그대로 들어맞고, 상호작용이 없는 진입점(멘션 답변)은
- * 자기 라이브 메시지를 `editReply`로 감싸 넘겨요. `user`만 버튼을 누를 수 있어요.
- */
 export interface ConfirmationSurface {
 	user: { id: string };
 	editReply(options: { components: ContainerBuilder[]; flags: MessageFlags.IsComponentsV2[]; allowedMentions?: { parse: [] } }): Promise<Message>;

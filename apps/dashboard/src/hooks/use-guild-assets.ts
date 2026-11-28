@@ -16,7 +16,6 @@ export interface GuildAsset {
 	createdAt: string;
 }
 
-/** 업로드 상한 8MiB · 허용 mime 화이트리스트 (서버 계약과 동일하게 유지해요) */
 export const ASSET_MAX_BYTES = 8 * 1024 * 1024;
 export const ASSET_ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const;
 
@@ -34,7 +33,6 @@ interface UseGuildAssetsResult {
 	error: ApiError | null;
 	loading: boolean;
 	uploading: boolean;
-	/** 파일을 순차적으로 업로드해요. 실패한 파일은 개별로 알려요. 모두 성공했는지 돌려줘요. */
 	upload: (files: File[]) => Promise<boolean>;
 	rename: (id: string, name: string) => Promise<boolean>;
 	remove: (id: string) => Promise<boolean>;
@@ -43,10 +41,6 @@ interface UseGuildAssetsResult {
 
 const assetsFetcher = createApiFetcher<GuildAssetsResponse>("이미지 에셋을 불러오지 못했어요.");
 
-/**
- * 길드 이미지 에셋 — 목록 조회(SWR)와 업로드·이름 변경·삭제 액션을 한곳에서 관리해요.
- * 목록은 useGuildResource 세션 게이트 계약을 쓰고, 액션은 성공 후 mutate로 재검증해요.
- */
 export function useGuildAssets(guildId: string): UseGuildAssetsResult {
 	const toast = useToast();
 	const { data, error, isLoading, mutate, guildUrl } = useGuildResource<GuildAssetsResponse>(guildId, "/assets", { fetcher: assetsFetcher });

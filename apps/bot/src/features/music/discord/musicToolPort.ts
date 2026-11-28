@@ -8,10 +8,6 @@ import { applyFilterPreset, dropLoserFilters, FILTER_PRESET_NAMES, isFilterPrese
 import { checkDJOrAlone, checkManageGuild } from './utils/permissionCheck.ts';
 import { parseTimeToMs } from './utils/timeParse.ts';
 
-/**
- * AI 도구 포트 구현 (BotApplication.setupServices가 한 번 만들어요).
- * 헬퍼를 이 한 곳에서 묶어 노출하고, lavalink 의존성은 자동 추천곡 정리·선예열에만 써요.
- */
 export function createMusicToolPort(deps: { lavalink: LavalinkDeps }): MusicToolPort {
 	return {
 		actorFromMember,

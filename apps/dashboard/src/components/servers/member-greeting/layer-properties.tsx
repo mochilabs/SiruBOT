@@ -41,15 +41,12 @@ const DEFAULT_ANIMATION: Omit<GreetingAnimation, "type"> = { durationMs: 2000, d
 
 interface LayerPropertiesProps {
 	layer: GreetingLayer | null;
-	/** 선택된 레이어 수 — 2 이상이면 속성 대신 안내만 보여요 */
 	selectedCount?: number;
 	saving: boolean;
 	onPatchLayer: (id: string, partial: Partial<GreetingLayer>) => void;
-	/** 편집 확정(되돌리기 한 단계) — 슬라이더는 값 확정, 입력 필드는 blur, 버튼은 클릭마다 호출해요 */
 	onCommit: () => void;
 }
 
-/** 선택된 레이어의 속성 편집 — 타입별 필드 + 공통 x/y */
 export function LayerProperties({ layer, selectedCount = layer ? 1 : 0, saving, onPatchLayer, onCommit }: LayerPropertiesProps) {
 	if (selectedCount > 1) {
 		return <p className="text-sm text-muted-foreground">레이어 {selectedCount}개를 선택했어요. 드래그로 함께 옮기고, Ctrl+C/V·Ctrl+D·Delete로 복사·붙여넣기·복제·삭제할 수 있어요. 속성을 고치려면 레이어 하나만 선택하세요.</p>;
@@ -59,7 +56,6 @@ export function LayerProperties({ layer, selectedCount = layer ? 1 : 0, saving, 
 	}
 
 	const patch = (partial: Partial<GreetingLayer>) => onPatchLayer(layer.id, partial);
-	// 단발 조작(버튼·라디오) — 패치와 함께 한 단계로 커밋해요
 	const patchAndCommit = (partial: Partial<GreetingLayer>) => {
 		patch(partial);
 		onCommit();

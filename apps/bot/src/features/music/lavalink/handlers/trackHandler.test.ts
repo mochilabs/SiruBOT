@@ -45,14 +45,12 @@ vi.mock('@sentry/node', () => ({
 	captureException: vi.fn()
 }));
 
-/** 핸들러가 받는 LavalinkDeps 역할 — 테스트 전체가 Object.assign으로 필요한 필드를 채워요 */
 const container: Record<string, any> = {
 	logger: { getSubLogger },
 	playerNotifier: { updateController: playerNotifierUpdate },
 	mixerService,
 	playbackReporter: { reportPlaybackEvent },
 	incidentNotice: { appendTo: async (message: string) => message },
-	// 이 테스트의 곡은 유튜브가 아니라 SponsorBlock이 아무 일도 하지 않아요
 	sponsorBlockService: { startTrack: vi.fn(), stop: vi.fn(), tick: vi.fn(), prefetch: vi.fn(), queueChanged: vi.fn() }
 };
 
@@ -75,7 +73,6 @@ function startEvent(encoded?: string, identifier?: string): TrackStartEvent {
 	return { track: encoded ? { encoded, info: { identifier } } : null } as unknown as TrackStartEvent;
 }
 
-// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
 beforeEach(() => setConfigForTesting(makeTestConfig()));
 afterEach(() => setConfigForTesting(null));
 
@@ -177,7 +174,6 @@ describe('trackError 사유 보고 (상태 페이지 최근 재생 오류)', () 
 	beforeEach(() => {
 		getSubLogger.mockReturnValue(stubLogger);
 		reportPlaybackEvent.mockClear();
-		// handleTrackFailure가 스킵 분기로 빠지도록 mixerService를 고정해요 (sendNotification 경로 회피)
 		Object.assign(container, {
 			mixerService: {
 				consumePreloaded: () => false,
@@ -321,7 +317,6 @@ describe('reconcileNowPlaying', () => {
 		const player = transitionPlayer({ track: { encoded: 'started-enc', info: { identifier: 'id-a' } }, paused: false });
 		player.queue.current = started;
 		handler.setLastStarted(player, started);
-		// 라이브러리의 지연 continuation이 current를 밀어낸 상황 재현
 		player.queue.current = track('displaced-enc', 'id-x');
 
 		await vi.advanceTimersByTimeAsync(900);
@@ -399,7 +394,6 @@ describe('startClientOwnedTrack race handling', () => {
 
 		await expect(handler.startClientOwnedTrack(player)).rejects.toThrow('REST 500');
 
-		// 서버에 트랙이 없으니 이후 재생 이벤트가 없다 — 복구 타이머는 반드시 남아 있어야 한다.
 		expect(handler.hasWatchdog('g')).toBe(true);
 		handler.cleanup();
 	});
@@ -503,8 +497,6 @@ describe('handleTrackEnd: overlap abort 직후 진행 분기', () => {
 	});
 });
 
-/* ─── 공개 계약 고정: 이벤트 흐름 전체 경로 (start→end→advance, 실패/종료/타이머 정리) ─── */
-
 function ttsTrack(encoded: string, identifier?: string): Track {
 	return { encoded, info: { identifier, title: `title-${encoded}` }, requester: { id: 'chat_tts_clip' } } as unknown as Track;
 }
@@ -536,7 +528,6 @@ function fullPlayer(overrides: Record<string, unknown> = {}) {
 }
 
 const channelSend = vi.fn(async (_payload: unknown) => undefined);
-/** 테스트별로 생성한 핸들러 — afterEach에서 cleanup해 남은 타이머가 다음 테스트를 오염시키지 않게 한다. */
 const handlerBin: Array<{ [key: string]: any }> = [];
 
 function makeTrackedHandler() {
@@ -640,14 +631,12 @@ describe('handleTrackStart (시작 확정과 mixer wiring)', () => {
 		stubPlaybackContainer();
 		const player = fullPlayer();
 		const started = track('a-enc', 'id-a');
-		// 이전 전이의 잔재: watchdog 1개 + advance-pending 1개
 		handler.armWatchdog(player);
 		handler.queueAdvancer.setAdvancePending('g-1');
 		expect(vi.getTimerCount()).toBe(2);
 
 		await handler.handleTrackStart(player, started, startEvent('a-enc', 'id-a'));
 
-		// 시작 확정이 둘을 지우고, 전이 확정 리커널(reconcile) 1개만 남는다
 		expect(vi.getTimerCount()).toBe(1);
 	});
 
@@ -775,7 +764,7 @@ describe('handleQueueEnd', () => {
 		expect(publishPlayerEnded).toHaveBeenCalledWith(expect.anything(), player);
 		expect(notifier.deleteController).toHaveBeenCalledWith(player);
 		expect(channelSend).toHaveBeenCalledTimes(1);
-		expect(JSON.stringify(channelSend.mock.calls[0][0])).toContain('📥 대기열의 모든 곡을 재생했어요.'); // inbox_tray 폴백
+		expect(JSON.stringify(channelSend.mock.calls[0][0])).toContain('📥 대기열의 모든 곡을 재생했어요.');
 		expect(chatTts.keepAliveForTts).toHaveBeenCalledWith(player);
 	});
 
@@ -972,6 +961,6 @@ describe('watchdog 복구 루프', () => {
 		expect(publishPlayerEnded).toHaveBeenCalledWith(expect.anything(), player);
 		expect(notifier.deleteController).toHaveBeenCalledWith(player);
 		expect(channelSend).toHaveBeenCalledTimes(1);
-		expect(JSON.stringify(channelSend.mock.calls[0][0])).toContain('📥 대기열의 모든 곡을 재생했어요.'); // inbox_tray 폴백
+		expect(JSON.stringify(channelSend.mock.calls[0][0])).toContain('📥 대기열의 모든 곡을 재생했어요.');
 	});
 });

@@ -5,7 +5,6 @@ import { requestGiveawayManage } from "@/lib/data-api/giveaway";
 import { listGiveaways, startGiveawaySchema } from "@/lib/giveaways";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 
-/** 진행 중·지난 나눔 목록 (서버 관리 권한) */
 export const GET = createGuildApiHandler({
   role: "manage",
   rate: READ_RATE,
@@ -20,11 +19,6 @@ export const GET = createGuildApiHandler({
   },
 });
 
-/**
- * 나눔 시작 — 참여 카드를 올리려면 봇 토큰이 필요해서 data-api → Redis로 봇에 위임해요.
- * 입력 규칙(상품·당첨자 수·마감·조건)은 슬래시 명령과 같은 계약(@sirubot/utils/giveaway)이고,
- * 서버당 진행 중 상한과 채널 권한은 봇이 확인해 한국어 사유로 돌려줘요.
- */
 export const POST = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,

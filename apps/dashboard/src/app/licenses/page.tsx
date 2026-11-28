@@ -21,7 +21,6 @@ interface LicenseEntry {
   note?: string;
 }
 
-/** 레포에 자산으로 포함된 폰트·이모지 (npm 패키지가 아니라서 생성 목록 밖에 있어요) */
 const bundledAssets: LicenseEntry[] = [
   {
     name: "Pretendard Variable",

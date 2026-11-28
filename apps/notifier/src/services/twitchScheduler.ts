@@ -6,25 +6,23 @@ import { getLogger } from '../utils/logger.ts';
 
 const logger = getLogger('twitchScheduler');
 
-const TICK_MS = 60 * 60 * 1000; // 1시간: 구독 수명이 약 10일이라 여유 있게 점검해요.
+const TICK_MS = 60 * 60 * 1000;
 const LOCK_KEY = 'sirubot:social:twitch:scheduler-lock';
-const LOCK_TTL_SECONDS = 3_000; // 틱(1h)보다 살짝 짧게: 매 틱이 락을 다시 얻어요.
+const LOCK_TTL_SECONDS = 3_000;
 const STATE_KEY_PREFIX = 'sirubot:social:twitch:sub:';
+const STATE_TTL_SECONDS = 12 * 24 * 60 * 60;
+// EventSub 구독 수명이 약 10일이라 8일 시점에 새 구독으로 교체해요.
+const RENEWAL_AGE_MS = 8 * 24 * 60 * 60 * 1000;
 
-/** 브로드캐스터별 EventSub 구독 상태 키: social 라우트의 DELETE 정리 경로와 공유해요. */
 export function twitchSubscriptionStateKey(broadcasterId: string): string {
 	return `${STATE_KEY_PREFIX}${broadcasterId}`;
 }
-const STATE_TTL_SECONDS = 12 * 24 * 60 * 60;
-// 구독 수명 약 10일: 8일이 지나면 새 구독을 만들어 교체해요 (구형은 만료되면 저절로 사라져요).
-const RENEWAL_AGE_MS = 8 * 24 * 60 * 60 * 1000;
 
 interface SubscriptionState {
 	subscriptionId: string;
 	createdAt: number;
 }
 
-/** 트위치 EventSub 구독 갱신 워커: stream.online 구독이 약 10일마다 만료되므로 8일 시점에 새로 등록해요. */
 export class TwitchScheduler extends SubscriptionPoller {
 	private readonly client: TwitchApiClient;
 	private readonly callbackUrl: string;
@@ -53,20 +51,16 @@ export class TwitchScheduler extends SubscriptionPoller {
 	}
 
 	protected override async pollOnce(db: PrismaClient, now: number): Promise<PollOutcome> {
-		let rows: { sourcePlatformId: string }[];
-		try {
-			rows = await db.socialSubscription.findMany({ where: { platform: 'twitch', status: 'active' }, select: { sourcePlatformId: true } });
-		} catch (error) {
-			// DB 오류를 빈 목록으로 삼키면 브레이커 계정에서 빠져 장애가 조용히 이어져요.
-			logger.error('트위치 구독 목록 조회 실패: 이번 틱은 실패로 기록해요:', String(error));
-			return 'failed';
-		}
-		const broadcasterIds = [...new Set(rows.map((row) => row.sourcePlatformId))];
+		const broadcasterIds = await this.loadActiveSourceIds(db, 'twitch', '트위치');
+		if (!broadcasterIds) return 'failed';
 		if (broadcasterIds.length === 0) return 'skipped';
 
 		let tickFailed = false;
 		for (const broadcasterId of broadcasterIds) {
-			const state = await this.loadState(broadcasterId);
+			const state = await this.readJsonState<SubscriptionState>(
+				twitchSubscriptionStateKey(broadcasterId),
+				(s) => typeof s.subscriptionId === 'string' && typeof s.createdAt === 'number'
+			);
 			if (state && now - state.createdAt < RENEWAL_AGE_MS) continue;
 			try {
 				const created = await this.client.createStreamOnlineSubscription({
@@ -84,18 +78,6 @@ export class TwitchScheduler extends SubscriptionPoller {
 		}
 
 		return tickFailed ? 'failed' : 'ok';
-	}
-
-	private async loadState(broadcasterId: string): Promise<SubscriptionState | null> {
-		const raw = await this.options.redis.get(twitchSubscriptionStateKey(broadcasterId));
-		if (!raw) return null;
-		try {
-			const parsed = JSON.parse(raw) as SubscriptionState;
-			if (typeof parsed.subscriptionId !== 'string' || typeof parsed.createdAt !== 'number') return null;
-			return parsed;
-		} catch {
-			return null;
-		}
 	}
 
 	private async saveState(broadcasterId: string, state: SubscriptionState): Promise<void> {

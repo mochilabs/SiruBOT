@@ -32,7 +32,6 @@ const MAX_NICKNAME_LENGTH = 32;
 const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/gif,image/webp";
 
-/** lastApply.error를 패널 문구로 바꿔요 — missing_permission은 사용자가 조치할 수 있는 안내로 특별 처리해요 */
 function describeApplyError(error: string): string {
   if (error === "missing_permission") {
     return "봇에게 닉네임 변경 권한이 없어요. 서버에서 봇 역할에 권한을 추가해 주세요.";
@@ -52,12 +51,10 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
   const toast = useToast();
   const { profile, refreshFailed, isLoading, error, saving, save, reload } =
     useBotProfile(guildId);
-  // 봇 테마는 길드 설정(DB)이라 프로필(Discord 적용)과 저장 경로가 달라요. 저장 바 하나로 둘을 같이 저장해요.
   const theme = useSettingsPanel(guildId, toThemeForm, "봇 테마를 저장했어요.");
 
   const [nickname, setNickname] = useState("");
   const [nicknameTouched, setNicknameTouched] = useState(false);
-  // 저장 직후 재조회가 오기 전까지 입력이 옛 값으로 되돌아가지 않게 막는 기준값이에요.
   const [appliedNickname, setAppliedNickname] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarReset, setAvatarReset] = useState(false);
@@ -72,18 +69,15 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
-  // 서버 값이 도착하면 입력값을 채워요 — 사용자가 건드리기 전까지만 동기화해요.
   useEffect(() => {
     if (!profile || nicknameTouched) return;
     if (appliedNickname !== null) {
-      // 재조회로 저장한 값이 도착하면 기준값을 풀고 서버 값을 따라가요.
       if ((profile.nickname ?? "") === appliedNickname) setAppliedNickname(null);
       return;
     }
     setNickname(profile.nickname ?? "");
   }, [profile, nicknameTouched, appliedNickname]);
 
-  // 파일 미리보기 — 교체/해제 시 이전 URL을 즉시 회수해요.
   useEffect(() => {
     if (!avatarFile) {
       setAvatarPreviewUrl(null);
@@ -115,7 +109,6 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
         toast.error("PNG, JPEG, GIF, WebP 이미지만 지원해요.");
         return;
       }
-      // GIF는 애니메이션이 살아있어야 해서 자르지 않고 그대로 써요. 나머지는 크롭 모달로.
       if (shouldSkipCrop(file)) {
         setAvatarFile(file);
         setAvatarReset(false);
@@ -206,7 +199,6 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
   const themeSubmit = theme.submit;
   const themeDirty = theme.dirty;
   const handleSave = useCallback(async (): Promise<boolean> => {
-    // 프로필이 실패하면 테마는 건드리지 않아요 — 저장 바가 남아 있어서 다시 누를 수 있어요.
     if (!(await saveProfile())) return false;
     if (!themeDirty) return true;
     try {
@@ -219,7 +211,6 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
     }
   }, [saveProfile, themeDirty, themeSubmit]);
 
-  // 로드 실패/초기 로딩부터는 조기 반환해요 — 모든 훅은 위에서 호출됐어요.
   if (error) return <PanelError error={error} onRetry={reload} />;
   if (isLoading && !profile)
     return <PanelLoading label="봇 프로필 상태 불러오는 중…" />;
@@ -251,7 +242,6 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
     bannerFile !== null ||
     bannerReset ||
     theme.dirty;
-  // 미리보기: 새 파일 → 초기화 요청이면 전역 아바타 → 현재 길드 아바타 → 전역 아바타 순이에요.
   const previewUrl =
     avatarPreviewUrl ??
     (avatarReset ? profile.globalAvatarUrl : null) ??
@@ -284,7 +274,6 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
   };
 
   const handleNicknameReset = () => {
-    // 빈 닉네임은 저장 때 '사용자명 표시'로 정규화돼요 — 서버 닉네임을 없애는 동작이어요.
     handleNicknameChange("");
   };
 

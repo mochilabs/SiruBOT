@@ -14,8 +14,6 @@ export function VoiceServerSection() {
 		dedupingInterval: 5000,
 	});
 
-	// 섹션 헤더를 계속 마운트해 두고 본문만 상태로 갈아끼워요.
-	// 연동 실패 때도 섹션이 통째로 사라지면 화면이 점프해요.
 	const sectionHeader = (
 		<div className="flex items-center gap-3">
 			<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary-text">

@@ -4,11 +4,9 @@ import { queueRelatedUpfront } from '../../lavalink/autoPlayRelated.ts';
 import * as view from '../views/related.ts';
 import * as guildPlayback from '../../../../services/guildSettings/playback.ts';
 
-/** 기존 /related(추천 곡)에서 개명 — /recommend(추천)와 헷갈린다는 지적 반영 */
 export const name = 'autoplay';
 export const ko = '자동재생';
 export const description = '추천 곡 자동재생을 설정해요. 사용을 비우면 현재 설정만 보여줘요.';
-/** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Turn autoplay of related tracks on or off.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying', 'DJOrAlone'];
 

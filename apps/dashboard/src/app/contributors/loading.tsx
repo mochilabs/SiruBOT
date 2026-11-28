@@ -3,9 +3,6 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { SkeletonCircle, SkeletonLine } from "@/components/ui/skeleton";
 
-/**
- * 기여자 로딩 중 — 완성 화면과 같은 구조(히트맵 카드 1개 + 기여자 목록 카드 1개)로 그려요.
- */
 export default function ContributorsLoading() {
 	return (
 		<Container>

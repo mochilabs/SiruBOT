@@ -21,18 +21,12 @@ export class MentionReplyListener extends Listener {
 		const client = this.container.client;
 		if (!client.user) return;
 
-		// 1. 직접 멘션(@시루)이 메시지 본문에 명시적으로 들어있는지 확인
 		const hasExplicitMention = new RegExp(`<@!?${client.user.id}>`).test(message.content);
-
-		// 2. 메시지가 봇을 멘션하지도 않았고 명시적 멘션도 없으면 무시
 		if (!hasExplicitMention && !message.mentions.has(client.user, { ignoreEveryone: true })) return;
 
-		// AI·TTS 모듈이 꺼진 서버는 조용히 무시해요
 		if (!(await isMessageFeatureEnabled(this.container.guildService, message.guildId, 'ai-mention'))) return;
 
-		// 3. 만약 명시적 멘션 없이 Discord 답장(Reply)으로 인해 암묵적으로 봇이 멘션된 경우:
-		// 답장 대상 메시지가 실제 "AI 어시스턴트의 답변"일 때만 대화로 인정해요.
-		// (컨트롤러 버튼, 슬래시 커맨드 응답, 임베드 등에 답장했을 때 AI가 끼어드는 것을 차단)
+		// 답장으로 인한 암묵적 멘션은 실제 AI 답변에 답장한 경우만 허용해요.
 		if (!hasExplicitMention && message.reference?.messageId) {
 			const isAiMessage = await this.container.aiChatHistory.isAiAssistantMessage(message.channelId, message.reference.messageId);
 			if (!isAiMessage) return;
@@ -44,12 +38,10 @@ export class MentionReplyListener extends Listener {
 
 		const channelId = message.channelId;
 
-		// 꺼진 서버/채널이면 라이브 메시지 없이 바로 오류로 알려요
 		const policy = await this.container.aiChat.getAiChatPolicy(message.guildId);
 		try {
 			assertChatEnabled(policy, channelId);
 		} catch (error) {
-			// 기능을 끈 서버/채널은 아무 안내 없이 조용히 무시해요.
 			if (error instanceof ChatServiceError && error.identifier === 'chat_disabled') return;
 			const text = error instanceof ChatServiceError ? error.message : '이 채널에서는 AI 채팅을 사용할 수 없어요.';
 			await message.reply(errorPayload(text)).catch(() => undefined);

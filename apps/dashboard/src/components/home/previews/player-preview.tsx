@@ -11,15 +11,6 @@ import { cn } from "@/lib/utils";
 
 import { fmtTime, PLAYLIST_TRACKS, PREVIEW_TAIL_SECONDS, toSeconds } from "./tracks";
 
-/**
- * 음악 컨트롤러 프리뷰 — 실제 재생처럼 진행도가 흐르고 곡이 순환하는 embed.
- * 초 단위 시계가 진행 바·시간 배지를 밀고, 곡이 끝나면 건너뛰기 버튼이 반응한 뒤
- * 다음 곡 제목·썸네일로 크로스페이드해요. reduced-motion에선 시계를 멈춘 정지 화면을 보여줘요.
- * 화면에 보일 때만 시계가 흘러요(useInView).
- *
- * 곡이 넘어갈 때 제목 블록은 높이가 고정(line-clamp-2)이라 제자리 크로스페이드만으로
- * 넘어가요 — 이동이 섞이면 컨테이너 전체가 출렁여요.
- */
 export function PlayerPreview() {
 	const shouldReduce = useReducedMotion();
 	const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.3 });
@@ -37,7 +28,6 @@ export function PlayerPreview() {
 		return () => clearInterval(timer);
 	}, [durationSeconds, inView, shouldReduce]);
 
-	// 곡 끝 지점에서 잠깐 머문 뒤 다음 곡으로 넘어가요 — 건너뛰기를 누른 것처럼
 	useEffect(() => {
 		if (shouldReduce || !inView || !advancing) return undefined;
 		const timer = setTimeout(() => {
@@ -49,13 +39,11 @@ export function PlayerPreview() {
 	}, [advancing, inView, shouldReduce, trackIndex]);
 
 	return (
-		// 아래 카드는 실제 제품 상태(대기열 1곡 추가)예요
 		<div ref={ref} className="space-y-3">
 			<div className="flex flex-col gap-3 rounded-card bg-discord-embed p-3 sm:p-4">
 				<div className="flex gap-3">
 					<div className="flex min-w-0 flex-1 flex-col justify-between gap-1.5">
 						<p className="text-2xs text-discord-text-muted">재생 중 #음악-라운지</p>
-						{/* 곡 제목·아티스트 — 높이가 고정된 블록이라 건너뛰기 없이 제자리 페이드만으로 넘어가요 */}
 						<AnimatePresence mode="wait" initial={false}>
 							<m.div
 								key={track.title}
@@ -100,7 +88,6 @@ export function PlayerPreview() {
 						</AnimatePresence>
 					</div>
 				</div>
-				{/* ActionRow — ⏮ ⏸ ⏭ 🔂 📄 대기열. 곡이 끝나가는 동안 건너뛰기 버튼이 밝아져요 */}
 				<div className="flex items-center gap-2">
 					<span className="flex h-8 w-10 items-center justify-center rounded-md bg-discord-btn-active text-discord-text" aria-hidden>
 						<SkipForward size={13} className="rotate-180" fill="currentColor" />
@@ -125,7 +112,6 @@ export function PlayerPreview() {
 						대기열
 					</span>
 				</div>
-				{/* Separator + Footer — 실제 봇의 buildFooterSegments와 동일 */}
 				<div className="flex items-center justify-between border-t border-discord-btn-active pt-2">
 					<p className="text-2xs text-discord-text-muted">📡 시루-노드-01 🔊 100%</p>
 					<span className="rounded-sm bg-discord-primary/10 px-1.5 py-1 text-2xs font-semibold text-discord-light">

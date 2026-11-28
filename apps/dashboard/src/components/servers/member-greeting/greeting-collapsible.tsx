@@ -7,14 +7,12 @@ import { cn } from "@/lib/utils";
 
 interface GreetingCollapsibleProps {
   title: string;
-  /** 접힌 상태에서도 제목 옆에 보이는 요약 (예: 지금 고른 배경 이름) */
   summary?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
 }
 
-/** 에디터 보조 섹션(배경·템플릿)용 접이식 — 기본은 접어서 카드 미리보기와 레이어 패널이 먼저 보이게 해요 */
 export function GreetingCollapsible({ title, summary, open, onOpenChange, children }: GreetingCollapsibleProps) {
   return (
     <Collapsible.Root open={open} onOpenChange={onOpenChange}>

@@ -23,7 +23,6 @@ import { startGiveawayHub, stopGiveawayHub } from './services/giveawayHub.ts';
 import { startPanelHub, stopPanelHub } from './services/panelHub.ts';
 import { configureOutboundPool } from './utils/proxyPool.ts';
 
-/** Redis 허브 — start와 stop 모두 이 배열 순서대로 불러요 (기존 server.ts의 start·stop 순서와 같아요) */
 const HUBS: { start: (redisUrl: string | undefined) => Promise<void>; stop: () => Promise<void> }[] = [
 	{ start: startPlayerHub, stop: stopPlayerHub },
 	{ start: startBotProfileHub, stop: stopBotProfileHub },
@@ -43,7 +42,6 @@ export async function buildServer(env: Env) {
 	configureOutboundPool(env.OUTBOUND_PROXY_URLS);
 	for (const hub of HUBS) await hub.start(env.REDIS_URL);
 
-	// 이미지 렌더 폰트는 부팅 시 1회 로드 — 첫 카드 요청이 폰트 로드에 막히지 않아요.
 	await getCardRenderer();
 
 	const translationProvider = new OpenAICompatTranslationProvider(
@@ -54,7 +52,6 @@ export async function buildServer(env: Env) {
 	if (!translationProvider.available) {
 		logger.warn('Translation provider not configured, serving raw horoscopes (translated:false)');
 	}
-	// 커스텀 명령어 초안 생성 — 같은 엔드포인트에 모델만 바꿔 써요 (미설정 시 TRANSLATION_MODEL)
 	const draftProvider = new OpenAICompatTranslationProvider(
 		env.OPENAI_COMPATIBLE_API_URL.replace(/\/+$/, ''),
 		(env.OPENAI_API_KEY ?? '').trim(),
@@ -68,12 +65,9 @@ export async function buildServer(env: Env) {
 	fastify.addHook('onSend', async (request, reply) => {
 		reply.header('x-request-id', request.id);
 	});
-	// 공용 에러 계약 — 라우트가 미처 처리하지 못한 층(본문 파싱 실패·검증 예외·미확인 throw)만 수거해요.
-	// 도메인 라우트의 sendError 개별 매핑은 그대로 써요.
 	registerAppErrorHandler(fastify, { logger, onServerError: captureSentryException });
 
-	// register()는 캡슐화 컨텍스트를 만들어 루트 레벨 라우트에 훅이 안 붙어요.
-	// shardmanager와 동일하게 플러그인을 직접 호출해요.
+	// register() encapsulates hooks away from root routes; invoke directly like shardmanager.
 	await auth(fastify, env.dataApiAuthKey);
 	await registerRoutes(fastify, {
 		translationProvider,
@@ -89,15 +83,12 @@ export async function buildServer(env: Env) {
 
 	const stopScheduler = startOhaasaScheduler(env, translationProvider);
 
-	// 메모리 정리(nightly pass) — 봇 샤드 각각이 돌리던 것을 게이트웨이로 이전.
-	// DB+프로바이더가 있을 때만 활성화돼요.
 	await connectDb(env.DATABASE_URL);
 	const stopTidy = startMemoryTidyScheduler(getDb(), translationProvider, {
 		enabled: env.MEMORY_TIDY_ENABLED,
 		at: env.MEMORY_TIDY_AT,
 		batchSize: env.MEMORY_TIDY_BATCH_SIZE
 	});
-	// ISRC 보강 — ISRC 없는 곡을 외부 카탈로그에서 찾아 차트 묶음을 합쳐요.
 	const db = getDb();
 	const stopIsrc = startIsrcEnrichScheduler(
 		db ? new IsrcEnricher(db, createIsrcProviders({ musicBrainzUserAgent: env.MUSICBRAINZ_USER_AGENT }), env.ISRC_ENRICH_BATCH) : null,

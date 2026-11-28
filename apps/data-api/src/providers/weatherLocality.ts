@@ -302,7 +302,6 @@ const KR_TO_EN_QUERY: Record<string, string> = {
 	두바이: 'Dubai, UAE'
 };
 
-/** 한국어 지명 끝의 행정구역 접미사: weather.ts도 이 규칙을 import해 같은 기준으로 잘라요. */
 export const KR_ADMIN_SUFFIX = /(특별시|광역시|특별자치시|특별자치도|시|군|구|도)$/;
 
 function stripNoise(s: string): string {
@@ -314,10 +313,6 @@ function stripNoise(s: string): string {
 		.trim();
 }
 
-/**
- * 사용자 입력(한글 지명 등)을 Open-Meteo 지오코딩용 영문 검색어로 바꿉니다.
- * 매핑에 없으면 원문을 그대로 둡니다(해외 도시 등).
- */
 export function normalizeWeatherLocationQuery(raw: string): {
 	geocodeQuery: string;
 	originalQuery: string;
@@ -332,14 +327,12 @@ export function normalizeWeatherLocationQuery(raw: string): {
 		return { geocodeQuery: direct, originalQuery };
 	}
 
-	// "서울 강남구" 같이 짧게 붙인 경우
 	const compact = originalQuery.replace(/\s+/g, '');
 	const compactHit = KR_TO_EN_QUERY[compact];
 	if (compactHit) {
 		return { geocodeQuery: compactHit, originalQuery };
 	}
 
-	// 접미사만 다른 경우 (특별시/광역시/특별자치시/특별자치도/시/군/구/도)
 	const noMetroSuffix = originalQuery.replace(KR_ADMIN_SUFFIX, '');
 	const hit2 = KR_TO_EN_QUERY[stripNoise(noMetroSuffix)];
 	if (hit2) {

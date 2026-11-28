@@ -102,7 +102,6 @@ export class QueueCommand extends Command {
 	}
 
 	public override async autocompleteRun(interaction: AutocompleteInteraction) {
-		// 제거·이동 세 옵션 모두 같은 유저 대기열 번호 규칙을 써요 (/음악 건너뛰기와 동일)
 		return respondQueuedTracks(interaction);
 	}
 
@@ -162,8 +161,7 @@ export class QueueCommand extends Command {
 			});
 		}
 
-		// 선예열한 추천곡은 셔플 대상이 아니다 — 제거 후 유저 곡만 섞는다
-		// (다음 트랙 시작 시 큐가 비어 있으면 다시 예열된다).
+		// 선예열 추천곡은 제거 후 유저 곡만 섞는다.
 		await removeStaleRelatedTracks(container.lavalink, player);
 		await player.queue.shuffle();
 		void this.container.mixerService.preloadUpcoming(player).catch(() => null);

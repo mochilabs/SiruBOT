@@ -12,9 +12,6 @@ const tracksQuerySchema = z.object({
 });
 
 export async function GET(request: Request) {
-  // 공개 차트 엔드포인트 — 읽기 전용 공개 메타데이터라 로그인 없이 허용해요.
-  // 비로그인 요청은 전역 공용 버킷(PUBLIC_RATE)으로 묶어요 — X-Forwarded-For 헤더는 클라이언트가
-  // 위조할 수 있어 주체로 쓰지 않아요(요청마다 새 버킷이 생기는 한도 우회 방지, SEC-002).
   const session = await auth();
   const limit = publicReadLimit(session?.user?.id);
 
@@ -34,7 +31,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    // 곡 묶음(Recording) 단위 기간 차트 — 같은 노래의 여러 업로드·소스는 한 줄로 합쳐져요 (lib/track-chart.ts).
     return NextResponse.json(await fetchChart(parsed.data));
   } catch (error) {
     console.error("Failed to fetch tracks:", error);

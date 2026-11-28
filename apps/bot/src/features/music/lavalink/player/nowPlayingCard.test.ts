@@ -11,7 +11,6 @@ import {
 } from './nowPlayingCard.ts';
 
 const { render } = vi.hoisted(() => ({ render: vi.fn() }));
-/** 카드 함수가 받는 LavalinkDeps 역할 — 카드 캐시 상태도 여기 있어요 */
 const deps = {
 	dataApi: { renderNowPlayingCard: render },
 	client: { guilds: { cache: new Map() } },

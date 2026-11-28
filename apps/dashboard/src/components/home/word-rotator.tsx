@@ -5,16 +5,9 @@ import { AnimatePresence, m } from "framer-motion";
 
 import { motionSlow } from "@/components/motion/durations";
 
-// 헤드라인 회전 단어 — "음악부터 AI까지, ___ 시루봇 하나면 돼요"의 빈칸에 아래에서 위로 밀려 올라와 교체돼요
 export const ROTATING_WORDS = ['서버에 필요한 모든 걸', '한국어 커뮤니티에 맞게', '게임부터 서버 꾸미기까지'] as const;
 const ROTATE_INTERVAL_MS = 2600;
 
-/**
- * 헤드라인 단어 회전기 — 현재 단어가 위로 빠지면서 다음 단어가 아래에서 올라와요.
- * 폭 sizer는 "교체 대상(다음) 단어" 기준으로 즉시 전환해요: 이전 단어 폭을 유지하면
- * 더 긴 단어가 진입하는 동안 overflow-hidden에 잘려요.
- * 마스크 하단 패딩은 자모 받침 클리핑 방지용이에요.
- */
 export function WordRotator({ running = true }: { running?: boolean }) {
 	const [index, setIndex] = useState(0);
 
@@ -24,7 +17,6 @@ export function WordRotator({ running = true }: { running?: boolean }) {
 		return () => clearInterval(timer);
 	}, [running]);
 
-	// 스크린 리더엔 첫 문구만 고정으로 읽혀요. 회전하는 글자는 장식이라 숨겨요.
 	return (
 		<>
 			<span className="sr-only">{ROTATING_WORDS[0]}</span>

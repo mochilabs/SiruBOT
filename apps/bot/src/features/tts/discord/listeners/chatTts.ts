@@ -8,12 +8,6 @@ import { isMessageFeatureEnabled } from '../../../../services/guildSettings/modu
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 import { usageFeatureKey } from '@sirubot/utils/modules';
 
-/**
- * 채팅 TTS 리스너 — 설정된 채널의 메시지를 음성으로 읽는다 (명세 4.1 트리거).
- * 권한 제한은 없다: 봇이 음성에 연결돼 있을 때만, 명령어 형태가 아닌 메시지를 읽는다.
- * 읽는 채널은 길드 설정의 허용 목록과, 길드 TTS가 꺼져 있지 않을 때 현재 플레이어 세션의 텍스트 채널이다.
- * 전처리·병합·스로틀·모드 결정은 ChatTtsService가 담당한다.
- */
 @ApplyOptions<Listener.Options>({
 	event: Events.MessageCreate
 })
@@ -22,7 +16,6 @@ export class ChatTtsListener extends Listener {
 		try {
 			await this.handle(message);
 		} catch (error) {
-			// 채팅 읽기 실패는 조용히 스킵한다 (명세 4.6) — 채널 공지 없음
 			this.container.logger.error(`[chatTts] unhandled error (guild ${message.guildId}): ${error}`);
 		}
 	}

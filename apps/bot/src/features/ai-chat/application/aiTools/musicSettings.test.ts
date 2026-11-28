@@ -154,7 +154,6 @@ describe('musicSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 		mocks.setRelated.mockResolvedValue(true);
 		mocks.setCrossfade.mockResolvedValue({ crossfadeEnabled: true, crossfadeMs: 4000 });
 		mocks.setTtsAnnounceMode.mockResolvedValue('parallel');
-		// 기본은 재생 중인 플레이어가 있는 상황이에요 — 볼륨·반복은 공용 유스케이스가 인가해요.
 		mocks.getPlayer.mockReturnValue({});
 	});
 

@@ -195,7 +195,6 @@ describe("플레이리스트 트랙 터치 드래그", () => {
     await act(async () => {
       rows[0].dispatchEvent(touchEvent("touchend", [{ clientX: 10, clientY: 70 }]));
     });
-    // 부모(mock)가 draggedIdx를 세웠다고 가정하고 재렌더하면 onDrop이 호출돼요.
     await act(async () => { root.render(renderDetail(0, parentRef)); });
     expect(drop).toHaveBeenCalledTimes(1);
     expect(drop.mock.calls[0][1]).toBe(1);

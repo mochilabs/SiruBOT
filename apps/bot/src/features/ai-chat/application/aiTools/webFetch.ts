@@ -9,12 +9,10 @@ const MAX_BYTES = 400_000;
 const MAX_TEXT_CHARS = 6_000;
 const ALLOWED_CONTENT_TYPES = ['text/html', 'text/plain', 'application/xhtml+xml'];
 
-/** 검사용 호스트명 정규화: 대시 소문자화 + [괄호] 제거 + 끝 dot 제거 (localhost. 형태 방어) */
 function normalizeHostKey(hostname: string): string {
 	return hostname.trim().toLowerCase().replace(/^\[/, '').replace(/\]$/, '').replace(/\.+$/, '');
 }
 
-/** 사설·내부 IPv4 대역이에요 (0.x·10·127·169.254·172.16-31·192.168·CGNAT·멀티캐스트/예약) */
 function isPrivateIpv4(ip: string): boolean {
 	const v4 = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
 	if (!v4) return false;

@@ -7,7 +7,6 @@ import type { AppLogger } from '../lib/appLogger.ts';
 import { dataApiAuthHeaders, gatewayBaseUrl } from '../lib/dataApi.ts';
 import type { DailyHoroscope } from './types.ts';
 
-/** 게이트웨이 4xx 본문 — { error, message } 형태 (도메인 에러). 명령어에서 UserError로 변환해요. */
 export class GatewayDomainError extends Error {
 	public constructor(
 		public readonly identifier: string,
@@ -23,7 +22,6 @@ export interface LyricsResult {
 	artistName: string;
 	plainLyrics: string | null;
 	syncedLyrics: string | null;
-	/** 한국어 번역 — pending이면 data-api가 뒤에서 번역 중이라 잠시 뒤 다시 조회하면 채워져요 */
 	translation?: { status: 'ready' | 'pending' | 'none'; lines: Record<string, string> | null };
 }
 
@@ -34,25 +32,20 @@ export interface YouTubeChapter {
 	duration: number;
 }
 
-// 구 직접호출 체인과 같은 15초 — open-meteo가 느리게 답하는 요청을 성공으로 살려야 해요
 const GATEWAY_TIMEOUT_MS = 15_000;
-/** 이미지 렌더 POST 타임아웃: 카드 3종(지금 재생/프로필/인사)이 공유해요 */
 const IMAGE_RENDER_TIMEOUT_MS = 20_000;
-/** 멤버 인사 카드는 애니메이션 WebP를 그릴 수 있어서(data-api가 동시 2개로 제한) 대기 시간까지 넉넉히 둬요 */
+// data-api 동시 2개 제한 + 애니메이션 WebP 렌더 대기로 여유를 둬요
 const MEMBER_CARD_RENDER_TIMEOUT_MS = 30_000;
 
-/** 렌더된 카드 이미지와 content-type — 첨부 파일 확장자를 정할 때 써요 */
 export interface RenderedImage {
 	buffer: Buffer;
 	contentType: string;
 }
 
-/** 이미지 렌더 POST 공용: URL 가드·타임아웃·content-type 검증·실패 시 로그 후 null 반환까지 한곳에서 처리해요 */
 async function renderImage(logger: AppLogger, path: string, body: unknown): Promise<Buffer | null> {
 	return (await renderImageTyped(logger, path, body, IMAGE_RENDER_TIMEOUT_MS))?.buffer ?? null;
 }
 
-/** renderImage와 같지만 content-type도 같이 돌려줘요 (인사 카드: PNG 또는 애니메이션 WebP) */
 async function renderImageTyped(logger: AppLogger, path: string, body: unknown, timeoutMs: number): Promise<RenderedImage | null> {
 	const base = gatewayBaseUrl();
 	if (!base) return null;
@@ -73,7 +66,6 @@ async function renderImageTyped(logger: AppLogger, path: string, body: unknown, 
 	}
 }
 
-/** data-api GET. 실패/미설정 시 throw. 4xx 도메인 에러는 GatewayDomainError로 변환해요. */
 async function gatewayGet<T>(path: string): Promise<T> {
 	const base = gatewayBaseUrl();
 	if (!base) throw new Error('data-api disabled');
@@ -88,20 +80,16 @@ async function gatewayGet<T>(path: string): Promise<T> {
 			const body = (await res.json()) as { error?: unknown; message?: unknown };
 			if (typeof body.error === 'string') identifier = body.error;
 			if (typeof body.message === 'string') message = body.message;
-		} catch {
-			// 본문 파싱 실패 시 기본 메시지
-		}
+		} catch {}
 		throw new GatewayDomainError(identifier, message);
 	}
 	return (await res.json()) as T;
 }
 
-/** 오하아사 — 게이트웨이. */
 export async function fetchOhaasaKo(): Promise<DailyHoroscope> {
 	return gatewayGet<DailyHoroscope>('/v1/ohaasa');
 }
 
-/** 가사 검색 — 게이트웨이 (30일 캐시). */
 export async function searchLyrics(query: string): Promise<LyricsResult[]> {
 	const q = query.replace(/\(.*?\)|\[.*?\]/g, '').trim();
 	const data = await gatewayGet<LyricsResult | LyricsResult[]>(`/v1/lyrics?q=${encodeURIComponent(q)}`);
@@ -110,7 +98,6 @@ export async function searchLyrics(query: string): Promise<LyricsResult[]> {
 	return results;
 }
 
-/** 재생 중인 곡의 가사 — 제목·아티스트·길이로 찾고, 제목 정리는 서버가 해요. */
 export async function searchLyricsForTrack(track: {
 	title: string;
 	artist: string;
@@ -126,7 +113,6 @@ export async function searchLyricsForTrack(track: {
 	return [data];
 }
 
-/** 유튜브 챕터 — 게이트웨이 (12시간 캐시). */
 export async function fetchYouTubeChapters(videoId: string, durationMs: number): Promise<YouTubeChapter[]> {
 	if (!videoId || durationMs <= 0) return [];
 	const data = await gatewayGet<{ chapters: YouTubeChapter[] }>(`/v1/chapters?videoId=${encodeURIComponent(videoId)}&durationMs=${durationMs}`);
@@ -134,7 +120,6 @@ export async function fetchYouTubeChapters(videoId: string, durationMs: number):
 	return data.chapters;
 }
 
-/** SponsorBlock skip 구간 — data-api가 공식 API를 조회하고 캐시해요. */
 export async function fetchSponsorBlockSegments(videoId: string): Promise<SponsorBlockSkipSegment[]> {
 	const data = await gatewayGet<{ segments: SponsorBlockSkipSegment[] }>(`/v1/sponsorblock/segments?videoId=${encodeURIComponent(videoId)}`);
 	if (!Array.isArray(data.segments)) throw new Error('invalid SponsorBlock response');
@@ -150,17 +135,12 @@ export async function getSimpleYouTubeSuggestions(query: string, maxResults: num
 	}
 }
 
-/** 택배 조회 — 게이트웨이 (5분 캐시). 별칭 해석도 서버에서 해요. */
 export async function trackDelivery(carrierHint: string, trackingNumber: string): Promise<DeliveryTrackResult> {
 	return gatewayGet<DeliveryTrackResult>(
 		`/v1/delivery/track?carrier=${encodeURIComponent(carrierHint)}&number=${encodeURIComponent(trackingNumber)}`
 	);
 }
 
-/**
- * 오브젝트 업로드 — storage가 아니라 data-api 게이트웨이를 거쳐요(스토리지 주소·키는 게이트웨이만 알아요).
- * 실패·미설정이면 null을 돌려줘 호출부가 기능을 건너뛸 수 있게 해요.
- */
 async function uploadObject(
 	logger: AppLogger,
 	bucket: string,
@@ -185,24 +165,17 @@ async function uploadObject(
 	}
 }
 
-/** 택배사 검색 — `/택배 택배사` 자동완성용. 게이트웨이가 택배사 목록을 24시간 캐시해요. */
 export async function searchDeliveryCarriers(query: string): Promise<DeliveryCarrier[]> {
 	const result = await gatewayGet<{ carriers: DeliveryCarrier[] }>(`/v1/delivery/carriers?q=${encodeURIComponent(query)}`);
 	return result.carriers;
 }
 
-/** 날씨 — 게이트웨이 (15분 캐시). */
 export async function fetchWeather(location: string, scope: WeatherScope = 'now'): Promise<WeatherResult> {
 	return gatewayGet<WeatherResult>(`/v1/weather?location=${encodeURIComponent(location)}&scope=${scope}`);
 }
 
-/**
- * 프로필 카드 이미지 데이터 — data-api POST 바디와 동일한 형식이에요.
- * preset: 'dark'(RINE 다크 퍼플) | 'ticket'(RINE 멤버패스 티켓)
- */
 export interface ProfileCardRequest {
 	preset?: 'dark' | 'ticket' | 'dashboard' | 'light' | 'aura';
-	/** 서버 테마 프리셋 — 다크 계열 카드의 색 */
 	themePreset?: string;
 	userId: string;
 	displayName: string;
@@ -220,7 +193,6 @@ export interface ProfileCardRequest {
 	accountCreated: string | null;
 	guildJoinedAt: string | null;
 	topTracks: { title: string; artist: string; thumbnailUrl: string | null }[];
-	/** 게임 전적 — data-api 렌더러가 아직 지원하지 않으면 무시돼요 (forward-compatible) */
 	gameStats?: {
 		rpsWins: number;
 		rpsLosses: number;
@@ -228,66 +200,42 @@ export interface ProfileCardRequest {
 		rpsBestStreak: number;
 		guessBest: number | null;
 	} | null;
-	/** 출석 스트릭 (연속 일수) */
 	checkinStreak?: number | null;
-	/** dark/ticket 프리셋 — 상태/상태라벨/소개/역할 캡슐 */
 	status?: 'online' | 'idle' | 'dnd' | 'invisible';
 	statusLabel?: string;
 	intro?: string;
 	roleChips?: string[];
-	/** 디스코드 서버 태그(4자리, primaryGuild) — 있으면 뱃지로 표시 */
 	guildTag?: string | null;
-	/** 서버 태그 뱃지 이미지 (guildTagBadgeURL) */
 	guildTagBadgeUrl?: string | null;
-	/** 지금 재생 중인 곡 (프리셋 카드에 표시) */
 	nowPlaying?: { title: string; artist: string; thumbnailUrl: string | null } | null;
 }
 
-/**
- * NowPlaying 카드 이미지 데이터 — data-api POST /v1/image/nowplaying 바디와 동일한 형식이에요.
- */
 export interface NowPlayingCardRequest {
 	trackId: string;
 	title: string;
 	artist: string;
 	artworkUrl: string | null;
-	/** 재생 위치(ms) — 카드의 진행바로 그려졌으나, 이제는 정적 카드로 쓰지 않아요 (호환용). */
 	positionMs: number;
 	durationMs: number;
 	isStream: boolean;
-	/** 일시정지 상태 — 카드에 일시정지 뱃지를 박아요 */
 	isPaused?: boolean;
-	/** 반복 모드 — off가 아니면 카드에 상단 반복 뱃지로 표기돼요 */
 	repeatMode?: 'off' | 'track' | 'queue';
-	/** 현재 곡이 추천 곡(related) 곡인지 — 카드에 추천 곡 뱃지를 박아요 */
 	isRecommended?: boolean;
-	/** 다음 곡 목록(유저 대기열 기준, 최대 3) — 있으면 카드에 목록으로 그려요 */
 	nextTracks?: Array<{ title: string; artist: string | null }>;
 	queueCount: number;
-	/** 대기열 전체 남은 시간(ms) */
 	queueRemainingMs: number;
-	/** 볼륨(%) — 브랜드줄(brandLine)에 통합되어 카드에서는 미사용 (호환용으로 유지) */
 	volume: number | null;
-	/** 노드 ID — 브랜드줄(brandLine)에 통합되어 카드에서는 미사용 (호환용으로 유지) */
 	nodeId: string | null;
-	/** 브랜드 줄 (노드·볼륨·봇 이름 + 버전/해시) */
 	brandLine: string | null;
-	/** 현재 재생 중인 챕터 — 있으면 카드에 구간을 표시해요 */
 	chapter?: { name: string; startMs: number; endMs: number } | null;
-	/** 신청자 — 있으면 카드에 아바타 + 이름을 박아요 */
 	requester?: { name: string; avatarUrl: string | null } | null;
-	/** 곡 원본 URL — 카드 이미지는 클릭 불가라 참조용으로만 유지해요 */
 	trackUrl?: string | null;
 }
 
-/**
- * NowPlaying 카드 PNG 렌더. 실패/미설정 시 null (호출자가 기존 썸네일로 폴백해요).
- */
 async function renderNowPlayingCard(logger: AppLogger, data: NowPlayingCardRequest): Promise<Buffer | null> {
 	return renderImage(logger, '/v1/image/nowplaying', data);
 }
 
-/** 날씨 카드 요청 — WeatherResult에서 표시용 필드만 골라 보내요 (data-api weatherCardSchema와 같은 모양). */
 export interface WeatherCardRequest {
 	scope: WeatherScope;
 	locationLabel: string;
@@ -314,7 +262,6 @@ export interface WeatherCardRequest {
 	}>;
 }
 
-/** 운세 카드 이미지 입력 — data-api POST /v1/image/ohaasa 바디와 같은 형식이에요. 운세 설명·럭키 컬러는 텍스트 본문 전용이라 보내지 않아요. */
 export interface OhaasaCardRequest {
 	zodiacCode: string;
 	rank: number;
@@ -323,35 +270,27 @@ export interface OhaasaCardRequest {
 	date: string;
 }
 
-/** 운세 TOP 3 카드 입력 — data-api POST /v1/image/ohaasa/top 바디와 같은 형식이에요. */
 export interface OhaasaTopCardRequest {
 	items: Array<{ zodiacCode: string; rank: number }>;
 	date: string;
 }
 
-/** 운세 카드 PNG — 실패하면 null이라 호출부가 텍스트만으로 폴백해요. */
 async function renderOhaasaCard(logger: AppLogger, data: OhaasaCardRequest): Promise<Buffer | null> {
 	return renderImage(logger, '/v1/image/ohaasa', data);
 }
 
-/** 운세 TOP 3 카드 PNG — 실패하면 null. */
 async function renderOhaasaTopCard(logger: AppLogger, data: OhaasaTopCardRequest): Promise<Buffer | null> {
 	return renderImage(logger, '/v1/image/ohaasa/top', data);
 }
 
-/** 날씨 카드 PNG — 실패하면 null이라 호출부가 텍스트 카드로 폴백해요. */
 async function renderWeatherCard(logger: AppLogger, data: WeatherCardRequest): Promise<Buffer | null> {
 	return renderImage(logger, '/v1/image/weather', data);
 }
 
-/**
- * 프로필 카드 PNG 렌더. 실패/미설정 시 null (호출자가 텍스트 카드로 폴백해요).
- */
 async function renderProfileCard(logger: AppLogger, data: ProfileCardRequest): Promise<Buffer | null> {
 	return renderImage(logger, '/v1/image/profile', data);
 }
 
-/** 멤버 인사 카드 렌더에 박을 멤버/서버 컨텍스트 — 렌더러가 템플릿({유저이름} {서버} {멤버수}) 치환에 써요 */
 export interface MemberCardRenderContext {
 	userId: string;
 	username: string;
@@ -361,9 +300,6 @@ export interface MemberCardRenderContext {
 	memberCount: number;
 }
 
-/**
- * 멤버 인사(환영/작별) 카드 렌더 — 움직임이 없으면 PNG, 있으면 애니메이션 WebP예요. 실패/미설정 시 null (호출자가 텍스트 메시지로 폴백해요).
- */
 async function renderMemberCard(
 	logger: AppLogger,
 	guildId: string,
@@ -374,30 +310,22 @@ async function renderMemberCard(
 	return renderImageTyped(logger, '/v1/image/member-card', { guildId, kind, config, context }, MEMBER_CARD_RENDER_TIMEOUT_MS);
 }
 
-/** Wrapped 카드 입력 — data-api POST /v1/image/wrapped 바디와 같은 형식이에요. 집계는 data-api가 DB에서 직접 해요. */
 export interface WrappedCardRequest {
 	userId: string;
-	/** null이면 모든 서버를 합쳐요 */
 	guildId: string | null;
 	displayName: string;
 	avatarUrl: string | null;
 	period: 'month' | 'year' | 'all';
 }
 
-/** Wrapped 카드 PNG — 실패하면 null이라 호출부가 안내 문구로 폴백해요. 집계가 오래 걸릴 수 있어 이미지 렌더 타임아웃을 그대로 써요. */
 async function renderWrappedCard(logger: AppLogger, data: WrappedCardRequest): Promise<Buffer | null> {
 	return renderImage(logger, '/v1/image/wrapped', data);
 }
 
-/** 로거가 필요한 data-api 호출(이미지 렌더·오브젝트 업로드)이 쓰는 의존성 */
 export interface DataApiClientDeps {
 	logger: AppLogger;
 }
 
-/**
- * 실패를 로그로 남기는 data-api 호출 묶음 (container.dataApi) — 이미지 렌더 6종과 오브젝트 업로드예요.
- * 로거가 필요 없는 조회 함수(fetch*, search*, trackDelivery …)는 위의 모듈 함수 그대로 써요.
- */
 export function createDataApiClient(deps: DataApiClientDeps) {
 	const { logger } = deps;
 	return {

@@ -17,19 +17,16 @@ export const CHAT_TOOL_LABELS: Record<ChatToolName, string> = {
 	embedFix: '임베드 복구'
 };
 
-/** 채널 한 곳에서 채팅 유틸 기능이 켜져 있는지 — 채널 정보가 없으면 꺼짐으로 봐요 */
 export function chatToolEnabledIn(guild: Guild, tool: ChatToolName, channelId: string | undefined): boolean {
 	if (!channelId) return false;
 	const fields = CHAT_TOOL_TOGGLE_FIELDS[tool];
 	return isChannelToggleEnabled({ mode: normalizeChatToolMode(guild[fields.mode]), channelIds: guild[fields.channelIds] }, channelId);
 }
 
-/** 패널이 놓인 채널에서 기능 하나를 뒤집어요 — 토글 규칙은 AI 채팅·TTS와 같아요 */
 function toggleTool(tool: ChatToolName) {
 	return async ({ interaction, guildId, channelId, services }: SettingsContext) => {
 		const settings = await guildChatPolicy.getChatToolSettings(services.guildService, guildId);
 		const enable = !isChannelToggleEnabled(settings[tool], channelId);
-		// 끄기로 all → channels를 만들 때 남길 목록을 위해 서버의 나머지 텍스트 채널을 모아요.
 		await guildChatPolicy.setChannelChatToolEnabled(
 			services.guildService,
 			guildId,
@@ -52,12 +49,10 @@ function toolButton(tool: ChatToolName) {
 	};
 }
 
-/** 채팅 유틸·카운팅 페이지 — 구 `/채팅유틸`의 채널별 기능 on/off와 카운팅 채널 지정 */
 export const chatToolsActions = {
 	toggleEmojiEnlarge: { mode: 'chatTools', apply: toggleTool('emojiEnlarge'), control: toolButton('emojiEnlarge') },
 	toggleQuote: { mode: 'chatTools', apply: toggleTool('quote'), control: toolButton('quote') },
 	toggleEmbedFix: { mode: 'chatTools', apply: toggleTool('embedFix'), control: toolButton('embedFix') },
-	// 카운팅 채널을 지정하면 그 순간 켜지고 기록은 새로 시작해요
 	selectCountingChannel: {
 		mode: 'chatTools',
 		apply: async ({ interaction, guildId, services }) => {

@@ -7,16 +7,13 @@ import { Button } from "@/components/ui/button";
 import { notifyApiError } from "@/lib/notify";
 import type { GreetingTestResult } from "@/types/member-greeting";
 
-
 interface GreetingTestPanelProps {
-  /** 저장된 설정이 활성화 + 채널 지정이어야 테스트 전송이 가능해요 */
   ready: boolean;
   pending: boolean;
   result: GreetingTestResult | null;
   onTest: () => Promise<void>;
 }
 
-/** 테스트 전송 — 봇이 읽을 "저장된 설정"으로 본인 멤버 카드를 그려 메시지 채널에 보내요 */
 export function GreetingTestPanel({
   ready,
   pending,

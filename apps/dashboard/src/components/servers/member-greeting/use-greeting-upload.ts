@@ -10,9 +10,7 @@ import { toApiError, toError } from "@/lib/api-error";
 import { createImageLayer, loadImage } from "./greeting-draw";
 
 const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
-/** 업로드·파일 입력이 같이 쓰는 허용 이미지 타입 */
 const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/webp";
-/** 배경은 움직이는 GIF도 받아요 */
 const ACCEPTED_BACKGROUND_TYPES = `${ACCEPTED_IMAGE_TYPES},image/gif`;
 export { ACCEPTED_BACKGROUND_TYPES, ACCEPTED_IMAGE_TYPES };
 
@@ -23,10 +21,6 @@ export interface GreetingUpload {
   handleBackgroundUpload: (file: File | null) => Promise<void>;
 }
 
-/**
- * 인사 카드 이미지 업로드 — 이미지 레이어 추가와 커스텀 배경 교체 두 경로가 있어요.
- * POST /background 계열 엔드포인트로 보내 dataURI 정규화를 재사용해요.
- */
 export function useGreetingUpload({
   guildId,
   image,

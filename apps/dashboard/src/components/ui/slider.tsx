@@ -11,13 +11,10 @@ interface SliderProps extends Omit<SliderPrimitive.Root.Props, "value" | "defaul
 	max?: number;
 	step?: number;
 	onChange?: (value: number) => void;
-	/** 조작이 끝나는 시점(드래그 놓기·트랙 클릭·키보드 한 스텝)에 1회 호출돼요 — 히스토리 커밋용 */
 	onCommit?: (value: number) => void;
 	label?: string;
-	/** 라벨을 화면에서는 숨기고 스크린리더용(aria-label)으로만 둬요 — 바깥 Field 라벨과 겹칠 때 써요 */
 	hideLabel?: boolean;
 	showValue?: boolean;
-	/** 트랙 아래에 최소·최대 값을 보여줘요 (기본은 숨김 — 범위는 설명 문구가 말해줘요) */
 	showRange?: boolean;
 	formatValue?: (value: number) => string;
 	className?: string;

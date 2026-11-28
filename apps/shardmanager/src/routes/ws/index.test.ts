@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import WebSocket from 'ws';
 import fastifyWebsocket from '@fastify/websocket';
@@ -11,11 +11,11 @@ const AUTH_KEY = 'ws-test-key';
 
 function notifierStub() {
 	return {
-		shardConnected: async () => {},
-		shardDisconnected: async () => {},
-		shardReady: async () => {},
-		shardHeartbeatTimeout: async () => {},
-		allShardsReady: async () => {}
+		shardConnected: vi.fn(async () => {}),
+		shardDisconnected: vi.fn(async () => {}),
+		shardReady: vi.fn(async () => {}),
+		shardHeartbeatTimeout: vi.fn(async () => {}),
+		allShardsReady: vi.fn(async () => {})
 	} as unknown as DiscordNotifier;
 }
 
@@ -35,7 +35,6 @@ describe('ws IDENTIFY route', () => {
 		const registry = new ShardRegistry(shardCount, shardsPerProcess, notifier);
 		registries.push(registry);
 		const app = Fastify();
-		// ws 라우트는 fastify.manager 로케이터로 registry/notifier/authKey를 끌어와요.
 		app.decorate('manager', { getRegistry: () => registry, getNotifier: () => notifier, getAuthKey: () => AUTH_KEY } as never);
 		await app.register(fastifyWebsocket, { options: { maxPayload: 64 * 1024 } });
 		await app.register(wsRoutes);
@@ -43,7 +42,7 @@ describe('ws IDENTIFY route', () => {
 		apps.push(app);
 		const address = app.server.address();
 		const port = typeof address === 'object' && address !== null ? address.port : 0;
-		return { registry, port };
+		return { registry, notifier, port };
 	}
 
 	class TestClient {
@@ -51,7 +50,6 @@ describe('ws IDENTIFY route', () => {
 		public closeInfo: Promise<{ code: number; reason: string }> | null = null;
 
 		private constructor(private readonly socket: WebSocket) {
-			// terminate/서버 종료로 오는 후행 에러 이벤트는 조용히 흡수해요 (unhandled 'error' 방지).
 			socket.on('error', () => {});
 			socket.on('message', (raw) => {
 				this.messages.push(JSON.parse(raw.toString()) as WsMessage<unknown>);
@@ -75,7 +73,6 @@ describe('ws IDENTIFY route', () => {
 			this.socket.send(JSON.stringify({ op, payload }));
 		}
 
-		/** 특정 조건의 메시지를 기다려요. 서버는 클라이언트 메시지를 마주쳐야 응답하므로 polling이 자연스러워요. */
 		public async waitFor(predicate: (message: WsMessage<unknown>) => boolean, timeoutMs = 2_000): Promise<WsMessage<unknown>> {
 			const deadline = Date.now() + timeoutMs;
 			while (Date.now() < deadline) {
@@ -94,7 +91,6 @@ describe('ws IDENTIFY route', () => {
 			]);
 		}
 
-		/** 조건 없이 잠깐 기다려요. "오면 안 되는" 메시지 부재 검증용. */
 		public async waitQuietly(ms: number): Promise<void> {
 			await new Promise((resolve) => setTimeout(resolve, ms));
 		}
@@ -116,7 +112,7 @@ describe('ws IDENTIFY route', () => {
 		expect((await client.waitForClose()).code).toBe(4008);
 	});
 
-	it('allocates shards on IDENTIFY and refuses re-identification on the same socket (SEC-003)', async () => {
+	it('allocates shards on IDENTIFY and refuses re-identification on the same socket', async () => {
 		const { port } = await startServer();
 		const client = await TestClient.connect(port);
 		client.send(WsOp.IDENTIFY, { token: AUTH_KEY, hostname: 'host-a' });
@@ -147,6 +143,57 @@ describe('ws IDENTIFY route', () => {
 		client.send(WsOp.IDENTIFY, { token: AUTH_KEY, hostname: 'host-b', shardIds: [2, 3] });
 		const ack = await client.waitFor((message) => message.op === WsOp.IDENTIFY_ACK);
 		expect(ack.payload).toMatchObject({ shardIds: [2, 3], shardCount: 4 });
+	});
+
+	it('closes with 4000 when no shards are left to allocate', async () => {
+		const { port } = await startServer(2, 2);
+		const first = await TestClient.connect(port);
+		first.send(WsOp.IDENTIFY, { token: AUTH_KEY });
+		await first.waitFor((message) => message.op === WsOp.IDENTIFY_ACK);
+
+		const second = await TestClient.connect(port);
+		second.send(WsOp.IDENTIFY, { token: AUTH_KEY });
+		const ack = await second.waitFor((message) => message.op === WsOp.IDENTIFY_ACK);
+		expect(ack.payload).toEqual({ shardIds: [], shardCount: 0 });
+		expect(await second.waitForClose()).toMatchObject({ code: 4000, reason: 'No shards available' });
+	});
+
+	it('answers HEARTBEAT with the same timestamp once identified', async () => {
+		const { port } = await startServer();
+		const client = await TestClient.connect(port);
+		client.send(WsOp.IDENTIFY, { token: AUTH_KEY });
+		await client.waitFor((message) => message.op === WsOp.IDENTIFY_ACK);
+
+		client.send(WsOp.HEARTBEAT, { timestamp: 1234 });
+		const ack = await client.waitFor((message) => message.op === WsOp.HEARTBEAT_ACK);
+		expect(ack.payload).toEqual({ timestamp: 1234 });
+	});
+
+	it('records status and stats and notifies when a process reports ready', async () => {
+		const { registry, notifier, port } = await startServer();
+		const client = await TestClient.connect(port);
+		client.send(WsOp.IDENTIFY, { token: AUTH_KEY, hostname: 'host-a' });
+		await client.waitFor((message) => message.op === WsOp.IDENTIFY_ACK);
+
+		client.send(WsOp.SHARD_STATS, { shardIds: [0, 1], guilds: 7, players: 2, memoryUsage: 1024, uptime: 5 });
+		client.send(WsOp.SHARD_STATUS, { status: 'ready', shardIds: [0, 1] });
+		await vi.waitFor(() => expect(registry.getAllProcesses()[0]).toMatchObject({ status: 'ready', guilds: 7 }));
+		const wsId = registry.getAllProcesses()[0]!.wsId;
+		expect(notifier.shardReady).toHaveBeenCalledWith(wsId, [0, 1], 'host-a');
+
+		expect(registry.getAllProcesses()[0]).toMatchObject({ players: 2, memoryUsage: 1024, uptime: 5 });
+	});
+
+	it('releases shards and notifies with the hostname when the socket closes', async () => {
+		const { registry, notifier, port } = await startServer();
+		const client = await TestClient.connect(port);
+		client.send(WsOp.IDENTIFY, { token: AUTH_KEY, hostname: 'host-a' });
+		await client.waitFor((message) => message.op === WsOp.IDENTIFY_ACK);
+		const wsId = registry.getAllProcesses()[0]!.wsId;
+
+		sockets[0]!.close();
+		await vi.waitFor(() => expect(notifier.shardDisconnected).toHaveBeenCalledWith(wsId, [0, 1], 'host-a'));
+		expect(registry.getAllProcesses()).toEqual([]);
 	});
 
 	it('ignores non-IDENTIFY ops before identification without closing the socket', async () => {

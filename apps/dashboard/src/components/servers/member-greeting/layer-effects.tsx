@@ -20,7 +20,6 @@ import { cn, radioArrowKeyDown } from "@/lib/utils";
 
 import { textWeight } from "./greeting-draw";
 
-/** 속성 패널 한 줄짜리 선택지(라디오 그룹) — 키보드 방향키 이동을 지원해요 */
 export function Segmented<T extends string | number>({
   label,
   options,
@@ -75,7 +74,6 @@ interface EffectProps<L extends GreetingLayer> {
   onCommit: () => void;
 }
 
-/** 그림자 편집 — 색·투명도·흐림·오프셋 */
 function ShadowEditor({
   shadow,
   label,
@@ -125,7 +123,6 @@ const SHADOW_MODES: readonly { value: ShadowMode; label: string }[] = [
   { value: "custom", label: "직접 설정" },
 ];
 
-/** 텍스트 효과 — 굵기·간격·최대 폭·그림자·외곽선·그라디언트 */
 export function TextEffectFields({ layer, saving, patch, patchAndCommit, onCommit }: EffectProps<GreetingTextLayer>) {
   const shadowMode: ShadowMode = layer.shadow === undefined ? "default" : layer.shadow === null ? "none" : "custom";
   const hasMaxWidth = layer.maxWidth !== undefined;
@@ -224,7 +221,6 @@ const AVATAR_SHAPE_OPTIONS: readonly { value: GreetingAvatarShape; label: string
   { value: "square", label: "사각형" },
 ];
 
-/** 아바타 옵션 — 모양·링 두께·그림자·글로우 */
 export function AvatarEffectFields({ layer, saving, patch, patchAndCommit, onCommit }: EffectProps<GreetingAvatarLayer>) {
   const shape = layer.shape ?? "circle";
   return (

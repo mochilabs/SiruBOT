@@ -8,15 +8,13 @@ const logger = getLogger('shardRegistry');
 export const HEARTBEAT_TIMEOUT_MS = 60_000;
 const HEARTBEAT_CHECK_INTERVAL_MS = 15_000;
 
-/** ws readyState 값: 2(CLOSING)/3(CLOSED)는 이미 끊긴 소켓이에요 */
 const WS_CLOSING = 2;
 const WS_CLOSED = 3;
 
+const BYTES_PER_MB = 1024 * 1024;
+
 export interface ShardRegistryOptions {
-	/**
-	 * 서버 시작 직후 신규 샤드 할당을 보류하는 시간(ms). 매니저가 재시작되면 레지스트리가 비어서, 재연결 백오프 중인 기존 봇들의
-	 * 샤드를 신규 프로세스가 먼저 가져가 이중 점유가 생길 수 있어요. 기존 봇의 re-identify(claimShards)는 이 시간에도 허용해요.
-	 */
+	/** 재시작 직후 기존 봇의 re-identify가 끝날 때까지 신규 할당을 보류하는 시간(ms). */
 	allocationGraceMs?: number;
 }
 
@@ -33,8 +31,19 @@ interface ShardProcessInfo {
 	wsConnection: WebSocket;
 }
 
+type ProcessSnapshot = Omit<ShardProcessInfo, 'wsConnection'> & { wsId: string };
+
+function snapshotOf(wsId: string, info: ShardProcessInfo): ProcessSnapshot {
+	const { wsConnection, ...rest } = info;
+	return { wsId, ...rest };
+}
+
+function isSocketClosing(socket: WebSocket): boolean {
+	return socket.readyState === WS_CLOSING || socket.readyState === WS_CLOSED;
+}
+
 export class ShardRegistry {
-	private processes: Map<string, ShardProcessInfo> = new Map(); // wsId -> info
+	private processes: Map<string, ShardProcessInfo> = new Map();
 	private allocatedShards: Set<number> = new Set();
 	private shardCount: number;
 	private shardsPerProcess: number;
@@ -57,14 +66,7 @@ export class ShardRegistry {
 			return null;
 		}
 
-		const available: number[] = [];
-
-		for (let i = 0; i < this.shardCount; i++) {
-			if (!this.allocatedShards.has(i)) {
-				available.push(i);
-				if (available.length >= this.shardsPerProcess) break;
-			}
-		}
+		const available = this.findFreeShardIds(this.shardsPerProcess);
 
 		if (available.length === 0) {
 			logger.warn('No available shard IDs to allocate');
@@ -79,27 +81,31 @@ export class ShardRegistry {
 		return available;
 	}
 
-	/**
-	 * Re-identification용 샤드 ID claim: 요청 전체를 검증하고, 하나라도 잘못되면 null을 돌려줘요.
-	 * - 각 ID는 [0, shardCount) 안의 정수여야 하고 중복이면 안 돼요
-	 * - 살아있는 다른 프로세스가 점유 중인 ID는 거부해요 (샤드 이중 점유/탈취 방지)
-	 * - 점유 주인의 소켓이 이미 끊긴 경우(재연결 레이스)에는 이전 등록에서 떼어와 새 주인에게 넘겨요
-	 * 할당 집합(allocatedShards)에만 남은 유실 ID는 재사용해요. 이전 버전의 할당 누수를 스스로 치유해요.
-	 */
+	private findFreeShardIds(limit: number): number[] {
+		const free: number[] = [];
+		for (let id = 0; id < this.shardCount && free.length < limit; id++) {
+			if (!this.allocatedShards.has(id)) free.push(id);
+		}
+		return free;
+	}
+
+	private isValidShardId(shardId: number): boolean {
+		return Number.isInteger(shardId) && shardId >= 0 && shardId < this.shardCount;
+	}
+
+	/** Re-identify 시 요청된 샤드 ID를 검증·점유하며, 끊긴 소켓의 잔여 점유는 회수하고 하나라도 유효하지 않으면 null을 반환해요. */
 	public claimShards(wsId: string, requested: number[]): number[] | null {
 		const claimed: number[] = [];
 		const seen = new Set<number>();
 
 		for (const shardId of requested) {
-			if (!Number.isInteger(shardId) || shardId < 0 || shardId >= this.shardCount) return null;
-			if (seen.has(shardId)) return null;
+			if (!this.isValidShardId(shardId) || seen.has(shardId)) return null;
 			seen.add(shardId);
 
 			const owner = this.findShardOwner(shardId);
 			if (owner && owner.wsId !== wsId) {
-				const readyState = owner.info.wsConnection.readyState;
-				if (readyState !== WS_CLOSING && readyState !== WS_CLOSED) return null;
-				// 끊긴 소켓의 잔여 등록: 이후 release가 이 ID를 다시 해제하지 않도록 떼어내요
+				if (!isSocketClosing(owner.info.wsConnection)) return null;
+				// stale registration of a dead socket: detach so a later release doesn't free this ID again
 				owner.info.shardIds = owner.info.shardIds.filter((id) => id !== shardId);
 				logger.info(`Shard ${shardId} reclaimed from disconnected process ${owner.wsId}`);
 			}
@@ -142,14 +148,13 @@ export class ShardRegistry {
 	}
 
 	public release(wsId: string): number[] | undefined {
-		const process = this.processes.get(wsId);
-		if (!process) return undefined;
+		const info = this.processes.get(wsId);
+		if (!info) return undefined;
 
-		for (const id of process.shardIds) {
+		const released = info.shardIds;
+		for (const id of released) {
 			this.allocatedShards.delete(id);
 		}
-
-		const released = process.shardIds;
 		this.processes.delete(wsId);
 
 		logger.info(`Released process ${wsId}, freed shards [${released.join(', ')}]`);
@@ -158,27 +163,23 @@ export class ShardRegistry {
 	}
 
 	public heartbeat(wsId: string): void {
-		const process = this.processes.get(wsId);
-		if (process) {
-			process.lastHeartbeat = Date.now();
-		}
+		const info = this.processes.get(wsId);
+		if (info) info.lastHeartbeat = Date.now();
 	}
 
 	public updateStatus(wsId: string, status: ShardStatus): void {
-		const process = this.processes.get(wsId);
-		if (process) {
-			process.status = status;
-			logger.info(`Process ${wsId} status: ${status}`);
-			this.checkAllShardsReady();
-		}
+		const info = this.processes.get(wsId);
+		if (!info) return;
+
+		info.status = status;
+		logger.info(`Process ${wsId} status: ${status}`);
+		this.checkAllShardsReady();
 	}
 
 	private checkAllShardsReady(): void {
 		let readyShards = 0;
-		for (const process of this.processes.values()) {
-			if (process.status === 'ready') {
-				readyShards += process.shardIds.length;
-			}
+		for (const info of this.processes.values()) {
+			if (info.status === 'ready') readyShards += info.shardIds.length;
 		}
 
 		const isAllReady = readyShards === this.shardCount;
@@ -190,31 +191,22 @@ export class ShardRegistry {
 	}
 
 	public updateStats(wsId: string, stats: ShardStatsPayload): void {
-		const process = this.processes.get(wsId);
-		if (process) {
-			process.guilds = stats.guilds;
-			process.players = stats.players;
-			process.memoryUsage = stats.memoryUsage;
-			process.uptime = stats.uptime;
-		}
+		const info = this.processes.get(wsId);
+		if (!info) return;
+
+		info.guilds = stats.guilds;
+		info.players = stats.players;
+		info.memoryUsage = stats.memoryUsage;
+		info.uptime = stats.uptime;
 	}
 
-	/** 반환에서 wsConnection은 제외해요. */
-	public getAllProcesses(): Array<Omit<ShardProcessInfo, 'wsConnection'> & { wsId: string }> {
-		return Array.from(this.processes.entries()).map(([wsId, info]) => {
-			const { wsConnection, ...rest } = info;
-			return { wsId, ...rest };
-		});
+	public getAllProcesses(): ProcessSnapshot[] {
+		return Array.from(this.processes.entries()).map(([wsId, info]) => snapshotOf(wsId, info));
 	}
 
-	public getProcessByShardId(shardId: number): (Omit<ShardProcessInfo, 'wsConnection'> & { wsId: string }) | null {
-		for (const [wsId, info] of this.processes.entries()) {
-			if (info.shardIds.includes(shardId)) {
-				const { wsConnection, ...rest } = info;
-				return { wsId, ...rest };
-			}
-		}
-		return null;
+	public getProcessByShardId(shardId: number): ProcessSnapshot | null {
+		const owner = this.findShardOwner(shardId);
+		return owner ? snapshotOf(owner.wsId, owner.info) : null;
 	}
 
 	public getAggregateStats() {
@@ -222,10 +214,10 @@ export class ShardRegistry {
 		let totalPlayers = 0;
 		let totalMemory = 0;
 
-		for (const process of this.processes.values()) {
-			totalGuilds += process.guilds;
-			totalPlayers += process.players;
-			totalMemory += process.memoryUsage;
+		for (const info of this.processes.values()) {
+			totalGuilds += info.guilds;
+			totalPlayers += info.players;
+			totalMemory += info.memoryUsage;
 		}
 
 		return {
@@ -235,7 +227,7 @@ export class ShardRegistry {
 			allocatedShards: this.allocatedShards.size,
 			totalGuilds,
 			totalPlayers,
-			totalMemoryMB: Math.round(totalMemory / 1024 / 1024)
+			totalMemoryMB: Math.round(totalMemory / BYTES_PER_MB)
 		};
 	}
 
@@ -248,22 +240,22 @@ export class ShardRegistry {
 	}
 
 	private startHeartbeatMonitor(): void {
-		this.heartbeatTimer = setInterval(() => {
-			const now = Date.now();
-			for (const [wsId, process] of this.processes.entries()) {
-				if (now - process.lastHeartbeat > HEARTBEAT_TIMEOUT_MS) {
-					logger.warn(`Process ${wsId} heartbeat timeout (shards: [${process.shardIds.join(', ')}])`);
-					this.notifier.shardHeartbeatTimeout(wsId, process.shardIds);
-					process.status = 'disconnected';
-					try {
-						process.wsConnection.close();
-					} catch {
-						// 이미 끊긴 소켓 close 실패는 무해해요
-					}
-					this.release(wsId);
-				}
-			}
-		}, HEARTBEAT_CHECK_INTERVAL_MS);
+		this.heartbeatTimer = setInterval(() => this.releaseStaleProcesses(), HEARTBEAT_CHECK_INTERVAL_MS);
+	}
+
+	private releaseStaleProcesses(): void {
+		const now = Date.now();
+		for (const [wsId, info] of this.processes.entries()) {
+			if (now - info.lastHeartbeat <= HEARTBEAT_TIMEOUT_MS) continue;
+
+			logger.warn(`Process ${wsId} heartbeat timeout (shards: [${info.shardIds.join(', ')}])`);
+			this.notifier.shardHeartbeatTimeout(wsId, info.shardIds);
+			info.status = 'disconnected';
+			try {
+				info.wsConnection.close();
+			} catch {}
+			this.release(wsId);
+		}
 	}
 
 	public destroy(): void {

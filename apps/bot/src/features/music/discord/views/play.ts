@@ -55,11 +55,8 @@ export function trackAdded({ track, queued, position, totalDuration }: playViewP
 	return container;
 }
 
-/** trackAdded 뷰 props 공용 계산 — 추가 직후 시점의 큐 상태로 대기 위치/총 길이를 잰다 (audioService·commandChannel·playerWebResponder 공용). */
 export function trackAddedProps(player: Player, track: Track): playViewProps {
 	const userTracks = getUserQueuedTracks(player);
-	// enqueueTrack이 곧바로 재생을 시작한 경우(유저 트랙이 큐에 남지 않음)에도
-	// '대기열 0번에 추가'가 아닌 '곧 재생' 문구가 나오도록 유저 트랙 유무를 함께 본다.
 	return {
 		track,
 		queued: player.queue.current !== null && userTracks.length > 0,
@@ -73,7 +70,6 @@ type playStartedViewProps = {
 	userId: string;
 };
 
-/** idle 상태에서 재생이 곧바로 시작될 때 — 누가 시작했는지 남긴다. */
 export function playStarted({ track, userId }: playStartedViewProps) {
 	const container = createContainer();
 

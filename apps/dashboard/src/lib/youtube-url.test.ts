@@ -1,5 +1,3 @@
-// youtube-url 회귀 계약 — 클라이언트(add-track-modal·use-playlists)와 서버(tracks/route)가
-// 공유하는 유튜브 링크 인식 정규식의 단일 소스를 잠가요.
 import { describe, expect, it } from "vitest";
 
 import { extractYoutubeVideoId, isYoutubeUrl } from "./youtube-url";

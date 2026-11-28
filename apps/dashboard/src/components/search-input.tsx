@@ -28,6 +28,7 @@ export function SearchInput({
 		if (urlQuery !== value) {
 			setValue(urlQuery);
 		}
+		// Mount only: seed the store from the URL once; after that the effect below drives the URL from the store.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
@@ -65,7 +66,6 @@ export function SearchInput({
 			/>
 
 			{value && (
-				// ghost variant — icon variant의 shadow-control-boundary가 덮어쓰기에도 남아서 링처럼 보였어요
 				<Button
 					variant="ghost"
 					onClick={clear}

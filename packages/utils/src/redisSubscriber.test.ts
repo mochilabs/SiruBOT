@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ManagedRedisSubscriber, type RedisSubscriberLogger } from './redisSubscriber.ts';
 
-// stop()과 connect 완료의 레이스, subscribe 실패 시 새 클라이언트 누수를 고정하는 회귀 테스트예요.
-
 interface MockClient {
 	on: ReturnType<typeof vi.fn>;
 	connect: ReturnType<typeof vi.fn>;
@@ -90,7 +88,6 @@ describe('ManagedRedisSubscriber', () => {
 		await flush();
 		await subscriber.stop();
 
-		// subscribe까지 끝난 뒤에도 this.subscriber에 올리지 않고 즉시 quit해요
 		resolveConnect();
 		await starting;
 		expect(client.subscribe).toHaveBeenCalled();
@@ -117,7 +114,6 @@ describe('ManagedRedisSubscriber', () => {
 			expect(client.destroy).toHaveBeenCalled();
 			expect(subscriber.isSubscribed).toBe(false);
 			expect(logger.warn).toHaveBeenCalled();
-			// 재연결 예약은 됐지만 재시도 전까지 연결은 없어요
 			expect(subscriber.isSubscribed).toBe(false);
 		} finally {
 			vi.useRealTimers();

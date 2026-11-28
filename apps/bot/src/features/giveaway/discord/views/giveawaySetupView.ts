@@ -25,7 +25,6 @@ function endText(state: GiveawaySetupState): string {
 	return `시작하고 나서 ${quick ? quick.label : `${Math.round(ms / 60_000)}분`} 뒤`;
 }
 
-/** 설정 패널의 요약 글 — 지금까지 고른 값을 한눈에 보여줘요 */
 export function giveawaySetupSummary(state: GiveawaySetupState): string {
 	const conditions = setupConditions(state);
 	const lines = [

@@ -17,7 +17,6 @@ export class MemoryCache<Key, Value> {
 	}
 
 	public set(key: Key, value: Value) {
-		// JS Map은 insertion-ordered — 첫 엔트리가 가장 오래 전에 삽입된 항목이라 O(1)로 제거 가능.
 		if (!this.cache.has(key) && this.cache.size >= this.memoryCacheOptions.maxSize) {
 			const oldestKey = this.cache.keys().next().value;
 			if (oldestKey !== undefined) {
@@ -40,7 +39,6 @@ export class MemoryCache<Key, Value> {
 			return undefined;
 		}
 
-		// 재삽입으로 최근 사용 항목을 맨 뒤로 승격 — O(1) LRU 갱신.
 		this.cache.delete(key);
 		this.cache.set(key, entry);
 		return entry.data;

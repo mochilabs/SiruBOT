@@ -2,12 +2,12 @@ import Fastify from 'fastify';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { TICKET_TRANSCRIPT_BUCKET } from '@sirubot/utils';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { requireAuth } from '../plugins/auth.ts';
 import { ObjectStore } from '../services/objectStore.ts';
 import { registerObjectRoutes } from './objects.ts';
 
-// inject payload는 Buffer로 실어야 원시 바이트가 돼요 (Uint8Array는 JSON으로 직렬화돼요)
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00]);
 
@@ -104,5 +104,50 @@ describe('PUT /:bucket/*', () => {
 			payload: PNG
 		});
 		expect(res.statusCode).toBe(400);
+	});
+
+	it('이미지가 아닌 파일은 400이에요', async () => {
+		const res = await fastify.inject({
+			method: 'PUT',
+			url: '/guild-assets/g1/a.png',
+			headers: { authorization: 'key', 'content-type': 'image/png' },
+			payload: Buffer.from('plain text, not an image')
+		});
+		expect(res.statusCode).toBe(400);
+		expect(res.json()).toEqual({ error: 'PNG, JPEG, WebP, GIF 이미지만 지원해요.' });
+	});
+
+	describe('비공개 transcript 버킷', () => {
+		const put = (key: string, payload: Buffer) =>
+			fastify.inject({
+				method: 'PUT',
+				url: `/${TICKET_TRANSCRIPT_BUCKET}/${key}`,
+				headers: { authorization: 'key', 'content-type': 'application/gzip' },
+				payload
+			});
+
+		it('.json.gz는 공개 URL 없이 201이에요', async () => {
+			const payload = Buffer.from([0x1f, 0x8b, 0x08, 0x00]);
+			const res = await put('t1/log.json.gz', payload);
+			expect(res.statusCode).toBe(201);
+			expect(res.json()).toEqual({
+				bucket: TICKET_TRANSCRIPT_BUCKET,
+				key: 't1/log.json.gz',
+				size: payload.length,
+				contentType: 'application/gzip',
+				etag: expect.any(String)
+			});
+		});
+
+		it('.json.gz가 아니면 400이에요', async () => {
+			const res = await put('t1/log.json', Buffer.from([1, 2, 3]));
+			expect(res.statusCode).toBe(400);
+			expect(res.json()).toEqual({ error: 'transcript는 .json.gz 형식이어야 해요.' });
+		});
+
+		it('16MB를 넘으면 413이에요', async () => {
+			const res = await put('t1/big.json.gz', Buffer.alloc(16 * 1024 * 1024 + 1));
+			expect(res.statusCode).toBe(413);
+		});
 	});
 });

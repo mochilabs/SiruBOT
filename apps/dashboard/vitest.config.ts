@@ -7,21 +7,17 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
 	resolve: {
 		alias: [
-			// dashboard tsconfig paths(@/*)를 테스트 러너에도 맞춰요
 			{ find: /^@\//, replacement: path.join(rootDir, "src") + "/" },
-			// 루트 vitest.config.ts와 동일 — 워크스페이스 패키지는 소스로 참조 (stale dist 무관).
-			// 서브경로는 확장자 없이 import하므로 .ts를 붙여 매핑해요.
 			{ find: /^@sirubot\/utils$/, replacement: path.join(rootDir, "../../packages/utils/src/index.ts") },
 			{ find: /^@sirubot\/utils\/(.*)$/, replacement: path.join(rootDir, "../../packages/utils/src/$1.ts") },
 			{ find: /^@sirubot\/cards$/, replacement: path.join(rootDir, "../../packages/cards/src/index.ts") },
 		],
 	},
 	test: {
-		// DOM이 필요한 파일은 `// @vitest-environment happy-dom` 주석으로 개별 전환해요
 		environment: "node",
 		include: ["src/**/*.{test,spec}.{ts,tsx}"],
 		testTimeout: 10_000,
-		// 동시 워커 수를 제한해요 — turbo가 여러 패키지 테스트를 한꺼번에 돌릴 때 시스템 메모리·CPU가 고갈되는 걸 막아요
+		// turbo 병렬 테스트 시 시스템 리소스 고갈 방지
 		maxWorkers: 2,
 	},
 });

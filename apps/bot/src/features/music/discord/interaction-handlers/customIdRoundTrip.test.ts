@@ -46,7 +46,6 @@ const BASE_GUILD = {
 	jtcTemplate: '{user}',
 	jtcUserLimit: 0
 };
-/** 오디오·AI·채팅 유틸 페이지가 읽는 길드 값 */
 const EXTRA_GUILD = {
 	volume: 100,
 	disabledModules: [],
@@ -133,7 +132,6 @@ describe('audio custom id round trips', () => {
 			jtcUserLimit: 0,
 			...EXTRA_GUILD
 		};
-		// 설정을 바꾸는 액션(고정 화면 + apply)만 검사해요. 화면 이동(navigate/back)과 모달(jtcTemplate)은 표의 다른 형태예요.
 		for (const [action, entry] of Object.entries(SETTINGS_ACTIONS)) {
 			if (!('apply' in entry) || typeof entry.mode !== 'string') continue;
 			const mode = entry.mode;
@@ -153,7 +151,6 @@ describe('audio custom id round trips', () => {
 		for (const [action, entry] of Object.entries(SETTINGS_ACTIONS)) {
 			if (!entry.control) continue;
 			expect(renderedActions(entry.control.screen), `${action} on ${entry.control.screen}`).toContain(action);
-			// navigate는 첫 화면 외에 음악 하위 페이지 위의 이동 셀렉트로도 그려져요
 			for (const other of SETTINGS_SCREENS.filter(
 				(screen) => screen !== entry.control!.screen && !(action === 'navigate' && isMusicSubpage(screen))
 			)) {

@@ -5,7 +5,6 @@ import { fromJsx } from '@takumi-rs/helpers/jsx';
 import { parseGifTiming } from '@sirubot/utils';
 import { getCardRenderer, renderSvgRaster } from '../shared/takumiKit.tsx';
 
-/** 테스트용 단색 이미지를 dataURI로 — 업로드 정규화 입력을 만들어요. */
 async function solidImage(width: number, height: number): Promise<string> {
 	const png = await renderSvgRaster(
 		`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ff85c1"/></svg>`,
@@ -62,7 +61,6 @@ describe('normalizeGreetingLayerImage', () => {
 	});
 });
 
-/** 움직이는 GIF — 흰 사각형이 가로로 움직이는 장면을 Takumi로 인코딩해요 (정지 장면이면 프레임 1개) */
 async function gifDataUri(width: number, height: number, options: { seconds: number; fps: number; animated?: boolean }): Promise<string> {
 	const { renderer } = await getCardRenderer();
 	const box = {
@@ -107,7 +105,6 @@ describe('normalizeGreetingBackground — GIF', () => {
 	it('5초보다 길면 5초까지만 남겨요', async () => {
 		const gif = await gifDataUri(1300, 400, { seconds: 7, fps: 6 });
 		const timing = parseGifTiming(decodeDataUri(await normalizeGreetingBackground(gif))!)!;
-		// GIF 지연은 1/100초 단위로 반올림돼서 5초에서 조금 어긋날 수 있어요
 		expect(timing.durationMs).toBeLessThanOrEqual(5500);
 		expect(timing.durationMs).toBeGreaterThan(4000);
 	}, 60_000);

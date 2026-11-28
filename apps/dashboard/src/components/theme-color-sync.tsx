@@ -3,10 +3,6 @@
 import { useEffect } from "react";
 import { useTheme } from "next-themes";
 
-/**
- * 브라우저·OS UI 색(`theme-color`)을 현재 테마의 하단 탭바 면(--surface-1)에 맞춰요.
- * 서버가 내려주는 값은 다크 기본값 하나라서, 라이트로 바꾸면 탭바(흰색)와 OS 영역 색이 달라져요.
- */
 export function ThemeColorSync() {
 	const { resolvedTheme } = useTheme();
 

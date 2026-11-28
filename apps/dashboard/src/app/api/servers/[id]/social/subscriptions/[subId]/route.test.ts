@@ -1,6 +1,3 @@
-// 소셜 알림 구독 [subId] 라우트 회귀 계약 — upstream(data-api)의 기술 메시지
-// ("Route DELETE:/v1/... not found")가 사용자에게 새지 않고 한국어 폴백으로 바뀌며,
-// 소유 검증에 실패하면 삭제를 위임하지 않는 것을 잠가요.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { forwardGet, forwardPost } = vi.hoisted(() => ({
@@ -26,7 +23,6 @@ vi.mock("@/lib/rate-limit", () => ({
 }));
 
 vi.mock("@/lib/data-api/client", async (importOriginal) => {
-	// 검증 로직(dataApiUserMessage)은 실제를 쓰고 위임 함수만 스텁으로 바꿔요
 	const actual = await importOriginal<typeof import("@/lib/data-api/client")>();
 	return {
 		...actual,
@@ -47,7 +43,6 @@ function callDelete(): Promise<Response> {
 	);
 }
 
-/** 소유 목록 확인 성공 — 길드가 구독을 실제로 소유한 상태를 만드는 헬퍼예요. */
 function listOwned() {
 	forwardGet.mockResolvedValueOnce({ ok: true, data: { subscriptions: [{ id: SUB_ID }] } });
 }

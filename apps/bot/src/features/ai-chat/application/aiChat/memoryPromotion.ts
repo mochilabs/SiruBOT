@@ -4,34 +4,16 @@ import type { AiChatDeps } from './deps.ts';
 import type { ChatConfig } from './types.ts';
 import type { Stoppable } from '../../../../lib/lifecycle.ts';
 
-/** 기억 승격이 쓰는 의존성 — 로거, 기억 서비스, 진행 중 작업 소유자예요 */
 type PromotionDeps = Pick<AiChatDeps, 'logger' | 'memory' | 'promotions'>;
 
-/**
- * 단기 기억 컨텍스트 압축 + 장기 기억 승격(promotion) — 단기 기억(최근 대화)이 가득 차면
- * 백그라운드에서 한 번의 plain-text LLM 호출로 두 가지를 동시에 처리해요:
- * 1) **컨텍스트 압축**: 최근 대화를 짧은 롤링 요약으로 압축해 shortTermSummary에 저장 (토큰 절약).
- * 2) **장기 기억 승격**: 오래갈 만한 사실·선호·약속을 뽑아 MEMORY.md에 병합.
- *
- * `memory_save` 도구(모델 자발 호출)에 의존하지 않아 gemma 계열처럼 function calling이
- * 불안정한 모델에서도 동작하고, 배치 단위(8턴)라 비용이 낮아요. 응답을 지연시키지 않도록
- * fire-and-forget으로 돌아요. 참고: MemGPT/Letta의 "recursive summarization + FIFO eviction" 패턴.
- */
-
-/** 단기 기억이 이만큼 쌓여야 압축·승격을 시도해요 — 매 턴이 아니라 배치 단위로 돌려 비용을 낮춰요 */
 export const PROMOTION_MIN_TURNS = 8;
 
-/**
- * 진행 중인 압축·승격 작업의 소유자 — 한 사용자에 하나만 돌게 하고, 종료 때 끝나기를 기다려요
- * (상한은 lib/lifecycle.ts의 stopAll이 걸어요). 시간 안에 못 끝나도 단기 기억 원본은 DB에 남아 있어서
- * 다음 대화에서 다시 시도돼요.
- */
+/** 사용자당 하나만 실행하고, 종료 시 진행 중인 작업 완료를 기다려요. */
 export class MemoryPromotionJobs implements Stoppable {
 	public readonly name = 'memoryPromotionJobs';
 	private readonly jobs = new Map<string, Promise<void>>();
 	private stopped = false;
 
-	/** 이미 돌고 있거나 종료 중이면 아무것도 하지 않아요 */
 	public run(userId: string, job: () => Promise<void>): void {
 		if (this.stopped || this.jobs.has(userId)) return;
 		this.jobs.set(

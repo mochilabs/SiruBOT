@@ -43,7 +43,6 @@ import {
 import { z } from 'zod';
 
 describe('Redis 계약의 채널 문자열', () => {
-	// 롤링 배포 중 구·신 프로세스가 같은 채널로 통신하므로 와이어 문자열은 리터럴로 고정해요.
 	it('RPC 채널이 배포된 값과 바이트 단위로 같아요', () => {
 		expect([guildDataRpc.requestChannel, guildDataRpc.responseChannel]).toEqual(['sirubot:guild-data:request', 'sirubot:guild-data:response']);
 		expect([playerWebRpc.requestChannel, playerWebRpc.responseChannel]).toEqual(['sirubot:player-web:request', 'sirubot:player-web:response']);

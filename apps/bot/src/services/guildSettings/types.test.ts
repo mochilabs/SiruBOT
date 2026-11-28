@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeChannelToggle, isChannelToggleEnabled, normalizeAiMode, normalizeChatToolMode, normalizeTtsMode } from './types.ts';
 
-/** 모드 정규화 — DB에 깨린 값이 들어와도 각 정책의 기본값으로 되돌아가요 */
 describe('모드 정규화', () => {
 	it('AI 채팅은 잘못된 값이면 all로, TTS·채팅 유틸은 off로 폴백해요', () => {
 		expect(normalizeAiMode('all')).toBe('all');
@@ -13,7 +12,6 @@ describe('모드 정규화', () => {
 	});
 });
 
-/** 채널 토글 판정 — off면 끄기, all이면 항상 켜기, channels는 목록에 있는 채널만 */
 describe('채널 토글 판정', () => {
 	it('isChannelToggleEnabled는 채널 목록 규칙을 따라요', () => {
 		expect(isChannelToggleEnabled({ mode: 'off', channelIds: ['a'] }, 'a')).toBe(false);
@@ -25,7 +23,6 @@ describe('채널 토글 판정', () => {
 	});
 });
 
-/** 채널 토글 전이 — AI 채팅·채팅 TTS·채팅 유틸이 공유하는 계산 규칙 */
 describe('computeChannelToggle', () => {
 	it('켜기: off면 channels + [채널], channels면 목록에 추가하고 중복은 없어요', () => {
 		expect(computeChannelToggle({ mode: 'off', channelIds: [] }, 'c1', true, [])).toEqual({ mode: 'channels', channelIds: ['c1'] });

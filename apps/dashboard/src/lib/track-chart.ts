@@ -8,7 +8,6 @@ import { PAGE_SIZE } from "@/lib/track-constants";
 export const CHART_PERIODS = ["today", "week", "month", "all"] as const;
 export type ChartPeriod = (typeof CHART_PERIODS)[number];
 
-/** 곡 묶음(Recording) 단위의 차트 한 줄. `trackId`·`url`은 묶음에서 가장 많이 재생된 업로드예요 (즐겨찾기·듣기 링크용). */
 export interface ChartEntry {
   id: string;
   trackId: string | null;
@@ -19,7 +18,6 @@ export interface ChartEntry {
   url: string | null;
   plays: number;
   rank: number;
-  /** 직전 같은 길이 기간 대비 순위 변화 (+는 상승). 직전 기간에 없었으면 "new", 비교하지 않으면 null */
   rankChange: number | "new" | null;
 }
 
@@ -33,14 +31,11 @@ export interface ChartPage {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-// 1분 이하 효과음, 1시간 이상 믹스·방송은 차트에서 빼요.
 const MIN_DURATION_MS = 60 * 1000;
 const MAX_DURATION_MS = 60 * 60 * 1000;
 
 interface Window {
-  /** 일별 롤업 범위 (KST 날짜, 포함) */
   days?: { from: Date; to: Date };
-  /** 최근 24시간 같은 시각 범위 (GuildTrackHistory 직접 집계) */
   since?: { from: Date; to: Date };
 }
 
@@ -61,11 +56,9 @@ function windows(period: ChartPeriod, now: Date): { current: Window; previous: W
   };
 }
 
-/** 기간 안의 묶음별 재생 수 (서버당 하루 상한 적용). 결과는 (id, plays) 행의 서브쿼리예요. */
 function playsQuery(window: Window): Prisma.Sql {
   const cap = CHART_GUILD_DAILY_PLAY_CAP;
   if (window.since) {
-    // 최근 24시간: 서버×곡마다 상한을 걸어요. 요청자 없는 기록(자동재생)은 빼요 — 일별 롤업과 같은 기준.
     return Prisma.sql`
       SELECT g."recordingId" AS id, SUM(LEAST(g.c, ${cap}))::int AS plays FROM (
         SELECT t."recordingId", h."guildId", COUNT(*)::int AS c
@@ -117,7 +110,6 @@ export async function fetchChart({ period, query, page }: { period: ChartPeriod;
 
   const ids = rows.map((r) => r.id);
   const [previousRanks, tracks] = await Promise.all([
-    // 검색 결과에는 순위 변동을 붙이지 않아요 (순위가 검색 결과 안의 위치라서).
     previous && !query && ids.length > 0 ? previousRankMap(previous, ids) : Promise.resolve(null),
     ids.length > 0
       ? db.track.findMany({
@@ -164,7 +156,6 @@ export async function fetchChart({ period, query, page }: { period: ChartPeriod;
   };
 }
 
-/** 직전 기간의 전체 순위 중 이번 페이지 곡들의 순위만 */
 async function previousRankMap(window: Window, ids: string[]): Promise<Map<string, number>> {
   const rows = await db.$queryRaw<{ id: string; rank: number }[]>`
     SELECT ranked.id, ranked.rank FROM (

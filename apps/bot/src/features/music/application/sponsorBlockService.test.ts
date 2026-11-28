@@ -13,7 +13,6 @@ const mixerService = {
 	prepareNextAnalysis: vi.fn(async () => undefined),
 	invalidate: vi.fn(async () => undefined)
 };
-/** 큐 관측 헬퍼가 받는 lavalink 의존성 역할 */
 const lavalink = { mixerService, sponsorBlockService: { prefetch: vi.fn(), queueChanged: vi.fn() } } as never;
 const makeService = () =>
 	new SponsorBlockService({

@@ -6,7 +6,6 @@ import { Interaction } from 'discord.js';
 @ApplyOptions<Listener.Options>({ event: Events.InteractionCreate })
 export class InteractionCreateDebug extends Listener {
 	public override run(interaction: Interaction) {
-		// 컴포넌트 사용 지표(`ns:`)는 모듈 꺼짐 검사를 통과한 것만 세야 해서 CoreInteractionCreate 라우터가 기록해요.
 		const user = `${interaction.user.username}[${cyan(interaction.user.id)}]`;
 		const guild = interaction.guild ? `${interaction.guild.name}[${cyan(interaction.guild.id)}]` : 'DM';
 

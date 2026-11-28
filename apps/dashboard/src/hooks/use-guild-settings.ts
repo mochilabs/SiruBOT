@@ -7,10 +7,8 @@ import { createApiFetcher, useGuildResource } from "@/lib/swr";
 import type { DiscordChannelSummary, DiscordRoleSummary } from "@/types/discord";
 import type { GuildSettings } from "@/types/settings";
 
-/** 설정 목록 fetcher — 401이면 세션 갱신 후 한 번만 재시도하는 공용 계약 (lib/swr) */
 const settingsFetcher = createApiFetcher<GuildSettings>("설정을 불러오지 못했어요.", { sessionRetry: true });
 
-/** 서버 일반 설정 조회 + 부분 저장 (SWR 캐시는 훅 간 공유돼요) */
 export function useGuildSettings(guildId: string, enabled = true) {
 	const { data, error, isLoading, mutate, guildUrl, redirectToLogin } = useGuildResource<GuildSettings>(guildId, "/settings", {
 		enabled,
@@ -29,7 +27,6 @@ export function useGuildSettings(guildId: string, enabled = true) {
 				});
 				if (!res.ok) {
 					const apiError = await toApiError(res, "설정을 저장하지 못했어요.");
-					// 세션 만료 — 실패할 재시도 버튼 대신 로그인으로 안내해요
 					if (apiError.status === 401) redirectToLogin();
 					throw apiError;
 				}
@@ -44,8 +41,7 @@ export function useGuildSettings(guildId: string, enabled = true) {
 	);
 
 	const reload = useCallback(() => {
-		// bound mutate()는 FETCH/PRELOAD 진행 요청 마커를 지우고 재검증해요 —
-		// dedupingInterval(SWRConfig 5000ms)로 실패 직후 "다시 시도"가 묵살되지 않게 해요.
+		// bound mutate()로 dedupingInterval 내 재시도 묵살 방지
 		void mutate();
 	}, [mutate]);
 
@@ -67,11 +63,7 @@ export function useGuildSettings(guildId: string, enabled = true) {
 	};
 }
 
-/**
- * 설정 패널용 폼 상태 — 로드 시 서버 값을 채우고, 수정 중에는
- * 백그라운드 재검증이 입력을 덮어쓰지 않게 dirty 리포트로 보호해요.
- * `mapSettings`는 모듈 수준 함수로 넘길 것(안정 참조).
- */
+/** mapSettings는 안정 참조(모듈 수준 함수)로 전달해야 함 */
 export function useSettingsForm<T extends Partial<GuildSettings>>(
 	guildId: string,
 	mapSettings: (settings: GuildSettings) => T,
@@ -168,7 +160,6 @@ export interface RolesPayload {
 const channelsFetcher = createApiFetcher<ChannelsPayload>("목록을 불러오지 못했어요.", { sessionRetry: true });
 const rolesFetcher = createApiFetcher<RolesPayload>("목록을 불러오지 못했어요.", { sessionRetry: true });
 
-/** Discord 채널 목록 — 조건부 키로 필요한 패널만 요청해요 */
 export function useGuildChannels(guildId: string, enabled = true) {
 	const { data, error, isLoading, mutate } = useGuildResource<ChannelsPayload>(guildId, "/channels", { enabled, fetcher: channelsFetcher });
 
@@ -176,12 +167,10 @@ export function useGuildChannels(guildId: string, enabled = true) {
 		channels: data?.channels ?? null,
 		isLoading,
 		error: error ? toError(error, "채널 목록을 불러오지 못했어요.") : null,
-		// dedupingInterval 우회: mutate 재검증은 진행 요청 마커를 삭제해 즉시 재요청돼요 (위 useGuildSettings 주석 참고)
 		reload: () => void mutate(),
 	};
 }
 
-/** Discord 역할 목록 */
 export function useGuildRoles(guildId: string, enabled = true) {
 	const { data, error, isLoading, mutate } = useGuildResource<RolesPayload>(guildId, "/roles", { enabled, fetcher: rolesFetcher });
 
@@ -189,7 +178,6 @@ export function useGuildRoles(guildId: string, enabled = true) {
 		roles: data?.roles ?? null,
 		isLoading,
 		error: error ? toError(error, "역할 목록을 불러오지 못했어요.") : null,
-		// dedupingInterval 우회: mutate 재검증은 진행 요청 마커를 삭제해 즉시 재요청돼요
 		reload: () => void mutate(),
 	};
 }

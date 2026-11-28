@@ -3,9 +3,6 @@ import { getLoggerSettings } from '@sirubot/utils';
 
 import { getAppLogger, resolveMinLevel } from './logger.ts';
 
-// resolveMinLevel은 packages/utils/src/logger.ts(getLoggerSettings)의 미러예요.
-// 미러 드리프트는 아래 "packages/utils logger 미러 동기화" describe가 잡아요.
-
 const originalLoglevel = process.env.LOGLEVEL;
 
 afterEach(() => {

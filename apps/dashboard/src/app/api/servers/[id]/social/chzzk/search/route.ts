@@ -14,7 +14,6 @@ const querySchema = z.object({
 
 const FALLBACK = "치지직 채널 검색에 실패했어요.";
 
-/** 치지직 채널 검색 — 관리자가 구독할 채널을 찾는 용도예요. notifier가 치지직 공개 검색 API를 대신 호출해요. */
 export const GET = createGuildApiHandler({
   role: "manage",
   rate: READ_RATE,

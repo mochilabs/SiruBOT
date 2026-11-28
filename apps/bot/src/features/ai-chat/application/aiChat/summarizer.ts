@@ -3,10 +3,8 @@ import { historyLine } from './historyStore.ts';
 import type { AiChatDeps } from './deps.ts';
 import type { ChatConfig, ChatMessage } from './types.ts';
 
-/** 롤링 요약이 쓰는 의존성 — 로거와 채널 기록 저장소예요 */
 type SummarizerDeps = Pick<AiChatDeps, 'logger' | 'history'>;
 
-// 롤링 요약
 const SUMMARY_SYSTEM_PROMPT = [
 	'당신은 대화 요약기예요. 주어진 기존 요약과 새 대화를 한국어 하나의 요약으로 통합해요.',
 	'규칙:',
@@ -16,11 +14,9 @@ const SUMMARY_SYSTEM_PROMPT = [
 	'- 새로운 사실이 없으면 기존 요약을 그대로 반복해요.'
 ].join('\n');
 
-/** 롤링 요약 — pending이 이 수 이상 쌓이면 백그라운드 요약 작업을 시작해요 */
 const SUMMARY_MIN_BATCH = 6;
 const SUMMARY_BATCH_SIZE = 12;
 
-/** 한 채널에 요약 작업이 동시에 하나만 돌게 해요 */
 const summaryJobs = new Set<string>();
 
 function buildSummaryPrompt(existing: string | null, batch: ChatMessage[]): string {
@@ -30,10 +26,6 @@ function buildSummaryPrompt(existing: string | null, batch: ChatMessage[]): stri
 	return parts.join('\n');
 }
 
-/**
- * 요약 대기가 쌓이면 백그라운드에서 오래된 대화를 요약으로 압축해요.
- * 응답을 지연시키지 않도록 agentLoop에서 fire-and-forget으로 호출해요.
- */
 export function scheduleSummary(deps: SummarizerDeps, channelId: string, config: ChatConfig): void {
 	if (summaryJobs.has(channelId)) return;
 	const state = deps.history.getStoredHistoryState(channelId);

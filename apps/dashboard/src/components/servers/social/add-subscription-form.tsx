@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ChevronDown, Loader2, Play, Radio, Search, Tv, X } from "lucide-react";
 
 import { ChannelSelect } from "@/components/discord/channel-select";
@@ -40,12 +40,10 @@ interface AddSubscriptionFormProps {
 const CHZZK_URL_ID = /chzzk\.naver\.com\/(?:live\/)?([a-f0-9]{32})/i;
 const CHZZK_RAW_ID = /^[a-f0-9]{32}$/i;
 
-/** 알림 구독 추가 폼 — 플랫폼 선택 → 채널 찾기 → 알림받을 채널 → 메시지 템플릿 순서로 진행해요. */
 export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProps) {
 	const toast = useToast();
 	const { channels } = useGuildChannels(guildId);
 	const { createSubscription, searchChzzk, fetchChzzkProfile, resolveYouTube, resolveTwitch } = useSocialAlerts(guildId);
-	// 웹훅 프로필 사진 폴백 미리보기용 — 서버(길드) 전용 → 전역 봇 프로필 사진 순서 (봇 프로필 설정과 동일)
 	const { profile: botProfile } = useBotProfile(guildId);
 
 	const [platform, setPlatform] = useState<SocialPlatform>("chzzk");
@@ -67,7 +65,6 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 		const input = keyword.trim();
 		if (!input) return;
 
-		// 링크·채널 ID를 붙여넣으면 프로필로 바로 확인하고, 아니면 검색으로 찾아요
 		const directId = CHZZK_URL_ID.exec(input)?.[1] ?? (CHZZK_RAW_ID.test(input) ? input : null);
 		if (directId) {
 			setLooking(true);
@@ -184,7 +181,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 
 	const canSubmit = Boolean(resolved && targetChannelId) && !saving;
 
-	const sourceStep = useMemo(() => {
+	const renderSourceStep = () => {
 		if (platform === "chzzk") {
 			return (
 				<div className="flex flex-col gap-2">
@@ -257,8 +254,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 				</Button>
 			</div>
 		);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [platform, keyword, sourceInput, chzzkResults, looking]);
+	};
 
 	const resetPlatform = (next: SocialPlatform) => {
 		setPlatform(next);
@@ -285,7 +281,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 			<ModePicker label="플랫폼" value={platform} options={PLATFORMS} onChange={resetPlatform} />
 
 			<div className="flex flex-col gap-2">
-				{sourceStep}
+				{renderSourceStep()}
 				{resolved ? (
 					<p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
 						선택한 채널:

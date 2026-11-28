@@ -4,9 +4,6 @@ import { useEffect, useRef } from "react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 
-/**
- * 마지막 스냅샷 이후 경과 보간 — 재생 중이면 position + 경과, 아니면 스냅샷 그대로.
- */
 export function interpolatedPositionMs(
   state: LivePlayerState,
   receivedAt: number,
@@ -17,19 +14,12 @@ export function interpolatedPositionMs(
   return Math.min(state.durationMs, state.positionMs + elapsed);
 }
 
-/** 진행률(0..1) — 스트림처럼 길이를 모르면 0이에요 */
 function positionRatio(state: LivePlayerState, receivedAt: number): number {
   if (state.durationMs <= 0) return 0;
   const positionMs = interpolatedPositionMs(state, receivedAt);
   return Math.min(1, Math.max(0, positionMs / state.durationMs));
 }
 
-/**
- * SSE 스냅샷(수 초 간격) 사이를 선형 보간해 매 프레임 채우는 진행바 —
- * rAF에서 style.width를 직접 써요(초당 1회 리렌더 + CSS transition 계단을 없애요).
- * 스냅샷이 갱신되면 receivedAt 기준이라 다음 프레임에 정확한 위치로 따라와요.
- * 일시정지면 interpolatedPositionMs가 스냅샷 위치를 그대로 돌려줘 그 자리에 고정돼요.
- */
 export function ProgressBar({
   state,
   receivedAt,
@@ -57,7 +47,6 @@ export function ProgressBar({
     return () => cancelAnimationFrame(raf);
   }, [isIndeterminate, state, receivedAt]);
 
-  // 라이브 스트림은 길이가 정해지지 않아 진행률을 그리지 않아요.
   if (isIndeterminate) {
     return <div className="h-2 w-full rounded-full bg-surface-1" />;
   }

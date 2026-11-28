@@ -135,7 +135,6 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>) {
 
 	await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
-	// 상품이나 마감이 빠졌으면 적어 준 옵션을 채워 둔 설정 패널을 열어요.
 	if (prize === null || endsAt === null) {
 		const state: GiveawaySetupState = {
 			...emptyGiveawaySetup(channelId),

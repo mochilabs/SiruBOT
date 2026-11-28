@@ -4,7 +4,6 @@ import type { AiTool } from './types.ts';
 
 const CATEGORY_HINT = 'facts: 이름·거주지·상황 등 사실 / preferences: 선호·취미·스타일 / commitments: 약속·미결 사항';
 
-/** AI 기억 도구를 만들어요 — 의존성은 deps로 받아요 */
 export function createMemoryTools(deps: Pick<AiToolDeps, 'aiMemory'>): AiTool[] {
 	const memorySaveTool: AiTool = {
 		name: 'memory_save',

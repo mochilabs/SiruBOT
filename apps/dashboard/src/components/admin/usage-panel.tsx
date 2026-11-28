@@ -14,7 +14,6 @@ import type { AdminUsageResponse } from "@/lib/usage-summary";
 
 const usageFetcher = createApiFetcher<AdminUsageResponse>("사용 지표를 불러오지 못했어요.");
 
-/** 재생 이벤트 유형 표시 이름 */
 const PLAYBACK_LABELS: Record<string, string> = {
 	track_start: "재생 시작",
 	track_error: "재생 오류",

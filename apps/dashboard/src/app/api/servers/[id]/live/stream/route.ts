@@ -3,12 +3,7 @@ import { NextResponse } from "next/server";
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { openDataApiStream } from "@/lib/data-api/client";
 
-/**
- * 실시간 상태 스트림 프록시 — data-api `GET /v1/player/:guildId/stream`(SSE)을
- * 인가 게이트 뒤에서 그대로 relay해요. 인가가 끝난 뒤엔 파이프라인만 유지하면
- * 서버 리소스를 거의 쓰지 않아요 — rate limit은 적용하지 않아요 (장기 연결). `rate: null`은
- * 의도된 면제예요 — 생략이 아니라 명시예요. 미설정/장애 모두 502로 통일 — 클라이언트가 폴링으로 폴백해요.
- */
+// 장기 SSE 연결이라 rate limit을 의도적으로 면제해요.
 export const GET = createGuildApiHandler({
   role: "member",
   rate: null,

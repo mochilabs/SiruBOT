@@ -3,12 +3,10 @@ import { Command } from '@sapphire/framework';
 import { pingView } from '../views/ping.ts';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
-/** ms → 표기 (정수, 하단 콤마 제거) */
 function ms(value: number): string {
 	return `${Math.round(value)}ms`;
 }
 
-/** 지연 수준 이모지 — 100ms 단계 */
 function latencyEmoji(value: number): string {
 	if (value < 0) return '⚪';
 	if (value < 50) return '🟢';
@@ -16,7 +14,6 @@ function latencyEmoji(value: number): string {
 	return '🔴';
 }
 
-/** 한 줄 지표 — `항목      값` 정렬 */
 function metricLine(emoji: string, label: string, value: string): string {
 	return `${emoji} **${label}**: \`${value}\``;
 }
@@ -42,7 +39,6 @@ export class PingCommand extends Command {
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
 		const deferStart = Date.now();
 		await interaction.deferReply();
-		// 유저 명령어 → 봇 응답까지 왕복 (interaction.createdTimestamp 기준)
 		const apiRoundTrip = Date.now() - interaction.createdTimestamp;
 		const deferOverhead = Date.now() - deferStart;
 
@@ -57,7 +53,6 @@ export class PingCommand extends Command {
 			const pings = shards.map((shard) => shard.ping).filter((ping) => ping >= 0);
 			const avgPing = pings.length > 0 ? pings.reduce((a, b) => a + b, 0) / pings.length : -1;
 			lines.push(metricLine(latencyEmoji(avgPing), '게이트웨이', pings.length > 0 ? ms(avgPing) : '측정 중...'));
-			// 다중 샤드면 샤드별 핑도
 			if (shards.length > 1) {
 				lines.push(`-# 샤드별: ${shards.map((shard) => `#${shard.id} ${shard.ping >= 0 ? ms(shard.ping) : 'N/A'}`).join(' · ')}`);
 			}
@@ -68,7 +63,6 @@ export class PingCommand extends Command {
 
 		const shardClient = this.container.shardClient;
 		if (shardClient?.getIdentity()) {
-			// heartbeat ACK 기반 RTT는 별도 노출이 없어 상태만 표시
 			const shardIds = shardClient.getIdentity()!.shardIds;
 			lines.push(metricLine('🟢', '샤드 매니저', `연결됨 (샤드 ${shardIds.join(', ')})`));
 		} else {

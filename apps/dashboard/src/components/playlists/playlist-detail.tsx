@@ -20,8 +20,6 @@ import { SkeletonLine } from "@/components/ui/skeleton";
 import { FAVORITES_PLAYLIST_NAME } from "@/lib/playlist-constants";
 import type { Playlist, Track } from "@/types/playlist";
 
-// 키보드 이동은 부모가 준 드래그 핸들러를 그대로 태워요: onDrop이 부모 상태의 draggedIdx를 읽어야 해서
-// onDragStart 호출과 onDrop 호출을 한 렌더씩 나눠야 해요 (재정렬 API는 페이지의 훅에만 있어요).
 const dragEventShim = {
 	preventDefault() {},
 	dataTransfer: { effectAllowed: "move" },
@@ -40,7 +38,6 @@ interface PlaylistDetailProps {
 	onOpenAddTrack: () => void;
 	onRemoveTrack: (position: number, title: string) => void;
 	draggedIdx: number | null;
-	/** 순서 변경 요청 진행 중 — 추가 이동은 잠시 막아요 */
 	reordering?: boolean;
 	onDragStart: (e: React.DragEvent, idx: number) => void;
 	onDragOver: (e: React.DragEvent) => void;
@@ -71,9 +68,7 @@ export function PlaylistDetail({
 	parentRef,
 	rowVirtualizer,
 }: PlaylistDetailProps) {
-	// 위/아래 이동: onDragStart가 부모의 draggedIdx를 세우면 다음 렌더에서 onDrop을 넘겨 재정렬을 요청해요.
 	const [pendingMove, setPendingMove] = useState<{ from: number; to: number } | null>(null);
-	// 터치(모바일) 길게 누르기 드래그 상태
 	const [touchDragIdx, setTouchDragIdx] = useState<number | null>(null);
 	const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 	const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -126,7 +121,6 @@ export function PlaylistDetail({
 		setPendingMove({ from, to });
 	};
 
-	/** 모바일: 길게 누르면 해당 행을 드래그 모드로 진입해요. */
 	const beginTouchDrag = (idx: number) => {
 		touchActiveRef.current = true;
 		setTouchDragIdx(idx);
@@ -149,7 +143,6 @@ export function PlaylistDetail({
 		const touch = e.touches[0];
 		if (!touch) return;
 		if (!touchActiveRef.current) {
-			// 아직 드래그 모드가 아니면 스크롤 제스처를 허용해요 (8px 임계값 초과 시 타이머 취소)
 			if (touchStartRef.current) {
 				const dy = Math.abs(touch.clientY - touchStartRef.current.clientY);
 				const dx = Math.abs(touch.clientX - touchStartRef.current.clientX);
@@ -160,7 +153,6 @@ export function PlaylistDetail({
 		const parent = parentRef.current;
 		if (!parent || touchDragIdx === null) return;
 		const rect = parent.getBoundingClientRect();
-		// 데스크톱 폭에서는 sticky 헤더가 목록 위를 차지해요
 		const headerHeight = headerRef.current?.offsetHeight ?? 0;
 		const offset = touch.clientY - rect.top + parent.scrollTop - headerHeight;
 		const item = rowVirtualizer.getVirtualItemForOffset(offset);
@@ -175,13 +167,11 @@ export function PlaylistDetail({
 		if (touchDragIdx !== null && dragOverIdx !== null && touchDragIdx !== dragOverIdx) {
 			moveTrack(touchDragIdx, dragOverIdx);
 		} else {
-			// 이동 없이 끝나도 onDragStart가 세운 부모의 draggedIdx를 해제해야 행이 흐려진 채 남지 않아요.
 			onDragEnd();
 		}
 		clearTouchDrag();
 	};
 
-	/** 스크롤 등으로 브라우저가 터치를 가져가면(cancel) 이동 없이 취소해요 */
 	const handleTouchCancel = () => {
 		if (!touchActiveRef.current) {
 			clearTouchTimer();
@@ -225,7 +215,6 @@ export function PlaylistDetail({
 		);
 	}
 
-	// 이미 불러온 곡 목록이 있으면 재검증 실패로 통째로 가리지 않아요
 	if (detailError && !activePlaylist) {
 		return (
 			<ErrorPanel
@@ -470,7 +459,6 @@ export function PlaylistDetail({
 							})}
 						</div>
 
-						{/* 흐린 표시는 opacity가 아니라 muted 토큰으로 해요. opacity-40이면 본문 대비가 2.3:1까지 내려가요 */}
 						{tracks.length > 0 && (
 							<div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs text-muted-foreground select-none">
 								<span>총 {tracks.length}곡이 담겨 있어요</span>

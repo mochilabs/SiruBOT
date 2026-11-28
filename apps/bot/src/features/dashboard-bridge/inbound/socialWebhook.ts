@@ -1,26 +1,11 @@
-/**
- * 소셜 알림 웹훅 생성 응답자 — 대시보드 소셜 알림 구독 추가 → notifier → Redis → 봇 수행.
- *
- * Discord 웹훅 생성은 Manage Webhooks 권한이 필요해요 — 대시보드 유저 토큰으로는 만들 수
- * 없고 봇 토큰으로만 가능해요. 구독 추가 시점에 이 응답자가 대상 채널에 웹훅을 딱 한 번
- * 만들고 {webhookId, webhookToken}을 응답해요 — notifier가 그걸 DB에 저장하고, 이후 알림
- * 전송은 봇을 거치지 않고 웹훅으로 곧바로 가요. 봇은 이 생성 순간에만 관여해요.
- *
- * - 이 프로세스가 보유하지 않은 길드면 조용히 무시해요 — 다른 레플리카가 응답해요.
- *   아무도 응답하지 않으면 요청자(notifier)가 타임아웃으로 처리해요.
- * - 실패(채널 없음·권한 부족·웹훅 한도)는 한국어 error 메시지로 응답해요 — 대시보드가 그대로 안내해요.
- * - 수신·서명·검증·길드 확인·응답 골격은 lib/redisResponder.ts가 맡아요.
- */
 import { DiscordAPIError } from 'discord.js';
 import { socialWebhookCreateRpc } from '@sirubot/utils';
 import { AppError } from '../../../lib/appError.ts';
 import { discordApiErrorText } from '../../../lib/discordErrorText.ts';
 import { createRedisResponder, type RedisBinding } from '../../../lib/redisResponder.ts';
 
-/** Discord API 오류 코드 — 웹훅 한도 */
 const DISCORD_MAX_WEBHOOKS = 220001;
 
-/** 처리 흐름의 실패를 한국어 안내로 바꿔요 — 사용자가 고칠 수 있는 행동별로 구분해요 */
 function toKoreanError(error: unknown): string {
 	if (error instanceof DiscordAPIError && error.code === DISCORD_MAX_WEBHOOKS) {
 		return `이 채널의 웹훅 한도(10개)가 가득 찼어요. 사용하지 않는 웹훅을 삭제한 뒤 다시 시도해 주세요.`;

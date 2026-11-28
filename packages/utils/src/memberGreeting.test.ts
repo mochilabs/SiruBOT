@@ -17,7 +17,6 @@ import {
 	validateGreetingConfig
 } from './memberGreeting.ts';
 
-/** v2 초창기에 저장됐던 모양 — layout·accentColor 필드가 없어요 */
 const LEGACY_CONFIG = {
 	version: 2,
 	enabled: true,
@@ -225,7 +224,6 @@ describe('레이어 움직임(animation)', () => {
 });
 
 describe('GIF 배경', () => {
-	/** 2프레임 GIF(각 100ms) 최소 바이트 */
 	const gif = (frames: number, delayCs = 10) => {
 		const out: number[] = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 4, 0, 4, 0, 0, 0, 0];
 		for (let i = 0; i < frames; i += 1) {
@@ -260,20 +258,15 @@ describe('GIF 배경', () => {
 
 	it('움직이는 GIF 배경이면 레이어 움직임이 없어도 애니메이션이에요', () => {
 		expect(hasGreetingAnimation(asImage(withBackground(gif(2))))).toBe(true);
-		// 프레임이 하나뿐인 GIF는 정지 이미지예요
 		expect(hasGreetingAnimation(asImage(withBackground(gif(1))))).toBe(false);
 		expect(hasGreetingAnimation(asImage(withBackground(null)))).toBe(false);
 	});
 
 	it('한 바퀴 길이는 GIF 한 바퀴의 정수배예요', () => {
-		// GIF 1초(10프레임 × 100ms)
 		const oneSecond = gif(10);
 		expect(greetingAnimationDurationMs(asImage(withBackground(oneSecond)))).toBe(1000);
-		// 레이어 주기 4초에 가장 가까운 배수(4바퀴)
 		expect(greetingAnimationDurationMs(asImage(withBackground(oneSecond, [pulse(4000)])))).toBe(4000);
-		// 상한 5초 안에서만 반복해요
 		expect(greetingAnimationDurationMs(asImage(withBackground(oneSecond, [pulse(5000)])))).toBe(5000);
-		// 레이어 주기가 GIF보다 짧으면 GIF 한 바퀴
 		expect(greetingAnimationDurationMs(asImage(withBackground(oneSecond, [pulse(500)])))).toBe(1000);
 	});
 
@@ -282,7 +275,7 @@ describe('GIF 배경', () => {
 	});
 });
 
-describe('텍스트 효과·아바타 옵션 (P-17)', () => {
+describe('텍스트 효과·아바타 옵션', () => {
 	const withLayers = (layers: unknown[]) => ({ ...DEFAULT_GREETINGS.welcome, image: { background: { presetId: 'rose', dataUri: null }, layers } });
 	const text = { id: 't', type: 'text', x: 50, y: 50, size: 30, color: '#ffffff', bold: false, align: 'center', text: 'a' };
 	const avatar = { id: 'a', type: 'avatar', x: 50, y: 50, size: 180, ringColor: '#ffffff' };
@@ -309,7 +302,6 @@ describe('텍스트 효과·아바타 옵션 (P-17)', () => {
 			gradient: { to: '#ff00ff', angle: 90 }
 		};
 		expect(ok(full)).toBe(true);
-		// null은 "끄기"예요 (shadow: null은 기본 그림자도 없애요)
 		expect(ok({ ...text, shadow: null, stroke: null, gradient: null })).toBe(true);
 	});
 

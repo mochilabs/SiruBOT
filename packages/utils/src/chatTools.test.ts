@@ -386,7 +386,6 @@ describe('enlargeTwitterPhoto·enlargeTwitterAvatar', () => {
 	});
 });
 
-// 실측 기반 fixture — api.fxtwitter.com/jack/status/20 (2026-10-19 라이브 응답)
 const JACK_STATUS_PAYLOAD = {
 	code: 200,
 	message: 'OK',

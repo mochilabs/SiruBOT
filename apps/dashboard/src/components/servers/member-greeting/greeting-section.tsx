@@ -29,12 +29,6 @@ import { GreetingImageEditCard } from "./greeting-image-edit-card";
 import { GreetingTemplateField } from "./greeting-template-field";
 import { GreetingTestPanel } from "./greeting-test-panel";
 
-/** 메시지 레이아웃 라벨 — Select의 값 표시와 옵션 목록이 같은 표를 써요 */
-/**
- * 봇 기본 강조색(#RRGGBB) — accentColor를 지정하지 않을 때 초기값으로 보여줘요.
- * 원본은 packages/utils constants.ts의 DEFAULT_COLOR_HEX인데 배럴 전용 export라 서브패스로
- * 가져올 수 없어 리터럴을 유지해요 — 봇 기본색이 바뀌면 같이 업데이트해요.
- */
 const DEFAULT_ACCENT_COLOR_HEX = "#ffdaff";
 
 const LAYOUT_LABELS: Record<GreetingLayout, string> = {
@@ -74,7 +68,6 @@ interface GreetingSectionProps {
   dirty: boolean;
   channels: DiscordChannelSummary[] | null;
   saving: boolean;
-  /** 테스트 전송이 없는 종류(생일 축하)는 비워 두면 테스트 패널을 숨겨요 */
   testPending?: boolean;
   testResult?: GreetingTestResult | null;
   onPatch: (next: GreetingConfig) => void;
@@ -82,7 +75,6 @@ interface GreetingSectionProps {
   onTest?: () => Promise<void>;
 }
 
-/** 인사 한 종류(환영/작별)의 설정 섹션 — 탭 콘텐츠로 마운트 유지돼요 */
 export function GreetingSection({
   asTabContent,
   guildId,
@@ -102,7 +94,6 @@ export function GreetingSection({
 }: GreetingSectionProps) {
   const meta = SECTION_META[kind];
 
-  // 테스트 전송은 봇이 읽을 "저장된 설정"으로 실행돼요 — 편집 중인 내용은 저장 후 테스트해요.
   const testReady = saved.enabled && saved.channelId !== null;
 
   const handleEnabledToggle = (checked: boolean) => {

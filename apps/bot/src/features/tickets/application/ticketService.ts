@@ -6,14 +6,10 @@ import { saveTicketTranscript, type UploadObject } from './ticketTranscript.ts';
 import type { Stoppable } from '../../../lib/lifecycle.ts';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 
-/** 티켓 마감 안내 후 채널을 지우기까지의 유예(ms) */
 const CHANNEL_DELETE_DELAY_MS = 5000;
 
-/** 티켓 채널에 직접 올리는 메시지를 만드는 포트 — 실제 구현은 features/tickets/discord/ticketMessages.ts예요. */
 export interface TicketMessagePort {
-	/** 새 티켓 채널 첫 메시지(환영·관리 버튼) */
 	welcome(ticket: Ticket): MessageCreateOptions;
-	/** 텍스트 안내 한 블록(Components V2). 멘션 억제 같은 전송 옵션은 서비스가 덧붙여요. */
 	notice(message: string): MessageCreateOptions;
 }
 
@@ -21,13 +17,11 @@ export interface TicketServiceDeps {
 	db: PrismaClient;
 	logger: AppLogger;
 	messages: TicketMessagePort;
-	/** 티켓 대화 기록 업로드 (data-api storage) */
 	uploadObject: UploadObject;
 }
 
 export class TicketService implements Stoppable {
 	public readonly name = '티켓 채널 정리 예약';
-	/** 마감됐지만 아직 지우지 않은 채널의 예약 삭제 — 종료 때 stop()이 남은 삭제를 지금 실행해요 */
 	private readonly pendingChannelDeletes = new Map<string, { timer: ReturnType<typeof setTimeout>; run: () => Promise<void> }>();
 	private stopped = false;
 
@@ -37,10 +31,7 @@ export class TicketService implements Stoppable {
 		return this.deps.db;
 	}
 
-	/**
-	 * 마감된 티켓 채널의 삭제를 유예 시간 뒤로 예약해요. DB는 이미 마감 상태라 예약이 사라지면 채널만 고아로 남아요 —
-	 * stop()이 남은 삭제를 기다리지 않고 지금 실행하고, 종료 뒤에 마감된 티켓은 유예 없이 바로 지워요.
-	 */
+	/** DB는 이미 마감 상태라 종료 시 stop()이 남은 삭제를 즉시 실행해 고아 채널을 막아요. */
 	public scheduleChannelDelete(channelId: string, run: () => Promise<void>): void {
 		if (this.stopped) {
 			void run();
@@ -67,10 +58,6 @@ export class TicketService implements Stoppable {
 		});
 	}
 
-	/**
-	 * 유저가 담당자(스태프) 역할을 가지고 있는지 확인해요.
-	 * 서버 관리자(Administrator) 또는 ManageChannels 권한을 가진 유저도 스태프로 인정해요.
-	 */
 	public async isStaff(member: GuildMember, config: { supportRoleIds: string[] } | null): Promise<boolean> {
 		if (member.permissions.has(PermissionFlagsBits.Administrator) || member.permissions.has(PermissionFlagsBits.ManageChannels)) {
 			return true;
@@ -79,9 +66,6 @@ export class TicketService implements Stoppable {
 		return config.supportRoleIds.some((roleId) => member.roles.cache.has(roleId));
 	}
 
-	/**
-	 * 신규 티켓 생성
-	 */
 	public async createTicket(
 		guild: Guild,
 		member: GuildMember
@@ -91,7 +75,6 @@ export class TicketService implements Stoppable {
 			return { ok: false, reason: '이 서버에서는 티켓 기능이 비활성화되어 있어요.' };
 		}
 
-		// 유저 동시 오픈 티켓 수 제한 검사
 		const openCount = await this.db.ticket.count({
 			where: {
 				guildId: guild.id,
@@ -107,11 +90,6 @@ export class TicketService implements Stoppable {
 			};
 		}
 
-		// 채널 생성에 필요한 권한 오버라이트 구성
-		// 1. @everyone: ViewChannel Deny
-		// 2. 봇 본인: ViewChannel, SendMessages, ManageChannels, EmbedLinks, AttachFiles Allow
-		// 3. 신청 유저: ViewChannel, SendMessages, AttachFiles, ReadMessageHistory Allow
-		// 4. 담당자 역할군: ViewChannel, SendMessages, AttachFiles, ReadMessageHistory Allow
 		const permissionOverwrites = [
 			{
 				id: guild.roles.everyone.id,

@@ -18,15 +18,6 @@ import { truncateText } from '../../../../lib/text.ts';
 import type { GuildService } from '../../../../services/guildService.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
-/**
- * /tts 설정 패널(Components V2) 뷰.
- * customId는 `features/tts/discord/customIds.ts`의 `ttsId`로 만들어요.
- * 상호작용은 `features/tts/discord/interaction-handlers/ttsPanelButton.ts`(버튼),
- * `ttsPanelSelect.ts`(음성·위치 셀렉트)가 파싱한다.
- * 패널 응답은 전부 ephemeral이라 상호작용은 작성자만 가능하다.
- */
-
-/** 음성 목록 언어 선택지 — siru_tts `/v1/voices?lang=`에 그대로 넘기는 코드 */
 export const TTS_PANEL_LANGUAGES: ReadonlyArray<{ code: string; label: string }> = [
 	{ code: 'ko', label: '한국어' },
 	{ code: 'ja', label: '일본어' },
@@ -43,19 +34,14 @@ export function normalizePanelLang(value: string | null | undefined): string {
 	return TTS_PANEL_LANGUAGES.some((language) => language.code === value) ? (value as string) : TTS_PANEL_DEFAULT_LANG;
 }
 
-/** 셀렉트에서 "기본 음성(preset.voice = null)"을 나타내는 값. 실제 음성 id와 겹치지 않도록 밑줄로 감싼다. */
 export const TTS_VOICE_DEFAULT_VALUE = '__default__';
 
-/** 셀렉트 옵션 최대 개수(Discord 한도). 기본 음성 + 카탈로그 + 저장된 음성 표시를 감안해 카탈로그는 24개까지만 넣는다. */
 const TTS_VOICE_OPTION_LIMIT = 25;
 
 export interface TtsPanelProps {
 	preset: TtsUserPreset;
-	/** `ttsService.listVoices()` 첫 페이지. 비어 있으면 셀렉트에 기본 음성만 보인다. */
 	voices: TtsVoice[];
-	/** SIRU_TTS_* 설정 여부. 꺼져 있으면 준비 안내를 붙인다. */
 	serviceReady: boolean;
-	/** 음성 목록에 보여주는 언어 코드 */
 	lang: string;
 }
 

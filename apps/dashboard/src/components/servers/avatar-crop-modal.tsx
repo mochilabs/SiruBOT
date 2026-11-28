@@ -18,13 +18,11 @@ import { useToast } from "@/components/ui/toast";
 const MAX_ZOOM = 3;
 
 interface ShapeSpec {
-	viewportWidth: number; // 크로프 뷰포트 크기(CSS px)
+	viewportWidth: number;
 	viewportHeight: number;
-	outputWidth: number; // 저장 이미지 크기(px)
+	outputWidth: number;
 	outputHeight: number;
-	/** 뷰포트 자리 마스크 클래스 — 아바타는 원형, 배너는 둥근 사각형이에요 */
 	maskClass: string;
-	/** 뷰포트 자리 클래스 */
 	viewportClass: string;
 	title: string;
 	outputName: string;
@@ -42,8 +40,6 @@ const SHAPES: Record<CropShape, ShapeSpec> = {
 		outputName: "avatar.png",
 	},
 	banner: {
-		// Discord 멤버 배너 비율 16:5 — 논리 뷰포트 480×150, 저장 960×300이에요.
-		// 뷰포트는 aspect로 잠가 좁은 화면에서도 종횡비가 유지돼요 (포인터 좌표는 displayScale로 환산).
 		viewportWidth: 480,
 		viewportHeight: 150,
 		outputWidth: 960,
@@ -57,7 +53,6 @@ const SHAPES: Record<CropShape, ShapeSpec> = {
 
 export type CropShape = "avatar" | "banner";
 
-/** 뷰포트 안으로 고정 — 이미지 언저리가 보이면 안 돼요 */
 function clampOffset(viewport: number, displayed: number, offset: number): number {
 	if (displayed <= viewport) return (viewport - displayed) / 2;
 	return Math.min(0, Math.max(viewport - displayed, offset));
@@ -65,13 +60,11 @@ function clampOffset(viewport: number, displayed: number, offset: number): numbe
 
 interface AvatarCropModalProps {
 	source: File | null;
-	/** 아바타(정사각형·원형 마스크) 또는 배너(16:5) — 배너는 뷰포트가 좁은 화면에서 가로로 꽉 차요 */
 	shape: CropShape;
 	onClose: () => void;
 	onApply: (file: File) => void;
 }
 
-/** 봇 프로필 이미지 선택 후 크롭하는 모달 — 아바타는 원형, 배너는 16:5 사각형 마스크예요 */
 export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropModalProps) {
 	const toast = useToast();
 	const spec = SHAPES[shape];
@@ -93,13 +86,11 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 		return { scale, offset, displayed };
 	}, [fitScale, zoom, offset]);
 
-	/** 표시 배율 — 뷰포트가 max-w로 축소된 폭 ÷ 논리 폭. 포인터 좌표를 논리 px로 되돌릴 때 써요. */
 	const displayScale = useCallback(() => {
 		const rect = viewportRef.current?.getBoundingClientRect();
 		return rect && rect.width > 0 ? rect.width / spec.viewportWidth : 1;
 	}, [spec]);
 
-	// 파일을 img로 적재해요 — 로드 실패 시 모달 오류로 끝내요.
 	useEffect(() => {
 		if (!source) return;
 		const url = URL.createObjectURL(source);
@@ -121,7 +112,6 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [source]);
 
-	// 그리기 — 캔버스에 표시 배율·오프셋 그대로 그려요 (DPR로 선명하게).
 	useEffect(() => {
 		const canvas = canvasRef.current;
 		const image = imageRef.current;
@@ -145,7 +135,6 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 			if (!image || !rect) return;
 			const nextZoom = Math.min(MAX_ZOOM, Math.max(1, zoom * (event.deltaY < 0 ? 1.1 : 0.9)));
 			if (nextZoom === zoom) return;
-			// 커서 지점의 이미지 좌표가 그대로 머무는 앵커 줌 (표시 좌표 → 논리 좌표 환산)
 			const scale = rect.width > 0 ? rect.width / spec.viewportWidth : 1;
 			const cursorX = (event.clientX - rect.left) / scale;
 			const cursorY = (event.clientY - rect.top) / scale;
@@ -179,7 +168,6 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 	const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
 		const drag = dragRef.current;
 		if (!drag || drag.pointerId !== event.pointerId || !crop) return;
-		// 화면 배율로 드래그 변위를 논리 px로 환산해요 — 축소된 뷰포트에서도 잡은 지점이 손에 붙어요.
 		const scale = displayScale();
 		setOffset({
 			x: clampOffset(spec.viewportWidth, crop.displayed.width, offset.x + (event.clientX - drag.lastX) / scale),
@@ -218,7 +206,6 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 			toast.error("이미지를 잘라내지 못했어요.", "잠시 후 다시 시도해 주세요.");
 			return;
 		}
-		// CSS px → 원본 px 비율 — 뷰포트 영역만 원본에서 골라내요.
 		const ratio = 1 / crop.scale;
 		ctx.imageSmoothingQuality = "high";
 		ctx.drawImage(
@@ -284,11 +271,9 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 								ref={canvasRef}
 								className="block w-full h-full"
 							/>
-							{/* 아바타 원형(또는 배너 사각) 마스크 — 뷰포트에 딱 맞춘 inset-0, 축소돼도 어긋나지 않아요 */}
 							<div className="pointer-events-none absolute inset-0">
 								{/* 마스크 div 자체는 w-full h-full이어야 9999px 확산 shadow가 뷰포트 "바깥"만 덮어요 —
 								    크기가 0이면 shadow가 크롭 영역까지 전부 덮어 이미지가 어둡게 보여요. */}
-								{/* 바깥 스크림은 다이얼로그 백드롭(bg-black/60)과 같은 농도의 예외예요 — 토큰 대체 불가(box-shadow 확장) */}
 								<div className={`h-full w-full shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-1 ring-border ${spec.maskClass}`} />
 							</div>
 						</div>
@@ -328,7 +313,6 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 	);
 }
 
-/** 크로프 전 검증 — GIF는 애니메이션이 살아있어야 해서 자르지 않고 통과해요 */
 export function shouldSkipCrop(file: File): boolean {
 	return file.type === "image/gif";
 }

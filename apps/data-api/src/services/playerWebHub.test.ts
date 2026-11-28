@@ -16,10 +16,6 @@ const TRACK = {
 	isStream: false
 };
 
-/**
- * 허브의 requestPlayerWeb()과 같은 조립을 테스트용으로 만들어요 —
- * 메타데이터를 register 전에 심고, 상관은 hub.correlate가 담당해요.
- */
 function makeRegistry(capacity = 10) {
 	const pendingMeta = new Map<string, PlayerWebPendingMeta>();
 	const pending = new PendingRequestPool<PlayerWebResult>({
@@ -56,7 +52,6 @@ describe('playerWebHub pending correlation', () => {
 		const first = registry.register(REQUEST_ID, 'guild-1', 'search', 10_000);
 		expect(registry.size).toBe(1);
 
-		// 상한 초과 — 등록되지 않고 즉시 실패해요 (대기 요청 누수 방지)
 		await expect(registry.register(OTHER_REQUEST_ID, 'guild-1', 'search', 10_000)).resolves.toEqual({
 			ok: false,
 			reason: 'timeout',
@@ -64,7 +59,6 @@ describe('playerWebHub pending correlation', () => {
 		});
 		expect(registry.size).toBe(1);
 
-		// 첫 요청은 여전히 유효해요
 		expect(registry.handleRaw(JSON.stringify({ requestId: REQUEST_ID, guildId: 'guild-1', kind: 'search', tracks: [TRACK] }))).toBe('resolved');
 		await expect(first).resolves.toEqual({ ok: true, tracks: [TRACK] });
 	});
@@ -76,7 +70,6 @@ describe('playerWebHub pending correlation', () => {
 		const assertion = expect(promise).resolves.toEqual({ ok: false, reason: 'timeout', message: null });
 		await vi.advanceTimersByTimeAsync(12_000);
 		await assertion;
-		// 타임아웃 뒤엔 pending에서 제거됨
 		expect(registry.size).toBe(0);
 	});
 
@@ -144,7 +137,6 @@ describe('playerWebHub pending correlation', () => {
 		registry.register(REQUEST_ID, 'guild-1', 'search', 10_000);
 
 		expect(registry.handleRaw('not-json')).toBe('malformed');
-		// 스키마 위반 — kind 누락
 		expect(registry.handleRaw(JSON.stringify({ requestId: REQUEST_ID, guildId: 'guild-1' }))).toBe('malformed');
 		expect(registry.size).toBe(1);
 	});
@@ -171,7 +163,6 @@ describe('playerWebHub pending correlation', () => {
 		expect(registry.handleRaw(JSON.stringify({ requestId: REQUEST_ID, guildId: 'guild-1', kind: 'voice-context', voice: VOICE_CONTEXT }))).toBe(
 			'resolved'
 		);
-		// 이미 해소된 requestId — 중복 응답은 무시해요
 		expect(registry.handleRaw(JSON.stringify({ requestId: REQUEST_ID, guildId: 'guild-1', kind: 'voice-context', voice: VOICE_CONTEXT }))).toBe(
 			'unmatched'
 		);

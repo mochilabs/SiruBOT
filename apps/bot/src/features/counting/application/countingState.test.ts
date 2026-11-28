@@ -16,18 +16,15 @@ const deps = {
 
 import { CountingStateStore, countingStateKey } from './countingState.ts';
 
-/** 예약된 write-behind flush가 돌아갈 때까지 한 틱 기다려요 */
 const flushTick = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 let owner: CountingStateStore;
 
 beforeEach(async () => {
-	// 이전 테스트의 예약된 flush가 새 테스트의 호출 기록을 더럽히지 않게 비워요
 	await flushTick();
 	vi.resetAllMocks();
-	// 테스트마다 새 상태 소유자를 만들어 길드 상태가 새지 않게 해요
 	owner = new CountingStateStore(deps);
-	mocks.getCacheHashFields.mockResolvedValue(null);
+	mocks.getCacheHashFields.mockResolvedValue({});
 	mocks.setCacheHashFields.mockResolvedValue(undefined);
 	mocks.deleteCacheValue.mockResolvedValue(undefined);
 });
@@ -37,9 +34,7 @@ describe('countingState write-behind', () => {
 		owner.save('wb-basic', { current: 1, lastUserId: 'u1', best: 1 });
 		owner.save('wb-basic', { current: 2, lastUserId: 'u2', best: 2 });
 
-		// hot path는 Redis 왕복을 기다리지 않아요
 		expect(mocks.setCacheHashFields).not.toHaveBeenCalled();
-		// 메모리는 이미 최신이에요
 		expect(await owner.load('wb-basic')).toEqual({ current: 2, lastUserId: 'u2', best: 2 });
 
 		await flushTick();
@@ -55,7 +50,6 @@ describe('countingState write-behind', () => {
 		mocks.setCacheHashFields.mockRejectedValueOnce(new Error('redis down'));
 
 		owner.save('wb-flaky', { current: 1, lastUserId: 'u1', best: 1 });
-		// 재시도하지 않고 실패를 조용히 흘려보내요 (메모리가 최신이라 다음 저장이 덮어써요)
 		await flushTick();
 		expect(mocks.setCacheHashFields).toHaveBeenCalledTimes(1);
 
@@ -99,7 +93,6 @@ describe('CountingStateStore 수명주기', () => {
 		expect(mocks.setCacheHashFields).toHaveBeenCalledTimes(1);
 		expect(mocks.setCacheHashFields).toHaveBeenCalledWith(countingStateKey('stop-flush'), { current: '3', lastUserId: 'u3', best: '3' });
 
-		// 뒤늦게 도는 microtask가 같은 상태를 다시 쓰지 않아요
 		await flushTick();
 		expect(mocks.setCacheHashFields).toHaveBeenCalledTimes(1);
 	});

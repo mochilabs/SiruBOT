@@ -11,10 +11,8 @@ const REPEAT_MODE_EMOJI_NAMES: Record<RepeatMode, AppEmojiFallbackKey> = {
 	queue: 'repeat'
 } as const;
 
-/** repeat 모드 표기 이모지 — 컨트롤러 버튼과 뷰 텍스트가 함께 써요 */
 export const repeatEmoji = (mode: RepeatMode) => emoji(REPEAT_MODE_EMOJI_NAMES[mode]);
 
-/** 컨트롤러 반복 버튼을 눌렀을 때 바뀔 모드 — 끄기 → 전체 곡 → 한 곡 → 끄기 순으로 돌아요 */
 const NEXT_REPEAT_MODE: Record<RepeatMode, RepeatMode> = {
 	off: 'queue',
 	queue: 'track',

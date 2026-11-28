@@ -27,7 +27,6 @@ export function PanelHeader({
   description: string;
   action?: ReactNode;
 }) {
-  // lg 미만에서는 제목이 기능 전환 버튼을 겸해요 (상단 막대와 같은 바텀시트를 열어요).
   const switcher = useFeatureSwitcher();
   const headerRef = useRef<HTMLElement>(null);
   useRegisterPanelHeader(headerRef);
@@ -66,7 +65,6 @@ export function PanelHeader({
 
 export { InfoBox, WarningBox };
 
-/** 경고 박스 안 쓰는 공용 재시도 링크 — 모든 설정 패널이 같은 형태로 다시 시도해요 */
 export function RetryLink({ onRetry, className }: { onRetry: () => void; className?: string }) {
   return (
     <button
@@ -79,7 +77,6 @@ export function RetryLink({ onRetry, className }: { onRetry: () => void; classNa
   );
 }
 
-/** 채널 목록 로드 실패 공용 안내 — useGuildChannels를 쓰는 설정 패널이 같이 써요 */
 export function ChannelListError({ error, onRetry }: { error: ApiError; onRetry: () => void }) {
   return (
     <WarningBox>
@@ -89,11 +86,7 @@ export function ChannelListError({ error, onRetry }: { error: ApiError; onRetry:
   );
 }
 
-/**
- * 설정 패널 로딩 중 — 라우트 loading.tsx와 같은 모양(PanelHeader 아이콘+제목, 2단 필드 그리드)이에요.
- * 스켈레톤이 실제 패널과 자리를 공유해야 탭 전환·최초 진입에서 이중 레이아웃 시프트가 없어요.
- */
-export function PanelLoading({ label, decorative = false }: { label: string; /** 이미 다른 곳에서 로딩을 알리는 자리(라우트 loading·dynamic fallback)라 스크린리더에 숨겨요 */ decorative?: boolean }) {
+export function PanelLoading({ label, decorative = false }: { label: string; decorative?: boolean }) {
   return (
     <Card padding="lg" {...(decorative ? { "aria-hidden": true } : { role: "status", "aria-label": label })}>
       <div className="space-y-6">
@@ -118,7 +111,6 @@ export function PanelLoading({ label, decorative = false }: { label: string; /**
   );
 }
 
-/** 모드 선택 카드(radiogroup): AI 설정·채팅 유틸 패널이 같은 마크업을 써요 */
 export interface ModeCardOption<T extends string = string> {
   value: T;
   label: string;
@@ -172,7 +164,6 @@ export function ModePicker<T extends string>({
   );
 }
 
-/** 닫은 일시 장애 안내 기록 키 — 같은 페이지(같은 길드)·같은 상태 코드 단위로 세션 동안 유지돼요 */
 function noticeStorageKey(pathname: string, code: number): string {
   return `siru:error-note:${pathname}:${code}`;
 }
@@ -191,7 +182,6 @@ function writeNoticeDismissed(key: string): void {
   try {
     window.sessionStorage.setItem(key, "1");
   } catch {
-    // 스토리지 차단 시 닫기가 세션에만 유지되지 않아요 — 기본 동작으로 계속해요
   }
 }
 
@@ -211,7 +201,6 @@ export function PanelError({
   }, [storageKey]);
 
   if (error.status === 401) {
-    // 세션 만료 — 재시도 대신 로그인 페이지로 안내해요
     return (
       <Card padding="lg" className="gap-3">
         <p className="flex items-center gap-2 text-sm text-destructive">
@@ -239,7 +228,6 @@ export function PanelError({
 
   if (error.retryable) {
     if (dismissed) {
-      // 닫은 뒤에도 상태는 조용하게 남겨요 — 원인과 다음 행동을 숨기지 않아요
       return (
         <p className="text-xs text-muted-foreground">
           {error.message}{" "}
@@ -248,7 +236,6 @@ export function PanelError({
       );
     }
 
-    // Discord 일시 장애 등 재시도 가능한 오류 — 화면을 가리는 배너 대신 닫을 수 있는 인라인 안내
     return (
       <div
         role="status"
@@ -272,7 +259,6 @@ export function PanelError({
     );
   }
 
-  // 권한 없음(403) 등 재시도로 해결되지 않는 안내 — 명확한 카드로 유지해요
   return (
     <Card padding="lg" className="gap-3">
       <p className="flex items-center gap-2 text-sm text-destructive">
@@ -283,7 +269,6 @@ export function PanelError({
   );
 }
 
-/** 저장 결과 — true/false는 성공/실패, undefined는 결과를 알리지 않는 패널(저장 뒤 dirty로 판단해요) */
 type SaveResult = boolean | void;
 
 const dirtySaveBars = new Map<string, { dirty: boolean; active: boolean; save: () => Promise<SaveResult> }>();
@@ -324,16 +309,11 @@ export function hasUnsavedActiveSettings(): boolean {
   return [...dirtySaveBars.values()].some((entry) => entry.dirty && entry.active);
 }
 
-/**
- * 지금 보이는 패널의 저장하지 않은 변경을 모두 저장해요. 패널 저장 핸들러가 성공 여부(boolean)를 돌려주면
- * 그대로 쓰고, 알리지 않는 패널만 저장 뒤에도 변경이 남아 있는지로 판단해요.
- */
 export async function saveActiveSettings(): Promise<boolean> {
   const entries = [...dirtySaveBars.values()].filter((entry) => entry.dirty && entry.active);
   const results = await Promise.all(entries.map((entry) => entry.save()));
   if (results.some((result) => result === false)) return false;
   if (results.every((result) => result === true)) return true;
-  // 결과를 알리지 않는 패널은 dirty 상태가 렌더·이펙트를 거쳐 갱신되므로 한 틱 기다려요
   await new Promise((resolve) => setTimeout(resolve, 60));
   return !hasUnsavedActiveSettings();
 }
@@ -355,7 +335,6 @@ export function useHasUnsavedActiveSettings(): boolean {
 
 let discardHandler: (() => void) | null = null;
 
-/** 저장 바의 "취소"가 부르는 폐기 동작 — 대시보드 셸이 현재 탭 패널을 새로 마운트하는 함수를 등록해요 */
 export function registerSettingsDiscardHandler(handler: () => void): () => void {
   discardHandler = handler;
   return () => {
@@ -374,7 +353,6 @@ export function SaveBar({
   dirty: boolean;
   saving: boolean;
   onSave: () => SaveResult | Promise<SaveResult>;
-  /** 변경 취소 — 넘기지 않으면 대시보드 셸이 등록한 폐기 동작(패널 새로 마운트)을 써요 */
   onDiscard?: () => void;
   children?: ReactNode;
   active?: boolean;
@@ -395,7 +373,6 @@ export function SaveBar({
   }, []);
   const savingRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
-  // 섬의 좌표는 화면에 고정된 앵커에서 읽어요. 높이는 여기 넣지 않아요.
   // 섬은 fixed라 본문을 밀지 않고, 앵커에 높이를 예약하면 설정 패널이 갑자기 커져요.
   const [geometry, setGeometry] = useState({ left: 16, width: 0 });
   const visible = active && (dirty || saving || submitting);

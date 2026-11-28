@@ -5,17 +5,12 @@ import { CirclePlay, Radio, Tv } from "lucide-react";
 
 import { motionSlow } from "@/components/motion/durations";
 
-/** 알림 한 건 — 예시 채널 이름이라 실제 방송인과 무관해요 */
 const ALERTS = [
 	{ icon: CirclePlay, platform: "YouTube", title: "새 영상이 올라왔어요", detail: "봄 산책 브이로그 #12", live: false },
 	{ icon: Radio, platform: "Twitch", title: "방송을 시작했어요", detail: "오늘은 느긋하게 퍼즐 게임", live: true },
 	{ icon: Tv, platform: "Chzzk", title: "방송을 시작했어요", detail: "저녁 수다 방송", live: true }
 ] as const;
 
-/**
- * SNS 알림 프리뷰 — notifier가 YouTube·Twitch·Chzzk를 확인하다 새 소식이 생기면 웹훅으로 채널에 보내요.
- * 카드는 위에서부터 클립 와이프로 차례로 열려요. 웹훅 연결은 대시보드에서 해요.
- */
 export function SocialAlertPreview() {
 	const shouldReduce = useReducedMotion();
 	return (

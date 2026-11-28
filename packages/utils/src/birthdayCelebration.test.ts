@@ -20,7 +20,6 @@ import {
 } from './birthdayCelebration.ts';
 import { validateGreetingConfig } from './memberGreeting.ts';
 
-/** KST "YYYY-MM-DD HH:mm"을 UTC Date로 — 테스트 가독성용 */
 const kst = (text: string) => new Date(`${text.replace(' ', 'T')}:00+09:00`);
 
 describe('KST 날짜', () => {
@@ -82,7 +81,6 @@ describe('보내는 시각', () => {
 	});
 
 	it('KST 자정 부근 UTC 날짜가 달라도 KST 기준으로 계산해요', () => {
-		// UTC로는 11/21 16:00이지만 KST로는 11/22 01:00
 		expect(nextSendAt(new Date('2026-11-21T16:00:00Z'), '09:00')).toEqual(kst('2026-11-22 09:00'));
 	});
 
@@ -120,7 +118,6 @@ describe('켜는 날과 중복 방지', () => {
 		expect(nextActiveFrom({ enabled: false, activeFrom: null }, true, now)).toBe('2026-11-23');
 		expect(nextActiveFrom({ enabled: true, activeFrom: '2026-11-01' }, true, now)).toBe('2026-11-01');
 		expect(nextActiveFrom({ enabled: true, activeFrom: '2026-11-01' }, false, now)).toBeNull();
-		// 껐다가 다시 켜면 그 다음 날부터
 		expect(nextActiveFrom({ enabled: false, activeFrom: null }, true, kst('2026-12-01 08:00'))).toBe('2026-12-02');
 	});
 });

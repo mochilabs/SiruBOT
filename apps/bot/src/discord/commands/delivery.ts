@@ -73,7 +73,6 @@ export class DeliveryCommand extends Command {
 
 	public override async autocompleteRun(interaction: AutocompleteInteraction) {
 		const focused = interaction.options.getFocused();
-		// 조회 실패(게이트웨이 미설정·프로바이더 장애)면 빈 목록 — 자유 입력은 그대로 유지돼요
 		const carriers = await searchDeliveryCarriers(focused).catch(() => []);
 		await interaction.respond(
 			carriers.slice(0, 25).map((carrier) => ({

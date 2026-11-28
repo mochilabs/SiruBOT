@@ -4,7 +4,6 @@ import type { AiTool } from './types.ts';
 
 export { stripTags };
 
-/** 웹 검색 도구를 만들어요 — 검색 설정은 deps로 받아요 */
 export function createWebSearchTool(deps: Pick<AiToolDeps, 'getSearchConfig'>): AiTool {
 	return {
 		name: 'web_search',

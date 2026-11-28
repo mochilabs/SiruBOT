@@ -6,7 +6,6 @@ import { getConfig } from '../../../lib/config.ts';
 import { notice } from '../../../lib/notice.ts';
 import type { WrappedCardRequest } from '../../../services/dataApiClient.ts';
 
-/** Wrapped 카드 시험용 개발 명령어 — 개발 길드에서만 등록되고 봇 소유자만 쓸 수 있어요. 정식 공개 전 렌더 결과를 확인하는 용도예요. */
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'wrapped',
@@ -52,7 +51,6 @@ export class WrappedCommand extends Command {
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-		// 이미지는 결과를 같이 볼 수 있게 공개로 보내요 (개발 길드·소유자 전용이라 노출 범위가 좁아요).
 		await interaction.deferReply();
 
 		const period = (interaction.options.getString('period') ?? 'month') as WrappedCardRequest['period'];

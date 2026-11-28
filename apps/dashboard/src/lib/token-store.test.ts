@@ -1,5 +1,3 @@
-// token-store 회귀 계약 — refresh 레이스·Redis 뮤텍스·낙관적 version 잠금을 잠가요.
-// DB·Discord·Redis는 전부 목으로 대체하고 AUTH_SECRET만 실제 env로 줘요.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/db", () => ({
@@ -33,7 +31,6 @@ import { decryptToken, encryptToken, ensureFreshToken, readTokenSet } from "./to
 
 const USER = "user-token-store";
 
-/** DB 행 모형 — 실제 encryptToken으로 감싸 readTokenSet 복호 경로까지 검증해요 */
 function tokenRow(opts: { version: number; expiresAtMs: number; accessToken?: string; refreshToken?: string }) {
 	return {
 		userId: USER,
@@ -115,7 +112,6 @@ describe("ensureFreshToken", () => {
 			expiresAtMs: Date.now() + 3_600_000,
 		});
 		expect(result).toMatchObject({ status: "ok", accessToken: "access-legacy" });
-		// 백필은 기존 행을 덮어쓰지 않는 no-op upsert 예요
 		expect(db.userToken.upsert).toHaveBeenCalledWith(
 			expect.objectContaining({ update: {} }),
 		);
@@ -141,9 +137,9 @@ describe("ensureFreshToken", () => {
 		const stale = tokenRow({ version: 1, expiresAtMs: Date.now() - 1 });
 		const winner = tokenRow({ version: 2, expiresAtMs: Date.now() + 3_600_000, accessToken: "access-winner" });
 		vi.mocked(db.userToken.findUnique)
-			.mockResolvedValueOnce(stale) // ensureFreshToken 최초 조회
-			.mockResolvedValueOnce(stale) // performRefresh 권위 재조회
-			.mockResolvedValueOnce(winner); // 경쟁 패배 후 승자 조회
+			.mockResolvedValueOnce(stale)
+			.mockResolvedValueOnce(stale)
+			.mockResolvedValueOnce(winner);
 		vi.mocked(requestDiscordToken).mockResolvedValue(okDiscordToken());
 		vi.mocked(db.userToken.updateMany).mockResolvedValue({ count: 0 });
 
@@ -201,12 +197,12 @@ describe("ensureFreshToken", () => {
 
 	it("Redis 뮤텍스 대기자 — 승자가 회전하면 Discord 호출 없이 승자를 채택해요", async () => {
 		vi.mocked(isRedisEnabled).mockReturnValue(true);
-		vi.mocked(redisSetNx).mockResolvedValue(false); // 남이 락을 잡고 있어요
+		vi.mocked(redisSetNx).mockResolvedValue(false);
 		const stale = tokenRow({ version: 1, expiresAtMs: Date.now() - 1 });
 		const winner = tokenRow({ version: 2, expiresAtMs: Date.now() + 3_600_000, accessToken: "access-winner" });
 		vi.mocked(db.userToken.findUnique)
-			.mockResolvedValueOnce(stale) // 대기 전 최초 조회
-			.mockResolvedValueOnce(winner); // 폴링 1회차에서 승자 발견
+			.mockResolvedValueOnce(stale)
+			.mockResolvedValueOnce(winner);
 
 		const result = await ensureFreshToken(USER);
 		expect(result).toMatchObject({ status: "ok", accessToken: "access-winner" });

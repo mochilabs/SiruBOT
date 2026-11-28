@@ -1,15 +1,3 @@
-/**
- * 커스텀 명령어 인터프리터 — 검증된 스펙의 스텝을 순차 실행해요 (v1·v2 스펙 모두).
- *
- * - v2 액션 추가는 utils의 customCommandStepSchema와 이 루프를 함께 확장해요.
- * - 실행 제한(access)·역할 위계 같은 안전 검사는 여기서 **실행 시점에 재검증**해요 —
- *   저장 시점 검증만 믿지 않아요 (저장 이후 봇/길드 상태가 바뀔 수 있어요).
- * - send 실패·액션 실패(권한 상실 등)면 같은 실행의 남은 스텝을 중단해요.
- * - 최대 600초의 대기를 품을 수 있어 실행이 메시지 이벤트 처리보다 오래 남아요. 봇 재시작 시
- *   진행 중 실행은 함께 끝나요 (재개 없음 — v1 계약).
- * - 슬래시 실행도 같은 엔진을 써요 — 호출부(리스너)가 ctx.channel을 interaction 응답으로
- *   감싸서 넘기고, delete_trigger는 ctx.triggerMessage.delete()로 동작해요 (슬래시에선 응답 삭제).
- */
 import { MessageFlags } from 'discord.js';
 import {
 	CUSTOM_COMMAND_MAX_ARGS,
@@ -24,7 +12,7 @@ export interface CustomCommandSendPayload {
 	content?: string;
 	components?: unknown[];
 	flags?: number[];
-	/** 멘션 해석은 항상 꺼요 — 커스텀 명령어 메시지의 @everyone/@here 악용 방지 */
+	/** @everyone/@here 악용을 막기 위해 멘션 해석을 항상 끕니다. */
 	allowedMentions: { parse: [] };
 }
 
@@ -32,7 +20,6 @@ interface CustomCommandChannel {
 	send(payload: CustomCommandSendPayload): Promise<unknown>;
 }
 
-/** 리액트/고정/삭제 대상이 되는 '실행을 유발한 메시지' — 접두사에선 트리거 메시지, 슬래시에선 응답 메시지 */
 interface CustomCommandTriggerMessage {
 	react(emoji: string): Promise<unknown>;
 	pin(): Promise<unknown>;
@@ -46,16 +33,13 @@ interface CustomCommandRoleInfo {
 }
 
 export interface CustomCommandGuildContext {
-	/** 봇 최상위 역할 위치 — 대상 역할보다 높아야 변경 가능 */
 	botTopRolePosition: number;
-	/** 봇의 ManageRoles 권한 보유 여부 */
 	botCanManageRoles: boolean;
 	getRole(roleId: string): CustomCommandRoleInfo | null;
 }
 
 export interface CustomCommandMemberContext {
 	id: string;
-	/** 실행자의 채널 기준 권한 비트마스크 (discord.js PermissionFlagsBits) */
 	permissions: bigint;
 	hasRole(roleId: string): boolean;
 	addRole(roleId: string): Promise<unknown>;
@@ -64,12 +48,10 @@ export interface CustomCommandMemberContext {
 
 export interface CustomCommandContext {
 	channel: CustomCommandChannel;
-	/** 디자인 메시지(send_message의 design)를 Discord 컴포넌트로 만드는 포트 — 구현은 features/custom-commands/discord/views/customCommand.ts예요. */
 	renderDesign(design: CustomCommandDesign, substitute: (text: string) => string): unknown;
 	member: CustomCommandMemberContext;
 	guild: CustomCommandGuildContext;
 	channelId: string;
-	/** 인수 치환 {argv0}~의 값 — 최대 5개 */
 	args: string[];
 	triggerMessage?: CustomCommandTriggerMessage;
 }
@@ -80,12 +62,10 @@ export type CustomCommandRunResult =
 	| { kind: 'access_denied' }
 	| { kind: 'action_failed'; sent: number; stepIndex: number; reason: string };
 
-/** 인수 값의 디스코드 멘션 문법 제거 — 치환 결과로 핑이 튀는 것을 막아요 */
 function sanitizeArg(value: string): string {
 	return value.replace(/<@!?\d{17,20}>|<@&\d{17,20}>|<#\d{17,20}>|<a?:\w+:\d{17,20}>/gu, '');
 }
 
-/** {argvN} 치환 — N ≥ MAX_ARGS는 빈 문자열 */
 function substituteArgs(text: string, args: string[]): string {
 	return text.replace(/\{argv(\d+)\}/gu, (_match, digits: string) => {
 		const index = Number(digits);
@@ -100,7 +80,6 @@ const PERMISSION_BITS: Record<string, bigint> = {
 	Administrator: 0x8n
 };
 
-/** access 판정 — 통과하면 null, 거부 사유(한국어)를 돌려줘요 */
 function checkAccess(access: CustomCommandAccess | undefined, ctx: CustomCommandContext): string | null {
 	if (!access || access.mode === 'everyone') return null;
 	if (access.mode === 'roles') {
@@ -113,7 +92,6 @@ function checkAccess(access: CustomCommandAccess | undefined, ctx: CustomCommand
 	return all ? null : '허용된 권한을 갖고 있지 않아요';
 }
 
-/** 역할 변경 사전 검증 — 통과하면 null, 실패 사유(한국어)를 돌려줘요 */
 function checkRoleAction(roleId: string, ctx: CustomCommandContext): string | null {
 	const role = ctx.guild.getRole(roleId);
 	if (!role) return '그 역할을 서버에서 찾지 못했어요';
@@ -128,7 +106,6 @@ interface RunState {
 	failed: { stepIndex: number; reason: string } | null;
 }
 
-/** 스텝 배열 실행 — 실패 사유를 state.failed에 남기고 중단해요. if 서브 스텝도 같은 함수로 실행 */
 async function runSteps(steps: readonly CustomCommandStep[], ctx: CustomCommandContext, state: RunState, baseIndex: number): Promise<void> {
 	for (const [offset, step] of steps.entries()) {
 		const stepIndex = baseIndex + offset;

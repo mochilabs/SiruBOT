@@ -39,7 +39,6 @@ describe('shapeSvg', () => {
 		const [defs] = kids(svg);
 		expect(defs!.type).toBe('defs');
 		const gradient = kids(defs!)[0]!;
-		// 90도 = 위→아래
 		expect(gradient.props).toMatchObject({ x1: 0.5, y1: 0, x2: 0.5, y2: 1 });
 		expect(shapeOf(svg).props.fill).toBe(`url(#${gradient.props.id})`);
 		expect(String(gradient.props.id)).not.toMatch(/\s/);

@@ -1,7 +1,4 @@
-/**
- * lucide 아이콘 (0.545, 24×24 viewBox, stroke 기반) — SVG 경로 DB예요. ISC 라이선스.
- * 이모지는 폰트에 없으니 카드에서는 항상 이 벡터 아이콘을 써요.
- *  */
+// lucide icons (0.545, 24x24 viewBox, ISC license).
 
 export type IconName =
 	| 'sparkle'
@@ -178,7 +175,6 @@ const ICONS: Record<IconName, IconDef> = {
 	}
 };
 
-/** 아이콘 정의(경로·원·사각형) — `<Icon>` 컴포넌트가 이 경로 DB로 SVG를 그려요. */
 export function getIconDef(name: IconName): IconDef | undefined {
 	return ICONS[name];
 }

@@ -1,8 +1,3 @@
-/**
- * 커스텀 명령어 AI 초안 생성. 대시보드 빌더의 자연어 설명을 JSON 스펙 초안으로 바꿔요.
- * LLM 출력은 파싱+스키마 재검증을 거치고, 형식 오류는 사유를 담아 1회 재요청해요(HTTP 안내는 라우트 소유).
- * 모델 계약은 @sirubot/utils의 customCommandPayloadSchema(스펙 v2)예요. 스펙이 바뀌면 CUSTOM_COMMAND_SPEC_RULES도 함께 갱신하고, 반복 수정도 같은 규칙 상수를 써요.
- */
 import { z } from 'zod';
 import {
 	CUSTOM_COMMAND_MAX_ARGS,
@@ -21,7 +16,6 @@ export const customCommandDraftRequestSchema = z.object({
 
 export type CustomCommandDraft = CustomCommandPayload;
 
-/** 스펙 규칙 공용 텍스트 — 초안과 반복 수정 프롬프트가 함께 써요 (DRY) */
 export const CUSTOM_COMMAND_SPEC_RULES = [
 	'## 스펙 규칙 (v2)',
 	`- "version"은 항상 ${CUSTOM_COMMAND_SPEC_VERSION}이에요.`,
@@ -68,7 +62,6 @@ const DRAFT_SYSTEM_PROMPT = [
 	'출력: {"name":"인사규칙","description":"인사 후 3초 뒤 규칙 요약","method":"prefix","spec":{"version":2,"steps":[{"type":"send_message","text":"안녕하세요! 규칙을 요약해 드릴게요."},{"type":"delay","seconds":3},{"type":"send_message","text":"- 채팅 규칙 요약..."}]}}'
 ].join('\n');
 
-/** ```` 펜스로 감싸 온 출력을 벗겨요 */
 export function stripCodeFences(text: string): string {
 	const lines = text.split('\n');
 	while (lines.length > 0 && /^```/.test(lines[0]!.trim())) lines.shift();
@@ -80,10 +73,6 @@ export interface DraftProvider {
 	chatCompletion(systemPrompt: string, userContent: string, providerLabel: string): Promise<string>;
 }
 
-/**
- * LLM 1회 호출 + 형식 오류 시 1회 재요청 공용 루프 — 초안/반복 수정이 함께 써요.
- * parse가 실패 사유를 돌려주면 그 사유로 재요청해요.
- */
 export async function generateValidated<T>(
 	provider: DraftProvider,
 	systemPrompt: string,
@@ -106,7 +95,6 @@ export async function generateValidated<T>(
 	return { ok: false, reason: 'output_format: 두 번 모두 형식에 맞지 않는 출력' };
 }
 
-/** LLM 출력 → 검증된 초안. 실패하면 재요청에 쓸 한국어 사유를 돌려줘요. */
 export function parseCustomCommandDraft(raw: string): { ok: true; draft: CustomCommandDraft } | { ok: false; reason: string } {
 	let parsed: unknown;
 	try {
@@ -130,7 +118,6 @@ export function parseCustomCommandDraft(raw: string): { ok: true; draft: CustomC
 	return { ok: true, draft: draft.data };
 }
 
-/** LLM 1회 호출 + 형식 오류 시 1회 재요청. 실패하면 사유를 돌려줘요. */
 export async function generateCustomCommandDraft(
 	provider: DraftProvider,
 	prompt: string

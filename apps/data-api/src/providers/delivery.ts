@@ -22,7 +22,6 @@ interface LegacyRestResponse {
 	}>;
 }
 
-/** 한국어 택배사 별칭 → tracker.delivery carrier ID */
 const CARRIER_ALIASES: Record<string, string> = {
 	cj: 'kr.cjlogistics',
 	cj대한통운: 'kr.cjlogistics',
@@ -112,7 +111,6 @@ function normalizeLegacyResponse(data: LegacyRestResponse): DeliveryTrackResult 
 	};
 }
 
-/** Legacy v1 REST 조회 (API 키 불필요) */
 async function trackViaRest(carrierId: string, trackingNumber: string): Promise<DeliveryTrackResult> {
 	const url = `${DELIVERY_REST_BASE_URL}/carriers/${encodeURIComponent(carrierId)}/tracks/${encodeURIComponent(trackingNumber)}`;
 	let res: Response;
@@ -177,7 +175,6 @@ function searchCarriersLocal(carriers: DeliveryCarrier[], query: string, limit =
 	return scored.slice(0, limit).map((s) => s.carrier);
 }
 
-/** 별칭이 아닌 입력을 택배사 목록에서 검색해 carrier id로 해석 */
 async function resolveCarrierId(carrierHint: string): Promise<string> {
 	const normalized = normalizeCarrierInput(carrierHint);
 	if (/^[a-z]{2}\.[a-z0-9._-]+$/i.test(normalized)) return normalized;
@@ -189,10 +186,6 @@ async function resolveCarrierId(carrierHint: string): Promise<string> {
 	return candidates[0]!.id;
 }
 
-/**
- * 택배사 이름/별칭 검색 — 봇 `/택배` 자동완성이 쓰는 목록 API예요.
- * 조회 경로와 같은 별칭·정렬 규칙(searchCarriersLocal)을 공유해야 자동완성에서 고른 택배사가 그대로 조회돼요.
- */
 export async function searchDeliveryCarriers(query: string, limit = 25): Promise<DeliveryCarrier[]> {
 	const carriers = await getCarriersCached();
 	const trimmed = query.trim();
@@ -201,12 +194,10 @@ export async function searchDeliveryCarriers(query: string, limit = 25): Promise
 	return matched.length > 0 ? matched : carriers.slice(0, limit);
 }
 
-/** 운송장 조회 단기 캐시 (배송 상태는 변해요) */
 export function deliveryTrackCacheKey(carrierId: string, trackingNumber: string): string {
 	return `dataapi:v1:delivery:track:${carrierId}:${trackingNumber}`;
 }
 
-/** 택배사 힌트(별칭/이름/id) → 조회까지 한 번에. 별칭 해석도 서버에서 해요. */
 export async function trackDelivery(carrierHint: string, trackingNumber: string): Promise<DeliveryTrackResult> {
 	const carrierId = await resolveCarrierId(carrierHint);
 	return trackViaRest(carrierId, normalizeTrackingNumber(trackingNumber));

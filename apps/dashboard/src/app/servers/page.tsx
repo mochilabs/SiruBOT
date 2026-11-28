@@ -18,7 +18,6 @@ import { buildInviteUrl } from "@/utils";
 
 export default function ServersPage() {
     const { data: session, status } = useSession();
-    // 세션 만료(unauthenticated) 리다이렉트·인증 게이트는 useAuthedSWR가 담당해요 — 로그인 후 이 화면으로 돌아와요
     const { data, error, isLoading, mutate } = useAuthedSWR<{ guilds: EnrichedGuild[] }>("/api/servers", "/servers");
 
     if (status === "loading") {

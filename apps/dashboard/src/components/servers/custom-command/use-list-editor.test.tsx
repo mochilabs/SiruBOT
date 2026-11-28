@@ -84,14 +84,12 @@ describe("useListEditor", () => {
     expect(initialKeys).toHaveLength(3);
     expect(new Set(initialKeys).size).toBe(3);
 
-    // 0번을 아래로 이동 → key 순서도 [k1, k0, k2]로 뒤바뀌어야 함
     await click(2);
     await rerender();
     expect(document.querySelector("[data-testid='keys']")?.textContent).toBe(
       [initialKeys[1], initialKeys[0], initialKeys[2]].join(","),
     );
 
-    // 새 0번(원래 1번) 삭제 → 남은 key는 [k0, k2] (뒤 항목이 앞 key를 물려받지 않음)
     await click(5);
     await rerender();
     expect(document.querySelector("[data-testid='keys']")?.textContent).toBe(

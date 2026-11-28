@@ -7,7 +7,6 @@ import { Clock, Hash } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-/** 커스텀 명령어 데모 — 접두사 명령어 하나가 메시지·대기 스텝을 순서대로 실행하는 모습 */
 const DEMO_COMMAND = "!아침브리핑";
 const DEMO_STEPS = [
   { type: "message", text: "좋은 아침이에요! 오늘의 일정을 요약해 드릴게요." },
@@ -17,19 +16,12 @@ const DEMO_STEPS = [
 
 const STEP_MS = 1800;
 
-/**
- * 커스텀 명령어 프리뷰(mockup) — 채널에 "!이름"을 치면 시루가 스텝을 순서대로 실행해요.
- * Discord 채널 프레임(헤더·푸터) 안에 명령어 입력과 실행 결과가 있고,
- * 실행 중인 스텝만 표시가 켜져 순서를 보여줘요.
- * 행은 처음부터 전부 렌더되고 상태만 바뀌어 레이아웃이 밀리지 않아요.
- */
 export function CustomCommandPreview() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.3 });
   /** -1: 대기(아직 미실행), 0: 명령어 입력, 1~3: 실행 중인 스텝 순번 — SSR/CSR 초기값을 -1로 통일해 hydration 불일치를 막아요 */
   const [step, setStep] = useState(-1);
 
   useEffect(() => {
-    // reduced-motion에선 타이머를 돌리지 않고 모든 스텝이 켜진 정지 화면을 보여줘요 (형제 프리뷰와 같은 규칙)
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setStep(DEMO_STEPS.length);
       return undefined;
@@ -52,7 +44,6 @@ export function CustomCommandPreview() {
       ref={ref}
       className="flex min-w-0 flex-col overflow-hidden rounded-card bg-discord-embed"
     >
-      {/* 채널 헤더 */}
       <div className="flex items-center gap-2 border-b border-discord-btn-active px-4 py-2.5">
         <Hash
           size={14}
@@ -68,7 +59,6 @@ export function CustomCommandPreview() {
       </div>
 
       <div className="flex flex-col gap-3 p-3 sm:p-4">
-        {/* 명령어 입력 — 채널에 친 메시지 */}
         <div className="flex gap-2.5">
           <span
             aria-hidden
@@ -98,7 +88,6 @@ export function CustomCommandPreview() {
           </div>
         </div>
 
-        {/* 시루 실행 결과 — 메시지·대기 스텝이 순서대로 켜져요 */}
         <div className="flex gap-2.5">
           <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full">
             <Image

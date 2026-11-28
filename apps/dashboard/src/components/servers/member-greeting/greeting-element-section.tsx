@@ -17,7 +17,6 @@ interface GreetingElementSectionProps {
   onUploadImage: (file: File | null) => Promise<void>;
 }
 
-/** 요소 추가 — 텍스트·아바타·도형 레이어를 넣거나 이미지를 올려 레이어로 추가해요 */
 export function GreetingElementSection({
   saving,
   uploading,

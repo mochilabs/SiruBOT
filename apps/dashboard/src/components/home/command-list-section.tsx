@@ -6,17 +6,6 @@ import { ChevronDown, Gamepad2, type LucideIcon, MessageCircle, Music2, Wrench }
 
 import { cn } from "@/lib/utils";
 
-/**
- * 명령어 섹션: Discord 슬래시 자동완성 팝업을 흉내 내요. 카테고리 탭으로 고르면 대표 명령어 몇 개만 보이고,
- * 입력창에 선택한 명령어가 타이핑돼요. 나머지는 "더 보기"로 펼쳐요(전체 목록은 문서처럼 읽히지 않게 접어 둬요).
- *
- * cmd/desc는 봇 커맨드 정의의 **ko 로캘 문구를 그대로** 옮겨 적어요 —
- * `apps/bot/src/discord/commands/*.ts`, `apps/bot/src/features/<name>/discord/commands/*.ts`의 `setNameLocalizations({ ko })` / `setDescriptionLocalizations({ ko })`,
- * 서브커맨드는 `subcommands/*.ts`의 `name`/`ko`/`description`. 봇 문구를 바꾸면 이 목록도 함께 갱신하세요.
- *
- * 톤: 사용자에게 말을 거는 해요체 존댓말, 마침표 유지, 기능만 서술하고 광고문구는 넣지 않아요.
- */
-
 interface CommandCard {
 	cmd: string;
 	desc: string;
@@ -99,7 +88,6 @@ export function CommandListSection() {
 	const current = visible[Math.min(selected, visible.length - 1)];
 	const hiddenCount = active.commands.length - COLLAPSED_COUNT;
 
-	// 선택된 명령어를 입력창에 한 글자씩 타이핑하고, 다 치면 잠시 머문 뒤 다음 명령어로 넘어가요
 	useEffect(() => {
 		if (!inView) return undefined;
 		const fullLength = current.cmd.length - 1;
@@ -161,7 +149,6 @@ export function CommandListSection() {
 						})}
 					</div>
 
-					{/* Discord 자동완성 팝업 + 입력창 */}
 					<div role="tabpanel" aria-label={active.label} className="overflow-hidden rounded-card bg-discord-embed">
 						<div className="px-3 pt-3 pb-1 text-2xs font-bold tracking-wide text-discord-text-muted">{active.label} 명령어</div>
 						<ul className={cn("space-y-0.5 px-2 pb-2", expanded && "max-h-[22rem] overflow-y-auto")}>

@@ -27,7 +27,6 @@ describe('customCommandSpecSchema', () => {
 
 	it('caps single delay and total delay', () => {
 		expect(customCommandSpecSchema.safeParse({ version: 1, steps: [{ type: 'delay', seconds: 301 }] }).success).toBe(false);
-		// 총합 상한(600)은 스텝 여럿으로만 넘길 수 있어요 (300 + 300 + 1 = 601)
 		const tooLong = {
 			version: 1,
 			steps: [
@@ -36,7 +35,6 @@ describe('customCommandSpecSchema', () => {
 				{ type: 'delay', seconds: 1 }
 			]
 		};
-		// 300 + 300 = CUSTOM_COMMAND_MAX_TOTAL_DELAY_SECONDS 경계는 허용
 		const boundary = {
 			version: 1,
 			steps: [
@@ -97,11 +95,10 @@ describe('customCommandSpecSchemaV2 — 신규 스텝', () => {
 				access: { mode: 'roles' },
 				steps: [{ type: 'send_message', text: 'x' }]
 			}).success
-		).toBe(false); // roles 모드인데 roleIds 없음
+		).toBe(false);
 	});
 
 	it('requires access control for role actions nested in if branches', () => {
-		// 최상위가 아니라 if.then/if.else 안에 있는 역할 액션도 실행 제한이 필수예요 (가드 우회 방지)
 		const nestedThen = {
 			version: 2,
 			steps: [
@@ -130,7 +127,7 @@ describe('customCommandSpecSchemaV2 — 신규 스텝', () => {
 				...nestedThen,
 				access: { mode: 'everyone' }
 			}).success
-		).toBe(false); // everyone 모드도 실행 제한이 없으면 거부
+		).toBe(false);
 		expect(
 			customCommandSpecSchemaV2.safeParse({
 				...nestedThen,
@@ -173,9 +170,7 @@ describe('customCommandSpecSchemaV2 — 신규 스텝', () => {
 	});
 
 	it('validates send_message content and CV2 design limits', () => {
-		// 둘 다 없으면 실패
 		expect(customCommandSpecSchemaV2.safeParse({ version: 2, steps: [{ type: 'send_message' }] }).success).toBe(false);
-		// design은 https URL만, items ≤10, media urls ≤10
 		const httpDesign = {
 			version: 2,
 			steps: [
@@ -232,11 +227,9 @@ describe('customCommandPayloadSchema — 실행 방식', () => {
 	});
 
 	it('rejects slash names the Discord pattern forbids', () => {
-		// 라틴 대문자 금지, 공백 금지, 33자 초과 금지
 		expect(customCommandPayloadSchema.safeParse({ name: 'Greet', method: 'slash', description: 'd', spec: baseSpec }).success).toBe(false);
 		expect(customCommandPayloadSchema.safeParse({ name: 'has space', method: 'slash', description: 'd', spec: baseSpec }).success).toBe(false);
 		expect(customCommandPayloadSchema.safeParse({ name: 'a'.repeat(33), method: 'slash', description: 'd', spec: baseSpec }).success).toBe(false);
-		// 한글·소문자·하이픈/언더스코어는 통과
 		expect(customCommandPayloadSchema.safeParse({ name: 'greet-v2_x', method: 'slash', description: 'd', spec: baseSpec }).success).toBe(true);
 	});
 

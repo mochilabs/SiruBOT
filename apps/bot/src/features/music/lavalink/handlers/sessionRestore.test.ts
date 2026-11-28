@@ -10,8 +10,6 @@ import { RawEvent } from '../../discord/listeners/raw.ts';
 import { SessionRestoreEngine } from './sessionRestore.ts';
 import { NodeHandler } from './nodeHandler.ts';
 
-// 엔진·핸들러는 LavalinkDeps로 이 container를 받아요 (RawEvent 피스도 같은 container를 읽어요)
-
 const BOT_ID = '123456789012345678';
 const GUILD_ID = '123456789012345679';
 const VOICE_ID = '123456789012345680';
@@ -87,7 +85,6 @@ function setup(destroyPlayer = true) {
 	Object.assign(container, {
 		audio: manager,
 		logger,
-		// nodeHandler가 노드 끊김을 data-api로 보고해요 — 이 테스트는 보고 자체를 보지 않아요
 		playbackReporter: { post: vi.fn(), reportNodeEvent: vi.fn() },
 		client: { user: { id: BOT_ID }, guilds: { cache: new Map([[GUILD_ID, { members: { me: { voice } } }]]) } },
 		mixerService: {
@@ -107,7 +104,6 @@ function setup(destroyPlayer = true) {
 	return { voice, sends, manager, node, raw, saved, engine, restore, queueStore, updatePlayer };
 }
 
-// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
 beforeEach(() => setConfigForTesting(makeTestConfig()));
 afterEach(() => setConfigForTesting(null));
 
@@ -277,12 +273,10 @@ describe('fresh restore voice reconnect', () => {
 		Object.assign(container, { redisStore: { getPlayerSaver: () => ({ listGuildIds: async () => [GUILD_ID], get: async () => saved }) } });
 		vi.spyOn(handler.sessionRestore, 'isVoiceChannelOccupied').mockResolvedValue(true);
 
-		// 봇 재시작 직후: manager.players는 비어 있음 (orphan 없음)
 		expect(manager.players.size).toBe(0);
 
 		await handler.sessionRestore.restoreFreshSession(node);
 
-		// 음성 퇴장(null) 전송 없이 바로 음성 채널(VOICE_ID)로 연결한다
 		expect(sends.map((s) => s.channelId)).toEqual([VOICE_ID]);
 		expect(manager.getPlayer(GUILD_ID)).toBeDefined();
 		expect(manager.getPlayer(GUILD_ID)?.voiceChannelId).toBe(VOICE_ID);

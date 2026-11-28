@@ -21,7 +21,6 @@ import {
 } from './guildSettingsContract.ts';
 import { SPONSORBLOCK_SKIP_CATEGORIES } from './sponsorblock.ts';
 
-/** 길드 설정 공용 계약 — 봇과 대시보드가 같은 값을 쓰므로 값이 바뀌면 여기서 먼저 깨져요 */
 describe('guildSettingsContract 열거값', () => {
 	it('열거값과 순서를 고정해요', () => {
 		expect(AI_MODES).toEqual(['all', 'channels', 'off']);
@@ -52,7 +51,6 @@ describe('guildSettingsContract 열거값', () => {
 	});
 });
 
-/** 수치 범위 — 대시보드 스키마·UI 슬라이더·봇 클램프가 같은 상·하한을 써요 */
 describe('guildSettingsContract 수치 범위', () => {
 	it('볼륨 범위는 playerLimits 상한(150%)을 따라요', () => {
 		expect(MUSIC_VOLUME_RANGE).toEqual({ min: 0, max: 150 });

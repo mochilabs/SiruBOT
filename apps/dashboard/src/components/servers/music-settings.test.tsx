@@ -33,7 +33,6 @@ describe("AutoMix 설정 화면", () => {
     const root = createRoot(host);
     try {
       await act(async () => { root.render(<MusicSettings guildId="fixture" />); });
-      // 전환 방식이 꺼짐이면 길이·AutoMix 조절기는 아예 그리지 않아요
       expect(host.querySelector('[aria-label="겹치기 길이"]')).toBeNull();
       expect(host.querySelector('[aria-label="최대 템포 변경"]')).toBeNull();
       const modeSelect = host.querySelector<HTMLButtonElement>('[aria-label="곡 전환 방식"]');

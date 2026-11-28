@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 type Store = typeof import('./playbackStore.ts');
 
-/** 모듈 전역 상태(이벤트 버퍼·카운트)를 테스트마다 깨끗이 시작하기 위해 매번 새로 import해요. */
 async function loadStore(): Promise<Store> {
 	vi.resetModules();
 	return import('./playbackStore.ts');
@@ -60,7 +59,6 @@ describe('playbackStore', () => {
 		const snapshot = store.playbackSnapshot();
 		expect(snapshot.recentErrors).toHaveLength(1);
 		expect(snapshot.recentErrors[0].count).toBe(5);
-		// 카운트는 원 보고 수를 유지해요 (병합은 목록 표시만)
 		expect(snapshot.counts.node_disconnect).toBe(5);
 		expect(snapshot.total).toBe(1);
 	});

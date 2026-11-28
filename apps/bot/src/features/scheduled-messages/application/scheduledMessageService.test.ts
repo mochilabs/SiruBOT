@@ -145,7 +145,6 @@ describe('handle — 채널 권한 실패', () => {
 		const { service, discord } = setup({ problem: 'no-send' });
 		await expect(service.handle(makeJob({ attempts: 0 }))).rejects.toThrow(/메시지 보내기/);
 		expect(discord.send).not.toHaveBeenCalled();
-		// 첫 실패에는 아직 알리지 않아요 (재시도 남음)
 		expect(discord.notifyCreator).not.toHaveBeenCalled();
 	});
 

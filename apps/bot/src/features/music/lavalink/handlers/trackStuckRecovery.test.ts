@@ -5,7 +5,6 @@ import { CustomPlayer } from '../player/customPlayer.ts';
 import { MixerService } from '../../application/mixerService.ts';
 import { clearMixerRuntime } from './mixerHandlers.ts';
 
-/** 믹서·큐 헬퍼가 받는 LavalinkDeps 역할 — 테스트가 mixerService를 채워 넣어요 */
 const container: Record<string, any> = {
 	logger: { warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
 	playerNotifier: { updateController: vi.fn() },
@@ -75,7 +74,6 @@ describe.each([
 			thresholdMs: 10_000,
 			track: rawTrack('stuck')
 		};
-		// Exercise the installed library's event continuation, which emitting on the manager alone skips.
 		const dispatch = () => Reflect.apply(Reflect.get(player.node, 'trackStuck'), player.node, [player, player.queue.current, payload]);
 		return { manager, player, mixer, override, updatePlayer, track, dispatch };
 	}

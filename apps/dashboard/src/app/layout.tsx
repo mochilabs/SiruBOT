@@ -11,9 +11,7 @@ import { OG_IMAGES, SITE_DESCRIPTION, SITE_TITLE, socialMetadata } from "@/lib/s
 import "./globals.css";
 
 export const viewport: Viewport = {
-	// 다크 --surface-1과 같은 값 — 모바일 하단 탭바·헤더 pill과 브라우저 UI 색을 맞춰요
 	themeColor: "#2b2023",
-	// iOS 노치·홈 인디케이터 safe-area를 CSS env()로 계산하기 위해 viewport-fit=cover 확장
 	viewportFit: "cover"
 }
 
@@ -48,8 +46,7 @@ const pretendard = localFont({
 	variable: "--font-pretendard",
 });
 
-// 일본어 한자 폴백 — Pretendard 본체(한·영)에 없는 일본식 한자만 담당해요.
-// 스택 매칭 시에만 로드되게 preload를 꺼요(woff2 5.3MB, unicode-range 조합 불가라 next/font 한계).
+// woff2 5.3MB; next/font가 unicode-range를 지원하지 않아 preload 비활성화
 const pretendardJP = localFont({
 	src: "../../public/PretendardJPVariable.woff2",
 	display: "swap",

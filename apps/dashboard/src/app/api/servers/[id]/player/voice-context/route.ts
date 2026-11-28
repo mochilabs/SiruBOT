@@ -4,10 +4,6 @@ import { createGuildApiHandler } from "@/lib/api-handler";
 import { fetchPlayerVoiceContext } from "@/lib/data-api/player-web";
 import { READ_RATE } from "@/lib/rate-limit";
 
-/**
- * 요청자 음성·권한 상태 — player 페이지의 배지와 재생 UI 활성화에 써요.
- * OAuth로는 사용자의 음성 채널·DJ 권한을 알 수 없으므로 봇이 userId로 해석해 내려줘요.
- */
 export const GET = createGuildApiHandler({
   role: "member",
   rate: READ_RATE,

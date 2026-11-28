@@ -1,5 +1,3 @@
-// rate-limit 회귀 계약 — 인메모리 슬라이딩 윈도우 폴백과 Redis fail-open을 잠가요.
-// 모듈 상태(buckets, warnedRedisFailure)가 테스트 간 섞이지 않게 고유 키를 써요.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/redis", () => ({
@@ -14,9 +12,8 @@ import { guardRateLimit, PUBLIC_RATE, publicReadLimit, rateKey, READ_RATE } from
 let seq = 0;
 const freshKey = (action: string) => `test:${action}:${++seq}`;
 
-describe("publicReadLimit — 무인증 요청은 전역 공용 버킷 (SEC-002)", () => {
+describe("publicReadLimit — 무인증 요청은 전역 공용 버킷", () => {
 	it("비로그인 요청은 헤더와 무관하게 anonymous 주체 하나로 묶여요", () => {
-		// 요청 헤더를 인자로 받지 않는 것이 계약이에요 — X-Forwarded-For 위조로 버킷이 늘어나지 않아요.
 		const first = publicReadLimit(undefined);
 		const second = publicReadLimit(undefined);
 		expect(first.subject).toBe("anonymous");

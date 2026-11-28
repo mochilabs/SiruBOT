@@ -11,35 +11,23 @@ import { getConfig } from '../../../lib/config.ts';
 import * as guildMixer from '../../../services/guildSettings/mixer.ts';
 import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 
-// Above highSimilarity: Too similar tracks like translated versions, covers (exclude)
-// Below lowSimilarity: Unrelated tracks (exclude)
 const highSimilarity = (): number => getConfig().autoplay.highSimilarity;
 const lowSimilarity = (): number => getConfig().autoplay.lowSimilarity;
 
-// Similarity weights (sum = 1.0)
 const TITLE_WEIGHT = 0.6;
 const DURATION_WEIGHT = 0.4;
 
-/** 진행 중인 추천곡 프리페치를 반환한다 (handleQueueEnd가 완료를 기다릴 때 사용). 가드는 deps.relatedFetchInFlight에 있어요. */
 export function getInFlightRelatedFetch(deps: LavalinkDeps, guildId: string): Promise<Track | null> | undefined {
 	return deps.relatedFetchInFlight.get(String(guildId));
 }
 
-/** 봇이 자동으로 넣은 추천곡인지 판별한다 (requester.id === 'related_track'). null/undefined는 추천곡이 아니다. */
 export function isRelatedTrack(track: Track | UnresolvedTrack | null | undefined): boolean {
 	const requester = track?.requester;
 	const requesterId = requester && typeof requester === 'object' ? (requester as { id?: unknown }).id : requester;
 	return requesterId === RELATED_TRACK_REQUESTER_ID;
 }
 
-/**
- * 큐에 남아 있는 선예열 추천곡을 제거한다.
- * 추천곡은 "큐가 비어 있을 때 현재 곡 기준"으로 만들어진 것이므로 그대로 두면
- * 사용자가 추가한 곡보다 먼저 재생된다 — 사용자 곡이 그 자리를 잇도록 replace 한다.
- * 반드시 `queue.add` "이후"에 부른다 (이전에 부르면 그 사이에 빈 큐를 본 선예열
- * fetch가 다시 추가할 수 있다). 제거한 개수를 반환하며, 서버 예열 슬롯 갱신은
- * 호출부의 preload가 담당한다.
- */
+/** Must run after queue.add so an in-flight preload fetch doesn't re-add against an empty queue. */
 export async function removeStaleRelatedTracks(deps: LavalinkDeps, player: Player): Promise<number> {
 	const tracks = player.queue.tracks;
 	const relatedIndexes: number[] = [];
@@ -48,15 +36,11 @@ export async function removeStaleRelatedTracks(deps: LavalinkDeps, player: Playe
 	}
 	if (relatedIndexes.length === 0) return 0;
 
-	// 추천곡은 대기열 끝에 연속으로 붙는다 — 연속 구간이면 splice 1회로 Redis 저장
-	// 동기화(round-trip)를 줄여 사용자 곡 추가 → 재예열까지의 전이 공백을 최소화한다.
 	const isContiguousTail =
 		relatedIndexes.every((value, i) => value === relatedIndexes[0] + i) && relatedIndexes[relatedIndexes.length - 1] === tracks.length - 1;
 	if (isContiguousTail) {
-		// queue.splice를 쓰면 tracksRemoved 콜백과 utils.save()(큐 저장소 동기화)까지 함께 처리된다.
 		await player.queue.splice(relatedIndexes[0], relatedIndexes.length);
 	} else {
-		// 뒤에서부터 지워야 인덱스가 밀리지 않는다.
 		for (let i = relatedIndexes.length - 1; i >= 0; i--) {
 			await player.queue.splice(relatedIndexes[i], 1);
 		}
@@ -65,21 +49,10 @@ export async function removeStaleRelatedTracks(deps: LavalinkDeps, player: Playe
 	return relatedIndexes.length;
 }
 
-/**
- * UI 표시·번호 지정의 기준이 되는 유저 대기열 — 선예열한 추천곡은 세지 않는다.
- * 추천곡은 대기열 끝에만 붙고(사용자가 곡을 넣으면 removeStaleRelatedTracks로 제거되므로),
- * 필터 결과의 인덱스는 원본 인덱스와 같다.
- */
 export function getUserQueuedTracks(player: Player): Track[] {
-	// 타입 시그니처상 (Track | UnresolvedTrack)[]이지만, 필터 결과는 기존 코드들과 같이 Track로 본다
 	return player.queue.tracks.filter((track) => !isRelatedTrack(track)) as Track[];
 }
 
-/**
- * 지금부터 유저 대기열이 끝날 때까지의 실제 남은 시간(ms).
- * 현재 곡의 전체 길이에서 현재 위치만큼 빼고, 선예열한 추천곡은 대기열로 세지 않아 제외한다.
- * 스트리밍은 끝나는 시점이 없어 position을 뺸다.
- */
 export function remainingUntilQueueEnd(player: Player, queuedTracks: Track[]): number {
 	const current = player.queue.current;
 	const elapsed = current && !current.info.isStream ? Math.min(player.position ?? 0, current.info.duration ?? 0) : 0;
@@ -87,22 +60,16 @@ export function remainingUntilQueueEnd(player: Player, queuedTracks: Track[]): n
 	return Math.max(0, (current?.info.duration ?? 0) + queuedDuration - elapsed);
 }
 
-/**
- * Normalize title: convert to lowercase, remove bracketed content (feat., remix, etc.), remove special characters, trim whitespace
- */
 export function normalizeTitle(title: string): string {
 	return title
 		.toLowerCase()
-		.replace(/\s*[\(\[\{].*?[\)\]\}]\s*/g, '') // Remove (Official MV), [Lyrics], {Remix}, etc.
-		.replace(/\s*[-–—|].*$/, '') // Remove " - Topic", " | Official Audio", etc.
-		.replace(/[^\p{L}\p{N}\s]/gu, '') // Remove special characters (keep Unicode letters, numbers, and whitespace)
+		.replace(/\s*[\(\[\{].*?[\)\]\}]\s*/g, '')
+		.replace(/\s*[-–—|].*$/, '')
+		.replace(/[^\p{L}\p{N}\s]/gu, '')
 		.replace(/\s+/g, ' ')
 		.trim();
 }
 
-/**
- * Generate a set of bigrams (2-character pairs) from a string
- */
 function getBigrams(str: string): string[] {
 	const bigrams: string[] = [];
 	for (let i = 0; i < str.length - 1; i++) {
@@ -111,17 +78,11 @@ function getBigrams(str: string): string[] {
 	return bigrams;
 }
 
-/**
- * Dice coefficient (Bigram similarity): 0 = completely different, 1 = identical
- * Measures how similar two tracks are based on their titles
- */
 export function titleSimilarity(titleA: string, titleB: string): number {
 	const a = normalizeTitle(titleA);
 	const b = normalizeTitle(titleB);
 
-	// 괄호/특수문자만 남아 정규화가 비어버린 제목은 비교 불가 — 0으로 두고
-	// (a === b === "")이 유사도 1.0이 되어 완전히 다른 곡들이 "너무 유사"로
-	// 전량 배제되는 일을 막는다.
+	// Guard against empty normalized titles becoming 1.0 similarity.
 	if (a.length === 0 || b.length === 0) return 0;
 	if (a === b) return 1;
 	if (a.length < 2 || b.length < 2) return 0;
@@ -146,10 +107,6 @@ export function titleSimilarity(titleA: string, titleB: string): number {
 	return (2 * intersectionSize) / (bigramsA.length + bigramsB.length);
 }
 
-/**
- * Duration similarity: Returns a value between 0 and 1 indicating how similar the lengths of two tracks are
- * 1 if identical, closer to 0 as the difference increases
- */
 function durationSimilarity(durationA: number, durationB: number): number {
 	if (durationA === 0 && durationB === 0) return 1;
 	const maxDuration = Math.max(durationA, durationB);
@@ -158,9 +115,6 @@ function durationSimilarity(durationA: number, durationB: number): number {
 	return 1 - Math.abs(durationA - durationB) / maxDuration;
 }
 
-/**
- * Overall similarity: Sum of title similarity (60%) and duration similarity (40%)
- */
 function trackSimilarity(trackA: Track, trackB: Track): number {
 	const titleSim = titleSimilarity(trackA.info.title, trackB.info.title);
 	const durationSim = durationSimilarity(trackA.info.duration, trackB.info.duration);
@@ -168,12 +122,9 @@ function trackSimilarity(trackA: Track, trackB: Track): number {
 	return titleSim * TITLE_WEIGHT + durationSim * DURATION_WEIGHT;
 }
 
-// 추천 추첨 후보 수 — 유사도 상위 몇 곡까지 추첨에 넣을지
 const PICK_POOL_SIZE = 8;
-// 가중치 하한 — 유사도가 낮은 곡(완화 밴드)도 뽑힐 여지를 남긴다
 const MIN_PICK_WEIGHT = 0.05;
 
-/** 유사도에 비례한 확률로 하나를 고른다 (유사할수록 잘 뽑히지만 1등이 고정되지는 않는다). */
 export function weightedPick<T extends { similarity: number }>(items: T[], random: () => number = Math.random): T {
 	const weights = items.map((item) => Math.max(item.similarity, MIN_PICK_WEIGHT));
 	const total = weights.reduce((acc, w) => acc + w, 0);
@@ -185,13 +136,6 @@ export function weightedPick<T extends { similarity: number }>(items: T[], rando
 	return items[items.length - 1];
 }
 
-/**
- * Select the most suitable recommended track based on similarity
- * - Too similar tracks (translated versions, covers) → excluded
- * - Too different tracks → excluded
- * - Select the most appropriate track from the medium similarity range
- * 이미 재생했거나 대기 중인 곡은 fetchRelatedCandidate에서 하드 제외되므로 여기서 다루지 않는다.
- */
 export function pickBySimilarity(deps: LavalinkDeps, candidates: Track[], reference: Track, random: () => number = Math.random): Track | null {
 	if (candidates.length === 0) return null;
 
@@ -200,17 +144,12 @@ export function pickBySimilarity(deps: LavalinkDeps, candidates: Track[], refere
 		similarity: trackSimilarity(reference, track)
 	}));
 
-	// 중간 밴드만 후보로 삼는다 (너무 유사/너무 무관한 곡 배제)
 	let pool = scored.filter((s) => s.similarity > lowSimilarity() && s.similarity < highSimilarity());
 
-	// 밴드에 드는 곡이 없으면 하한만 완화한다 (커버·번역곡 배제는 유지)
 	if (pool.length === 0) pool = scored.filter((s) => s.similarity < highSimilarity());
 
-	// 전부 너무 유사하면 그래도 재생을 이어가기 위해 전체를 후보로 쓴다
 	if (pool.length === 0) pool = scored;
 
-	// 유사도 상위 PICK_POOL_SIZE곡 중 유사도 가중 랜덤으로 고른다. RD 플레이리스트와 유사도 순위는
-	// 같은 곡이면 매번 같아서, 상위 3곡 균등 추첨만으로는 A 다음에 거의 항상 B가 나왔다.
 	pool.sort((a, b) => b.similarity - a.similarity);
 	const pick = weightedPick(pool.slice(0, PICK_POOL_SIZE), random);
 
@@ -218,13 +157,6 @@ export function pickBySimilarity(deps: LavalinkDeps, candidates: Track[], refere
 	return pick.track;
 }
 
-/**
- * 현재 곡의 YouTube RD(Radio) 플레이리스트를 검색해 유사도 기반으로 추천곡을 고른다.
- * 재생 이력을 보존하고 후보를 고르며, 큐 상태 검사는 호출부에서 fetch 완료 후 한다. 실패 시 null.
- * extraExcludes: 같은 요청에서 여러 곡을 연속으로 뽑을 때 이미 선택된 곡을 제외한다.
- * 세션에서 재생했던 곡과 대기 중인 곡(queue.tracks)은 순위 감점이 아니라
- * 하드 제외한다 — 감점만으로는 폴백 경로에서 다시 뽑혀 같은 곡이 반복되었다.
- */
 export async function fetchRelatedCandidate(
 	deps: LavalinkDeps,
 	player: CustomPlayer,
@@ -248,7 +180,6 @@ export async function fetchRelatedCandidate(
 			return null;
 		}
 
-		// 검색 중 시작한 곡도 제외한다. 대기 곡은 제거 후 다시 추천할 수 있게 세션 이력과 분리한다.
 		const excludedIdentifiers = new Set<string>(extraExcludes);
 		for (const track of player.queue.previous) history.remember(track);
 		const queued = new RelatedTrackHistory();
@@ -272,13 +203,6 @@ export async function fetchRelatedCandidate(
 	}
 }
 
-/**
- * trackStart 시점에 대기열이 비어 있으면(현재 곡이 마지막) 추천곡을 미리 큐에 추가해
- * mixer 예열 슬롯을 채운다 — 서버가 content end에 갭리스(+크로스페이드)로 이어준다.
- * 재생 중이 아니면(예: fetch 동안 곡이 끝남) 예열하지 않는다. queueEnd 핸들러가
- * 큐에 추가된 곡을 직접 시작한다 — 예열하면 서버가 같은 곡을 다시 틀린다.
- * 반환값: 추가한 추천곡 (추가하지 않았으면 null)
- */
 export const queueRelatedUpfront = async (deps: LavalinkDeps, player: CustomPlayer, currentTrack: Track): Promise<Track | null> => {
 	const gid = String(player.guildId);
 	if (deps.relatedFetchInFlight.has(gid)) return null;
@@ -295,7 +219,6 @@ export const queueRelatedUpfront = async (deps: LavalinkDeps, player: CustomPlay
 		if (!selectedTrack) return null;
 
 		const activeEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
-		// fetch 동안 정지하거나 다른 곡으로 전이됐으면 이전 곡 기준 추천을 추가하지 않는다.
 		if (
 			player.transitionState.stopByCommand ||
 			player.queue.tracks.length > 0 ||
@@ -304,10 +227,8 @@ export const queueRelatedUpfront = async (deps: LavalinkDeps, player: CustomPlay
 			return null;
 
 		await player.queue.add(selectedTrack);
-		// 빈 큐 선두에 추천곡을 넣었다 — 타깃 헤드가 바뀌므로 큐 관측을 태운다.
 		if ((player as CustomPlayer).mixerRuntime) notifyQueueMutated(deps, player as CustomPlayer);
 		if (player.playing) {
-			// 서버가 재생 중 → 슬롯에 예열 (trackEnd 관망은 TrackHandler가 처리)
 			await deps.mixerService.preloadUpcoming(player).catch(() => null);
 		}
 		return selectedTrack;
@@ -320,11 +241,6 @@ export const queueRelatedUpfront = async (deps: LavalinkDeps, player: CustomPlay
 	}
 };
 
-/**
- * /추천 명령용 수동 추천 추가 — 현재 재생 곡을 기준으로 추천곡을 최대 count곡까지
- * 대기열 끝에 추가한다. 자동 프리페치와 같은 in-flight 가드를 공유해 이중 추가를 막는다.
- * 반환: 실제로 추가한 곡들 (지원하지 않는 소스/진행 중 충돌/후보 없음이면 빈 배열)
- */
 export const addManualRecommendation = async (deps: LavalinkDeps, player: CustomPlayer, reference: Track, count: number): Promise<Track[]> => {
 	const gid = String(player.guildId);
 	if (deps.relatedFetchInFlight.has(gid)) return [];
@@ -339,7 +255,6 @@ export const addManualRecommendation = async (deps: LavalinkDeps, player: Custom
 			const selected = await fetchRelatedCandidate(deps, player, reference, pickedIds);
 			if (!selected) break;
 
-			// fetch 동안 정지/전이됐으면 이 기준의 추천을 더 넣지 않는다.
 			const activeEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
 			if (player.transitionState.stopByCommand || (player.queue.current && !isSameEncodedTrack(activeEncoded, referenceEncoded))) break;
 
@@ -349,14 +264,12 @@ export const addManualRecommendation = async (deps: LavalinkDeps, player: Custom
 		}
 
 		if (added.length > 0 && player.playing) {
-			// 다음 곡 슬롯을 다시 예열한다 (선두 예열 상태가 바뀐다)
 			await deps.mixerService.preloadUpcoming(player).catch(() => null);
 		}
 		return added;
 	};
 
-	// in-flight 가드는 getInFlightRelatedFetch의 Promise<Track | null> 계약과 공유해야 한다
-	// (handleQueueEnd가 이 값을 await해 첫 추가곡을 확인한다).
+	// Shares the Promise<Track | null> in-flight guard with queueRelatedUpfront and autoPlayRelated.
 	const runs = operation();
 	const tracked: Promise<Track | null> = runs.then((tracks) => tracks[0] ?? null);
 	deps.relatedFetchInFlight.set(gid, tracked);
@@ -368,17 +281,13 @@ export const addManualRecommendation = async (deps: LavalinkDeps, player: Custom
 };
 
 export const autoPlayRelated = async (deps: LavalinkDeps, player: CustomPlayer, lastPlayedTrack?: Track | null): Promise<void> => {
-	// lavalink-client의 queueEnd 호출 시점에 직전 곡이 null로 전달될 수 있으므로
-	// lastPlayedTrack이 없으면 player.queue.previous[0] 또는 player.queue.current를 폴백으로 사용한다
 	const referenceTrack = lastPlayedTrack ?? player.queue.previous?.[0] ?? player.queue.current ?? null;
 	if (!referenceTrack?.info) {
 		deps.logger.debug('[autoPlayRelated] No reference track available, skipping fallback');
 		return;
 	}
 
-	// 서버 예열 전이가 진행 중이면 관망한다 — 이 시점의 queue.add는 라이브러리
-	// queueEnd 안에서 current를 새 추천곡으로 시프트해 표시가 실제 재생과 어긋난다
-	// (서버가 이미 예열곡을 시작한 β 시나리오). 정상 전이는 trackStart가 이어준다.
+	// Skip fallback while a server-side preloaded transition is in flight.
 	const transitionState = (player as CustomPlayer).transitionState;
 	const consumedRecently =
 		transitionState?.preloadConsumedAt != null && Date.now() - transitionState.preloadConsumedAt < transitionConfirmTimeoutMs();
@@ -389,13 +298,11 @@ export const autoPlayRelated = async (deps: LavalinkDeps, player: CustomPlayer, 
 	const relatedOn = await guildPlayback.getRelated(deps.guildService, player.guildId);
 	if (player.repeatMode == 'off' && relatedOn) {
 		if (referenceTrack.info.identifier && isYouTubeSource(referenceTrack.info.sourceName)) {
-			// trackStart 선예열이 진행 중이면 이중 추가 방지 (선예열쪽이 재생을 이어준다)
 			if (deps.relatedFetchInFlight.has(String(player.guildId))) {
 				deps.logger.debug('[autoPlayRelated] Pre-add in flight, skipping fallback');
 				return;
 			}
 
-			// Prevent race condition
 			const currentRequesterId = requesterIdOf(player.queue.current ?? undefined);
 			if ((player.queue.current && currentRequesterId !== null) || player.queue.tracks.length > 0) {
 				deps.logger.debug('[autoPlayRelated] Prevent race condition: user added track');
@@ -404,12 +311,9 @@ export const autoPlayRelated = async (deps: LavalinkDeps, player: CustomPlayer, 
 
 			const selectedTrack = await fetchRelatedCandidate(deps, player, referenceTrack);
 			if (!selectedTrack) {
-				// 추천 곡을 찾지 못하면 조용히 종료한다.
-				// 종료 안내는 queueEnd 핸들러(handleQueueEnd)가 한 번만 보낸다. (2연타 방지)
 				return;
 			}
 
-			// 검색 동안 상태가 변했는지 재확인 (사용자가 곡을 추가했으면 넘어간다)
 			const recheckRequesterId = requesterIdOf(player.queue.current ?? undefined);
 			if ((player.queue.current && recheckRequesterId !== null) || player.queue.tracks.length > 0) {
 				deps.logger.debug('[autoPlayRelated] Prevent race condition after search: user added track');
@@ -417,7 +321,6 @@ export const autoPlayRelated = async (deps: LavalinkDeps, player: CustomPlayer, 
 			}
 
 			await player.queue.add(selectedTrack);
-			// 빈 큐 선두에 추천곡을 넣었다 — 타깃 헤드가 바뀌므로 큐 관측을 태운다.
 			if ((player as CustomPlayer).mixerRuntime) notifyQueueMutated(deps, player as CustomPlayer);
 		}
 	}

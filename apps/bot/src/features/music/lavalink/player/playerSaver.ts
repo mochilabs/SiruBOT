@@ -9,7 +9,7 @@ export class CachedPlayerSaver extends PendingWriteStore {
 			redis,
 			'playerSaver',
 			{
-				ttl: 30 * 60 * 1000, // 30분
+				ttl: 30 * 60 * 1000,
 				maxSize: 500
 			},
 			0,
@@ -26,7 +26,6 @@ export class CachedPlayerSaver extends PendingWriteStore {
 		await this.writeRaw(player.guildId, this.stringify(player));
 	}
 
-	/** 저장 시각(savedAt)은 재시작 복구의 신선도 판별에 쓰인다(구버전 잔재에는 없을 수 있다). */
 	public async get(guildId: string): Promise<(Omit<CustomPlayerJson, 'queue'> & { savedAt?: number }) | null> {
 		const raw = await this.getRaw(guildId);
 		if (raw === null) {
@@ -36,8 +35,6 @@ export class CachedPlayerSaver extends PendingWriteStore {
 		try {
 			return JSON.parse(raw);
 		} catch (error) {
-			// 손상된 기록이 복구 경로로 새면 원시 throw가 어디로 튈지 알 수 없다 —
-			// "기록 없음"이라는 정의된 폴백으로 통일한다.
 			this.logger.warn(`Corrupted saved player for guild ${guildId}, ignoring: ${error}`);
 			return null;
 		}
@@ -49,12 +46,10 @@ export class CachedPlayerSaver extends PendingWriteStore {
 	}
 
 	private stringify(player: CustomPlayer): string {
-		const { queue, ...playerData } = player.toJSON(); // queue 분리
-		// 재시작 복구 판별용 시각 — 오래된 잔재는 복구하지 않고 정리한다.
+		const { queue, ...playerData } = player.toJSON();
 		return JSON.stringify({ ...playerData, savedAt: Date.now() });
 	}
 
-	/** 저장된 플레이어가 있는 길드 목록 — 세션이 새로 생겼을 때(크래시 재시작) 복구 대상 탐색용. */
 	public async listGuildIds(): Promise<string[]> {
 		const guildIds: string[] = [];
 		if (!this.isRedisConnected) {

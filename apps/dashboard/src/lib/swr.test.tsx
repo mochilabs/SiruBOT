@@ -83,7 +83,6 @@ describe("useAuthedSWR", () => {
 		remote.sessionStatus = "authenticated";
 		await render(<AuthedProbe fetchKey="/api/playlists" callbackUrl="/playlists" />);
 		expect(lastSwrCall()?.key).toBe("/api/playlists");
-		// 전역 SWRConfig fetcher를 쓰도록 fetcher 인자를 넘기지 않아요
 		expect(lastSwrCall()?.fetcher).toBeUndefined();
 	});
 
@@ -196,7 +195,6 @@ describe("createApiFetcher", () => {
 		const fetcher = createApiFetcher("실패", { sessionRetry: true });
 		const failure = (await fetcher("/api/x").catch((error: unknown) => error)) as ApiError;
 		expect(failure.status).toBe(401);
-		// 세션 갱신이 정보를 주지 못하면 재시도하지 않아요
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 

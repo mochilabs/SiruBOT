@@ -8,10 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 import { hasUnsavedSettings, saveActiveSettings } from "./settings-shared";
 
-/**
- * 클릭이 같은 사이트 안의 다른 페이지로 가는 링크인지 확인해요. 새 탭·다운로드·같은 페이지 이동은 제외해요.
- * App Router에는 라우트 변경 이벤트가 없어서, 모든 `next/link`가 결국 렌더하는 `<a>` 클릭을 캡처 단계에서 잡아요.
- */
+/** App Router에는 라우트 변경 이벤트가 없어 `next/link`의 `<a>` 클릭을 캡처 단계에서 잡는다. */
 export function internalNavigationTarget(event: MouseEvent, current: Location): string | null {
   if (event.defaultPrevented || event.button !== 0) return null;
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return null;
@@ -21,15 +18,10 @@ export function internalNavigationTarget(event: MouseEvent, current: Location): 
   if (anchor.target && anchor.target !== "_self") return null;
   const url = new URL(anchor.href, current.href);
   if (url.origin !== current.origin) return null;
-  // 같은 페이지 안의 쿼리·해시 이동(탭 전환 등)은 대시보드 셸이 따로 지켜요
   if (url.pathname === current.pathname) return null;
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
-/**
- * 저장하지 않은 설정이 있을 때 앱 안의 다른 페이지(내비게이션 바·푸터 링크 등)로 가는 이동을 막고 확인을 받아요.
- * 새로고침·탭 닫기는 settings-shared의 `beforeunload`가, 탭 전환·서버 전환은 각 컴포넌트가 이미 지켜요.
- */
 export function UnsavedNavigationGuard() {
   const router = useRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -42,7 +34,6 @@ export function UnsavedNavigationGuard() {
       if (!hasUnsavedSettings()) return;
       const href = internalNavigationTarget(event, window.location);
       if (!href) return;
-      // 캡처 단계에서 끊어 Link의 클라이언트 이동이 시작되지 않게 해요
       event.preventDefault();
       event.stopPropagation();
       setPendingHref(href);
@@ -60,7 +51,6 @@ export function UnsavedNavigationGuard() {
     if (saving) return;
     setSaving(true);
     try {
-      // 저장 실패는 각 패널이 토스트로 알렸어요 — 이동하지 않고 편집 상태를 유지해요
       if (await saveActiveSettings()) leave();
       else setPendingHref(null);
     } finally {

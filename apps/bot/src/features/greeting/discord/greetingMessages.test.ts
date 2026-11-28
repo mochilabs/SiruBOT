@@ -26,7 +26,6 @@ describe('greetingMessages — 메시지 레이아웃', () => {
 	});
 
 	it('components 레이아웃은 컨테이너 없이 컴포넌트 목록을 그대로 보낸다', () => {
-		// isTest일 때 안내 문구 + 구분선이 붙어 조각이 2개 이상이 돼요
 		const components = render({ layout: 'components' }, true);
 		expect(components.length).toBeGreaterThan(1);
 		expect(components.some((component) => component.type === ComponentType.Container)).toBe(false);

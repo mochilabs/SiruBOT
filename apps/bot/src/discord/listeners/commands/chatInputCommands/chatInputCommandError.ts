@@ -33,7 +33,6 @@ export class ChatInputCommandError extends Listener {
 			});
 		}
 
-		// 예기치 못한 오류에만 지원 서버 버튼과 장애 공지를 붙여요
 		const view = presentation.showSupport
 			? await unexpectedErrorView(presentation.message, { accentColor: WARN_COLOR })
 			: notice(presentation.message, presentation.report ? WARN_COLOR : undefined);

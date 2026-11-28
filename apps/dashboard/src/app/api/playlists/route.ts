@@ -63,7 +63,6 @@ export const POST = createGuildApiHandler({
         );
       }
 
-      // 플레이리스트 개수 상한 (userId별)
       const playlistCount = await db.playlist.count({ where: { userId } });
       if (playlistCount >= MAX_PLAYLISTS_PER_USER) {
         return NextResponse.json(
@@ -74,7 +73,6 @@ export const POST = createGuildApiHandler({
         );
       }
 
-      // Check duplicates
       const existing = await db.playlist.findFirst({
         where: { userId, name },
       });

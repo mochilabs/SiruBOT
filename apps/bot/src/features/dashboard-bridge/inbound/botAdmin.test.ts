@@ -30,7 +30,6 @@ import { createBotAdminResponder } from './botAdmin.ts';
 
 const REQUEST_ID = 'c9d3a1b2-4e5f-4a6b-8c7d-2b1e3f4a5c61';
 
-/** 서명 없는(개발용) 모드로 요청을 흘려 넣어요 — 서명 검증 자체는 lib/redisResponder.test.ts가 잠가요 */
 function createResponder() {
 	const logger = {
 		info: vi.fn(),

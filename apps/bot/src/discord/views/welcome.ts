@@ -8,13 +8,9 @@ export const onboardingSettingsCustomId = onboardingId.encode('settings');
 export const onboardingTourCustomId = onboardingId.encode('tour');
 
 export interface WelcomeViewOptions {
-	/** `first`: 처음 들어옴(전체 안내) · `rejoin`: 다시 들어옴(짧은 안내, D-3) */
 	kind: 'first' | 'rejoin';
-	/** 명령 멘션 색인 (`fetchCommandIndex`). 비어 있으면 인라인 코드로 보여요. */
 	index: ReadonlyMap<string, ApplicationCommand>;
-	/** null이면 "대시보드 열기" 버튼을 숨겨요 (D-4) */
 	dashboardUrl: string | null;
-	/** null이면 지원 서버 안내를 숨겨요 */
 	supportServerUrl: string | null;
 }
 
@@ -51,7 +47,6 @@ function bodyText(options: WelcomeViewOptions): string {
 	return lines.join('\n');
 }
 
-/** 서버 가입 안내 메시지 (Components V2) */
 export function welcomeView(options: WelcomeViewOptions): ContainerBuilder {
 	const container = createContainer();
 	container.addTextDisplayComponents((t) => t.setContent(bodyText(options)));

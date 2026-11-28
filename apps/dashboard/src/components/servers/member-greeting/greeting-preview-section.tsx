@@ -9,15 +9,11 @@ import { Slider } from "@/components/ui/slider";
 import { CARD_H, CARD_W } from "./greeting-draw";
 
 interface GreetingPreviewSectionProps {
-  /** 선택 테두리·핸들과 포인터 조작을 받는 투명 canvas — 카드 본체는 아래 미리보기 이미지예요 */
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
-  /** Takumi로 그린 카드 이미지(data URI) — 첫 렌더 전에는 null */
   previewSrc: string | null;
   previewError: boolean;
-  /** 움직이는 레이어가 있을 때만 재생 컨트롤을 보여줘요 */
   animated: boolean;
   playing: boolean;
-  /** 재생이 느려서 자동으로 멈췄을 때 안내 문구를 보여줘요 */
   autoPaused: boolean;
   timeMs: number;
   durationMs: number;
@@ -30,14 +26,11 @@ interface GreetingPreviewSectionProps {
   onRedo: () => void;
   onPointerDown: (event: React.PointerEvent<HTMLCanvasElement>) => void;
   onPointerMove: (event: React.PointerEvent<HTMLCanvasElement>) => void;
-  /** 포인터 놓기·취소 둘 다 같은 정리(드래그 종료 + 커밋)를 해요 */
   onPointerEnd: (event: React.PointerEvent<HTMLCanvasElement>) => void;
-  /** 드래그 중 가이드선에 붙이는 스냅 — Alt를 누르고 있으면 잠시 꺼져요 */
   snapEnabled: boolean;
   onToggleSnap: () => void;
 }
 
-/** 미리보기 — 실행취소/다시실행 버튼과 드래그로 조작하는 카드 캔버스 */
 export function GreetingPreviewSection({
   canvasRef,
   previewSrc,
@@ -101,7 +94,6 @@ export function GreetingPreviewSection({
         style={{ aspectRatio: "1200 / 675" }}
       >
         {previewSrc && (
-          // Takumi가 만든 data URI라 next/image 최적화 대상이 아니에요
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={previewSrc}

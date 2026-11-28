@@ -27,7 +27,6 @@ export function PlaylistSidebar({
 	const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 	const [searchQuery, setSearchQuery] = useState("");
 
-	// 검색창은 5개 이상일 때만 보이므로, 그 아래로 줄면 남은 검색어로 필터되지 않게 무시해요
 	const effectiveQuery = playlists.length >= 5 ? searchQuery : "";
 	const filteredPlaylists = useMemo(() => {
 		if (!effectiveQuery) return playlists;

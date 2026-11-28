@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { TICKET_TRANSCRIPT_BUCKET } from '@sirubot/utils';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { requireAuth } from '../plugins/auth.ts';
 import { ObjectStore } from '../services/objectStore.ts';
@@ -46,5 +47,11 @@ describe('GET /:bucket/*', () => {
 		// 이중 인코딩(%252e)이어야 URL 정규화를 지나 핸들러의 키 검증까지 도달해요
 		const res = await fastify.inject({ method: 'GET', url: '/guild-assets/g1/%252e%252e/%252e%252e/etc/passwd' });
 		expect(res.statusCode).toBe(400);
+	});
+
+	it('비공개 transcript 버킷은 있어도 404예요', async () => {
+		await store.put(TICKET_TRANSCRIPT_BUCKET, 't1/log.json.gz', Buffer.from([1]), 'application/gzip');
+		const res = await fastify.inject({ method: 'GET', url: `/${TICKET_TRANSCRIPT_BUCKET}/t1/log.json.gz` });
+		expect(res.statusCode).toBe(404);
 	});
 });

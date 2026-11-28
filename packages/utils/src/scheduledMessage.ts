@@ -3,28 +3,16 @@ import { nextRunAt, type Recurrence } from './jobRecurrence.js';
 
 export { nextRunAt, type Recurrence } from './jobRecurrence.js';
 
-/**
- * 예약 메시지 계약 — 정해진 시각(1회 또는 반복)에 지정 채널로 메시지를 보내요. 봇과 대시보드가 함께 써요.
- * 저장은 `ScheduledJob`(kind `scheduled-message`)의 payload이고, 서버별 상한·간격은 `ScheduledMessageSettings`(없으면 기본값)예요.
- * 시각은 전부 Asia/Seoul(KST, UTC+9 고정)이에요.
- */
-
 export const SCHEDULED_MESSAGE_KIND = 'scheduled-message';
 
 export const SCHEDULED_MESSAGE_CONTENT_MAX = 2000;
-/** 서버당 활성 예약 기본 상한 (D-18) */
 export const SCHEDULED_MESSAGE_MAX_ACTIVE_DEFAULT = 25;
 export const SCHEDULED_MESSAGE_MAX_ACTIVE_LIMIT = 100;
-/** 같은 채널 최소 간격(분) 기본값 (D-18) */
 export const SCHEDULED_MESSAGE_MIN_INTERVAL_DEFAULT = 10;
 export const SCHEDULED_MESSAGE_MIN_INTERVAL_LIMIT = 1440;
-/** 첫 실행은 이만큼(ms)은 미래여야 해요 */
 export const SCHEDULED_MESSAGE_MIN_LEAD_MS = 60_000;
-/** 첫 실행은 이 기간(ms) 안이어야 해요 (366일) */
 export const SCHEDULED_MESSAGE_MAX_LEAD_MS = 366 * 24 * 60 * 60_000;
-/** 반복 예약이 이 시간(ms) 넘게 밀려서 실행되면 그 회차는 건너뛰어요 (봇이 오래 꺼져 있던 경우) */
 export const SCHEDULED_MESSAGE_MISSED_SKIP_MS = 3 * 60 * 60_000;
-/** 간격 충돌을 확인하는 앞날 범위 */
 const CONFLICT_HORIZON_MS = 62 * 24 * 60 * 60_000;
 const CONFLICT_MAX_OCCURRENCES = 500;
 
@@ -32,11 +20,8 @@ const KST_OFFSET_MS = 9 * 60 * 60_000;
 const snowflake = z.string().regex(/^\d{17,20}$/, '올바른 ID 형식이 아니에요.');
 const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
-/* ---------------------------------------------------------------- 본문 */
-
 const EVERYONE_PATTERN = /@(everyone|here)/i;
 
-/** 본문 검증 — 1~2000자, @everyone/@here 금지. 전송할 때도 allowedMentions로 한 번 더 막아요. */
 export const scheduledMessageContentSchema = z
 	.string()
 	.trim()
@@ -44,9 +29,6 @@ export const scheduledMessageContentSchema = z
 	.max(SCHEDULED_MESSAGE_CONTENT_MAX, `메시지는 ${SCHEDULED_MESSAGE_CONTENT_MAX}자까지 쓸 수 있어요.`)
 	.refine((text) => !EVERYONE_PATTERN.test(text), '@everyone, @here 멘션은 예약 메시지에 쓸 수 없어요.');
 
-/* ---------------------------------------------------------------- 시각 */
-
-/** "YYYY-MM-DD HH:mm"(KST, 가운데가 'T'여도 돼요)를 Date로. 형식이나 달력이 틀리면 null */
 export function parseKstDateTime(text: string): Date | null {
 	const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/.exec(text.trim());
 	if (!match) return null;
@@ -57,7 +39,6 @@ export function parseKstDateTime(text: string): Date | null {
 	return new Date(utc - KST_OFFSET_MS);
 }
 
-/** Date를 "YYYY-MM-DD HH:mm"(KST)로 */
 export function formatKstDateTime(date: Date): string {
 	const kst = new Date(date.getTime() + KST_OFFSET_MS);
 	const p = (n: number) => String(n).padStart(2, '0');
@@ -74,7 +55,6 @@ export const SCHEDULED_MESSAGE_REPEAT_LABELS: Record<ScheduledMessageRepeat, str
 	monthly: '매월'
 };
 
-/** 첫 실행 시각에서 반복 규칙을 만들어요 — 매주는 그날의 요일, 매월은 그날의 일(31일이면 짧은 달은 말일)로 정해요 */
 export function buildRecurrence(repeat: ScheduledMessageRepeat, firstRunAt: Date): Recurrence | undefined {
 	const kst = new Date(firstRunAt.getTime() + KST_OFFSET_MS);
 	const p = (n: number) => String(n).padStart(2, '0');
@@ -97,7 +77,6 @@ const recurrenceSchema = z.discriminatedUnion('type', [
 	z.object({ type: z.literal('monthly'), day: z.number().int().min(1).max(31), time: timeOfDay })
 ]);
 
-/** 반복 규칙을 사람이 읽는 한국어로 */
 export function describeRecurrence(rule: Recurrence | undefined): string {
 	if (!rule) return '한 번';
 	switch (rule.type) {
@@ -110,9 +89,6 @@ export function describeRecurrence(rule: Recurrence | undefined): string {
 	}
 }
 
-/* ---------------------------------------------------------------- payload */
-
-/** ScheduledJob.payload — seriesId는 같은 예약의 회차를 묶는 ID(사용자가 보는 예약 ID)예요 */
 export const scheduledMessagePayloadSchema = z.object({
 	seriesId: z.string().uuid(),
 	channelId: snowflake,
@@ -121,13 +97,10 @@ export const scheduledMessagePayloadSchema = z.object({
 });
 export type ScheduledMessagePayload = z.infer<typeof scheduledMessagePayloadSchema>;
 
-/** 저장된 payload 읽기 — 깨졌으면 null */
 export function parseScheduledMessagePayload(value: unknown): ScheduledMessagePayload | null {
 	const parsed = scheduledMessagePayloadSchema.safeParse(value);
 	return parsed.success ? parsed.data : null;
 }
-
-/* ---------------------------------------------------------------- 서버 설정 */
 
 export const scheduledMessageSettingsSchema = z.object({
 	maxActive: z
@@ -149,9 +122,6 @@ export const SCHEDULED_MESSAGE_SETTINGS_DEFAULTS: ScheduledMessageSettings = {
 	minIntervalMinutes: SCHEDULED_MESSAGE_MIN_INTERVAL_DEFAULT
 };
 
-/* ---------------------------------------------------------------- 만들기 입력 */
-
-/** 대시보드 만들기 본문 — runAt은 "YYYY-MM-DD HH:mm"(KST) */
 export const createScheduledMessageSchema = z.object({
 	channelId: snowflake,
 	content: scheduledMessageContentSchema,
@@ -160,9 +130,6 @@ export const createScheduledMessageSchema = z.object({
 });
 export type CreateScheduledMessageInput = z.infer<typeof createScheduledMessageSchema>;
 
-/* ---------------------------------------------------------------- 상한·간격 검사 */
-
-/** 이미 활성(pending·running)인 예약 한 건 — 같은 seriesId의 여러 행은 한 건으로 세요 */
 export interface ActiveScheduledMessage {
 	seriesId: string;
 	channelId: string;
@@ -185,10 +152,6 @@ function occurrences(first: Date, recurrence: Recurrence | undefined, until: num
 	return list;
 }
 
-/**
- * 새 예약을 만들어도 되는지 — 시각 범위, 서버당 활성 예약 상한, 같은 채널 최소 간격(앞으로 62일 동안의 모든 회차끼리)을 봐요.
- * 봇 명령과 대시보드가 같은 함수를 써서 결과가 어긋나지 않아요.
- */
 export function checkNewScheduledMessage(input: {
 	now: Date;
 	runAt: Date;

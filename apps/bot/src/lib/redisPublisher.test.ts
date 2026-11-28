@@ -5,7 +5,7 @@ import { RedisPublisher, type RawRedisPublisher } from './redisPublisher.ts';
 const makeLogger = () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() });
 
 describe('RedisPublisher', () => {
-	it('서명 키가 있으면 서명 봉투로 감싸 같은 채널·라벨로 보내요', () => {
+	it('서명 키가 있으면 서명을 붙여 같은 채널·라벨로 보내요', () => {
 		const store: RawRedisPublisher = { publish: vi.fn() };
 		new RedisPublisher({ getStore: () => store, signingKey: 'secret', logger: makeLogger() }).publish('ch', { a: 1 }, 'label');
 		const [channel, payload, label] = vi.mocked(store.publish).mock.calls[0];

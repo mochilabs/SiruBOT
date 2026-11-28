@@ -1,5 +1,3 @@
-// 웹 플레이어 request/reply 매핑 계약 — forward*의 실패 상태·한국어 message를
-// PlayerWebApiResult로 옮기고, 검색·재생·제어·음성 컨텍스트 요청 본문을 잠가요.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { forwardDataApiGet, forwardDataApiPost } from "./client";

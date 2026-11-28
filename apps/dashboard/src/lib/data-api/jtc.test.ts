@@ -1,4 +1,3 @@
-// JTC 마커 채널 셋업 위임 계약 — 성공/마커 없음/봇 거절(한국어 안내)의 매핑을 잠가요.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { forwardDataApiPost } from "./client";

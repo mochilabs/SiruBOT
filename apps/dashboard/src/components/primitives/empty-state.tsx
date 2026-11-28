@@ -6,15 +6,12 @@ import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
 	icon?: React.ComponentType<{ className?: string }>;
-	/** 아이콘 칩 배경 톤 — default: 중립 서피스, warning/destructive: 상태색 tint. */
 	tone?: "default" | "warning" | "destructive";
 	title: string;
-	/** 제목 태그 — 오류 패널처럼 헤딩 의미론(스크린리더 탐색)이 필요한 곳에서 "h3"로 지정. */
 	titleAs?: "p" | "h2" | "h3";
 	description?: React.ReactNode;
 	action?: React.ReactNode;
 	secondaryAction?: React.ReactNode;
-	/** p-20이 기본. 표/프로세스 목록 등 좁은 영역에서는 sm. */
 	size?: "sm" | "md";
 	className?: string;
 }

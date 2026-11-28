@@ -10,6 +10,7 @@ import { CustomPlayer } from '../../lavalink/player/customPlayer.ts';
 import { buildControllerCardPayload } from '../../lavalink/player/controllerPayload.ts';
 import { currentChapterIndex } from '../../lavalink/player/chapters.ts';
 import { errorView } from '../../../../lib/errorView.ts';
+import { thrownCode } from '../../../../lib/thrownError.ts';
 import { GUARD_MESSAGES, guardPlayerAccess, replyGuardError } from '../utils/interactionGuards.ts';
 import { actorFromMember } from '../../application/actor.ts';
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
@@ -31,7 +32,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private static readonly DJ_COMMANDS = new Set(['pause', 'resume', 'stop', 'prev', 'next', 'repeat', 'chapter', 'volume']);
-	/** 인가를 `container.music` 유스케이스가 맡는 명령 — 어댑터는 `guardPlayerAccess`를 거치지 않아요. */
 	private static readonly MUSIC_USE_CASE_COMMANDS = new Set(['pause', 'resume', 'repeat', 'stop', 'volume', 'next', 'prev']);
 
 	public async run(interaction: ButtonInteraction<'cached'>, decoded: ControllerButtonId) {
@@ -39,7 +39,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		const existing = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
 		let player: CustomPlayer;
 		if (ControllerButtonHandler.MUSIC_USE_CASE_COMMANDS.has(command)) {
-			// 음성 채널·DJ 인가는 유스케이스가 검사해요. 여기서는 컨트롤러 갱신에 쓸 플레이어만 확인해요.
 			if (!existing) {
 				await replyGuardError(interaction, GUARD_MESSAGES.noPlayer);
 				return;
@@ -108,14 +107,13 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				player.controller = updated;
 			}
 			return true;
-		} catch (error: any) {
-			// 컨트롤러가 삭제됐거나 interaction이 만료된 경우: 호출부에서 안내한다.
-			if (error.code === 10008 || error.code === 10062 || error.code === 40060) return false;
+		} catch (error) {
+			const code = thrownCode(error);
+			if (code === 10008 || code === 10062 || code === 40060) return false;
 			throw error;
 		}
 	}
 
-	/** 컨트롤러 갱신 — safeUpdate가 실패하면(만료) ephemeral 안내로 대체한다. 각 핸들러가 공유한다. */
 	private async updateControllerOrFail(interaction: ButtonInteraction<'cached'>, player: CustomPlayer): Promise<void> {
 		if (!(await this.safeUpdate(interaction, player))) {
 			await interaction
@@ -145,10 +143,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		await this.updateControllerOrFail(interaction, player);
 	}
 
-	/**
-	 * 챕터 건너뛰기 — 현재 위치 기준으로 이전·다음 챕터 시작으로 seek해요.
-	 * '이전'은 현재 챕터를 5초 이상 들었으면 그 챕터 처음으로 되돌려요 (Discord 건너뛰기 관습).
-	 */
 	private async handleChapter(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, direction: 'prev' | 'next') {
 		const chapters = player.chapters ?? [];
 		const index = currentChapterIndex(player);
@@ -168,11 +162,9 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			} else if (index !== null && index > 0) {
 				target = chapters[index - 1]!.start;
 			} else if (index === null) {
-				// 챕터 경계 밖(보간 지연 등) — 위치보다 앞선 마지막 챕터로 되돌려요.
 				target = [...chapters].reverse().find((chapter) => chapter.start < position)?.start ?? chapters[0]!.start;
 			}
 		} else if (direction === 'next') {
-			// 현재 챕터 다음 또는 경계 밖이면 위치보다 뒤인 첫 챕터로 건너뛰어요.
 			target = chapters.find((chapter) => chapter.start > position)?.start ?? null;
 		}
 
@@ -210,7 +202,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private async handleStop(interaction: ButtonInteraction<'cached'>) {
 		await interaction.deferUpdate();
-		// 인가·컨트롤러 삭제·정지는 유스케이스가 맡아요. 여기서는 눌린 메시지를 정지 화면으로 바꿔요.
 		await this.container.music.stop(actorFromMember(interaction.member));
 		try {
 			await interaction.message.edit({
@@ -229,17 +220,16 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private async handlePrev(interaction: ButtonInteraction<'cached'>) {
 		await interaction.deferUpdate();
-		// 인가·재생 기록 확인과 이전곡 재생은 유스케이스가 맡아요. 곧 trackStart가 새 컨트롤러를 보내므로 edit는 생략해요 (edit→삭제 churn 방지).
+		// trackStart가 새 컨트롤러를 보내므로 edit는 생략한다.
 		await this.container.music.previous(actorFromMember(interaction.member));
 	}
 
 	private async handleNext(interaction: ButtonInteraction<'cached'>) {
 		await interaction.deferUpdate();
-		// 인가·현재 곡 확인과 건너뛰기는 유스케이스가 맡아요. 다음 곡이 있으면 곧 trackStart가 새 컨트롤러를 보내고, 없으면 mixer가 컨트롤러를 갱신하므로 edit는 생략해요.
+		// trackStart 또는 mixer가 컨트롤러를 갱신하므로 edit는 생략한다.
 		await this.container.music.skipNow(actorFromMember(interaction.member));
 	}
 
-	/** 컨트롤러의 '대기열 보기' 버튼 — 새 메시지로 queueList(10곡/쪽)를 연다. 컨트롤러는 유지한다. */
 	private async handleQueueView(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
 		const tracks = getUserQueuedTracks(player);
 		if (tracks.length === 0) {

@@ -69,20 +69,17 @@ function createListener(): CountingChannelListener {
 	);
 }
 
-/** 예약된 write-behind flush가 돌아갈 때까지 한 틱 기다려요 */
 const flushTick = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 let listener: CountingChannelListener;
 
 beforeEach(async () => {
-	// 이전 테스트의 pending flush/체인이 새 테스트의 호출 기록을 더럽히지 않게 비워요
 	await flushTick();
 	vi.resetAllMocks();
-	// 카운팅 상태 소유자는 container.countingState — 테스트마다 새로 만들어요
 	container.countingState = new CountingStateStore({ getRedisStore: () => container.redisStore });
 	listener = createListener();
 	mocks.getChatToolSettings.mockResolvedValue({ countingEnabled: true, countingChannelId: 'counting-channel' });
-	mocks.getCacheHashFields.mockResolvedValue(null);
+	mocks.getCacheHashFields.mockResolvedValue({});
 	mocks.setCacheHashFields.mockResolvedValue(undefined);
 	mocks.deleteCacheValue.mockResolvedValue(undefined);
 });
@@ -93,7 +90,6 @@ describe('countingChannel 레이스 방지 (길드별 직렬화)', () => {
 		const first = fakeMessage({ guildId, userId: 'user-a', content: '1' });
 		const second = fakeMessage({ guildId, userId: 'user-b', content: '1' });
 
-		// 두 메시지를 await 없이 동시에 진입시켜 await 경계 사이의 check-then-act 레이스를 재현해요
 		await Promise.all([listener.run(first.message), listener.run(second.message)]);
 
 		expect(first.reply).not.toHaveBeenCalled();
@@ -149,7 +145,6 @@ describe('countingChannel 카운팅 규칙 (행동 보존)', () => {
 		mocks.setCacheHashFields.mockReturnValue(gate);
 		const m = fakeMessage({ guildId, content: '1' });
 
-		// Redis 쓰기가 완료되지 않은 상태에서도 run()이 끝나야 해요 (write-behind)
 		await listener.run(m.message);
 
 		expect(m.reply).not.toHaveBeenCalled();
@@ -173,6 +168,20 @@ describe('countingChannel 카운팅 규칙 (행동 보존)', () => {
 		expect(JSON.stringify(m.reply.mock.calls)).toContain('5부터 차례로 세야 해요');
 		expect(JSON.stringify(m.reply.mock.calls)).toContain('최고 기록 7');
 		expect(await container.countingState.load(guildId)).toEqual({ current: 0, lastUserId: null, best: 7 });
+	});
+
+	it('Redis를 읽지 못하면 그 메시지를 건너뛰고 기록을 덮어쓰지 않아요', async () => {
+		const guildId = 'redis-down-guild';
+		mocks.getCacheHashFields.mockResolvedValueOnce(null);
+		const m = fakeMessage({ guildId, userId: 'user-2', content: '9' });
+
+		await listener.run(m.message);
+		expect(m.reply).not.toHaveBeenCalled();
+		expect(mocks.setCacheHashFields).not.toHaveBeenCalled();
+
+		mocks.getCacheHashFields.mockResolvedValueOnce({ current: '8', lastUserId: 'user-1', best: '20' });
+		await listener.run(fakeMessage({ guildId, userId: 'user-2', content: '9' }).message);
+		expect(await container.countingState.load(guildId)).toEqual({ current: 9, lastUserId: 'user-2', best: 20 });
 	});
 
 	it('같은 사람이 연속으로 세면 막아요', async () => {

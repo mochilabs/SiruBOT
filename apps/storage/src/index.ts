@@ -5,7 +5,6 @@ import { getLogger } from './utils/logger.ts';
 
 const logger = getLogger('bootstrap');
 
-// data-api·notifier와 같은 패턴: SENTRY_DSN이 없으면 no-op이에요.
 initSentry({ service: 'storage' });
 registerProcessErrorHandlers(logger);
 

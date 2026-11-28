@@ -4,10 +4,6 @@ import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { textContainer } from '../views/textContainer.ts';
 
-/**
- * `2d20+3` / `d20` / `20` 표기 → { count, sides, modifier }.
- * count를 생략한 `d20`은 1개로 본다 — 초보자가 가장 먼저 시도하는 표기예요.
- */
 const FORMULA_PATTERN = /^(\d{1,2})?d(\d{1,3})(?:\s*([+-])\s*(\d{1,3}))?$/i;
 
 const MAX_COUNT = 20;
@@ -100,7 +96,6 @@ export class DiceCommand extends Command {
 		});
 	}
 
-	/** 식이 있으면 식이 우선하고, 없으면 개별 옵션(기본 1d6)으로 조립해요 */
 	private resolveRoll(interaction: ChatInputCommandInteraction): DiceRoll {
 		const formula = interaction.options.getString('formula')?.trim();
 

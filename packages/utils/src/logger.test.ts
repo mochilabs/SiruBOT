@@ -1,9 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { getLoggerSettings } from './logger.ts';
 
-// LOGLEVEL 해석 계약 — app-kit/src/logger.ts의 미러(getAppLogger)와 같은 규칙이에요.
-// 한쪽을 바꾸면 다른쪽도 바꿔야 해요 (AGENTS.md 앱 미러 계약).
-
 const originalLoglevel = process.env.LOGLEVEL;
 
 afterEach(() => {

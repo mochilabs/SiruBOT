@@ -6,29 +6,18 @@ import { Popover } from "@base-ui/react/popover";
 import { Input } from "@/components/ui/input";
 import { clamp01, HEX_COLOR_PATTERN, hexToHsv, type Hsv,hsvToHex, normalizeHex } from "@/lib/color";
 import { cn, radioArrowKeyDown } from "@/lib/utils";
-/** 색 프리셋 기본값 — 사용자가 고르는 실제 색 데이터예요. UI 스타일이 아니에요 */
 export const COLOR_PRESETS = ["#ffffff", "#2d1b1e", "#ff85c1", "#a3416f", "#ffe4f0"] as const;
 
 export interface ColorPickerProps {
-	/** 현재 색 (#RRGGBB) */
 	value: string;
-	/** 색이 바뀔 때마다 호출 — 드래그 중에도 나가요 */
 	onChange: (color: string) => void;
-	/** 편집 확정 시점(드래그 놓기·키보드 한 스텝·HEX blur·프리셋 클릭)에 호출 — 되돌리기 한 단계용 */
 	onCommit?: (color: string) => void;
-	/** 색을 고르는 대상 이름 — 접근성 라벨에 쓰여요 (예: "글자", "강조색") */
 	label: string;
 	presets?: readonly string[];
 	disabled?: boolean;
 	className?: string;
 }
 
-/**
- * 색 선택기 — 채도·명도 팔레트 + 색상 바 + HEX 입력 + 프리셋 스와치.
- *
- * 팔레트의 그라데이션은 장식이 아니라 편집 중인 색 공간(채도/명도/색상)을 그대로 보여주는 표면이에요.
- * HEX 입력이 있어서 키보드만으로도 값을 정확히 낼 수 있고, 팔레트는 방향키로 한 스텝씩 움직여요.
- */
 export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_PRESETS, disabled = false, className }: ColorPickerProps) {
 	const normalized = normalizeHex(value) ?? "#ffffff";
 	// 색상(h)은 무채색에서도 유지돼야 해요 — 표시 색만으로 되돌리면 슬라이더가 튀어요.
@@ -37,8 +26,6 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 	const svRef = useRef<HTMLDivElement>(null);
 	const hueRef = useRef<HTMLDivElement>(null);
 
-	// 외부에서 값이 바뀌면(프리셋·HEX 입력·초기화) 팔레트를 따라가요.
-	// 자기가 만든 색은 비교에서 걸러지고, 무채색으로 옮겨도 색상(h)을 그대로 지켜요.
 	useEffect(() => {
 		setHsv((prev) => (hsvToHex(prev.h, prev.s, prev.v) === normalized ? prev : hexToHsv(normalized)));
 	}, [normalized]);
@@ -102,7 +89,6 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 						<Popover.Popup className="pop-in w-72 max-w-[calc(100vw-2rem)] origin-(--transform-origin) rounded-menu border border-border-subtle bg-popover p-3 text-popover-foreground shadow-2xl outline-none">
 							<Popover.Title className="sr-only">{label} 색 선택</Popover.Title>
 							<div className="flex items-stretch gap-2">
-							{/* 채도·명도 표면 — 가로는 채도, 세로는 명도 */}
 							<div
 								ref={svRef}
 								role="slider"
@@ -148,7 +134,6 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 								/>
 							</div>
 
-							{/* 색상 바 — 위에서 아래로 0°→360° */}
 							<div
 								ref={hueRef}
 								role="slider"
@@ -203,7 +188,6 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 				{presets.length > 0 && (
 					<div role="radiogroup" aria-label={`${label} 색 프리셋`} className="flex items-center gap-2.5">
 						{presets.map((preset) => (
-							// D 분류 — 색 프리셋 옵션 행은 raw 유지 (디자인 시스템 7장 §raw button)
 							<button
 								key={preset}
 								type="button"
@@ -232,7 +216,6 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 	);
 }
 
-/** HEX 입력 — 형식이 맞을 때만 바깥으로 값을 내보내요. 편집 중인 깨진 입력이 미리보기를 깨지 않게요 */
 function HexInput({
 	value,
 	label,

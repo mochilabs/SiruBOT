@@ -10,7 +10,6 @@ export interface ProfileBirthday {
 }
 
 export interface ProfileHoroscope {
-  /** 운세 날짜 (data-api 제공, YYYY-MM-DD) */
   date: string;
   rank: number;
   content: string;
@@ -24,10 +23,6 @@ interface OhaasaDailyResponse {
   horoscopes: Array<{ rank: number; zodiacCode: string; content: string }>;
 }
 
-/**
- * 오늘의 운세 — data-api /v1/ohaasa(일일 캐시·한국어 번역본)에서 유저 별자리 행만 꺼내요.
- * 실패는 null로 돌려 뷰의 안내 문장으로 흘려요 (봇 /v1 원본과 같은 데이터 원본).
- */
 export async function fetchProfileHoroscope(zodiac: ZodiacInfo): Promise<ProfileHoroscope | null> {
   const data = await fetchDataApi<OhaasaDailyResponse>("/v1/ohaasa");
   const mine = data?.horoscopes?.find((h) => h.zodiacCode === zodiac.code);
@@ -68,9 +63,7 @@ export interface ProfileRpsStats {
 export interface ProfileGamesStats {
   rps: ProfileRpsStats | null;
   guessBest: number | null;
-  /** 승/패/연승 표본이 RPS_SAMPLE_LIMIT(최근 5000건) 한도에 걸렸으면 true — 한도를 넘긴 기록은 반영되지 않아요 */
   rpsSampled?: boolean;
-  /** 최소 시도 표본이 GUESS_SAMPLE_LIMIT(최근 1000건) 한도에 걸렸으면 true — listenSampled와 같은 고지용 플래그예요 */
   guessSampled?: boolean;
 }
 
@@ -91,10 +84,6 @@ const LISTEN_SAMPLE_LIMIT = 500;
 const RPS_SAMPLE_LIMIT = 5000;
 const GUESS_SAMPLE_LIMIT = 1000;
 
-/**
- * 유저의 음악/게임/출석 통계를 집계해요.
- * API Route와 프로필 페이지(Server Component) 양쪽에서 공유해요.
- */
 export async function getProfileStats(userId: string): Promise<ProfileStats> {
   const profile = await db.user.findUnique({
     where: { id: userId },

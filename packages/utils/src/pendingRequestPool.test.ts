@@ -39,9 +39,7 @@ describe('PendingRequestPool', () => {
 		expect(pool.resolve('req-1', { ok: true, value: 'done' })).toBe(true);
 		await expect(promise).resolves.toEqual({ ok: true, value: 'done' });
 		expect(pool.size).toBe(0);
-		// 정상 완료는 타임아웃 회수가 아니에요 — onTimeout이 불리지 않아요
 		expect(timeouts).toEqual([]);
-		// 이미 완료된 id는 더 이상 완료할 수 없어요
 		expect(pool.resolve('req-1', { ok: true, value: 'again' })).toBe(false);
 	});
 
@@ -58,7 +56,6 @@ describe('PendingRequestPool', () => {
 		await assertion;
 		expect(pool.size).toBe(0);
 		expect(timeouts).toEqual(['req-1']);
-		// 타임아웃 회수 뒤의 resolve/fail은 아무 효과가 없어요
 		expect(pool.resolve('req-1', { ok: true, value: 'late' })).toBe(false);
 		expect(pool.fail('req-1', { ok: false, reason: 'failed' })).toBe(false);
 	});
@@ -69,13 +66,11 @@ describe('PendingRequestPool', () => {
 		const first = pool.register('req-1', 3_000);
 		expect(pool.size).toBe(1);
 
-		// 상한 초과 — 등록되지 않고 즉시 실패해요 (대기 요청 누수 방지)
 		await expect(pool.register('req-2', 3_000)).resolves.toEqual(TIMEOUT_RESULT);
 		expect(pool.size).toBe(1);
 		expect(timeouts).toEqual(['req-2']);
 		expect(warnings).toHaveLength(1);
 
-		// 첫 요청은 여전히 유효해요
 		expect(pool.resolve('req-1', { ok: true, value: 'first' })).toBe(true);
 		await expect(first).resolves.toEqual({ ok: true, value: 'first' });
 	});
@@ -86,7 +81,6 @@ describe('PendingRequestPool', () => {
 		expect(pool.size).toBe(1);
 
 		await expect(pool.register('req-1', 3_000)).resolves.toEqual(TIMEOUT_RESULT);
-		// 기존 대기는 덮어쓰이지 않고 살아 있어요
 		expect(pool.size).toBe(1);
 		expect(timeouts).toEqual(['req-1']);
 		expect(warnings).toHaveLength(1);
@@ -125,12 +119,10 @@ describe('PendingRequestPool', () => {
 			}
 		});
 
-		// 타이머 회수 경로
 		const timed = pool.register('req-1', 3_000);
 		await vi.advanceTimersByTimeAsync(3_000);
 		await expect(timed).resolves.toEqual({ ok: false, guildId: 'guild-1' });
 
-		// 용량 초과 즉시 실패 경로 — pool이 다시 차오른 뒤 (메타데이터는 register 전에 심는 계약)
 		pool.register('req-3', 60_000);
 		meta.set('req-2', 'guild-2');
 		await expect(pool.register('req-2', 3_000)).resolves.toEqual({ ok: false, guildId: 'guild-2' });
@@ -147,13 +139,11 @@ describe('PendingRequestPool', () => {
 
 		expect(pool.failAll((id) => ({ ok: true, value: `drained-${id}` }))).toBe(2);
 		expect(pool.size).toBe(0);
-		// failAll은 타임아웃 회수가 아니에요 — 호출자가 메타데이터를 통째로 정리해요
 		expect(timeouts).toEqual([]);
 
 		await expect(first).resolves.toEqual({ ok: true, value: 'drained-req-1' });
 		await expect(second).resolves.toEqual({ ok: true, value: 'drained-req-2' });
 
-		// 회수된 요청의 타이머는 해제돼요 — 이후 시각에도 다시 완료되지 않아요
 		await vi.advanceTimersByTimeAsync(60_000);
 		await Promise.resolve();
 	});

@@ -39,7 +39,6 @@ describe('ChannelHistoryStore 수명주기', () => {
 		expect(mocks.upsert).toHaveBeenCalledWith(
 			expect.objectContaining({ where: { channelId: 'c1' }, create: expect.objectContaining({ channelId: 'c1', guildId: 'g1' }) })
 		);
-		// 취소된 타이머가 뒤늦게 다시 쓰지 않아요
 		await vi.advanceTimersByTimeAsync(5_000);
 		expect(mocks.upsert).toHaveBeenCalledTimes(2);
 	});

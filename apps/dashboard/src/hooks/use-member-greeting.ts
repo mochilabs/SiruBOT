@@ -10,23 +10,17 @@ import type { GreetingPair, GreetingTestResult, GreetingTestStatus } from "@/typ
 
 type TestTicket = { kind: GreetingKind; requestId: string; at: number };
 
-/** 봇 결과 폴링 상한 — 20초 내에 결과가 없으면 확인 실패로 정리해요 (전송 자체는 성공했을 수 있어요) */
 const TEST_TIMEOUT_MS = 20_000;
 
 const greetingFetcher = createApiFetcher<GreetingPair>("인사 설정을 불러오지 못했어요.");
 const statusFetcher = createApiFetcher<GreetingTestStatus>("테스트 전송 결과를 불러오지 못했어요.");
 
-/**
- * 멤버 인사(환영/작별) 설정 편집 상태 — 종류별 draft, 저장, 테스트 전송과 결과 매칭을 한 곳에서 관리해요.
- * draft는 서버 값(없으면 공용 기본값)으로 채우고, 사용자가 건드린 종류는 백그라운드 재검증이 덮지 않아요.
- */
 export function useMemberGreeting(guildId: string) {
 	const { data: pair, error, isLoading, mutate, guildUrl, redirectToLogin } = useGuildResource<GreetingPair>(guildId, "/greeting", {
 		fetcher: greetingFetcher,
 	});
 
 	const [drafts, setDrafts] = useState<Record<GreetingKind, GreetingConfig | null>>({ welcome: null, goodbye: null });
-	/** 사용자 편집 마킹 — SWR이 도착해도 편집 중인 종류는 서버 값으로 되돌리지 않아요 */
 	const touchedRef = useRef({ welcome: false, goodbye: false });
 
 	useEffect(() => {
@@ -37,7 +31,6 @@ export function useMemberGreeting(guildId: string) {
 		}));
 	}, [pair]);
 
-	// 세션 만료(401) 리다이렉트는 useGuildResource가 담당해요 — 저장·전송의 수동 401도 같은 redirectToLogin을 써요
 	const patchKind = useCallback((kind: GreetingKind, next: GreetingConfig) => {
 		touchedRef.current[kind] = true;
 		setDrafts((prev) => ({ ...prev, [kind]: next }));
@@ -67,7 +60,6 @@ export function useMemberGreeting(guildId: string) {
 		}
 	}, [drafts, guildUrl, mutate, redirectToLogin]);
 
-	// 테스트 전송: 종류별 진행 티켓(requestId) → 결과 상태 폴링 → requestId 매칭으로 정리
 	const [tickets, setTickets] = useState<TestTicket[]>([]);
 	const [testResults, setTestResults] = useState<Record<GreetingKind, GreetingTestResult | null>>({
 		welcome: null,
@@ -91,7 +83,6 @@ export function useMemberGreeting(guildId: string) {
 			setTickets((prev) => prev.filter((t) => !matched.includes(t)));
 		};
 
-		// 상태 도착 전에도 티켓이 시간을 넘길 수 있어요 — 확인 실패로 솔직하게 정리해요.
 		const matched = status?.found && status.requestId ? tickets.filter((t) => status.requestId === t.requestId) : [];
 		const expired = tickets.filter((t) => now - t.at > TEST_TIMEOUT_MS);
 
@@ -130,14 +121,12 @@ export function useMemberGreeting(guildId: string) {
 			}
 			setTestResults((prev) => ({ ...prev, [kind]: null }));
 			setTickets((prev) => [...prev, { kind, requestId, at: Date.now() }]);
-			// dedupingInterval(5초)로 진행 요청 마커가 남는 걸 우회해요 (useGuildSettings 주석 참고)
 			void mutateStatus();
 		},
 		[guildUrl, mutateStatus, redirectToLogin],
 	);
 
 	return {
-		/** 저장된 설정(없으면 null — UI가 기본값을 깔아요) */
 		pair: pair,
 		drafts,
 		error: error ? toError(error, "인사 설정을 불러오지 못했어요.") : null,
@@ -145,12 +134,10 @@ export function useMemberGreeting(guildId: string) {
 		saving,
 		save,
 		patchKind,
-		/** 종류별 진행 중 테스트 여부 */
 		testPending: (kind: GreetingKind) => tickets.some((ticket) => ticket.kind === kind),
 		testResults,
 		startTest,
 		reload: useCallback(() => {
-			// bound mutate()는 실패 직후 재시도가 묵살되지 않게 진행 요청 마커를 지우고 재검증해요.
 			void mutate();
 		}, [mutate]),
 	};

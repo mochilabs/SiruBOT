@@ -12,10 +12,6 @@ import { db } from "@/lib/db";
 import { WRITE_RATE } from "@/lib/rate-limit";
 import { parseSettingBody } from "@/lib/schemas";
 
-/**
- * 커스텀 명령어 수정 — 이름·설명·스펙 중 보내준 것만 바꿔요.
- * 실행 방식(method)은 불변이에요 — 허용 필드에 없어 보내면 400으로 거부돼요.
- */
 export const PATCH = createGuildApiHandler({
   role: "manage",
   rate: WRITE_RATE,
@@ -30,7 +26,6 @@ export const PATCH = createGuildApiHandler({
       ]);
       if (!body.ok) return body.response;
 
-      // 소유 검증 — 다른 길드의 명령어는 건드릴 수 없어요
       const existing = await db.customCommand.findFirst({
         where: { id: cmdId, guildId },
       });

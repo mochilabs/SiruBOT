@@ -1,5 +1,3 @@
-// data-api HTTP 프록시 클라이언트 계약 — 키 미설정 시 fail-safe(null/503), 인증 헤더는 키 원문,
-// forward*는 실패 상태와 본문 message를 파기하지 않는 것을 잠가요.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type ClientModule = typeof import("./client");
@@ -7,7 +5,6 @@ type ClientModule = typeof import("./client");
 const ENV_KEYS = ["DATA_API_AUTH_KEY", "AUTH_KEY", "DATA_API_URL"] as const;
 const fetchMock = vi.fn();
 
-/** 모듈이 import 시점에 env를 읽으므로 테스트마다 env를 바꾸고 다시 불러와요. */
 async function loadClient(env: Record<string, string>): Promise<ClientModule> {
 	vi.resetModules();
 	for (const key of ENV_KEYS) delete process.env[key];
@@ -101,7 +98,6 @@ describe("openDataApiStream", () => {
 		const upstream = await openDataApiStream("/v1/player/stream");
 		expect(upstream).not.toBeNull();
 		expect(await upstream!.text()).toBe("data");
-		// SSE는 장기 연결이라 timeout 시그널을 걸지 않아요
 		const init = fetchMock.mock.calls[0][1];
 		expect(init.signal).toBeUndefined();
 		expect(init.headers).toEqual({ Authorization: "secret" });

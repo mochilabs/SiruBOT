@@ -12,7 +12,6 @@ import { inFreshGuildTheme } from '../../../../lib/guildThemeScope.ts';
 export const name = 'lyrics';
 export const ko = '가사';
 export const description = '가사를 검색해요.';
-/** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Search the lyrics of a song.';
 export const preconditions = ['TextChannelAllowed'];
 
@@ -60,7 +59,6 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	}
 
 	try {
-		// 게이트웨이(data-api) 우선, 실패 시 lrclib 직접 호출로 폴백해요
 		const results = current ? await searchLyricsForTrack(current).catch(() => searchLyrics(query)) : await searchLyrics(query);
 
 		if (!results || results.length === 0 || (!results[0].plainLyrics && !results[0].syncedLyrics)) {
@@ -73,7 +71,6 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 		let result = results[0];
 		let mode: LyricsViewMode = hasTranslation(result) ? 'both' : 'original';
-		// 재생 중인 곡을 찾은 경우에만 실시간 보기를 보여줘요 (검색어로 찾은 곡은 재생 위치를 알 수 없어요)
 		const liveLines = current ? parseLiveLines(result.syncedLyrics) : null;
 		const trackKey = (t: { info: { identifier: string; uri?: string | null } } | null | undefined) =>
 			t ? `${t.info.identifier}|${t.info.uri ?? ''}` : null;
@@ -98,7 +95,6 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		if (!needsSession) return;
 
 		const startViewSession = (): void => {
-			// 번역 보기 방식을 바꾸거나(ready), 준비 중인 번역을 다시 불러오거나(pending), 실시간 보기를 시작해요
 			createComponentSession(message, {
 				time: 10 * 60 * 1000,
 				owner: { userId: interaction.user.id },
@@ -139,8 +135,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 				translation,
 				getPositionMs: () => container.audio.getPlayer(interaction.guildId)?.position ?? null,
 				isSameTrack: () => trackKey(container.audio.getPlayer(interaction.guildId)?.queue.current) === startKey,
-				// 인터랙션 토큰은 15분 뒤 만료되니 메시지를 직접 고쳐요
-				// 타이머에서 도는 렌더라 서버 색을 새로 읽어요 (실시간 중에 색을 바꿔도 따라가요)
+				// 인터랙션 토큰은 15분 뒤 만료되고 타이머 중 서버 색 변경도 반영하기 위해 메시지를 직접 고쳐요.
 				render: (text) => inFreshGuildTheme(interaction.guildId, async () => void (await message.edit(livePayload(text)))),
 				onEnd: async () => {
 					liveSession?.settle('ended');
@@ -149,7 +144,6 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 				}
 			});
 			liveSession = createComponentSession(message, {
-				// 곡이 끝나면 루프가 먼저 멈춰요. 이건 루프가 멈추지 못했을 때를 위한 안전장치예요.
 				time: 6 * 60 * 60 * 1000,
 				filter: (i) => i.customId === LYRICS_BUTTON_IDS.liveStop,
 				logger: container.logger,

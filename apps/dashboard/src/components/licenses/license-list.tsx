@@ -24,7 +24,6 @@ interface LicenseListProps {
 const rowClass =
 	"flex min-w-0 items-center gap-2 rounded-control bg-surface-2 px-3 py-1.5 text-sm";
 
-/** 검색으로 패키지를 거르고, 라이선스별 그룹으로 고지해요 — 데이터는 스크립트로 생성돼요(커밋된 JSON). */
 export function LicenseList({ entries, summary, total }: LicenseListProps) {
 	const [query, setQuery] = useState("");
 	const trimmed = query.trim().toLowerCase();
@@ -44,7 +43,6 @@ export function LicenseList({ entries, summary, total }: LicenseListProps) {
 			if (!byGroup.has(entry.group)) byGroup.set(entry.group, []);
 			byGroup.get(entry.group)!.push(entry);
 		}
-		// summary는 카운트 내림차순으로 정렬돼 있어요 — 큰 그룹(MIT 등)이 위에 와요.
 		return summary
 			.map(({ license }) => ({ license, items: byGroup.get(license) ?? [] }))
 			.filter((group) => group.items.length > 0);
@@ -78,7 +76,6 @@ export function LicenseList({ entries, summary, total }: LicenseListProps) {
 			) : (
 				<div className="space-y-2">
 					{groups.map(({ license, items }) => (
-						// 검색 중엔 매칭 그룹을 펼쳐요(비어 있으면 기본 접힘 — 카운트만으로 훑을 수 있게)
 						<details key={license} open={trimmed ? true : undefined} className="group rounded-card">
 							<summary className="flex cursor-pointer select-none items-center justify-between gap-2 px-4 py-2.5 text-sm font-bold text-foreground hover:bg-surface-2 transition-colors duration-fast">
 								<span className="min-w-0 truncate">{license}</span>
@@ -99,7 +96,6 @@ export function LicenseList({ entries, summary, total }: LicenseListProps) {
 												target="_blank"
 												rel="noopener noreferrer"
 												aria-label={`${entry.name} 원본 저장소`}
-												// 아이콘(13px)만으로는 터치하기 어려워 after로 44px 히트 영역을 넓혀요(배지 dismiss와 같은 방식).
 												className="relative shrink-0 text-muted-foreground transition-colors duration-fast hover:text-primary-text after:absolute after:inset-[min(0px,calc((100%-44px)/2))]"
 											>
 												<ExternalLink size={13} aria-hidden />

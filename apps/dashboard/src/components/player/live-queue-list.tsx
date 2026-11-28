@@ -42,7 +42,6 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
     refreshInterval: VOICE_CONTEXT_REFRESH_MS,
   });
   const controlBlocked = voiceData?.voice ? !voiceData.voice.canControl : false;
-  // 명령 성공 후 새 상태가 도착할 때까지(또는 시간 초과) 행 조작을 잠가 옛 인덱스 재명령을 막아요.
   const [awaitingState, setAwaitingState] = useState(false);
   const controlsDisabled = unavailable || controlBlocked || pendingKey !== null || awaitingState;
 
@@ -57,7 +56,6 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
   }, [state.queue]);
   const queueSignature = `${state.queueLength}|${rowKeys.join("|")}`;
 
-  // 입장 애니메이션은 첫 마운트에만 적용해요.
   const animateEntry = useRef(true);
   useEffect(() => {
     animateEntry.current = false;
@@ -244,7 +242,6 @@ export function QueueList({ state, guildId, unavailable = false }: QueueListProp
                   onClick={() => void runQueueAction(`remove-${index}`, "queue-remove", { index }, "대기열에서 뺐어요.")}
                 />
               </div>
-              {/* 모바일은 버튼 네 개가 행을 차지해서 더보기 메뉴 하나로 묶어요 */}
               <div className="ml-auto shrink-0 sm:hidden">
                 <DropdownMenu>
                   <DropdownMenuTrigger

@@ -13,7 +13,6 @@ export class ChatInputCommandSuccess extends Listener {
 		const sentAt = guild ? `${guild.name}[${cyan(guild.id)}]` : 'Direct Messages';
 		container.logger.debug(`${shard} - ${cyan(command.name)} ${author} ${sentAt}`);
 
-		// 사용 지표: `cmd:{명령}` 또는 `cmd:{명령}.{서브커맨드}`
 		const sub = interaction.options.getSubcommand(false);
 		container.usageRecorder?.record(
 			interaction.guildId,

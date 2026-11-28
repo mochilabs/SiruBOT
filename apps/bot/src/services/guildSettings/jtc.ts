@@ -1,11 +1,6 @@
 import { JTC_USER_LIMIT_RANGE } from '@sirubot/utils/guildSettingsContract';
 import type { GuildSettingsStore } from './store.ts';
 
-/**
- * 임시 음성방(JTC) 셋팅 CRUD — 기본 채널/카테고리/마커/템플릿/인원 상한.
- * 쓰기는 store 공용 헬퍼로 캐시까지 함께 갱신해요.
- */
-
 export async function getJtcSettings(store: GuildSettingsStore, guildId: string) {
 	const guild = await store.getGuild(guildId);
 	return {

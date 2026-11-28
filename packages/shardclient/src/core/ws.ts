@@ -8,7 +8,6 @@ export type WebsocketOptions = {
 	authKey?: string;
 };
 
-/** 서버 연결(open)까지 기다리는 최대 시간 */
 const CONNECT_TIMEOUT_MS = 10_000;
 
 export type WsEventHandler = (message: WsMessage) => void;
@@ -35,15 +34,12 @@ export class ShardWebSocket {
 				return;
 			}
 
-			// Close any existing connection before creating a new one
 			if (this.ws) {
 				try {
 					this.ws.removeAllListeners();
-					this.ws.on('error', () => {}); // 후행 에러가 unhandled 'error'로 터지지 않게 흡수해요
+					this.ws.on('error', () => {}); // swallow trailing errors so they don't surface as unhandled
 					this.ws.terminate();
-				} catch {
-					// ignore close errors on old socket
-				}
+				} catch {}
 				this.ws = null;
 			}
 
@@ -55,7 +51,7 @@ export class ShardWebSocket {
 				const socket = new WebSocket(this.serverURL, options);
 				this.ws = socket;
 
-				// open 이전에 close만 오거나(error 없이) 응답이 없으면 Promise가 영원히 pending이라 상한을 둬요.
+				// close without error, or silence, before open would leave this promise pending forever.
 				let opened = false;
 				const connectTimeout = setTimeout(() => {
 					if (opened) return;
@@ -73,8 +69,6 @@ export class ShardWebSocket {
 				socket.on('message', (data) => {
 					try {
 						const parsed: unknown = JSON.parse(data.toString());
-						// manager와 동일하게 zod 스키마로 검증: 깨진/악의적 payload가
-						// 핸들러에 전달되지 않도록 한다.
 						const message = WsMessageSchema.parse(parsed);
 						this.emit(message.op, message);
 					} catch (error) {
@@ -87,7 +81,6 @@ export class ShardWebSocket {
 					const reasonStr = reason.toString();
 					this.logger.warn(`WebSocket closed: ${code} ${reasonStr}`);
 					if (!opened) reject(new Error(`WebSocket closed before open: ${code} ${reasonStr}`));
-					// Do NOT auto-reconnect. Let the caller handle reconnection.
 					if (opened && this.onCloseCallback) {
 						this.onCloseCallback(code, reasonStr);
 					}
@@ -104,10 +97,6 @@ export class ShardWebSocket {
 		});
 	}
 
-	/**
-	 * Set a callback for when the WebSocket closes (after successful connection).
-	 * This is how the caller knows to handle reconnection or process exit.
-	 */
 	public onClose(callback: (code: number, reason: string) => void): void {
 		this.onCloseCallback = callback;
 	}
@@ -120,7 +109,6 @@ export class ShardWebSocket {
 		}
 	}
 
-	/** 응답 없는 반쯤 끊긴(half-open) 소켓을 강제로 끊어요. 이후 close 이벤트로 재연결 흐름이 이어져요. */
 	public terminate(): void {
 		this.ws?.terminate();
 	}

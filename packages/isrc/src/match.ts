@@ -9,12 +9,7 @@ function artistContains(a: string, b: string): boolean {
 	return a.includes(b) || b.includes(a);
 }
 
-/**
- * 후보 중 같은 녹음을 골라요. 기준을 느슨하게 하지 마세요 — 잘못된 ISRC는 차트에서 다른 두 곡을 합쳐요.
- * - exact: 제목 일치 + 아티스트(또는 contributor) 일치 + 길이 ±3초
- * - strong: 제목 일치 + 길이 ±2초 + (아티스트 부분 일치 또는 프로바이더의 아티스트 필드 검색 결과), 그리고 그런 후보의 ISRC가 하나뿐일 때
- * `terms`는 이미 정규화된 값이에요 (resolveIsrc가 trackIdentity로 만들어요).
- */
+/** Do not loosen: a wrong ISRC merges distinct tracks in the chart. `terms` must already be normalized. */
 export function pickMatch(terms: IsrcSearchTerms, candidates: IsrcCandidate[]): IsrcMatch | null {
 	if (!terms.title || !terms.artist || terms.durationMs <= 0) return null;
 

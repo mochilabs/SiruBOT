@@ -23,7 +23,6 @@ export interface ConfirmDialogProps {
 	variant?: "danger" | "primary" | "default";
 }
 
-/** 파괴적 작업·중요 변경 확인용 공용 모달 — 진행 중에는 닫히지 않도록 잠가요 */
 export function ConfirmDialog({
 	open,
 	title,

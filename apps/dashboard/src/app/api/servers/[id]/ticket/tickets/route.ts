@@ -4,10 +4,6 @@ import { createGuildApiHandler } from "@/lib/api-handler";
 import { db } from "@/lib/db";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 
-/**
- * 티켓 목록 — 대시보드 관리자 화면용. DB의 Ticket 행을 그대로 내려주되
- * 채널 ID·상태·담당자·transcript 보유 여부만 노출해요.
- */
 export const GET = createGuildApiHandler({
 	role: "manage",
 	rate: READ_RATE,
@@ -42,10 +38,6 @@ export const GET = createGuildApiHandler({
 	}
 });
 
-/**
- * 티켓 강제 마감 — 채널이 이미 삭제된 티켓(봇 오프라인 중 마감 등) 정리에 써요.
- * 봇이 살아 있으면 Discord 채널 삭제·로그는 봇이 담당하므로, 여기서는 DB 상태만 닫아요.
- */
 export const POST = createGuildApiHandler({
 	role: "manage",
 	rate: WRITE_RATE,

@@ -26,15 +26,10 @@ import type { MojiProgress } from '../application/mojiClient.ts';
 
 const SESSION_MS = 5 * 60_000;
 const NAME_FORM_MS = 2 * 60_000;
-/** 진행 화면 편집 최소 간격 — 디스코드 편집 제한 안에서 미리보기가 움직여 보이는 정도예요. */
 const PROGRESS_EDIT_MS = 800;
 
 const toFiles = (images: Buffer[]) => images.map((image, i) => new AttachmentBuilder(image, { name: candidateFileName(i) }));
 
-/**
- * `/이모지만들기` 결과 메시지 한 개의 수명 — 후보 이미지를 메모리에 들고 있다가
- * 등록 셀렉트 메뉴(이름 모달 → 서버 이모지 생성)과 다시 그리기 버튼을 처리해요. 5분이 지나면 메뉴와 버튼을 닫아요.
- */
 export async function runEmojiMakerSession(
 	interaction: ChatInputCommandInteraction<'cached'>,
 	maker: EmojiMaker,

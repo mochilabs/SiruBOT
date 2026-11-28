@@ -22,10 +22,8 @@ import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { GuildJobScheduler } from '../../../services/guildJobScheduler.ts';
 import { JOB_MAX_ATTEMPTS } from '../../../services/guildJobScheduler.ts';
 
-/** 예약 메시지가 속한 모듈 — 이 모듈이 꺼진 서버에서는 보내지 않아요 (P-06) */
 const MODULE_ID = 'community';
 
-/** 보낼 채널을 못 쓰는 이유 */
 export type ChannelProblem = 'missing' | 'wrong-guild' | 'not-text' | 'no-view' | 'no-send';
 
 export const CHANNEL_PROBLEM_MESSAGES: Record<ChannelProblem, string> = {
@@ -36,19 +34,14 @@ export const CHANNEL_PROBLEM_MESSAGES: Record<ChannelProblem, string> = {
 	'no-send': '봇이 이 채널에 메시지를 보낼 수 없어요. 메시지 보내기(Send Messages) 권한이 필요해요.'
 };
 
-/** 예약 메시지가 Discord와 주고받는 포트 — 실제 구현은 features/scheduled-messages/discord/scheduledMessageDiscord.ts예요 */
 export interface ScheduledMessageDiscordPort {
-	/** 그 길드의 채널에 봇이 ViewChannel·SendMessages 권한으로 보낼 수 있는지. 문제가 없으면 null */
 	checkChannel(guildId: string, channelId: string): Promise<ChannelProblem | null>;
-	/** 메시지를 보내요. @everyone/@here는 allowedMentions로 막아요. 못 보내면 던져요 */
 	send(channelId: string, content: string): Promise<void>;
-	/** 만든 사람에게 DM으로 알려요 (DM이 막혀 있으면 false) */
 	notifyCreator(userId: string, guildId: string, text: string): Promise<boolean>;
 }
 
 export interface ScheduledMessageServiceDeps {
 	db: Pick<PrismaClient, '$transaction' | 'scheduledJob' | 'scheduledMessageSettings' | 'guild'>;
-	/** 핸들러 등록에만 써요 */
 	scheduler: Pick<GuildJobScheduler, 'register'>;
 	discord: ScheduledMessageDiscordPort;
 	logger: AppLogger;
@@ -59,7 +52,6 @@ export interface ScheduledMessageEntry {
 	seriesId: string;
 	channelId: string;
 	content: string;
-	/** 다음(또는 마지막) 실행 시각 */
 	runAt: Date;
 	recurrence?: Recurrence;
 	status: 'pending' | 'running' | 'failed';
@@ -93,7 +85,6 @@ export class ScheduledMessageService {
 		return row ? { maxActive: row.maxActive, minIntervalMinutes: row.minIntervalMinutes } : SCHEDULED_MESSAGE_SETTINGS_DEFAULTS;
 	}
 
-	/** 새 예약 — 본문·채널·상한·간격을 확인하고, 같은 서버의 동시 생성은 advisory lock으로 한 줄로 세워요 */
 	public async create(input: CreateScheduledMessageInput): Promise<ScheduledMessageEntry> {
 		const content = scheduledMessageContentSchema.safeParse(input.content);
 		if (!content.success)
@@ -152,7 +143,6 @@ export class ScheduledMessageService {
 		};
 	}
 
-	/** 이 서버의 예약 목록 — 같은 예약의 회차는 한 줄로 묶고, 대기 > 실행 중 > 실패 순으로 대표 행을 골라요 */
 	public async list(guildId: string): Promise<ScheduledMessageEntry[]> {
 		const rows = await this.deps.db.scheduledJob.findMany({
 			where: { guildId, kind: SCHEDULED_MESSAGE_KIND, status: { in: ['pending', 'running', 'failed'] } },
@@ -179,7 +169,6 @@ export class ScheduledMessageService {
 		return [...bySeries.values()].sort((a, b) => a.runAt.getTime() - b.runAt.getTime());
 	}
 
-	/** 예약 삭제 — 같은 예약의 대기·실패·끝난 회차를 모두 지워요. 이미 실행 중인 회차는 막을 수 없어요 */
 	public async remove(guildId: string, seriesId: string): Promise<boolean> {
 		const { count } = await this.deps.db.scheduledJob.deleteMany({
 			where: { guildId, kind: SCHEDULED_MESSAGE_KIND, status: { in: ['pending', 'failed', 'done'] }, payload: seriesWhere(seriesId) }
@@ -187,7 +176,6 @@ export class ScheduledMessageService {
 		return count > 0;
 	}
 
-	/** 봇이 서버에서 나갔을 때 — 대기 중인 예약을 지워요. 다시 들어왔을 때 오래된 공지가 갑자기 나가지 않게요 */
 	public async purgeGuild(guildId: string): Promise<number> {
 		const { count } = await this.deps.db.scheduledJob.deleteMany({
 			where: { guildId, kind: SCHEDULED_MESSAGE_KIND, status: { in: ['pending', 'failed', 'done'] } }
@@ -195,7 +183,6 @@ export class ScheduledMessageService {
 		return count;
 	}
 
-	/** 스케줄러가 부르는 핸들러 — 던지면 스케줄러가 재시도하고, 3번째 실패에서 failed로 닫아요 */
 	public async handle(job: ScheduledJob): Promise<void> {
 		const payload = parseScheduledMessagePayload(job.payload);
 		if (!payload) throw new Error('예약 내용이 올바르지 않아요.');
@@ -245,7 +232,6 @@ export class ScheduledMessageService {
 				}
 			});
 		}
-		// 이전 회차 기록은 가장 최근 것만 남겨요 (매일 반복해도 행이 쌓이지 않게)
 		await db.scheduledJob.deleteMany({
 			where: {
 				guildId: job.guildId,

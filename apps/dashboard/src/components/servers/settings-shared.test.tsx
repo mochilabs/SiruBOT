@@ -35,7 +35,6 @@ describe("floating save actions", () => {
   it("keeps the panel layout untouched when the island appears (no inline height reservation)", async () => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
-    // 섬이 실제로 82px라고 흉내 내요 — 섬 높이가 본문 높이로 새지 않아야 해요
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
       top: 0, left: 0, right: 760, bottom: 82, width: 760, height: 82, x: 0, y: 0, toJSON: () => ({}),
     } as DOMRect);
@@ -50,7 +49,6 @@ describe("floating save actions", () => {
     expect(anchor!.getAttribute("style")).toBeNull();
     await act(async () => { root.render(render(true)); });
     expect(document.querySelector('[data-slot="settings-save-island"]')).not.toBeNull();
-    // 섬이 떠도 앵커는 높이를 갖지 않아야 해요 — 설정 패널이 갑자기 커지는 이유였어요
     expect(anchor!.getAttribute("style")).toBeNull();
     await act(async () => { root.unmount(); });
     host.remove();
@@ -86,10 +84,8 @@ describe("floating save actions", () => {
     document.body.append(host);
     const root = createRoot(host);
     const onSave = vi.fn(async () => false);
-    // dirty가 그대로 남는 실패 저장 → false
     await act(async () => { root.render(<SaveBar dirty saving={false} active onSave={onSave} />); });
     expect(await saveActiveSettings()).toBe(false);
-    // 성공(true)은 dirty가 남아 있어도 60ms 대기 없이 true
     const okSave = vi.fn(async () => true);
     await act(async () => { root.render(<SaveBar dirty saving={false} active onSave={okSave} />); });
     expect(await saveActiveSettings()).toBe(true);

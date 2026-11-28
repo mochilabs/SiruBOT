@@ -1,14 +1,3 @@
-/**
- * 봇 관리자(운영자) 제어 응답자 — 대시보드 관리자 패널(/admin) 요청 → data-api Redis → 봇 수행.
- *
- * Lavalink 노드 상태 조회·재연결·연결 해제, 앱 이모지 조회·동기화, Sapphire 스토어 리로드처럼
- * 봇 런타임 내부 상태를 조회하거나 제어하는 작업을 수행한다.
- * - 노드 재연결·연결 해제·스토어 리로드는 구독한 모든 봇 프로세스가 수행하고,
- *   응답 퍼블리시는 대표 프로세스(shard 0 보유, 또는 단독 모드)만 내려 중복 응답을 방지한다.
- * - 앱 이모지 동기화는 Discord Application API를 건드리므로 대표 프로세스만 수행한다.
- * - 수신·서명·검증·응답 골격은 lib/redisResponder.ts가 맡아요 (길드가 없는 계약이라 createGlobalRedisResponder를 써요).
- * - 핸들러가 null을 돌려주면 응답하지 않아요 (대표 프로세스가 아닌 쪽).
- */
 import { container } from '@sapphire/framework';
 import { botAdminRpc, type BotAdminNodeItem, type BotAdminReloadStore, type BotAdminRequest } from '@sirubot/utils';
 import { createGlobalRedisResponder, type RedisBinding, type RedisRpcPayload } from '../../../lib/redisResponder.ts';
@@ -52,10 +41,8 @@ function collectNodeItems(): BotAdminNodeItem[] {
 	return items;
 }
 
-/** 봇 관리자 제어를 수행하고 응답 본문을 돌려줘요. 대표 프로세스가 아니면 수행만 하고 null(무응답)이에요. */
 async function executeRequest(req: BotAdminRequest, logger: RedisLogger): Promise<Payload | null> {
 	const primary = isPrimaryProcess();
-	/** 응답은 대표 프로세스만 내려 중복 응답을 막아요 */
 	const reply = (payload: Payload): Payload | null => (primary ? payload : null);
 
 	switch (req.kind) {

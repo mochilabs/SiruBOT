@@ -50,7 +50,6 @@ const dateFormat = new Intl.DateTimeFormat("ko-KR", {
   timeStyle: "short",
 });
 
-/** 지금부터 1시간 뒤를 "YYYY-MM-DDTHH:mm"(KST)로 — 마감 입력 기본값 */
 function defaultEndsAt(): string {
   return kstNow(60);
 }
@@ -66,7 +65,6 @@ const ACTION_COPY = {
 export function GiveawaysSettings({ guildId }: { guildId: string }) {
   const base = `/api/servers/${guildId}/giveaways`;
   const { data, error, isLoading, mutate } = useSWR<GiveawayList>(base, fetcher, {
-    // 진행 중 참여자 수를 가끔 새로 읽어요
     refreshInterval: 30_000,
   });
   const { channels, error: channelsError, reload: reloadChannels } = useGuildChannels(guildId, true);
@@ -74,7 +72,6 @@ export function GiveawaysSettings({ guildId }: { guildId: string }) {
 
   const [filter, setFilter] = useState<StatusFilter>("all");
 
-  // 새 나눔 폼
   const [channelId, setChannelId] = useState("");
   const [prize, setPrize] = useState("");
   const [winnerCount, setWinnerCount] = useState("1");
@@ -87,12 +84,10 @@ export function GiveawaysSettings({ guildId }: { guildId: string }) {
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // 종료·취소·다시 뽑기
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [rerollCount, setRerollCount] = useState("1");
   const [acting, setActing] = useState(false);
 
-  /** 조건 문장 속 `<@&id>`를 역할 이름으로 바꿔요 */
   const roleText = useCallback(
     (text: string) =>
       text.replace(/<@&(\d+)>/g, (_match, id: string) => `@${roles?.find((role) => role.id === id)?.name ?? "삭제된 역할"}`),
@@ -147,7 +142,6 @@ export function GiveawaysSettings({ guildId }: { guildId: string }) {
       await mutate();
       toast.success("나눔을 시작했어요.", "선택한 채널에 참여 카드를 올렸어요.");
     } catch (err) {
-      // 진행 중 상한·채널 권한 같은 사유는 폼 안에서 바로 읽을 수 있게 보여줘요
       setFormError(toError(err, "나눔을 시작하지 못했어요.").message);
     } finally {
       setCreating(false);

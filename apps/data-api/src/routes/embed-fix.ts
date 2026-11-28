@@ -20,9 +20,6 @@ import {
 	xEmbedFixResult
 } from '../providers/embedFix.ts';
 
-/** 임베드 복구 메타데이터 — X·인스타그램·BOOTH·TikTok·Reddit·Pixiv·Threads 팬아웃 (봇 채팅 유틸 리스너가 호출해요). */
-
-/** OG 카드 사이트별 서킷브레이커 프로바이더 이름 — 프로바이더 교체 시 여기만 고쳐요 */
 const OG_CARD_PROVIDERS = { tiktok: 'tnktok', reddit: 'vxreddit', pixiv: 'phixiv', threads: 'fixthreads' } as const;
 
 export function registerEmbedFixRoutes(fastify: FastifyInstance, deps?: Pick<RouteDeps, 'translationProvider'>): void {
@@ -43,7 +40,6 @@ export function registerEmbedFixRoutes(fastify: FastifyInstance, deps?: Pick<Rou
 					});
 					result = xEmbedFixResult(link, status);
 				} else if (link.site === 'instagram') {
-					// kirkstagram(작성자·캐러셀) + toinstagram(캡션)을 병합하고, 둘 다 실패하면 kkinstagram 이미지로 폴백해요
 					const { data: meta } = await serveCached({
 						route: 'embed-fix',
 						key: embedFixCacheKey('instagram', link.url),
@@ -62,7 +58,6 @@ export function registerEmbedFixRoutes(fastify: FastifyInstance, deps?: Pick<Rou
 					});
 					result = boothEmbedFixResult(link, meta);
 				} else {
-					// OG 카드 사이트(TikTok·Reddit·Pixiv·Threads) — 고친 주소에서 og 메타를 읽어 카드를 만들어요
 					const provider = OG_CARD_PROVIDERS[link.site];
 					const swappedUrl = swapEmbedFixUrl(link.site, link.url);
 					const { data: meta } = await serveCached({
@@ -97,9 +92,7 @@ export function registerEmbedFixRoutes(fastify: FastifyInstance, deps?: Pick<Rou
 								};
 							}
 						}
-					} catch {
-						// 번역 실패 시 원문 카드는 그대로 내려보내 임베드 복구 자체는 깨지지 않게 해요
-					}
+					} catch {}
 				}
 				results.push(result);
 			}

@@ -21,7 +21,6 @@ interface TrackInfo {
 interface SlideConfig {
 	command: string;
 	args: string;
-	/** 응답 임베드 안에서 커서가 눌러볼 버튼이 있는지 — [data-target]으로 찾아요 */
 	hasTarget: boolean;
 }
 
@@ -53,20 +52,14 @@ const [JUSTICE, GURENGE, IDOL, NIGHT_DANCER, LEMON, DYNAMITE, PRETENDER, SHAPE] 
 
 const COMMAND_MENTION = "bg-discord-primary/20 px-1 rounded-sm text-discord-light";
 
-// 데모용 더미 트랙은 duration을 "초"로 담아요 — lib/format formatDuration(밀리초 입력)과
-// 단위가 달라 여기서만 로컬 포매터를 써요.
 const formatDuration = (seconds: number) => {
 	const minutes = Math.floor(seconds / 60);
 	const remainingSeconds = seconds % 60;
 	return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 };
 
-/* ── 실제 Components V2 컨테이너를 흉내 내는 조각들 ───────────────────────────── */
-
-/** 봇 기본 accent 색 — packages/utils/src/constants.ts의 DEFAULT_COLOR(0xff85c0)와 같은 값이에요. 대시보드는 utils 루트 barrel을 못 써서 값만 옮겨 적어요. */
 const BOT_ACCENT_COLOR = "#ff85c0";
 
-/** Container — 좌측 accent 바 + 둥근 면. 실제 봇의 createContainer와 같은 모양 */
 function Container({ children }: { children: ReactNode }) {
 	return (
 		<div className="w-full max-w-lg space-y-2.5 rounded-lg border-l-4 bg-discord-embed p-3.5" style={{ borderLeftColor: BOT_ACCENT_COLOR }}>
@@ -75,7 +68,6 @@ function Container({ children }: { children: ReactNode }) {
 	);
 }
 
-/** Section — 텍스트 여러 줄 + 우측 썸네일 accessory */
 function Section({ children, thumbnail }: { children: ReactNode; thumbnail?: string }) {
 	return (
 		<div className="flex items-start gap-3">
@@ -89,12 +81,10 @@ function Section({ children, thumbnail }: { children: ReactNode; thumbnail?: str
 	);
 }
 
-/** `-#` subtext */
 function Subtext({ children }: { children: ReactNode }) {
 	return <p className="text-2xs leading-snug text-discord-text-muted">{children}</p>;
 }
 
-/** `###` heading */
 function Heading({ children }: { children: ReactNode }) {
 	return <p className="text-sm font-bold leading-snug text-discord-text">{children}</p>;
 }
@@ -103,12 +93,10 @@ function TrackTitle({ children }: { children: ReactNode }) {
 	return <span className="underline decoration-discord-text/20 underline-offset-2">{children}</span>;
 }
 
-/** Separator — 얇은 구분선 */
 function Separator() {
 	return <div className="h-px bg-discord-btn-active/70" />;
 }
 
-/** 봇 푸터: `-# 📡 main 🔊 100% ℹ️ 시루` */
 function Footer({ left, right }: { left: string; right?: string }) {
 	return (
 		<div className="flex items-center justify-between text-2xs text-discord-text-muted">
@@ -118,7 +106,6 @@ function Footer({ left, right }: { left: string; right?: string }) {
 	);
 }
 
-/** ActionRow 버튼 — Secondary 스타일. 커서가 누를 대상이면 data-target을 달아요 */
 function DiscordButton({ children, target, pressed, className }: { children: ReactNode; target?: boolean; pressed?: boolean; className?: string }) {
 	return (
 		<span
@@ -135,9 +122,6 @@ function DiscordButton({ children, target, pressed, className }: { children: Rea
 	);
 }
 
-/* ── 슬라이드별 응답 ─────────────────────────────────────────────────────────── */
-
-/** /재생 — 곡 추가 컨테이너. 아래에 "대기열 보기" 버튼이 붙어요 */
 function PlayResult({ clicked }: { clicked: boolean }) {
 	return (
 		<Container>
@@ -162,7 +146,6 @@ function PlayResult({ clicked }: { clicked: boolean }) {
 	);
 }
 
-/** /현재곡 — 컨트롤러. 다음곡 버튼을 누르면 곡이 바뀌어요 */
 function NowPlayingResult({ clicked }: { clicked: boolean }) {
 	const track = clicked ? DYNAMITE : JUSTICE;
 	const position = clicked ? 0 : 43;
@@ -213,7 +196,6 @@ function NowPlayingResult({ clicked }: { clicked: boolean }) {
 	);
 }
 
-/** /추천 — 추천곡을 대기열에 넣고 번호 리스트로 보여줘요 */
 function RecommendResult() {
 	const picks = [IDOL, NIGHT_DANCER, PRETENDER, SHAPE];
 	return (
@@ -235,7 +217,6 @@ function RecommendResult() {
 	);
 }
 
-/** /플레이리스트 재생 — 곡 일괄 추가 + 미리보기 */
 function PlaylistResult() {
 	const preview = [JUSTICE, GURENGE, DYNAMITE, LEMON];
 	const total = preview.reduce((acc, track) => acc + track.duration, 0);
@@ -264,7 +245,6 @@ function PlaylistResult() {
 	);
 }
 
-/** /대기열 — 목록 + 페이지 버튼. 다음 페이지를 누르면 목록이 넘어가요 */
 function QueueResult({ clicked }: { clicked: boolean }) {
 	const pages = [
 		[GURENGE, IDOL, NIGHT_DANCER],
@@ -302,7 +282,6 @@ function QueueResult({ clicked }: { clicked: boolean }) {
 	);
 }
 
-/** /채팅 — AI 응답. 실제로는 music_play 도구를 호출하고 결과를 텍스트로 알려줘요 (버튼 없음) */
 function ChatResult() {
 	return (
 		<Container>
@@ -314,7 +293,6 @@ function ChatResult() {
 	);
 }
 
-/** /날씨 — 실제 봇이 data-api로 그려 첨부하는 날씨 카드 이미지(MediaGallery)와 푸터 한 줄. 데모용 값이에요 */
 function WeatherResult() {
 	return (
 		<Container>
@@ -326,7 +304,6 @@ function WeatherResult() {
 	);
 }
 
-/** /주사위 — 2d6. 버튼을 누르면 다시 굴려 값이 바뀌어요 */
 function DiceResult({ clicked }: { clicked: boolean }) {
 	const [a, b] = clicked ? [6, 4] : [3, 5];
 	return (
@@ -374,12 +351,9 @@ function commandResult(slide: SlideConfig, clicked: boolean): ReactNode {
 	}
 }
 
-/* ── 타임라인 ───────────────────────────────────────────────────────────────── */
-
 const PHASES = ["typing", "sent", "thinking", "reply"] as const;
 type Phase = (typeof PHASES)[number];
 
-/** 강한 ease-out(등장·반응)과 ease-in-out(화면 위 이동) — 내장 이징보다 반응이 먼저 보여요 */
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 const EASE_IN_OUT = [0.77, 0, 0.175, 1] as const;
 const TYPE_MS = 80;
@@ -392,11 +366,9 @@ interface ExchangeProps {
 	slide: SlideConfig;
 	phase: Phase;
 	clicked: boolean;
-	/** 직전 예시 — 등장 애니메이션 없이 흐리게 위에 남아 새 대화에 시선을 넘겨요 */
 	muted?: boolean;
 }
 
-/** 명령 한 번의 주고받기 — 사용자 메시지(전송 후)와 봇 메시지(생각 중 → 응답) */
 function Exchange({ slide, phase, clicked, muted = false }: ExchangeProps) {
 	const reached = (target: Phase) => PHASES.indexOf(phase) >= PHASES.indexOf(target);
 	const enter = muted ? false : { opacity: 0, y: 8 };
@@ -455,30 +427,21 @@ interface CursorState {
 	y: number;
 	visible: boolean;
 	pressed: boolean;
-	/** 클릭할 때마다 올라가요 — 파문 애니메이션의 key */
 	tick: number;
 }
 
 interface DiscordCommandAnimationProps {
 	activeSlide?: number;
-	/** false면 시작하지 않고 대기해요 (히어로가 화면에 들어오기 전) */
 	active?: boolean;
-	/** 마지막 장면을 보여주고 잠시 머문 뒤 호출돼요. 부모가 다음 예시로 넘길 때 써요. */
 	onDone?: () => void;
 }
 
-/**
- * 가짜 마우스 커서가 입력창을 눌러 포커스 → 명령어 타이핑 → 전송 → 봇 "생각 중" → 응답 →
- * 응답 속 버튼을 눌러보는 순서로 재생해요. 타이머는 effect 하나가 맡고, 슬라이드가 바뀌면 처음부터 다시 시작해요.
- * 커서 좌표는 실제 요소(입력창, [data-target])를 재서 정확히 그 위에 멈춰요.
- */
 export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone }: DiscordCommandAnimationProps) {
 	const safeIndex = Math.min(Math.max(activeSlide, 0), slideConfigs.length - 1);
 	const currentSlide = slideConfigs[safeIndex];
 	const shouldReduce = useReducedMotion();
 	const fullText = currentSlide.args ? `${currentSlide.command} ${currentSlide.args}` : currentSlide.command;
 
-	// 직전 예시 — 슬라이드가 바뀌는 렌더에서 바로 기록해요 (effect를 기다리면 한 프레임 비어 보여요)
 	const [slideTrail, setSlideTrail] = useState<{ current: number; previous: number | null }>({ current: safeIndex, previous: null });
 	if (slideTrail.current !== safeIndex) setSlideTrail({ current: safeIndex, previous: slideTrail.current });
 	const previousIndex = slideTrail.current === safeIndex ? slideTrail.previous : slideTrail.current;
@@ -514,7 +477,6 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 			timers.push(setTimeout(fn, ms));
 		};
 
-		/** 요소 중심 좌표(카드 기준). 아이콘 끝이 요소 위에 오도록 살짝 안쪽으로 잡아요 */
 		const center = (el: Element | null | undefined) => {
 			const card = cardRef.current;
 			if (!card || !el) return null;
@@ -531,7 +493,6 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 			at(PRESS_MS, () => setCursor((prev) => ({ ...prev, pressed: false })));
 		};
 
-		// 커서가 오른쪽 아래 바깥에서 들어와요
 		const card = cardRef.current;
 		if (card) setCursor({ x: card.clientWidth - 40, y: card.clientHeight - 6, visible: false, pressed: false, tick: 0 });
 
@@ -589,15 +550,11 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 				<span className="text-sm font-semibold text-discord-text">음악-라운지</span>
 			</div>
 
-			{/* 메시지 영역 — 높이는 고정이고 Discord처럼 아래(입력창 쪽)부터 쌓여요. 직전 예시의 대화가 위에 남아
-			    새 명령을 입력하는 동안에도 빈 화면이 되지 않고, 긴 응답은 오래된 메시지부터 위로 밀려나요.
-			    카드 전체가 aria-hidden이에요: 데모가 자동 순환해 스크린 리더를 계속 방해해서, 설명은 탭 패널의 sr-only 문구가 맡아요. */}
 			<div className="flex h-[22rem] shrink-0 flex-col justify-end gap-4 overflow-hidden p-4 sm:h-[21rem] sm:p-5">
 				{previousSlide && <Exchange key={`prev-${previousIndex}`} slide={previousSlide} phase="reply" clicked muted />}
 				<Exchange key={`current-${safeIndex}`} slide={currentSlide} phase={phase} clicked={clicked} />
 			</div>
 
-			{/* 입력창 — 커서가 눌러 포커스하고, 전송하면 비워져요 */}
 			<div className="border-t border-discord-btn-active p-3 sm:px-5">
 				<div
 					ref={composerRef}
@@ -618,7 +575,6 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 				</div>
 			</div>
 
-			{/* 가짜 마우스 커서 — 장식이라 스크린리더에서 숨겨요 */}
 			<m.div
 				aria-hidden
 				className="pointer-events-none absolute top-0 left-0 z-10"
@@ -633,7 +589,6 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 					animate={{ scale: 1.7, opacity: 0 }}
 					transition={{ duration: motionSlow, ease: EASE_OUT }}
 				/>
-				{/* 원형 핸들 — 눌리면 살짝 줄어들어요. 중심이 누르는 지점이에요 */}
 				<m.span
 					className="absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full border-2 border-foreground/85 bg-foreground/15 shadow-md"
 					animate={{ scale: cursor.pressed ? 0.78 : 1 }}

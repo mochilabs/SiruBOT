@@ -3,6 +3,13 @@ import { ZODIAC_MAP, type DailyHoroscope, type HoroscopeData } from './types.ts'
 
 const logger = getLogger('ohaasa');
 
+/** One ranking row of the asahi.co.jp horoscope feed. */
+interface OhaasaDetailEntry {
+	ranking_no: string;
+	horoscope_st: string;
+	horoscope_text: string;
+}
+
 const TVASAHI_ZODIAC_MAP: Record<string, string> = {
 	ohitsuji: '01',
 	ousi: '02',
@@ -18,7 +25,6 @@ const TVASAHI_ZODIAC_MAP: Record<string, string> = {
 	uo: '12'
 };
 
-/** 일본 시간 기준 운세 날짜 (오전 7시 이전이면 전날) */
 function getHoroscopeDate(): Date {
 	const now = new Date();
 	const japanTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
@@ -117,7 +123,6 @@ function parseHoroscopeText(text: string): { content: string; lucky: string } {
 	};
 }
 
-/** 오늘의 오하아사 원문 — JSON API 우선, 주말/실패 시 TV아사히 크롤링 */
 export async function fetchOhaasaRaw(): Promise<DailyHoroscope> {
 	const todayStr = getTodayDateString();
 	const todayCompact = todayStr.replace(/\//g, '');
@@ -137,10 +142,10 @@ export async function fetchOhaasaRaw(): Promise<DailyHoroscope> {
 				const item = Array.isArray(rawData) ? rawData[0] : rawData;
 				if (item?.onair_date === todayCompact && Array.isArray(item.detail)) {
 					dateStr = item.onair_date;
-					parsed = (item.detail as any[])
+					parsed = (item.detail as OhaasaDetailEntry[])
 						.sort((a, b) => parseInt(a.ranking_no, 10) - parseInt(b.ranking_no, 10))
 						.map((d) => {
-							const zodiacCode = d.horoscope_st as string;
+							const zodiacCode = d.horoscope_st;
 							const { content, lucky } = parseHoroscopeText(d.horoscope_text);
 							return {
 								rank: parseInt(d.ranking_no, 10),
@@ -168,7 +173,6 @@ export async function fetchOhaasaRaw(): Promise<DailyHoroscope> {
 	return { date: dateStr, source, translated: false, horoscopes: parsed };
 }
 
-/** 캐시 키 — 봇의 기존 Redis 키(`ohaasa:ko:YYYYMMDD`)와 호환돼요 */
 export function ohaasaCacheKey(date: string): string {
 	return `ohaasa:ko:${date.replace(/\//g, '')}`;
 }

@@ -62,7 +62,6 @@ function player(overrides: Record<string, unknown> = {}): CustomPlayer {
 	} as unknown as CustomPlayer;
 }
 
-/** 컨테이너 직계 자식 중 ActionRow만 꺼낸다. */
 function actionRows(json: PlainComponent): PlainComponent[][] {
 	return (json.components ?? []).filter((component) => component.type === 1).map((row) => row.components ?? []);
 }
@@ -75,7 +74,6 @@ function controllerJson(options: { player?: CustomPlayer; nowPlayingCardUrl?: st
 	}).toJSON() as unknown as PlainComponent;
 }
 
-/** 컨테이너 전체를 돌며 TextDisplay content를 모은다 (섹션 내부 포함). */
 function collectTexts(component: unknown): string[] {
 	if (!component || typeof component !== 'object') return [];
 	const node = component as Record<string, unknown>;
@@ -85,7 +83,6 @@ function collectTexts(component: unknown): string[] {
 	return texts;
 }
 
-/** Discord는 ActionRow당 버튼 1~5개만 허용한다 (BASE_TYPE_BAD_LENGTH). */
 function expectValidActionRows(rows: PlainComponent[][]): void {
 	for (const row of rows) {
 		expect(row.length).toBeGreaterThanOrEqual(1);
@@ -178,7 +175,6 @@ describe('controllerView 라벨·타이틀', () => {
 		const texts = collectTexts(controllerJson({ player: player({ paused: true }) }));
 		expect(texts.some((text) => text.includes('<#voice-channel> 에서 일시정지됨'))).toBe(true);
 		expect(texts.some((text) => text.includes('<#voice-channel> 에서 재생 중'))).toBe(false);
-		// 일시정지 중에도 현재 위치는 계속 보여준다
 		expect(texts.some((text) => text.includes('(00:30 / 03:00)'))).toBe(true);
 	});
 
@@ -216,13 +212,11 @@ describe('controllerView 라벨·타이틀', () => {
 		mocks.nowPlaying.mockReturnValue(relatedTrack);
 		const texts = collectTexts(controllerJson({ player: player({ queue: { current: relatedTrack, previous: [], tracks: [] } }) }));
 
-		// 아티스트 줄에는 라벨이 없다
 		const artistLine = texts.find((text) => text.includes('artist_l 아티스트'));
 		expect(artistLine).toBeDefined();
 		expect(artistLine).not.toContain('추천곡');
 		expect(artistLine).not.toContain('추천 곡');
 
-		// footer에 추천 곡 인디케이터가 붙는다
 		const footer = texts.find((text) => text.startsWith('-# ') && text.includes('추천 곡'));
 		expect(footer).toBeDefined();
 		expect(footer?.trimEnd().endsWith('sparkle 추천 곡')).toBe(true);
@@ -246,7 +240,6 @@ describe('controllerView 라벨·타이틀', () => {
 
 	it('진행바를 재생 시간 앞에 배치한다', () => {
 		const texts = collectTexts(controllerJson());
-		// 셀은 full-bleed — 30초/180초 → '■□□□□'
 		expect(texts.some((text) => text.includes('■□□□□  (00:30 / 03:00)') || text.includes('■□□□□ (00:30 / 03:00)'))).toBe(true);
 	});
 

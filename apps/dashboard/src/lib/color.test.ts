@@ -19,7 +19,6 @@ describe("hexToHsv / hsvToHex", () => {
 	});
 
 	it("무채색에서도 색상(h) 값은 유지한다 (계산 결과만)", () => {
-		// 흰색은 채도가 0이라 색상이 빠지지만, hsvToHex는 받은 h를 계산에 쓴다
 		expect(hsvToHex(120, 0, 1)).toBe("#ffffff");
 		expect(hsvToHex(120, 1, 1)).toBe("#00ff00");
 	});

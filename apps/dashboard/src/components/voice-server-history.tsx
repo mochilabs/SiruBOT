@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SkeletonCard } from "@/components/ui/skeleton";
 import type { PublicVoiceServerHistoryPoint } from "@/lib/voice-server-stats";
 
-/** 조회 기간 (hours 쿼리 파라미터, 1~168) */
 const RANGE_OPTIONS = [
 	{ value: "6", label: "6시간" },
 	{ value: "24", label: "24시간" },
@@ -36,7 +35,6 @@ const PLAYER_SERIES: SeriesConfig[] = [
 	{ key: "playing", name: "재생 중", color: "var(--warning)", format: (value) => value.toLocaleString() },
 ];
 
-/** 축 눈금·툴팁 라벨 — "YYYY-MM-DD HH:mm"과 ISO 문자열 모두에서 HH:mm만 안전하게 뽑아요 */
 function timeLabel(time: string): string {
 	const match = /(\d{2}:\d{2})/.exec(time);
 	return match ? match[1] : time.slice(11, 16);
@@ -144,7 +142,6 @@ function ChartCard({
 	);
 }
 
-/** 음성 서버 추이 — 플레이어 수를 기간별로 보여줘요. CPU 부하 등 인프라 텔레메트리는 공개하지 않아요. */
 export function VoiceServerHistory() {
 	const [hours, setHours] = useState(24);
 	const { data, isLoading } = useSWR<PublicVoiceServerHistoryPoint[]>(`/api/voice-servers/history?hours=${hours}`, {
@@ -152,7 +149,6 @@ export function VoiceServerHistory() {
 		dedupingInterval: 10000,
 	});
 
-	// 섹션 헤더(제목+기간 셀렉터)는 계속 마운트해 두고 차트 영역만 상태로 갈아끼워요.
 	const rangeSelector = (
 		<Select
 			value={String(hours)}
@@ -174,7 +170,6 @@ export function VoiceServerHistory() {
 		</Select>
 	);
 
-	// 데이터 미도착이면 스켈레톤 차트 카드를, 도착했는데 비어 있으면(연동 직후 등) 조용한 안내를 보여줘요
 	let chartArea: React.ReactNode;
 	if (!data) {
 		chartArea = isLoading ? (

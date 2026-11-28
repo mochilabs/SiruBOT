@@ -4,11 +4,6 @@ import { AUTOMIX_MAX_TEMPO_CHANGE_RANGE, AUTOMIX_MIN_CONFIDENCE_RANGE, CROSSFADE
 import type { GuildSettingsStore } from './store.ts';
 import type { MixerSettings } from './types.ts';
 
-/**
- * 믹서(갭리스·크로스페이드) 설정 CRUD — 크로스페이드 저장은 재생 중 플레이어에
- * 바로 반영해야 해서 기존과 같이 db.update + 캐시 갱신으로 직접 써요.
- */
-
 export async function getMixerSettings(store: GuildSettingsStore, guildId: string): Promise<MixerSettings> {
 	const guild = await store.getGuild(guildId);
 	return {
@@ -41,7 +36,6 @@ export async function setCrossfadeDuration(store: GuildSettingsStore, guildId: s
 }
 
 export async function setCrossfade(store: GuildSettingsStore, guildId: string, enabled: boolean, durationMs?: number) {
-	// Lavalink mixer 플러그인의 겹치기 상한(계약 CROSSFADE_MS_RANGE.max)을 넘지 않게 여기서 잘라요
 	const clamped = durationMs === undefined ? undefined : Math.round(Math.min(CROSSFADE_MS_RANGE.max, Math.max(CROSSFADE_MS_RANGE.min, durationMs)));
 	const guild = await store.getGuild(guildId);
 	const data: Prisma.GuildUpdateInput = { crossfadeEnabled: enabled };

@@ -32,7 +32,6 @@ const empty: WrappedStats = {
 	hourCounts: new Array<number>(24).fill(0)
 };
 
-/** PNG IHDR에서 가로·세로를 읽어요. */
 function pngSize(png: Buffer): { width: number; height: number } {
 	return { width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
 }

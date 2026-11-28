@@ -9,7 +9,6 @@ import { StreamingTypeText } from "@/components/streaming-type-text";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
-/** 채팅 읽기 시퀀스 데모 — 채팅이 타이핑되어 올라오면 시루가 곧바로 TTS 목소리로 읽어줘요 */
 const CHAT_MESSAGES = [
 	{ author: "서름", time: "오후 8:11", text: "여기 후렴 미쳤다 ㅋㅋ" },
 	{ author: "미니", time: "오후 8:12", text: "노래 좋은데? 누가 골랐어?" },
@@ -17,19 +16,10 @@ const CHAT_MESSAGES = [
 ];
 
 const SPEAK_MS = 1800;
-/**
- * 채팅 TTS 프리뷰(mockup) — 음성 채널에 시루가 참여해 노래를 틀다가, 채팅이 오면 한 줄씩 읽어요.
- * Discord 채널 프레임(헤더·푸터) 안에 음성 참가 패널과 채팅이 있고, 시루 아바타의
- * 초록 링(음성 연결 상태)이 읽는 동안 숨 쉬듯 밝아져요.
- * 행은 처음부터 전부 렌더되고 상태 표시(읽는 중/읽었어요)만 순서대로 켜져서
- * 아래 레이아웃이 밀리지 않아요. 스위치를 끄면 읽기를 멈춰요.
- */
 export function ChatTtsPreview() {
 	const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.3 });
 	const [ttsOn, setTtsOn] = useState(true);
-	/** 0~2: 현재 활성 채팅 행 인덱스 */
 	const [activeIdx, setActiveIdx] = useState(0);
-	/** "typing": 유저가 채팅을 입력 중, "speaking": 시루가 음성으로 읽는 중 */
 	const [phase, setPhase] = useState<"typing" | "speaking">("typing");
 	const [reduceMotion, setReduceMotion] = useState(false);
 	const speakTimerRef = useRef<number | null>(null);
@@ -65,7 +55,6 @@ export function ChatTtsPreview() {
 	const isReading = ttsOn && phase === "speaking";
 	return (
 		<div ref={ref} className="flex min-w-0 flex-col overflow-hidden rounded-card bg-discord-embed">
-			{/* 채널 헤더 — 음성 채널 */}
 			<div className="flex items-center gap-2 border-b border-discord-btn-active px-4 py-2.5">
 				<Volume2 size={14} className="shrink-0 text-discord-text-muted" aria-hidden />
 				<span className="min-w-0 truncate text-xs font-semibold text-discord-text">음악 감상방</span>
@@ -73,7 +62,6 @@ export function ChatTtsPreview() {
 			</div>
 
 			<div className="flex flex-col gap-3 p-3 sm:p-4">
-				{/* 음성 참가 패널 — 노래를 틀면서 대기 중. 읽는 동안 초록 링이 숨 쉬어요 */}
 				<div className="flex items-center gap-2.5 rounded-control bg-discord-bg px-2.5 py-2">
 					<span className="relative h-8 w-8 shrink-0">
 						<span
@@ -100,7 +88,6 @@ export function ChatTtsPreview() {
 						</div>
 					</div>
 				</div>
-				{/* 읽혀야 할 채팅 — 항상 전부 렌더되고 상태만 순서대로 켜져요 */}
 				<ul className="flex flex-col gap-1">
 					{CHAT_MESSAGES.map((message, index) => {
 						const isCurrent = index === activeIdx;
@@ -166,7 +153,6 @@ export function ChatTtsPreview() {
 				</ul>
 			</div>
 
-			{/* 푸터 — 실제 기능 자리의 스위치. 켜두면 새 채팅을 순서대로 읽어요 */}
 			<div className="flex items-center justify-between gap-3 border-t border-discord-btn-active px-4 py-3">
 				<div className="min-w-0">
 					<p className="truncate text-sm font-medium text-discord-text">채팅 읽어주기</p>

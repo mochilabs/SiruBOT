@@ -1,4 +1,3 @@
-// tracks 차트 검색 회귀 계약 — ILIKE 와일드카드 이스케이프의 단일 소스를 잠가요.
 import { describe, expect, it } from "vitest";
 
 import { escapeLikeWildcard } from "./search-query";

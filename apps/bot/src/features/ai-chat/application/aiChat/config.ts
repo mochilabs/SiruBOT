@@ -4,15 +4,11 @@ import { ChatServiceError } from './types.ts';
 import type { GuildService } from '../../../../services/guildService.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
-// 서버/채널 AI 설정
 export interface AiChatPolicy {
-	/** all: 모든 채널 / channels: 특정 채널만 / off: 끄기 */
 	mode: AiMode;
-	/** mode가 channels일 때만 사용하는 허용 채널 목록 */
 	channelIds: string[];
 }
 
-/** 서버(Guild) 단위 AI 채팅 설정. 길드가 없으면(DM) 전부 기본값이에요. */
 export async function getAiChatPolicy(deps: { guildService: GuildService; logger: AppLogger }, guildId: string | null): Promise<AiChatPolicy> {
 	const fallback: AiChatPolicy = { mode: 'all', channelIds: [] };
 	if (!guildId) return fallback;
@@ -24,7 +20,6 @@ export async function getAiChatPolicy(deps: { guildService: GuildService; logger
 	}
 }
 
-/** 현재 턴이 이 채널에서 돌 수 있는지 확인해요. 꺼져 있으면 chat_cancelled가 아닌 chat_disabled 오류. */
 export function assertChatEnabled(policy: AiChatPolicy, channelId: string): void {
 	if (policy.mode === 'off') throw new ChatServiceError('chat_disabled', '이 서버에서 AI 채팅이 꺼져 있어요.');
 	if (policy.mode === 'channels' && !policy.channelIds.includes(channelId)) {

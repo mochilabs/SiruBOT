@@ -84,7 +84,6 @@ describe('mixer 도메인 CRUD', () => {
 		await expect(setCrossfade(store, 'guild', false)).resolves.toEqual({ crossfadeEnabled: false, crossfadeMs: 2500 });
 		expect(update.mock.calls[0][0].data).toEqual({ crossfadeEnabled: false, automixEnabled: false });
 
-		// 저장 직후 읽기는 캐시에서 — DB 조회는 setCrossfade의 1회뿐이에요
 		await expect(getMixerSettings(store, 'guild')).resolves.toEqual({
 			gaplessEnabled: false,
 			crossfadeEnabled: false,

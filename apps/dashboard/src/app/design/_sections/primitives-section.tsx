@@ -71,7 +71,6 @@ export function PrimitivesSection() {
 				</ShowcaseRow>
 
 				<ShowcaseRow label="Card" block>
-					{/* 카드는 실제 페이지처럼 page background 위에서 보여줘요 — 쇼케이스 카드와 같은 색이면 경계가 안 보여요 */}
 					<div className="flex flex-wrap items-start gap-4 rounded-card bg-background p-4">
 						<Card className="max-w-xs">
 							<CardHeader>
@@ -153,7 +152,6 @@ export function PrimitivesSection() {
 				</ShowcaseRow>
 
 				<ShowcaseRow label="Field" block>
-					{/* 설명/오류 문구가 달라도 인풋 라인이 일직선이 되도록 위 정렬 */}
 					<div className="grid items-start gap-4 sm:grid-cols-3">
 						<Field label="기본 필드" description="설명 문구가 아래에 표시돼요.">
 							{({ id, describedBy }) => <Input id={id} aria-describedby={describedBy} placeholder="값 입력" />}
@@ -241,7 +239,6 @@ export function PrimitivesSection() {
 				</ShowcaseRow>
 
 				<ShowcaseRow label="Skeleton" block>
-					{/* 스켈레톤은 실제 페이지처럼 page background 위에서 — 쇼케이스 표면과 같은 색이면 대비가 없어요 */}
 					<div className="rounded-card bg-background p-4">
 						<div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
 							<SkeletonCard lines={3} avatar />

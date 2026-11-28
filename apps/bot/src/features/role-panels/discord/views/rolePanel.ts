@@ -16,7 +16,6 @@ import { isValidRolePanelEmoji } from '@sirubot/utils/rolePanel';
 import { rolePanelId } from '../customIds.ts';
 import type { RolePanel, RolePanelButton } from '@sirubot/prisma';
 
-/** 버튼 스타일 문자열 → Discord ButtonStyle 매핑. */
 const BUTTON_STYLES: Record<string, ButtonStyle> = {
 	secondary: ButtonStyle.Secondary,
 	primary: ButtonStyle.Primary,
@@ -24,17 +23,8 @@ const BUTTON_STYLES: Record<string, ButtonStyle> = {
 	danger: ButtonStyle.Danger
 };
 
-/** 한 행에 넣을 버튼 수 (Discord 버튼 상한). */
 const BUTTONS_PER_ROW = 5;
 
-/**
- * 길드 유저들이 자기 역할을 토글할 수 있는 공개 역할 패널 메시지 뷰 (Components V2).
- *
- * - 제목·안내문 + 역할 버튼(5개/행).
- * - 이미지: `imageLayout`이 thumbnail이면 제목·안내문 옆 섬네일, gallery면 미디어 갤러리를 `imagePosition`(top/middle/bottom)에 둬요.
- * - customId: `role-panel:v1:grant:<buttonId>:<roleId>` — roleId 스냅샷 (게시 당시 역할 고정).
- * - 버튼은 최대 25개(5행) → 제목·안내문·구분선·이미지를 더해도 40 컴포넌트 상한 아래.
- */
 export function rolePanelView(panel: RolePanel, buttons: RolePanelButton[]): { flags: number; components: [ContainerBuilder] } {
 	const container = createContainer(panel.accentColor);
 	const separator = () => new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small);

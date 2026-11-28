@@ -5,13 +5,13 @@ import { DataApiError } from './serveCached.ts';
 
 const logger = getLogger('common');
 
-/**
- * 도메인 라우트 모듈(ohaasa·embed-fix·cache-providers·render·ai·player·guild-data)이 공유하는 라우트 공통부 —
- * HTTP 에러 응답 매핑과 여러 모듈에서 쓰는 파라미터 스키마예요.
- * 한 도메인에서만 쓰는 응답 헬퍼(replyPlayerWebResult·replyJtcSetupResult 등)는 해당 도메인 파일에 남겨요.
- */
+/** The part of FastifyReply the reply helpers touch, so tests can pass a plain fake. */
+export interface ReplySink {
+	code(statusCode: number): ReplySink;
+	send(body: unknown): unknown;
+}
 
-export function sendError(reply: { code: (n: number) => any }, error: unknown): any {
+export function sendError(reply: ReplySink, error: unknown): unknown {
 	if (error instanceof DataApiError) {
 		return reply.code(error.status).send({ error: error.code, message: error.message });
 	}
@@ -21,7 +21,6 @@ export function sendError(reply: { code: (n: number) => any }, error: unknown): 
 			message: error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
 		});
 	}
-	// 스택/detail은 앱 로거에만 남기고 500 응답 본문에는 일반 메시지만 내려요 (내부 정보 유출 방지).
 	const stack = error instanceof Error ? error.stack : undefined;
 	const detail = error instanceof Error ? error.message : String(error);
 	logger.error(`unhandled route error: ${detail}${stack ? `\n${stack}` : ''}`);
@@ -31,21 +30,16 @@ export function sendError(reply: { code: (n: number) => any }, error: unknown): 
 	});
 }
 
-/** 이름이 지정된 도메인 에러를 400 응답으로 매핑해요. error.name 검증은 호출부에서 하고,
- *  이 헬퍼는 identifier가 있으면 그대로, 없으면 fallbackCode를 에러 코드로 써요. */
-export function sendDomainError(reply: { code: (n: number) => any }, error: Error, fallbackCode: string): any {
+export function sendDomainError(reply: ReplySink, error: Error, fallbackCode: string): unknown {
 	const identifier = (error as { identifier?: string }).identifier;
-	// 도메인 에러(WeatherError/DeliveryError 등)는 사용자 안내 문구라 그대로 내려요.
 	return reply.code(400).send({ error: identifier ?? fallbackCode, message: error.message });
 }
 
-/** 봇 릴레이 실패 사유를 HTTP로 매핑하는 공통부 — redis_unavailable=503, timeout(봇 미응답)=502,
- *  그 외(봇이 실어 보낸 검증 거부·오류)=400. 세 릴레이 흐름(길드 데이터·플레이어 웹·JTC 셋업)이 같은 규칙을 써요. */
 export function replyBotRelayFailure(
-	reply: { code: (n: number) => any },
+	reply: ReplySink,
 	reason: 'redis_unavailable' | 'timeout' | 'bot_error',
 	rejected: { code: string; message: string | null | undefined; fallback: string }
-): any {
+): unknown {
 	if (reason === 'redis_unavailable') {
 		return reply.code(503).send({
 			error: 'redis_unavailable',

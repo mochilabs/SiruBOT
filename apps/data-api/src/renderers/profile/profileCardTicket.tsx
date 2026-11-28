@@ -1,8 +1,3 @@
-/**
- * 프로필 카드 — 멤버 패스 티켓 템플릿(Takumi). 본문(왼쪽)과 스텁(오른쪽)을 절취선으로 나눈 티켓 모양이에요.
- * 색은 대시보드 토큰(tokens.ts)에서 골라요 — 본문은 라이트 테마, 스텁은 브랜드 핑크예요.
- * 본문에는 아바타·이름·핸들·상태·소개·역할·날짜·스탯·음악, 스텁에는 세로로 큰 @핸들이 들어가요.
- */
 import { CARD_FONT, hexToRgba, RADIUS, stripEmoji, T, W } from '@sirubot/cards';
 import { BOT_NAME } from '@sirubot/utils';
 import { ellipsis, LIGHT, loadImage, Pill, STATUS_COLOR, Thumb, type ProfileCardInput } from './profileCard.tsx';
@@ -48,7 +43,6 @@ export async function renderProfileCardTicket(input: ProfileTicketInput): Promis
 				color: theme.foreground
 			}}
 		>
-			{/* 본문 */}
 			<Box style={{ flex: 1, minWidth: 0, flexDirection: 'column', padding: 40 }}>
 				<Box style={{ fontSize: 20, fontWeight: W.semibold, color: theme.muted, letterSpacing: '0.08em' }}>
 					{`${handle.toUpperCase()} / MEMBER PASS`}
@@ -183,7 +177,6 @@ export async function renderProfileCardTicket(input: ProfileTicketInput): Promis
 					</Box>
 				) : null}
 			</Box>
-			{/* 스텁 — 절취선(점선) + 세로 큰 핸들 */}
 			<Box
 				style={{
 					width: STUB_W,

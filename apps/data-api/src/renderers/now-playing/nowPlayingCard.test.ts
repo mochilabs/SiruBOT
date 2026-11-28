@@ -7,7 +7,7 @@ function input(patch: Partial<NowPlayingCardInput> = {}): NowPlayingCardInput {
 		trackId: 'jNQXAC9IVRw',
 		title: 'Rick Astley - Never Gonna Give You Up 😀',
 		artist: 'Rick Astley',
-		artworkUrl: null, // 테스트는 네트워크를 쓰지 않아요
+		artworkUrl: null,
 		positionMs: 92_000,
 		durationMs: 213_000,
 		isStream: false,
@@ -58,7 +58,6 @@ describe('renderNowPlayingCard', () => {
 	it('has transparent rounded corners so it sits on the container as a panel', async () => {
 		const png = await renderNowPlayingCard(input());
 		const { width, height } = size(png);
-		// PNG를 다시 raw RGBA로 풀어서 픽셀 알파를 봐요
 		const raw = await renderSvgRaster(
 			`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><image href="data:image/png;base64,${png.toString('base64')}" width="${width}" height="${height}"/></svg>`,
 			width,

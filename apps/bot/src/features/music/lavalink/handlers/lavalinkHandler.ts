@@ -5,7 +5,6 @@ import { TrackHandler } from './trackHandler.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import type { LavalinkDeps } from '../deps.ts';
 
-// lavalinkHandlerManager.ts
 export class LavalinkHandler {
 	private nodeHandler: NodeHandler;
 	private playerHandler: PlayerHandler;

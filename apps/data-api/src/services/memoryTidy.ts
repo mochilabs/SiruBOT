@@ -73,7 +73,6 @@ function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** 섹션별 상한 — 최근 항목 우선으로 뒤에서 자라요 (data-api tidy 정책; 봇은 총량 상한) */
 function capMemorySections(sections: MemorySections): void {
 	for (const category of MEMORY_CATEGORIES) {
 		const list = sections[category];
@@ -81,7 +80,6 @@ function capMemorySections(sections: MemorySections): void {
 	}
 }
 
-/** 옛 배열 형태({ text, category? })를 마크다운으로 변환해요 (레거시 호환: category 보존 — 봇 변환과 계약이 달라요) */
 function legacyToMarkdown(items: unknown[]): string {
 	const sections = createEmptyMemorySections();
 	for (const item of items) {
@@ -95,23 +93,19 @@ function legacyToMarkdown(items: unknown[]): string {
 	return renderMemoryMarkdown(sections);
 }
 
-/** 저장된 장기 기억을 파일 형식(마크다운)으로 정규화해요. */
 function normalizeStored(stored: unknown): string | null {
 	if (typeof stored === 'string') {
 		if (stored.includes('## Facts') || stored.includes('# MEMORY.md')) return stored;
 		try {
 			const parsed: unknown = JSON.parse(stored);
 			if (Array.isArray(parsed)) return legacyToMarkdown(parsed);
-		} catch {
-			// 마크다운으로 간주
-		}
+		} catch {}
 		return stored;
 	}
 	if (Array.isArray(stored)) return legacyToMarkdown(stored);
 	return null;
 }
 
-/** 한 사용자의 MEMORY.md를 LLM으로 정리해요. 검증 실패 시 원본을 유지해요. */
 async function tidyUser(db: PrismaClient, provider: TranslationProvider, userId: string): Promise<'ok' | 'rejected' | 'failed'> {
 	try {
 		const row = await db.userMemory.findUnique({ where: { userId } });
@@ -125,7 +119,6 @@ async function tidyUser(db: PrismaClient, provider: TranslationProvider, userId:
 			return 'ok';
 		}
 
-		// 번역 프로바이더와 같은 OpenAI 호환 호출 경로(chatCompletion)를 재사용해요
 		const output = stripCodeFences(await provider.chatCompletion(MEMORY_TIDY_PROMPT, original, 'tidy provider'));
 
 		if (tidyOutputValid(original, output)) {
@@ -143,7 +136,7 @@ async function tidyUser(db: PrismaClient, provider: TranslationProvider, userId:
 		return 'rejected';
 	} catch (error) {
 		logger.error(`memory tidy failed: ${userId}`, String(error));
-		// 실패해도 markTidied — 같은 사용자가 매 밤 재시도되지 않도록 (24시간 후 다시 후보)
+		// Still mark tidied on failure so broken entries don't retry every night.
 		await db.userMemory
 			.upsert({ where: { userId }, create: { userId, tidiedAt: new Date() }, update: { tidiedAt: new Date() } })
 			.catch(() => undefined);
@@ -151,10 +144,8 @@ async function tidyUser(db: PrismaClient, provider: TranslationProvider, userId:
 	}
 }
 
-/** nightly pass 후보 스캔 상한 — 페이지를 넘겨가며 찾되 배치의 배수(10배) 행까지만 봐요 (공백 longTerm 행이 섞여도 한 밤에 크게 밀리지 않게) */
 const CANDIDATE_SCAN_FACTOR = 10;
 
-/** nightly pass 후보 — 24시간 이상 정리 안 됐고 장기 기억이 있는 사용자. never-tidied 우선, tidiedAt 오래된 순. */
 async function findCandidates(db: PrismaClient, limit: number): Promise<string[]> {
 	const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
 	const scanCap = limit * CANDIDATE_SCAN_FACTOR;
@@ -162,12 +153,10 @@ async function findCandidates(db: PrismaClient, limit: number): Promise<string[]
 	let scanned = 0;
 	while (candidates.length < limit && scanned < scanCap) {
 		const take = Math.min(limit * 3, scanCap - scanned);
-		// 빈 longTerm(SQL NULL) 행은 쿼리에서 먼저 걸러 후보 창을 낭비하지 않아요.
 		const rows = await db.userMemory.findMany({
 			where: {
 				AND: [{ longTerm: { not: Prisma.DbNull } }, { OR: [{ tidiedAt: null }, { tidiedAt: { lt: cutoff } }] }]
 			},
-			// never-tidied를 앞에 두고 오래된 순 — DB가 보장하는 순서라 메모리 정렬 없이 페이지네이션이 안전해요.
 			orderBy: [{ tidiedAt: { sort: 'asc', nulls: 'first' } }, { userId: 'asc' }],
 			skip: scanned,
 			take
@@ -180,7 +169,7 @@ async function findCandidates(db: PrismaClient, limit: number): Promise<string[]
 			if (countMarkdownEntries(normalized) > 0) candidates.push({ userId: row.userId });
 			if (candidates.length >= limit) break;
 		}
-		if (rows.length < take) break; // 페이지가 가득 안 채워졌다는 건 더 이상 행이 없어요
+		if (rows.length < take) break;
 	}
 	return candidates.map((c) => c.userId);
 }
@@ -214,7 +203,7 @@ async function runMemoryTidy(db: PrismaClient, provider: TranslationProvider, ba
 }
 
 function msUntilNext(at: string, jitterMaxMs = 30 * 60_000): number {
-	// 서버 로컬 시각 기준이에요 — ohaasaScheduler.msUntilNextRefresh는 KST 보정 UTC 대상이라 병합하면 안 돼요.
+	// Server local time (unlike ohaasaScheduler's KST-adjusted UTC).
 	const now = Date.now();
 	const { hour, minute } = parseClock(at, { hour: 0, minute: 0 });
 	const next = new Date(now);
@@ -224,7 +213,6 @@ function msUntilNext(at: string, jitterMaxMs = 30 * 60_000): number {
 	return Math.max(60_000, target - now);
 }
 
-/** 매일 자정(+0~30분 지터)에 기억 정리 배치. DATABASE_URL·프로바이더가 있을 때만 시작해요. */
 export function startMemoryTidyScheduler(
 	db: PrismaClient | null,
 	provider: TranslationProvider,
@@ -242,7 +230,7 @@ export function startMemoryTidyScheduler(
 
 	const tick = () => {
 		if (stopped) return;
-		// 지터는 한 번만 뽑아요 — 예약된 타이머와 표시값(stats.nextRunAt)이 같은 시각을 가리키게.
+		// Sample jitter once so the timer and stats.nextRunAt match.
 		const delayMs = msUntilNext(options.at);
 		stats.nextRunAt = Date.now() + delayMs;
 		timer = setTimeout(() => {

@@ -10,29 +10,13 @@ import type { TtsChannel, TtsUserPreset } from './ttsUserSettings.ts';
 import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
 
-/**
- * 채팅 TTS 오케스트레이터 — 메시지 전처리·병합·스로틀 후 클립을 재생 모드(오버레이/단독)로 dispatch한다.
- *
- * 모드는 dispatch 시점에 재판정한다 (명세 4.2): 메인 트랙이 있으면 mixer announce 오버레이,
- * 없으면 클립을 메인 플레이어 트랙으로 재생하는 단독 모드. 만들어진 클립은 버리지 않고
- * 시점에 따라 둘 중 하나로 재생한다.
- */
-
-/** 같은 유저의 연속 합성 간격(ms) — 이 안의 메시지는 병합 창으로 모인다 (명세 4.4) */
 const TTS_USER_INTERVAL_MS = 3000;
-/** 메시지 병합 창(ms) — 창 안의 메시지는 한 발화로 합성하고, 창을 넘긴 메시지는 버린다 */
 export const TTS_MERGE_WINDOW_MS = 3000;
-/** 클립 최대 길이(자) — 초과분은 절단한다 (명세 4.4, 분할 없음) */
 export const TTS_CLIP_MAX_CHARS = 200;
-/** 단독 모드 내부 큐 상한 — 초과 시 가장 오래된 대기 클립을 버린다 (재생 중인 클립은 보호) */
 export const TTS_SOLO_QUEUE_MAX = 5;
-/** 오버레이 대기(mixer announcementsQueued) 상한 — 초과 시 신규 안내를 조용히 거절한다 */
 export const TTS_OVERLAY_QUEUE_MAX = 5;
-/** 길드당 동시 합성 수 — 초과분은 FIFO로 대기한다 */
 const TTS_GUILD_CONCURRENT_SYNTH = 2;
-/** 길드 분당 합성 글자 수 — 초과 시 클립을 버린다 */
 export const TTS_GUILD_CHARS_PER_MIN = 1000;
-/** 한 사람이 도배해도 다른 사람 차례가 밀리지 않게 하는 사용자당 분당 글자 한도 */
 export const TTS_USER_CHARS_PER_MIN = 300;
 
 interface TtsTextResolvers {
@@ -41,26 +25,17 @@ interface TtsTextResolvers {
 	channelName(id: string): string | null;
 }
 
-/**
- * 메시지 본문을 낭독용 평문으로 바꾼다 (명세 4.5 전처리 표).
- * 멘션·역할·채널·커스텀 이모지·URL은 읽을 말로 치환하고, 코드/인용/스포일러는
- * 마커만 제거한 뒤 내용을 읽는다. 첨부/스티커만 있는 메시지는 빈 결과가 된다.
- */
 export function preprocessTtsText(raw: string, resolvers: TtsTextResolvers): string {
 	let text = raw ?? '';
-	// 스포일러·코드·인용 마커 제거 — 내용은 읽는다
 	text = text.replace(/\|\|([\s\S]*?)\|\|/g, '$1');
 	text = text.replace(/```(?:\w*\n)?([\s\S]*?)```/g, '$1');
 	text = text.replace(/`([^`\n]+)`/g, '$1');
 	text = text.replace(/(^|\n)>{1,3}[ \t]*/g, '$1');
-	// 멘션·역할·채널 토큰 → 사람이 읽을 말 (캐시 미스 시 대체어)
 	text = text.replace(/<@!?(\d+)>/g, (_match, id: string) => resolvers.memberName(id) ?? '사용자');
 	text = text.replace(/<@&(\d+)>/g, (_match, id: string) => resolvers.roleName(id) ?? '역할');
 	text = text.replace(/<#(\d+)>/g, (_match, id: string) => resolvers.channelName(id) ?? '채널');
-	// 커스텀 이모지 → 이름, 유니코드 이모지는 그대로 둔다
 	text = text.replace(/<a?:([\w~]+):\d+>/g, '$1');
 	text = text.replace(/@(everyone|here)\b/g, '모두');
-	// URL은 읽지 않고 '링크'로 치환한다
 	text = text.replace(/\b(?:https?:\/\/|www\.)[^\s<]+/gi, '링크');
 	// 줄바꿈·연속 공백 → 단일 공백
 	return text.replace(/\s+/g, ' ').trim();

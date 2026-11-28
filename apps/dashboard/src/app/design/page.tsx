@@ -56,8 +56,7 @@ function ThemeToggle() {
 export default function DesignPage() {
 	const [activeSection, setActiveSection] = useState(SECTIONS[0].id);
 
-	// 클릭으로 시작된 smooth 스크롤이 끝날 때까지 스크롤 핸들러의 활성 섹션 재계산을 잠가요.
-	// 잠그지 않으면 스크롤 비행 중간 위치 샘플로 이전 섹션이 다시 활성화돼 "클릭한 것의 하나 위"가 선택돼 보여요.
+	// smooth 스크롤 중 이전 섹션으로 재활성화되는 것을 방지
 	const clickTargetRef = useRef<string | null>(null);
 	const clickLockTimerRef = useRef<number>(undefined);
 
@@ -85,7 +84,6 @@ export default function DesignPage() {
 	const handleTocClick = (id: string) => {
 		clickTargetRef.current = id;
 		setActiveSection(id);
-		// 앵커 이동은 기본 동작(href)에 맡기고, smooth 스크롤 완료 여유(1s) 후 잠금 해제
 		window.clearTimeout(clickLockTimerRef.current);
 		clickLockTimerRef.current = window.setTimeout(() => {
 			clickTargetRef.current = null;
@@ -94,7 +92,6 @@ export default function DesignPage() {
 
 	return (
 		<>
-			{/* 스티키 navbar은 흐름 공간을 차지하므로 별도 클리어런스 없이 바로 아래에서 시작 */}
 			<div className="container mx-auto max-w-7xl px-4 pb-8">
 				<div className="flex items-start justify-between gap-4 mb-8">
 					<div>

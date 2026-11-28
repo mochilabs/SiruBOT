@@ -11,17 +11,10 @@ import {
 
 import { type Box, type SnapGuide, unionBox } from "./greeting-snap";
 
-/**
- * 인사 카드 편집기 공용 헬퍼 — 레이어 바운딩 박스·히트테스트·생성, 선택 오버레이(`drawGreetingSelection`).
- * 카드 미리보기 자체는 `greeting-svg.ts`(@sirubot/cards + Takumi WASM)가 그려요.
- * 좌표계: x/y는 카드 %(0~100, 요소 중심 앵커), size/width/height는 카드 실좌표(1200×675) px.
- */
-
 export const CARD_W = GREETING_CARD_W;
 export const CARD_H = GREETING_CARD_H;
 const FONT_FAMILY = '"Pretendard JP", "Twemoji Mozilla", sans-serif';
 
-/** 템플릿 변수 치환 — 텍스트 레이어 폭 측정용 샘플 값 */
 function sampleGreetingText(text: string, guildName = ""): string {
 	return text
 		.replaceAll("{유저}", "유저")
@@ -30,7 +23,6 @@ function sampleGreetingText(text: string, guildName = ""): string {
 		.replaceAll("{멤버수}", "1");
 }
 
-/** dataURI/URL 이미지 로드 캐시 — 업로드 이미지 크기 측정 등에 써요 */
 const imageCache = new Map<string, HTMLImageElement | null>();
 
 export function loadImage(src: string): Promise<HTMLImageElement | null> {
@@ -50,13 +42,11 @@ export function loadImage(src: string): Promise<HTMLImageElement | null> {
 	});
 }
 
-/** 편집 중에만 보이는 오버레이 — 스냅 가이드선과 마퀴(드래그 선택) 사각형이에요 */
 export interface GreetingOverlay {
 	guides?: readonly SnapGuide[];
 	marquee?: Box | null;
 }
 
-/** 선택한 레이어의 테두리·핸들(단일 선택일 때만)과 가이드·마퀴만 그려요 — 카드 SVG 위에 겹친 투명 canvas에서 써요. */
 export function drawGreetingSelection(ctx: CanvasRenderingContext2D, image: GreetingImage, selectedIds: readonly string[], overlay: GreetingOverlay = {}): void {
 	ctx.clearRect(0, 0, CARD_W, CARD_H);
 	const selected = image.layers.filter((item) => selectedIds.includes(item.id) && !item.hidden);
@@ -102,7 +92,6 @@ export function drawGreetingSelection(ctx: CanvasRenderingContext2D, image: Gree
 	}
 }
 
-/** 렌더러(@sirubot/cards)와 같은 규칙의 글자 굵기 — weight가 있으면 그 값, 없으면 bold ? 900 : 600 */
 export function textWeight(layer: GreetingTextLayer): number {
 	return layer.weight ?? (layer.bold ? 900 : 600);
 }
@@ -143,7 +132,6 @@ function measureLayerTextWidth(ctx: CanvasRenderingContext2D, layer: GreetingTex
 	return width;
 }
 
-/** 텍스트 레이어의 카드 px 박스 — 렌더러(`textBox`)와 같은 폭 규칙이에요. 줄 수는 폭으로 어림해요. */
 function textBounds(ctx: CanvasRenderingContext2D, layer: GreetingTextLayer, cx: number, cy: number): Box {
 	const measured = measureLayerTextWidth(ctx, layer);
 	const lineHeight = layer.size * (layer.lineHeight ?? 1.25);
@@ -153,12 +141,10 @@ function textBounds(ctx: CanvasRenderingContext2D, layer: GreetingTextLayer, cx:
 	const lines = wrap ? Math.min(layer.maxLines ?? Infinity, Math.max(1, Math.ceil(measured / limit))) : 1;
 	const w = Math.min(measured, limit) + 16;
 	const h = (wrap ? lines * lineHeight : layer.size) + 16;
-	// 렌더러는 align 기준으로 x에서 시작(left)·가운데(center)·끝(right)해요
 	const left = layer.align === "left" ? cx - 8 : layer.align === "center" ? cx - w / 2 : cx - w + 8;
 	return { x: left, y: cy - h / 2, w, h };
 }
 
-/** 레이어의 카드 px 바운딩 박스(왼쪽 위 기준) — 선택 테두리·히트테스트 공용이에요 */
 export function layerBounds(ctx: CanvasRenderingContext2D, layer: GreetingLayer): Box {
 	const cx = (layer.x / 100) * CARD_W;
 	const cy = (layer.y / 100) * CARD_H;
@@ -176,7 +162,6 @@ export function layerBounds(ctx: CanvasRenderingContext2D, layer: GreetingLayer)
 	}
 }
 
-/** 위(뒤쪽)에서부터 겹친 레이어를 찾아요 — 반환 순서는 레이어 배열 역순(가장 앞부터)이에요 */
 export function hitTestLayer(ctx: CanvasRenderingContext2D, layers: readonly GreetingLayer[], px: number, py: number): GreetingLayer | null {
 	for (let i = layers.length - 1; i >= 0; i--) {
 		const layer = layers[i];
@@ -186,7 +171,6 @@ export function hitTestLayer(ctx: CanvasRenderingContext2D, layers: readonly Gre
 	return null;
 }
 
-/** 0~100으로 클램프 후 소수 1자리 반올림 — 위치 입력 공용이에요 */
 export function clampRatio(value: number): number {
 	return Math.round(Math.min(100, Math.max(0, value)) * 10) / 10;
 }
@@ -209,7 +193,6 @@ export function createShapeLayer(): GreetingShapeLayer {
 
 const SHAPE_LABELS = { rect: "사각형", circle: "원", triangle: "삼각형", diamond: "마름모", hexagon: "육각형", star: "별", heart: "하트" } as const;
 
-/** 레이어 패널에서 보여줄 한 줄 라벨 */
 export function layerLabel(layer: GreetingLayer): string {
 	switch (layer.type) {
 		case "text":

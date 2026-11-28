@@ -1,5 +1,3 @@
-// guild-permissions 회귀 계약 — 3상태 판정, 권한 캐시 TTL, 단일 비행을 잠가요.
-// Discord fetch는 전역 목으로 대체하고, Redis는 꺼둔 상태로 시작해요(테스트별로 전환).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/redis", () => ({
@@ -17,11 +15,9 @@ import {
 	resolveGuildMeta,
 } from "./guild-permissions";
 
-/** 단일 비행/캐시(Map)가 테스트 간 섞이지 않게 유저·길드 조합을 새로 만들어요 */
 let seq = 0;
 const freshIds = () => ({ userId: `user-${++seq}`, guildId: `guild-${seq}` });
 
-/** Date.now를 제어해 캐시 TTL(ok 60s / unavailable 10s)을 결정적으로 흘려요 */
 let fakeNowMs = 0;
 let dateSpy: ReturnType<typeof vi.spyOn> | null = null;
 
@@ -60,7 +56,7 @@ describe("hasManageablePermissions", () => {
 		expect(hasManageablePermissions("32")).toBe(true);
 		expect(hasManageablePermissions(0x20)).toBe(true);
 		expect(hasManageablePermissions("8")).toBe(true);
-		expect(hasManageablePermissions("40")).toBe(true); // 0x20 | 0x8
+		expect(hasManageablePermissions("40")).toBe(true);
 		expect(hasManageablePermissions("0")).toBe(false);
 		expect(hasManageablePermissions("1024")).toBe(false);
 		expect(hasManageablePermissions("not-a-number")).toBe(false);
@@ -161,7 +157,6 @@ describe("단일 비행 — 같은 user:guild 조회는 Discord 호출 하나로
 
 		const managePromise = resolveCanManage("token", userId, guildId);
 		const metaPromise = resolveGuildMeta("token", userId, guildId);
-		// 첫 비행이 fetch를 호출할 때까지 마이크로태스크를 흘려요
 		await new Promise((resolve) => setTimeout(resolve, 0));
 		resolveFetch(
 			discordGuildsResponse([{ id: guildId, permissions: "32", name: "시루 서버", icon: "abc" }]),

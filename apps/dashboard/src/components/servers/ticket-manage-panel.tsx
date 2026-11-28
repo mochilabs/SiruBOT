@@ -4,15 +4,6 @@ import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-/**
- * 티켓 관리 — 열린/마감된 티켓 목록과 대화 기록(transcript) 조회.
- *
- * 이 화면은 **서버 관리 권한(role: manage)** 라우트만 호출해요:
- * - 목록: `/api/servers/{id}/ticket/tickets?status=open|closed`
- * - 기록: `/api/servers/{id}/ticket/{ticketId}/transcript` (비공개 버킷을 data-api 경유로 읽어요)
- * 채널은 마감 5초 뒤 삭제되므로, 대화 원문은 여기 기록으로만 남아요.
- */
-
 interface TicketRow {
 	id: string;
 	ticketNumber: number;

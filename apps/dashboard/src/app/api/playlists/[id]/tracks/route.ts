@@ -12,7 +12,6 @@ import { extractYoutubeVideoId } from "@/lib/youtube-url";
 
 import { cleanYoutubeTitle } from "./clean-title";
 
-/** 외부 noembed API 타임아웃 — 무응답 연결 고갈 방지 */
 const NOEMBED_TIMEOUT_MS = 10_000;
 
 const addTrackSchema = z
@@ -43,7 +42,6 @@ export const POST = createGuildApiHandler({
         );
       }
 
-      // 트랙 개수 상한 (플레이리스트당)
       const trackCount = await db.playlistTrack.count({
         where: { playlistId },
       });
@@ -68,7 +66,6 @@ export const POST = createGuildApiHandler({
 
       const { trackId, youtubeUrl } = parsed.data;
 
-      // URL 경유가 아니라 trackId 직접 지정이면 실제 존재하는 곡인지 확인해요 (favorites와 같은 방식)
       if (trackId) {
         const track = await db.track.findUnique({ where: { id: trackId } });
         if (!track) {
@@ -141,7 +138,6 @@ export const POST = createGuildApiHandler({
         );
       }
 
-      // Check if track is already in this playlist (especially for "즐겨찾기" playlist)
       if (playlist.name === FAVORITES_PLAYLIST_NAME) {
         const existing = await db.playlistTrack.findFirst({
           where: { playlistId, trackId: finalTrackId },
@@ -208,7 +204,6 @@ export const DELETE = createGuildApiHandler({
     }
 
     try {
-      // Verify playlist belongs to user
       const playlist = await db.playlist.findFirst({
         where: { id: playlistId, userId },
       });
@@ -231,7 +226,6 @@ export const DELETE = createGuildApiHandler({
         );
       }
 
-      // Run in transaction to delete and shift subsequent track positions down
       await db.$transaction([
         db.playlistTrack.delete({
           where: { id: playlistTrack.id },

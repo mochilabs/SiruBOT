@@ -4,7 +4,6 @@ import { parseRouteList, ProxyPool, ProxyUnavailableError, RouteBlockedError } f
 const A = 'http://10.0.0.28:3128';
 const B = 'http://10.0.0.28:3129';
 
-/** 경로별 응답을 정해 둔 풀 — 각 경로의 fetch는 statusFor(entry)를 상태로 돌려주거나 던져요 */
 function poolWith(entries: string[], statusFor: (entry: string) => number | Error, clock = { now: 0 }) {
 	const calls: string[] = [];
 	const pool = new ProxyPool(entries, {
@@ -49,13 +48,11 @@ describe('ProxyPool', () => {
 		await expect(pool.run('captions', task)).resolves.toBe(200);
 		expect(calls).toEqual(['direct', A]);
 
-		// 같은 scope는 direct를 건너뛰고 프록시끼리 번갈아 써요
 		calls.length = 0;
 		await pool.run('captions', task);
 		await pool.run('captions', task);
 		expect(calls).toEqual([B, A]);
 
-		// 다른 scope는 direct를 그대로 써요(429를 준 건 그 요청 종류뿐이라)
 		calls.length = 0;
 		await pool.run('chapters', task).catch(() => null);
 		expect(calls[0]).toBe('direct');
@@ -80,11 +77,9 @@ describe('ProxyPool', () => {
 		const { pool, calls, task } = poolWith(['direct', A, B], () => 429);
 		await expect(pool.run('captions', task)).rejects.toBeInstanceOf(ProxyUnavailableError);
 		expect(calls).toEqual(['direct', A]);
-		// B는 아직 안 막혔으니 다음 작업은 B로 가요
 		calls.length = 0;
 		await expect(pool.run('captions', task)).rejects.toBeInstanceOf(ProxyUnavailableError);
 		expect(calls).toEqual([B]);
-		// 모두 쉬는 중이면 요청을 보내지 않아요
 		calls.length = 0;
 		await expect(pool.run('captions', task)).rejects.toBeInstanceOf(ProxyUnavailableError);
 		expect(calls).toEqual([]);

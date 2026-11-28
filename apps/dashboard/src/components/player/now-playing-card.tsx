@@ -16,7 +16,6 @@ import { interpolatedPositionMs, ProgressBar } from "./live-progress-bar";
 import { CONTROL_BLOCKED_HINT, sendPlayerCommand, VOICE_CONTEXT_REFRESH_MS } from "./player-command";
 import { useVoiceContext } from "./voice-context";
 
-/** 볼륨 슬라이더 값을 서버로 보내기 전 모으는 디바운스 — 드래그 중 연타를 막아요 */
 const VOLUME_SEND_DEBOUNCE_MS = 400;
 
 interface NowPlayingProps {
@@ -46,13 +45,11 @@ export function NowPlaying({
   const volumePendingRef = useRef(false);
   const volumeHoldRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [volumePending, setVolumePending] = useState(false);
-  // 봇이 실제 인가와 같은 정책으로 계산한 제어 가능 여부예요. 값을 모르면(로딩·오류) 열어 두고 봇의 거절 안내에 맡겨요.
   const { data: voiceData, mutate: refreshVoiceContext } = useVoiceContext(guildId, {
     refreshInterval: VOICE_CONTEXT_REFRESH_MS,
   });
   const controlBlocked = voiceData?.voice ? !voiceData.voice.canControl : false;
   const botChannelName = voiceData?.voice?.botVoiceChannelName ?? null;
-  // 명령 응답 뒤에도 새 상태가 도착할 때까지(또는 시간 초과) 잠가 같은 명령 중복을 막아요.
   const stateSignature = `${state.paused}|${state.repeatMode}|${Math.round(state.volume)}|${state.trackUri ?? ""}|${state.playing}`;
   const [settlingSignature, setSettlingSignature] = useState<string | null>(null);
   const settling = settlingSignature !== null && settlingSignature === stateSignature;
@@ -66,7 +63,6 @@ export function NowPlaying({
   }, [settlingSignature, stateSignature]);
   const controlsDisabled = unavailable || volumePending || volumeOverride !== null || controlBlocked || settling;
 
-  // 곡이 바뀌면 봇의 음성 채널도 바뀌었을 수 있어 바로 다시 확인해요
   useEffect(() => {
     void refreshVoiceContext();
   }, [refreshVoiceContext, state.trackUri]);
@@ -83,7 +79,6 @@ export function NowPlaying({
       if (volumeHoldRef.current) clearTimeout(volumeHoldRef.current);
     };
   }, []);
-  // 서버 볼륨이 보낸 값에 도달하면 override를 풀어요 (전송 중에는 유지)
   useEffect(() => {
     if (volumeOverride !== null && !volumePending && Math.round(state.volume) === volumeOverride) {
       if (volumeHoldRef.current) clearTimeout(volumeHoldRef.current);
@@ -195,11 +190,9 @@ export function NowPlaying({
     pendingAction !== null && !own.includes(pendingAction);
   const commandsOff = controlsDisabled || !hasCurrentTrack;
 
-  // 탐색 — 위치를 고르면 바로 이동하지 않고 확인 단계를 거쳐요
   const [seekTargetMs, setSeekTargetMs] = useState<number | null>(null);
   const [seekPending, setSeekPending] = useState(false);
   const canSeek = !state.isStream && state.durationMs > 0 && !commandsOff;
-  // 곡이 바뀌면 이전 곡 기준으로 고른 위치는 버려요
   useEffect(() => {
     setSeekTargetMs(null);
   }, [state.trackUri]);
@@ -221,7 +214,6 @@ export function NowPlaying({
     commandPendingRef.current = false;
   }, [controlsDisabled, failCommand, guildId, seekTargetMs]);
 
-  // 즐겨찾기 — 현재 곡을 내 즐겨찾기에 담아요
   const [favoritePending, setFavoritePending] = useState(false);
   const handleFavorite = useCallback(async () => {
     if (favoritePending || !state.trackUri) return;
@@ -249,7 +241,6 @@ export function NowPlaying({
   return (
     <section className="flex flex-col gap-3 rounded-row bg-surface-2 p-3 sm:p-4">
       <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-        {/* 아트워크 — 다음/이미지 도메인 없이 일반 img로 렌더 (외부 CDN 다양성) */}
         {state.artworkUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -324,7 +315,6 @@ export function NowPlaying({
         <div className="relative">
           <ProgressBar state={unavailable ? { ...state, stale: true } : state} receivedAt={receivedAt} />
           {canSeek && seekTargetMs !== null && (
-            // 고른 위치 표시 — 고른 위치까지 옅게 채우고 선택 핸들을 올려요
             <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-2">
               <div
                 className="absolute inset-y-0 left-0 rounded-full bg-primary-control/30"
@@ -337,7 +327,6 @@ export function NowPlaying({
             </div>
           )}
           {canSeek && (
-            // 보이지 않는 범위 입력을 진행바 위에 겹쳐 마우스·터치·키보드 탐색을 모두 받아요
             <input
               type="range"
               aria-label="재생 위치 선택"
@@ -387,12 +376,10 @@ export function NowPlaying({
         </div>
       </div>
 
-      {/* 실시간 컨트롤러 — 명령은 data-api Redis 브로드캐스트로 봇에 즉시 적용돼요 */}
       <div
         className="flex flex-wrap items-center justify-center gap-x-2 gap-y-3 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-4"
         title={controlBlocked ? CONTROL_BLOCKED_HINT : undefined}
       >
-        {/* 가운데: 이전 · 재생/일시정지 · 다음 */}
         <div className="flex items-center justify-center gap-3 max-sm:contents sm:order-2">
           <Button
             variant="secondary"
@@ -425,7 +412,6 @@ export function NowPlaying({
             aria-label="다음 곡"
           />
         </div>
-        {/* 왼쪽: 반복 · 정지 */}
         <div className="flex items-center justify-center gap-2 max-sm:contents sm:order-1 sm:justify-start">
           <Button
             variant={displayedRepeat === "off" ? "secondary" : "primary"}
@@ -457,7 +443,6 @@ export function NowPlaying({
             aria-label="정지"
           />
         </div>
-        {/* 오른쪽: 볼륨 */}
         <div className="flex w-full min-w-0 items-center gap-2 max-sm:order-last sm:order-3 sm:max-w-60 sm:justify-self-end">
           <Volume2 size={16} className="shrink-0 text-muted-foreground" aria-hidden />
           <Slider

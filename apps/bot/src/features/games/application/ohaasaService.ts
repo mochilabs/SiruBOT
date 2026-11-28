@@ -1,4 +1,3 @@
-/** 별자리 코드 → 정보 매핑 */
 export const ZODIAC_MAP: Record<string, { jp: string; ko: string; en: string }> = {
 	'01': { jp: 'おひつじ座', ko: '양자리', en: 'Aries' },
 	'02': { jp: 'おうし座', ko: '황소자리', en: 'Taurus' },
@@ -16,7 +15,6 @@ export const ZODIAC_MAP: Record<string, { jp: string; ko: string; en: string }> 
 
 export const ZODIAC_CHOICES = Object.entries(ZODIAC_MAP).map(([code, info]) => ({ code, ...info }));
 
-/** 생일(월, 일)을 입력받아 별자리 코드(01~12) 반환 */
 export function getZodiacFromDate(month: number, day: number): string | null {
 	if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return '01';
 	if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return '02';

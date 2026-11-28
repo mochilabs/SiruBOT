@@ -1,7 +1,3 @@
-/**
- * Sapphire 피스 소스 트리 스캔 — `pieceInventory.test.ts`(스냅샷)와 도움말 카탈로그 테스트가 같이 써요.
- * 테스트 전용이에요 (TypeScript 컴파일러 API로 소스를 읽어요). 규칙 설명은 `pieceInventory.test.ts` 맨 위 주석에 있어요.
- */
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,9 +9,7 @@ const STORES = ['commands', 'listeners', 'interaction-handlers', 'preconditions'
 const PIECE_BASES = new Set(['Command', 'Subcommand', 'Listener', 'InteractionHandler', 'Precondition', 'AllFlowsPrecondition']);
 
 export interface Piece {
-	/** `<스토어>:<이름>` */
 	key: string;
-	/** 커맨드만: 명시된 fullCategory. 옵션이 없으면 Sapphire가 폴더 구조에서 정하므로 `(folder:<commands 아래 하위 폴더>)`로 적어요 */
 	category: string | null;
 	file: string;
 }
@@ -46,7 +40,6 @@ const arrayProp = (obj: ts.ObjectLiteralExpression, prop: string): string[] | un
 	return undefined;
 };
 
-/** 파일에서 export된 피스 클래스를 찾아 이름/카테고리를 읽어요 (`@ApplyOptions({...})` 또는 `super(context, {...})`). */
 function readPieces(root: string, store: string, file: string): Piece[] {
 	const base = path.basename(file, '.ts');
 	const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);

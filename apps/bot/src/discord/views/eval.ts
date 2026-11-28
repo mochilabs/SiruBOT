@@ -3,7 +3,6 @@ import { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from
 import { evalId } from '../customIds.ts';
 import { notice } from '../../lib/notice.ts';
 
-/** 코드 입력 모달 — customId `eval:v1:modal` / `eval:v1:code`는 evalModal 핸들러가 파싱해요 */
 export function evalModal() {
 	const codeInput = new TextInputBuilder()
 		.setCustomId(evalId.encode('code'))

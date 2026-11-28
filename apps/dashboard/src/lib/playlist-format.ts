@@ -1,4 +1,3 @@
-/** 플레이리스트 총 재생 시간 표기 (ms → "N분" / "N시간 M분") */
 export function formatTotalDuration(ms: number): string {
 	if (!ms) return "0분";
 	const totalMinutes = Math.floor(ms / 60000);

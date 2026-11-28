@@ -29,7 +29,6 @@ function toolDefinitions(tools: AiTool[]): AiToolDefinition[] {
 	}));
 }
 
-/** 도구 인자 JSON을 파싱해요. 빈 인자는 {}, 잘못된 JSON은 null이에요. */
 function parseArguments(rawArguments: string): Record<string, unknown> | null {
 	const trimmed = rawArguments.trim();
 	if (!trimmed) return {};
@@ -41,7 +40,6 @@ function parseArguments(rawArguments: string): Record<string, unknown> | null {
 	}
 }
 
-/** 도구 실행 중 표시할 행동 멘트를 찾아요. */
 function toolStatus(toolMap: Map<string, AiTool>, name: string, rawArguments = ''): string {
 	const tool = toolMap.get(name);
 	if (!tool?.status) return `${name} 사용 중..`;

@@ -5,28 +5,23 @@ import { estimateTokens } from './tokenBudget.ts';
 import { contentText, type ChannelHistoryState, type ChatMessage } from './types.ts';
 
 const HISTORY_MAX_TURNS = 150;
-/** 요약기가 장시간 실패해도 기록이 무한 증식하지 않도록 하는 pending 상한 */
 const SUMMARY_PENDING_MAX = 120;
-/** 채널별 persist 코얼레스 창 — 유저 메시지 1건마다 전체 히스토리를 다시 쓰지 않도록 변경을 모아요 */
 const PERSIST_COALESCE_MS = 500;
 
-/** historyLine 결과 캐시 — append·프롬프트 조립마다 같은 메시지를 다시 형식화하지 않아요 (메시지 객체가 키라 GC가 정리해요) */
 const historyLineCache = new WeakMap<ChatMessage, string>();
-/** 메시지 라인의 토큰 비용 캐시 — 증분 토큰 갱신이 O(1)이 되게 해요 */
 const lineTokenCache = new WeakMap<ChatMessage, number>();
 
 function defaultHistoryState(): ChannelHistoryState {
 	return { messages: [], summary: null, pending: [], tokens: 0 };
 }
 
-/** 저장된 JSON의 messages 토큰 합 — 캐시가 비어 있는 로드 시점 1회 계산이에요 */
 function computeTokens(messages: ChatMessage[]): number {
 	let sum = 0;
 	for (const message of messages) sum += lineTokens(message);
 	return sum;
 }
 
-/** 저장된 JSON을 ChannelHistoryState로 해석해요 (옛 array 포맷은 summary/pending 없음, tokens 필드는 항상 재계산) */
+/** 옛 array 포맷 호환 및 로드 시점 tokens 재계산 */
 function parseStoredHistory(stored: unknown): ChannelHistoryState {
 	if (Array.isArray(stored)) {
 		const messages = stored as ChatMessage[];
@@ -45,7 +40,6 @@ function parseStoredHistory(stored: unknown): ChannelHistoryState {
 	return defaultHistoryState();
 }
 
-/** 히스토리 라인 한 줄 — 프롬프트 조립·토큰 추정·요약 입력에서 공용으로 써요 */
 export function historyLine(message: ChatMessage): string {
 	const cached = historyLineCache.get(message);
 	if (cached !== undefined) return cached;

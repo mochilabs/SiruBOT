@@ -20,36 +20,28 @@ import { CustomPlayer } from '../../lavalink/player/customPlayer.ts';
 import { nowPlayingTrack } from '../../lavalink/player/nowPlaying.ts';
 import { currentChapter, currentChapterIndex } from '../../lavalink/player/chapters.ts';
 
-// 타이틀 링크로 걸 수 있는 URL 최대 길이 (formatTrack의 제한과 같다).
 const MAX_TRACK_URL_LENGTH = 70;
 
-/** 컨트롤러에서 보여주는 큐 미리보기 곡 수. */
 const QUEUE_PREVIEW_COUNT = 5;
 
 type controllerViewProps = {
 	player: CustomPlayer;
 	volume?: number;
 	nowPlayingCardUrl?: string;
-	/** 기본 채널의 상시 패널 — 카드 이미지 아래에 대기 큐·재생 상태 요약을 텍스트로 더 보여준다 */
 	panel?: boolean;
 };
 
-/** 컨트롤러 미리보기 아래 '대기열 보기' 버튼 — controllerButton 핸들러의 queueView 액션으로 파싱한다. */
 const queueViewCustomId = controllerId.encode('queueView');
 
 export function controllerView({ player, volume, nowPlayingCardUrl, panel = false }: controllerViewProps) {
 	const containerComponent = createContainer();
 
-	// NOWPLAYING 표시는 trackStart 확정 트랙을 본다 (queue.current는 전이 기계가 덮어쓴다).
 	const current = nowPlayingTrack(player);
-	// 선예열한 추천곡은 대기열이 아니므로 개수·남은 시간·다음 곡 안내에서 제외한다.
 	const queuedTracks = getUserQueuedTracks(player);
 	const queueCount = queuedTracks.length;
 
-	// 재생 상태 라벨(음성 채널 멘션·재생 중/일시정지/실시간) — 트랙 정보 위 한 줄로 보여준다.
 	const statusLabel = current ? (current.info.isStream ? '실시간으로 재생 중' : player.paused ? '일시정지됨' : '재생 중') : null;
-	// lavalink-client는 음성 상태 null 이벤트에서 voiceChannelId만 비우고 options.voiceChannelId는 남겨 둔다.
-	// 라벨이 그 순간 사라지지 않도록 options 값을 fallback으로 쓴다.
+	// lavalink-client가 voiceChannelId를 비우는 순간에도 라벨이 유지되도록 options.voiceChannelId를 fallback으로 쓴다.
 	const voiceChannelId = player.voiceChannelId ?? player.options?.voiceChannelId;
 	const playbackLabel = current && voiceChannelId && statusLabel ? `-# <#${voiceChannelId}> 에서 ${statusLabel}` : null;
 
@@ -73,12 +65,10 @@ export function controllerView({ player, volume, nowPlayingCardUrl, panel = fals
 
 	const stopButton = new ButtonBuilder().setCustomId(controllerId.encode('stop')).setEmoji(emoji('stop'));
 
-	// 반복 상태 아이콘 바꾸기 — 버튼 ID에는 누르면 바뀔 다음 모드를 담아요
 	const repeatButton = new ButtonBuilder()
 		.setCustomId(controllerId.encode('repeat', { mode: nextRepeatMode(player.repeatMode) }))
 		.setEmoji(repeatEmoji(player.repeatMode));
 
-	// 핵심 조작만 한 행에 둬 모바일에서도 버튼 라벨이 눌리지 않게 한다.
 	const primaryComponents: ButtonBuilder[] = [prevButton, pauseButton, nextButton, stopButton, repeatButton];
 	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		primaryComponents.map((button) => {
@@ -86,8 +76,6 @@ export function controllerView({ player, volume, nowPlayingCardUrl, panel = fals
 		})
 	);
 
-	// 챕터 건너뛰기 버튼 — 챕터가 있는 영상(장문 YouTube)에만 노출해요.
-	// 현재 챕터 시작에서 5초 이상 지났으면 '이전 챕터'가 현재 챕터로 되돌려요.
 	const chapters = player.chapters ?? [];
 	const chapterIndex = chapters.length > 0 ? currentChapterIndex(player) : null;
 	const atChapterStart = chapterIndex !== null && (player.position ?? 0) - chapters[chapterIndex]!.start < 5_000;
@@ -102,7 +90,6 @@ export function controllerView({ player, volume, nowPlayingCardUrl, panel = fals
 		.setEmoji(emoji('arrow_forward'))
 		.setDisabled(chapterIndex === null || chapterIndex >= chapters.length - 1);
 
-	// 부가 조작은 챕터 이동과 재생 설정으로 나눠 한 행에 과밀하게 몰리지 않게 한다.
 	const utilityRows: ActionRowBuilder<ButtonBuilder>[] = [];
 	if (chapters.length > 0) {
 		utilityRows.push(
@@ -115,7 +102,6 @@ export function controllerView({ player, volume, nowPlayingCardUrl, panel = fals
 		const gallery = new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(nowPlayingCardUrl));
 		containerComponent.addMediaGalleryComponents(gallery);
 	} else if (current?.info.artworkUrl) {
-		// 일반 컨트롤러는 카드 대신 원본 앨범 아트만 작은 썸네일로 보여줘요.
 		const titleSection = new SectionBuilder().addTextDisplayComponents(nowplayingTextDisplay);
 		thumbnail.setURL(current.info.artworkUrl);
 		titleSection.setThumbnailAccessory(thumbnail);
@@ -129,20 +115,16 @@ export function controllerView({ player, volume, nowPlayingCardUrl, panel = fals
 		containerComponent.addActionRowComponents(utilityRow);
 	}
 
-	// 카드 이미지가 있어도 패널이면 큐·상태 요약을 함께 보여준다.
 	if (!nowPlayingCardUrl || panel) {
-		// 대기열 요약 → divider → 컨텐츠 → footer 순서. footer에는 대기열 개수를 두지 않는다.
 		if (queueCount > 0) {
 			containerComponent.addTextDisplayComponents(
 				new TextDisplayBuilder().setContent(
 					`-# ${emoji('scroll')} 대기열 ${queueCount}곡 (${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음)`
 				)
 			);
-			// divider 없이 spacing만 두면 구분선이 사라지고 최소 여백만 남는다.
-			// divider(구분선)는 기본 spacing(1)과 함께 렌더링돼 1번 곡 위에 빈 줄을 만든다.
+			// divider 없는 SeparatorBuilder만 spacing과 함께 여백을 만든다.
 			containerComponent.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
 
-			// 큐 미리보기 — 대기열 앞 5곡을 한 줄씩 보여준다.
 			const previewLines = queuedTracks.slice(0, QUEUE_PREVIEW_COUNT).map((track, index) => {
 				const title = formatTrack(track, { showLength: false, titleLength: { maxLength: 60 } });
 				return `-# ${index + 1}. ${title}`;
@@ -154,7 +136,6 @@ export function controllerView({ player, volume, nowPlayingCardUrl, panel = fals
 			containerComponent.addTextDisplayComponents(...preview);
 			containerComponent.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
 
-			// 대기열 전체 보기 진입 버튼 — 미리보기(5곡)를 넘는 대기열이 있을 때만 노출한다. 누르면 새 메시지로 queueList(10곡/쪽)를 연다.
 			if (queueCount > QUEUE_PREVIEW_COUNT) {
 				const viewQueueButton = new ButtonBuilder()
 					.setCustomId(queueViewCustomId)
@@ -166,7 +147,6 @@ export function controllerView({ player, volume, nowPlayingCardUrl, panel = fals
 		}
 		const footerSegments = buildFooterSegments(player, volume);
 		if (panel) footerSegments.push(...buildPanelStatusSegments(player));
-		// 신청자·추천곡 인디케이터는 footer 맨 마지막(볼륨 바로 뒤)에 아이콘과 함께 표시한다.
 		const requesterMention = current ? footerRequesterMention(current) : null;
 		if (requesterMention) {
 			footerSegments.push(requesterMention);

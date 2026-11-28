@@ -14,7 +14,6 @@ const TRANSITION_DESCRIPTIONS = {
 	automix: '박자를 맞춰 자연스럽게 이어요'
 } as const;
 
-/** 오디오(믹서) 페이지 — 구 `/믹서` 전환·고급설정·갭리스·크로스페이드·볼륨정규화·안내방식 */
 export const audioActions = {
 	selectTransition: {
 		mode: 'audio',
@@ -103,7 +102,6 @@ export const audioActions = {
 			build: () => new ButtonBuilder().setEmoji(emoji('spectrum')).setLabel('AutoMix 고급 설정').setStyle(ButtonStyle.Secondary)
 		}
 	},
-	// TTS 음성 안내를 어떻게 재생할지 (순서대로 / 겹쳐서 / 최신 안내만)
 	selectAnnounceMode: {
 		mode: 'audio',
 		apply: async ({ interaction, guildId, services }) => {

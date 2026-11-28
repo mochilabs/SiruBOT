@@ -16,7 +16,6 @@ const TOS_URL = process.env.NEXT_PUBLIC_TOS_URL;
 const PRIVACY_URL = process.env.NEXT_PUBLIC_PRIVACY_POLICY_URL;
 const SUPPORT_SERVER = process.env.NEXT_PUBLIC_SUPPORT_SERVER;
 
-/** 푸터 링크 분류 — 봇 초대는 위의 초대 버튼이 맡아서 목록에는 넣지 않아요. */
 const linkGroups: Array<{ title: string; links: FooterLink[] }> = [
 	{
 		title: '기능',
@@ -69,12 +68,10 @@ function FooterAnchor({ link }: { link: FooterLink }) {
 }
 
 export function Footer() {
-	// 모바일 하단 탭바가 덮는 높이만큼 푸터 면을 늘려요 — 탭바 둥근 모서리 뒤로 다른 배경색이 비치지 않게 해요
 	return (
 		<footer className="bg-surface-1 pb-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] md:pb-0">
 			<div className="mx-auto w-full max-w-7xl px-4 pt-7 pb-6 sm:px-6 sm:pt-12 sm:pb-8 lg:px-8">
 				<div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.2fr)] lg:gap-16">
-					{/* 브랜드 + 초대: 모바일은 한 줄, sm 이상은 설명을 더해 세로로 쌓아요 */}
 					<div className="flex items-center justify-between gap-3 sm:flex-col sm:items-start sm:justify-start sm:gap-5">
 						<div className="space-y-3">
 							<Link href="/" className="inline-flex items-center gap-2 sm:gap-2.5">
@@ -93,7 +90,6 @@ export function Footer() {
 						</Link>
 					</div>
 
-					{/* 분류별 링크 — 모바일은 제목 옆에 링크가 흘러가는 행, sm 이상은 4열 */}
 					<div className="divide-y divide-border-subtle sm:grid sm:grid-cols-4 sm:gap-8 sm:divide-y-0">
 						{linkGroups.map((group) => (
 							<nav

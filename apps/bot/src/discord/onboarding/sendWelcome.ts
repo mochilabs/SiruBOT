@@ -12,7 +12,6 @@ function canSend(channel: GuildBasedChannel | null | undefined, me: GuildMember)
 	return channel.permissionsFor(me)?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages]) ?? false;
 }
 
-/** 채널 목록 화면 순서: 카테고리 위치, 그 안의 채널 위치 */
 function sortedTextChannels(guild: Guild): TextChannel[] {
 	return [...guild.channels.cache.values()]
 		.filter((c): c is TextChannel => c.type === ChannelType.GuildText)
@@ -29,10 +28,6 @@ function candidates(guild: Guild, me: GuildMember): WelcomeChannelCandidate[] {
 	return list;
 }
 
-/**
- * 서버 가입 안내를 보내요 (P-02). 보낼 곳은 `pickWelcomeTarget` 순서이고, 채널이 없으면 서버 주인 DM을 한 번만 시도해요.
- * 실패해도 다시 시도하지 않아요 (대량 초대 때 스팸처럼 보이지 않게). 보냈으면 true.
- */
 export async function sendWelcome(guild: Guild, kind: Exclude<JoinKind, 'skip'>): Promise<boolean> {
 	const me = guild.members.me ?? (await guild.members.fetchMe().catch(() => null));
 	if (!me) return false;

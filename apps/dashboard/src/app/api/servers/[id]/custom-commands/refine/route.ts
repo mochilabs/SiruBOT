@@ -25,11 +25,6 @@ const refineBodySchema = z.object({
     .default([]),
 });
 
-/**
- * 커스텀 명령어 AI 반복 수정 — 현재 스펙 + 수정 지시(+최근 대화 기억)를 data-api LLM에 보내
- * 지시된 부분만 바꾼 전체 스펙을 받아와요. LLM 호출이라 무거운 쓰기(5/min)로 제한하고
- * 타임아웃을 60초로 넓혀요. 반환 스펙은 빌더에만 적용돼요 — 저장은 별도 버튼이에요.
- */
 export const POST = createGuildApiHandler({
   role: "manage",
   rate: HEAVY_WRITE_RATE,
@@ -55,7 +50,6 @@ export const POST = createGuildApiHandler({
         );
       }
 
-      // data-api가 이미 검증했지만, 경계를 넘어온 값은 한 번 더 확인해요
       const payload = result.data as { spec?: unknown } | null;
       const spec = customCommandSpecSchemaV2.safeParse(payload?.spec);
       if (!spec.success) {

@@ -21,7 +21,6 @@ const lineSchema = z.object({
   words: z.array(wordSchema).optional(),
 });
 
-/** data-api `/v1/lyrics` 응답 중 대시보드가 쓰는 필드 — 모르는 필드는 버려요 */
 const lyricsResponseSchema = z.object({
   trackName: z.string(),
   artistName: z.string(),
@@ -29,7 +28,6 @@ const lyricsResponseSchema = z.object({
   syncedLyrics: z.string().nullable(),
   hasWordSync: z.boolean().optional(),
   wordSync: z.array(lineSchema).nullable().optional(),
-  /** 한국어 번역 — pending이면 data-api가 뒤에서 번역 중이라 다시 조회하면 채워져요 */
   translation: z
     .object({
       status: z.enum(["ready", "pending", "none"]),
@@ -40,10 +38,6 @@ const lyricsResponseSchema = z.object({
 
 export type LyricsPayload = z.infer<typeof lyricsResponseSchema>;
 
-/**
- * 재생 중인 곡의 가사 — 제목·아티스트·길이로 data-api `GET /v1/lyrics`를 대신 호출해요.
- * 못 찾으면 404 (노래방 패널이 "가사가 없어요"로 보여줘요).
- */
 export const GET = createGuildApiHandler({
   role: "member",
   rate: READ_RATE,

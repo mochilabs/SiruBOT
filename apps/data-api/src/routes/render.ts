@@ -20,15 +20,11 @@ import { renderWrappedCard } from '../renderers/wrapped/wrappedCard.tsx';
 import { getDb } from '../services/db.ts';
 import { loadWrappedStats, resolveWrappedRange } from '../services/wrapped.ts';
 
-/** 이미지 렌더 라우트 — 프로필 카드·멤버 인사 카드·NowPlaying·운세 카드·날씨 카드 + 인사 이미지 정규화. 렌더러 본체는 renderers/에 있어요. */
-
-/** dedup 키용 페이로드 해시 — 같은 유저의 다른 요청(preset·설정·배경 변경)이 첫 렌더를 공유하지 않게 키에 섞어 넣어요 */
 function payloadHash(payload: unknown): string {
 	return createHash('sha256').update(JSON.stringify(payload)).digest('hex').slice(0, 16);
 }
 
 export function registerRenderRoutes(fastify: FastifyInstance): void {
-	// 프로필 카드 이미지 (프리셋: dark·dashboard=대시보드 다크 / light / aura / ticket=멤버패스 티켓)
 	const topTracksSchema = z
 		.array(
 			z.object({
@@ -49,7 +45,6 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		.default(null);
 	const profileCardSchema = z.object({
 		preset: z.enum(['dark', 'ticket', 'dashboard', 'light', 'aura']).default('dark'),
-		// 서버 테마 — 다크 계열 카드의 색을 정해요. 요청 본문 해시에 들어가서 테마별로 캐시가 갈려요.
 		themePreset: z.enum(THEME_PRESETS).default(THEME_PRESET_DEFAULT),
 		bannerUrl: z.string().url().nullable().default(null),
 		listenText: z.string().trim().max(40).default(''),
@@ -63,7 +58,6 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		intro: z.string().trim().max(120).default(''),
 		accountCreated: z.string().trim().max(40).nullable().default(null),
 		guildJoinedAt: z.string().trim().max(40).nullable().default(null),
-		// 역할 이름이라 ID 정규식을 쓰면 한글·공백 이름이 400이 돼요 — 디스코드 역할명 상한(100자)만 둬요.
 		roleChips: z.array(z.string().trim().min(1).max(100)).max(4).default([]),
 		guildTag: z
 			.string()
@@ -89,7 +83,6 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 				return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${String(d.getDate()).padStart(2, '0')}`;
 			};
 			const statusLabelMap: Record<string, string> = { online: '온라인', idle: '자리 비움', dnd: '방해 금지', invisible: '오프라인' };
-			// 키에 페이로드 해시를 넣어요 — 다른 preset·입력의 동시 요청이 첫 렌더 이미지를 공유하지 않게.
 			const buffer = await deduped(`img:card:${body.userId}:${payloadHash(body)}`, () => {
 				const card = {
 					displayName: body.displayName,
@@ -98,7 +91,6 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 					guildTag: body.guildTag,
 					status: body.status,
 					statusLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
-					// 소개는 유저가 등록한 문구 그대로 쓰고, 비어 있으면 렌더러가 소개 칸을 생략해요
 					intro: body.intro,
 					createdText: dateFmt(body.accountCreated),
 					joinedText: dateFmt(body.guildJoinedAt),
@@ -111,7 +103,6 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 					nowPlaying: body.nowPlaying
 				};
 				if (body.preset === 'ticket') return renderProfileCardTicket(card);
-				// dark는 dashboard와 같은 다크 대시보드 모양이에요
 				return renderProfileCard({
 					...card,
 					variant: body.preset === 'dark' ? 'dashboard' : body.preset,
@@ -126,13 +117,10 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		}
 	});
 
-	// 멤버 인사 카드 이미지 (환영/작별)
-	// config는 @sirubot/utils 공용 계약 스키마로 검증해요 — bot 리스너·dashboard 에디터와 같은 구조.
 	const greetingContextSchema = z.object({
 		userId: redisIdSchema,
 		username: z.string().trim().min(1).max(64),
 		displayName: z.string().trim().min(1).max(64),
-		// 이미지 텍스트의 {서버} 토큰용 — 호출자(봇)가 모르면 빈 문자열로 렌더해요
 		guildName: z.string().trim().max(64).nullable().default(null),
 		avatarUrl: z.string().url().nullable().default(null),
 		memberCount: z.number().int().min(0).max(100_000_000)
@@ -148,10 +136,8 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 			const body = memberCardSchema.parse(request.body);
 			const image = body.config.image;
 			if (!image) {
-				// 계약상 useImage:false 설정은 image:null — 이미지 경로는 렌더할 배경이 없어요
 				throw new DataApiError(400, 'greeting_image_missing', '이미지 설정이 비어 있어요. useImage를 켜고 배경을 지정해 주세요.');
 			}
-			// 키에 페이로드 해시를 넣어요 — 배경·설정·유저 컨텍스트가 다른 동시 미리보기 요청이 첫 렌더를 공유하지 않게.
 			const context = {
 				userId: body.context.userId,
 				displayName: body.context.displayName,
@@ -169,10 +155,6 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		}
 	});
 
-	// 멤버 인사 배경/레이어 업로드 정규화
-	// 브라우저에서 온 이미지를 저장 규격으로 맞춰요. 배경은 JPEG(가장 긴 변 1600px, 인코딩 후 900KB 이하),
-	// 스티커/로고 레이어는 알파를 살려야 해서 PNG로 정규화해요.
-	// dataURI를 Prisma Json 컬럼에 통째로 저장하는 관계로 이것이 저장 비용 상한이에요.
 	const greetingBackgroundSchema = z.object({
 		dataUri: z
 			.string()
@@ -195,10 +177,6 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 	registerGreetingImageNormalizeRoute('/v1/image/member-card/background', 'image-member-card-background', normalizeGreetingBackground);
 	registerGreetingImageNormalizeRoute('/v1/image/member-card/layer-image', 'image-member-card-layer-image', normalizeGreetingLayerImage);
 
-	// NowPlaying 카드 이미지
-	// 카드는 트랙 식별자 + 볼륨/챕터 + 5초 위치 버킷마다 다시 렌더돼요
-	// (도미넌트 색 배경 + 제목 + 다음 곡 목록 + 대기열 메타 + 브랜드줄).
-	// 신청자·추천/일시정지 뱃지도 이미지에 박아요 — 텍스트 동적 라인은 봇이 담당.
 	const nowPlayingCardSchema = z.object({
 		trackId: z.string().trim().min(1).max(200),
 		title: z.string().trim().min(1).max(200),
@@ -236,7 +214,6 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 			.min(0)
 			.max(24 * 3600_000)
 			.default(0),
-		// 볼륨/노드 — 브랜드줄(brandLine)에 통합되어 카드 렌더에서는 미사용 (하위호환으로 유지)
 		volume: z.number().int().min(0).max(1000).nullable().default(null),
 		nodeId: z.string().trim().min(1).max(100).nullable().default(null),
 		brandLine: z.string().trim().min(1).max(120).nullable().default(null),
@@ -268,8 +245,6 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 	fastify.post('/v1/image/nowplaying', async (request, reply) => {
 		try {
 			const body = nowPlayingCardSchema.parse(request.body);
-			// 카드에는 재생 위치가 그려지지 않아요 — 위치를 뺀 페이로드 해시를 키로 써서, 같은 곡이라도 볼륨·일시정지·반복·챕터가
-			// 다른 동시 요청이 첫 응답으로 합쳐지지 않게 하고 위치만 다른 요청은 합쳐요.
 			const buffer = await deduped(`img:nowplaying:${body.trackId}:${payloadHash({ ...body, positionMs: 0 })}`, () =>
 				renderNowPlayingCard(body)
 			);
@@ -280,9 +255,6 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		}
 	});
 
-	// 운세 카드 이미지
-	// 봇이 /v1/ohaasa 1건에서 요약 필드만 골라 POST해요 — 카드는 별자리·순위·럭키만 그려요.
-	// 운세 설명·럭키 컬러는 카드에 넣지 않아요(텍스트 본문 전용) — 스키마에 필드 자체가 없어요.
 	fastify.post('/v1/image/ohaasa', async (request, reply) => {
 		try {
 			const body = ohaasaCardSchema.parse(request.body);
@@ -294,7 +266,6 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		}
 	});
 
-	// 운세 TOP 3 카드 이미지 — 별자리 미지정 조회용. 같은 날짜·같은 구성이면 렌더를 공유해요.
 	fastify.post('/v1/image/ohaasa/top', async (request, reply) => {
 		try {
 			const body = ohaasaTopCardSchema.parse(request.body);
@@ -307,8 +278,6 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		}
 	});
 
-	// 날씨 카드 이미지
-	// 봇이 /v1/weather 결과에서 표시 필드만 골라 POST해요. 같은 위치·범위·관측 시각이면 렌더를 공유해요.
 	fastify.post('/v1/image/weather', async (request, reply) => {
 		try {
 			const body = weatherCardSchema.parse(request.body);
@@ -320,8 +289,6 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		}
 	});
 
-	// Wrapped 카드 이미지 (Takumi) — 신청 이력을 data-api가 직접 집계해서 그려요 (봇은 표시 정보만 보내요).
-	// guildId가 null이면 모든 서버를 합쳐요. DATABASE_URL이 없으면 503이에요.
 	const wrappedCardSchema = z.object({
 		userId: playerUserIdSchema,
 		guildId: redisIdSchema.nullable().default(null),

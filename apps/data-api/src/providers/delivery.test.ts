@@ -1,11 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { deliveryTrackCacheKey, trackDelivery } from './delivery.ts';
 
-/**
- * delivery provider 스모크 — 별칭 해석(택배사 목록 조회 생략), 운송장번호 정규화,
- * 유저 대상 실패 메시지를 fetch 스텁으로 잠가요.
- */
-
 const LEGACY_TRACK = {
 	carrier: { id: 'kr.cjlogistics', name: 'CJ대한통운', tel: '1588-1255' },
 	state: { id: 'delivered', text: '배송완료' },

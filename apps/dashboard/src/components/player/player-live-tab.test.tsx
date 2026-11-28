@@ -112,7 +112,6 @@ describe("live player context and recovery", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(pause.disabled).toBe(true);
     await act(async () => { resolve(Response.json({ ok: true })); });
-    // 새 상태가 도착할 때까지는 같은 명령을 다시 보내지 못하게 잠겨 있어요
     expect(pause.disabled).toBe(true);
     await act(async () => { Source.instances[0].emit(snapshot({ ...snapshot().player!, paused: true })); });
     expect(element.querySelector<HTMLButtonElement>('button[aria-label="재생"]')?.disabled).toBe(false);

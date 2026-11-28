@@ -9,15 +9,10 @@ export const MAX_DESCRIPTION_LENGTH = 200;
 export const CANDIDATE_COUNT = 4;
 
 export interface PreparedPrompt {
-	/** 사용자가 입력한 설명 (이미지만 보냈으면 빈 문자열) */
 	description: string;
-	/** 생성 서버에 보낼 영어 설명 */
 	prompt: string;
-	/** 'text' 설명만 · 'image' 첨부 이미지를 읽어 만든 설명 */
 	source: 'text' | 'image';
-	/** 원문과 다른 영어 설명을 보냈는지 (번역했거나 이미지에서 만들었으면 true) */
 	translated: boolean;
-	/** 등록 모달에 미리 채울 이름 */
 	suggestedName: string;
 }
 
@@ -30,24 +25,18 @@ export interface EmojiMakerDeps {
 
 export interface PrepareInput {
 	description?: string | null;
-	/** 첨부 이미지 URL — 있으면 비전 모델로 읽고, 설명은 무엇을 그릴지 고르는 메모로 써요. */
 	imageUrl?: string | null;
-	/** 첨부의 contentType — 이미지를 내려받았을 때 형식을 모르면 써요. */
 	imageType?: string | null;
 }
 
 export interface EmojiMaker {
 	isEnabled(): boolean;
-	/** 이미지로 만들기를 쓸 수 있는지 (비전 LLM 설정이 있는지) */
 	canReadImages(): boolean;
-	/** 설명을 다듬어 영어로 옮기거나, 이미지를 읽어 설명을 만들어요. 다시 그리기는 이 결과를 재사용해요. */
 	prepare(input: PrepareInput): Promise<PreparedPrompt>;
-	/** 후보 4장을 그려요. 한 사람은 한 번에 하나만 그릴 수 있어요. 진행 상황은 onProgress로 알려줘요. */
 	draw(userId: string, prompt: string, onProgress?: (progress: MojiProgress) => void): Promise<{ images: Buffer[]; seed: number }>;
 }
 
 export function createEmojiMaker(deps: EmojiMakerDeps): EmojiMaker {
-	// 같은 사람이 버튼·명령을 연타해 서버 대기열을 혼자 채우지 않게 막는 진행 중 표시예요 (인스턴스 소유).
 	const drawing = new Set<string>();
 
 	async function readImage(imageUrl: string, note: string, imageType?: string | null): Promise<{ prompt: string; subject: string | null }> {

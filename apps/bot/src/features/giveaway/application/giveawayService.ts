@@ -21,7 +21,6 @@ import { KeyedTimers } from '../../../lib/keyedTimers.ts';
 import type { Stoppable } from '../../../lib/lifecycle.ts';
 import type { GuildJobScheduler } from '../../../services/guildJobScheduler.ts';
 
-/** 카드와 발표를 그리는 데 필요한 값 — Discord 객체 대신 이 사본만 포트로 넘어가요 */
 export interface GiveawayCardData {
 	id: string;
 	guildId: string;
@@ -37,14 +36,10 @@ export interface GiveawayCardData {
 
 export type GiveawayCardResult = 'ok' | 'gone' | 'failed';
 
-/** 나눔이 Discord와 주고받는 포트 — 실제 구현은 features/giveaway/discord/giveawayDiscord.ts예요 */
 export interface GiveawayDiscordPort {
-	/** 채널에 카드를 올릴 수 있는지. 문제가 있으면 안내 문구, 없으면 null */
 	checkChannel(guildId: string, channelId: string): Promise<string | null>;
-	/** 참여 카드를 올리고 메시지 ID를 돌려줘요. 못 올리면 던져요 */
 	publish(channelId: string, card: GiveawayCardData): Promise<string>;
 	updateCard(channelId: string, messageId: string, card: GiveawayCardData): Promise<GiveawayCardResult>;
-	/** 결과(또는 다시 뽑기) 발표. 채널이 사라졌으면 'gone', 일시 오류는 던져요 */
 	announce(
 		channelId: string,
 		messageId: string | null,
@@ -52,7 +47,6 @@ export interface GiveawayDiscordPort {
 		kind: 'end' | 'reroll',
 		newWinnerIds: readonly string[]
 	): Promise<'ok' | 'gone'>;
-	/** 서버에 남아 있는 멤버의 조건 확인용 정보. 나간 멤버는 결과에 없어요 */
 	fetchMembers(guildId: string, userIds: readonly string[]): Promise<Map<string, GiveawayMemberFacts>>;
 }
 
@@ -62,7 +56,6 @@ export interface GiveawayServiceDeps {
 	discord: GiveawayDiscordPort;
 	logger: AppLogger;
 	now?: () => Date;
-	/** 0 이상 max 미만의 균등한 정수 — 기본은 crypto.randomInt */
 	randomInt?: (maxExclusive: number) => number;
 	cardUpdateIntervalMs?: number;
 }
@@ -118,9 +111,8 @@ export class GiveawayService implements Stoppable {
 	public readonly name = '나눔 카드 갱신';
 
 	private readonly timers = new KeyedTimers('나눔 카드 갱신 디바운스');
-	/** 카드를 마지막으로 고친 시각 — 10초에 한 번만 고치려고 써요 (캐시라 비어도 괜찮아요) */
 	private readonly lastCardUpdate = new Map<string, number>();
-	/** 마감 처리 중인 나눔 — 같은 프로세스에서 두 번 발표하지 않게 해요 */
+	/** 같은 프로세스에서 중복 마감을 막기 위한 잠금 집합 */
 	private readonly finalizing = new Set<string>();
 	private readonly inflight = new Set<Promise<void>>();
 	private stopped = false;
@@ -136,8 +128,6 @@ export class GiveawayService implements Stoppable {
 	private rng(max: number): number {
 		return (this.deps.randomInt ?? randomInt)(max);
 	}
-
-	/* ------------------------------------------------------------ 시작 */
 
 	public async start(input: StartGiveawayInput): Promise<{ id: string }> {
 		const prize = giveawayPrizeSchema.safeParse(input.prize);
@@ -240,7 +230,8 @@ export class GiveawayService implements Stoppable {
 	/** 참여 취소 — 마감 전에만 돼요 */
 	public async leave(giveawayId: string, guildId: string, userId: string): Promise<boolean> {
 		const row = await this.deps.db.giveaway.findUnique({ where: { id: giveawayId } });
-		if (!row || row.guildId !== guildId || row.status !== 'running') return false;
+		// 마감 시각이 지나면 추첨 작업이 아직 안 돌았어도 status는 running이에요. 참여(enter)와 같은 기준으로 막아요.
+		if (!row || row.guildId !== guildId || row.status !== 'running' || row.endsAt.getTime() <= this.now().getTime()) return false;
 		const { count } = await this.deps.db.giveawayEntry.deleteMany({ where: { giveawayId, userId } });
 		if (count > 0) this.requestCardUpdate(giveawayId);
 		return count > 0;
@@ -411,10 +402,21 @@ export class GiveawayService implements Stoppable {
 		const winners = giveawayWinnerCountSchema.safeParse(count);
 		if (!winners.success)
 			throw new AppError('invalid_input', winners.error.issues[0]?.message ?? '당첨자 수가 올바르지 않아요.', { ephemeral: true });
+		// 두 번 겹쳐 뽑으면 둘 다 같은 winnerIds를 읽고, 나중 저장이 먼저 발표된 당첨자를 지워요. 행을 읽기 전에 잠가요.
+		if (this.finalizing.has(giveawayId))
+			throw new AppError('conflict', '다른 추첨이 진행 중이에요. 잠시 뒤 다시 시도해 주세요.', { ephemeral: true });
+		this.finalizing.add(giveawayId);
+		try {
+			return await this.rerollLocked(guildId, giveawayId, winners.data);
+		} finally {
+			this.finalizing.delete(giveawayId);
+		}
+	}
+
+	private async rerollLocked(guildId: string, giveawayId: string, count: number): Promise<{ winnerIds: string[] }> {
 		const row = await this.deps.db.giveaway.findUnique({ where: { id: giveawayId } });
 		if (!row || row.guildId !== guildId) throw new AppError('not_found', '그 나눔을 찾을 수 없어요.', { ephemeral: true });
 		if (row.status !== 'ended') throw new AppError('conflict', '끝난 나눔에서만 다시 뽑을 수 있어요.', { ephemeral: true });
-
 		const requirements = parseGiveawayRequirements(row.requirements);
 		const entries = await this.deps.db.giveawayEntry.findMany({ where: { giveawayId }, select: { userId: true } });
 		const previous = new Set(row.winnerIds);
@@ -423,7 +425,7 @@ export class GiveawayService implements Stoppable {
 			entries.map((e) => e.userId).filter((id) => !previous.has(id)),
 			requirements
 		);
-		const drawn = drawWinners(pool, winners.data, (max) => this.rng(max));
+		const drawn = drawWinners(pool, count, (max) => this.rng(max));
 		if (drawn.length === 0) throw new AppError('conflict', '새로 뽑을 수 있는 참여자가 없어요.', { ephemeral: true });
 
 		const all = [...row.winnerIds, ...drawn];

@@ -12,7 +12,6 @@ const bodySchema = z.object({
 
 const FALLBACK = "치지직 채널 정보를 불러오지 못했어요.";
 
-/** 치지직 채널 프로필 — 링크로 붙여넣은 채널 ID의 이름·프로필을 확인할 때 써요. */
 export const POST = createGuildApiHandler({
   role: "manage",
   rate: READ_RATE,

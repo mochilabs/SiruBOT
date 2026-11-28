@@ -1,6 +1,3 @@
-// ShardClient 회귀 계약: IDENTIFY 핸드셰이크, 할당 샤드 없음의 조기 종료(재시도 없음),
-// 실패 후 5초 백오프 재시도, ws close 후 재연결·재식별 흐름을 잠가요.
-// ShardWebSocket은 목으로 대체해 실제 네트워크 없이 핸들러 등록 순서만 검증해요.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ShardClient } from './client.ts';
@@ -70,7 +67,6 @@ function emit(op: WsOp, payload: unknown): void {
 	for (const handler of wsState.handlers.get(op) ?? []) handler({ op, payload });
 }
 
-/** 등록·해결까지 필요한 마이크로태스크 흐름을 끝까지 돌려요 (타이머는 테스트가 직접 제어) */
 async function flush(): Promise<void> {
 	for (let i = 0; i < 20; i += 1) await Promise.resolve();
 }
@@ -204,13 +200,13 @@ describe('ShardClient 하트비트 ACK 감시', () => {
 		vi.useFakeTimers();
 		await identified();
 
-		await vi.advanceTimersByTimeAsync(30_000); // HEARTBEAT 전송, ACK 없음
+		await vi.advanceTimersByTimeAsync(30_000);
 		expect(wsState.terminated).toBe(0);
-		await vi.advanceTimersByTimeAsync(30_000); // 다음 틱: 미수신 감지
+		await vi.advanceTimersByTimeAsync(30_000);
 		expect(wsState.terminated).toBe(1);
 		expect(hasLog('warn', 'HEARTBEAT_ACK not received')).toBe(true);
 
-		await vi.advanceTimersByTimeAsync(1_000); // close 콜백이 시작한 재연결
+		await vi.advanceTimersByTimeAsync(1_000);
 		await flush();
 		expect(wsState.connectCalls).toBe(2);
 	});

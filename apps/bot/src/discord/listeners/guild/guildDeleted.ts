@@ -9,14 +9,13 @@ export class GuildDeleteListener extends Listener {
 	public override async run(guild: Guild) {
 		this.container.logger.info(`Bot removed from guild: ${guild.name} (${guild.id})`);
 
-		// 장애로 잠시 안 보이는 서버(available=false)는 나간 게 아니에요. 다시 들어오면 짧은 안내가 가요 (GuildLifecycle).
+		// available=false는 일시 장애이므로 실제 탈퇴로 기록하지 않아요.
 		if (guild.available !== false) {
 			await this.container.guildLifecycle
 				?.recordLeave(guild.id)
 				.catch((error: unknown) => this.container.logger.warn(`[onboarding] 나간 기록 실패 (guild ${guild.id}): ${error}`));
 		}
 
-		// 나간 서버의 대기 중 예약 메시지는 지워요 — 다시 들어왔을 때 오래된 공지가 갑자기 나가지 않게요
 		if (guild.available !== false) {
 			await this.container.scheduledMessages
 				?.purgeGuild(guild.id)
@@ -25,14 +24,12 @@ export class GuildDeleteListener extends Listener {
 				);
 		}
 
-		// 생일 축하의 대기 중 작업도 지워요 (다시 들어오면 부팅 복구나 대시보드 저장이 다시 이어 줘요)
 		if (guild.available !== false) {
 			await this.container.birthday
 				?.purgeGuild(guild.id)
 				.catch((error: unknown) => this.container.logger.warn(`[birthday] 나간 서버의 작업 정리 실패 (guild ${guild.id}): ${error}`));
 		}
 
-		// 진행 중이던 나눔도 마감 작업과 함께 정리해요
 		if (guild.available !== false) {
 			await this.container.giveaways
 				?.purgeGuild(guild.id)

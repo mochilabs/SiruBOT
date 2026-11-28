@@ -59,6 +59,32 @@ describe('CachedPlayerSaver pending writes', () => {
 		await expect(store.get('g1')).resolves.toBeNull();
 	});
 
+	it('stays online and retries when one command fails on a live connection', async () => {
+		const { redis, handle } = makeRedis();
+		Object.assign(redis, { isReady: true });
+		redis.set.mockRejectedValueOnce(new Error('OOM command not allowed'));
+		const store = new CachedPlayerSaver(handle, logger);
+
+		await store.set(makePlayer('g1'));
+		expect(isReady(store)).toBe(true);
+		expect(pendingCount(store)).toBe(1);
+
+		await store.set(makePlayer('g1'));
+		expect(redis.set).toHaveBeenCalledTimes(2);
+		expect(pendingCount(store)).toBe(0);
+	});
+
+	it('goes offline when a command fails because the connection dropped', async () => {
+		const { redis, handle } = makeRedis();
+		Object.assign(redis, { isReady: false });
+		redis.set.mockRejectedValueOnce(new Error('The client is closed'));
+		const store = new CachedPlayerSaver(handle, logger);
+
+		await store.set(makePlayer('g1'));
+		expect(isReady(store)).toBe(false);
+		expect(pendingCount(store)).toBe(1);
+	});
+
 	it('lets a delete during an outage override an earlier pending set', async () => {
 		const { redis, handle } = makeRedis();
 		const store = new CachedPlayerSaver(handle, logger);

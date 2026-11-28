@@ -5,12 +5,6 @@ import { db } from "@/lib/db";
 import { getDataApiEnv } from "@/lib/env";
 import { WRITE_RATE } from "@/lib/rate-limit";
 
-/**
- * 대화 기록(transcript) 조회 — 비공개 버킷의 gzip JSON을 data-api 프록시로 받아 풀어서 돌려줘요.
- *
- * storage 공개 GET은 이 버킷을 막아 두었고, 여기서는 관리 권한(`role: manage`)을 통과한 요청만
- * 해당 길드 티켓의 transcript를 읽어요. 권한 없이 ticketId만 알아도 다른 길드 기록은 404예요.
- */
 export const GET = createGuildApiHandler({
 	role: "manage",
 	rate: WRITE_RATE,

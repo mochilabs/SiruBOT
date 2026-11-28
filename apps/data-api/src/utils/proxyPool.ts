@@ -6,25 +6,18 @@ const logger = getLogger('proxy-pool');
 
 const REQUEST_TIMEOUT_MS = 10_000;
 const PROXY_CONNECT_TIMEOUT_MS = 3_000;
-/** 상대가 막았다는 신호(429·403·봇 확인) 뒤 쉬는 시간 */
 const BLOCKED_COOLDOWN_MS = 15 * 60_000;
-/** 연결 실패·타임아웃 뒤 쉬는 시간 */
 const NETWORK_COOLDOWN_MS = 60_000;
-/** 작업 하나가 시도할 수 있는 경로 수 */
 const MAX_ROUTES_PER_RUN = 2;
 const BLOCKED_STATUSES = new Set([403, 429]);
 
 type FetchFn = typeof globalThis.fetch;
 type Outcome = 'ok' | 'blocked' | 'network' | 'error';
 
-/** 나가는 경로 하나 — `direct`이거나 HTTP 프록시예요. */
 export interface OutboundRoute {
-	/** 'direct' 또는 프록시 주소(로그·메트릭용, 인증 정보 없이) */
 	readonly id: string;
 	readonly direct: boolean;
-	/** 이 경로로 나가는 fetch. 응답 상태와 연결 오류를 지켜보다가 작업이 실패하면 쿨다운 사유로 써요. */
 	readonly fetch: FetchFn;
-	/** 응답은 200인데 내용이 차단(봇 확인 등)일 때 호출해서 던져요. */
 	blocked(reason: string): RouteBlockedError;
 }
 
@@ -35,7 +28,6 @@ export class RouteBlockedError extends Error {
 	}
 }
 
-/** 시도할 수 있는 경로가 없거나 모두 막혔어요. */
 export class ProxyUnavailableError extends Error {
 	public constructor(scope: string, detail: string) {
 		super(`no outbound route available for ${scope}: ${detail}`);
@@ -48,23 +40,19 @@ interface RunSignal {
 	network: boolean;
 }
 
-/** 진행 중인 작업의 신호 — 경로별로 한 번 만든 클라이언트(Innertube 등)도 같은 fetch로 신호를 남길 수 있게 해요. */
 const runSignal = new AsyncLocalStorage<RunSignal>();
 
 interface RouteState {
 	route: OutboundRoute;
-	/** scope → 쉬는 게 끝나는 시각 */
 	cooldownUntil: Map<string, number>;
 	counts: Record<Outcome, number>;
 }
 
 export interface ProxyPoolOptions {
 	now?: () => number;
-	/** 테스트용: 경로별 fetch를 바꿔 끼워요 */
 	createFetch?: (entry: string) => FetchFn;
 }
 
-/** 'direct'와 http(s) 프록시 주소를 쉼표로 적은 목록을 읽어요. 비어 있으면 direct 하나예요. */
 export function parseRouteList(raw: string | undefined): string[] {
 	const entries = (raw ?? '')
 		.split(',')
@@ -94,14 +82,10 @@ function withTimeout(init: RequestInit | undefined): RequestInit {
 function defaultFetch(entry: string): FetchFn {
 	if (entry === 'direct') return (input, init) => fetch(input, withTimeout(init));
 	const dispatcher: Dispatcher = new ProxyAgent({ uri: entry, connect: { timeout: PROXY_CONNECT_TIMEOUT_MS } });
-	// Node 내장 fetch는 npm undici의 dispatcher도 받아요. 타입은 내장 undici-types와 버전이 달라 unknown으로 넘겨요
+	// Cast dispatcher for Node fetch; npm undici types differ from built-in undici-types.
 	return (input, init) => fetch(input, { ...withTimeout(init), dispatcher } as unknown as RequestInit);
 }
 
-/**
- * 나가는 경로 묶음. `direct`는 적힌 순서대로 먼저 쓰고, 프록시끼리는 번갈아 써요.
- * 쿨다운은 (경로, scope) 단위라, 한 종류의 요청이 막혀도 다른 종류는 그 경로를 계속 써요.
- */
 export class ProxyPool {
 	private readonly states: RouteState[];
 	private readonly now: () => number;
@@ -161,10 +145,6 @@ export class ProxyPool {
 		if (!wasCooling) logger.warn(`route ${state.route.id} cooling down for ${scope} (${Math.round(ms / 60_000)}m): ${reason}`);
 	}
 
-	/**
-	 * 경로를 하나 골라 작업 전체를 그 경로로 해요. 막혔거나 연결이 안 되면 그 경로를 쉬게 하고 다음 경로로 한 번 더 해요.
-	 * 그 밖의 오류(파싱 실패 등)는 다시 시도하지 않고 그대로 던져요.
-	 */
 	public async run<T>(scope: string, task: (route: OutboundRoute) => Promise<T>): Promise<T> {
 		const tried = new Set<RouteState>();
 		let lastReason = 'all routes cooling down';
@@ -209,7 +189,6 @@ export class ProxyPool {
 
 let pool = new ProxyPool(['direct']);
 
-/** 부팅 때 env(OUTBOUND_PROXY_URLS)로 한 번 설정해요. 설정 전에는 direct 하나예요. */
 export function configureOutboundPool(raw: string | undefined): ProxyPool {
 	const entries = parseRouteList(raw);
 	pool = new ProxyPool(entries);

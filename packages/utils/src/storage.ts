@@ -1,11 +1,6 @@
-/**
- * 서버 이미지 에셋 공용 계약 — S3 스타일 스토리지(apps/storage)와 대시보드가 함께 써요.
- * 키 규칙: bucket 'guild-assets' 아래 '{guildId}/{assetId}.{ext}'.
- */
 import { z } from 'zod';
 
 export const ASSET_BUCKET = 'guild-assets';
-/** 업로드 상한 (바이트) — 디스코드 미디어 갤러리·섹션 썸네일 용도에 충분한 크기예요 */
 export const ASSET_MAX_BYTES = 8 * 1024 * 1024;
 export const ASSET_ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
 export const ASSET_NAME_MAX_LENGTH = 60;
@@ -19,14 +14,8 @@ const MIME_TO_EXT: Record<string, string> = {
 
 const SAFE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
-/**
- * 비공개 버킷 — 공개 GET이 없고 대시보드(관리자)가 storage에서 직접 내려받아요.
- * 티켓 대화 transcript처럼 채널 밖으로 나가면 안 되는 문서를 여기에 둬요.
- * 저장 형식은 `{guildId}/{ticketId}.json.gz` (contract: `packages/utils/src/ticket.ts`).
- */
 export const TICKET_TRANSCRIPT_BUCKET = 'ticket-transcripts';
 
-/** 매직 바이트로 실제 이미지 형식을 판별해요 — Content-Type 헤더는 신뢰하지 않아요 */
 export function sniffImageMime(bytes: Uint8Array): string | null {
 	if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
 	if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
@@ -47,7 +36,6 @@ export function sniffImageMime(bytes: Uint8Array): string | null {
 	return null;
 }
 
-/** 에셋 키 생성 — 길드/에셋 ID에 경로 조각이 있으면 거부해요 */
 export function assetKeyFor(guildId: string, assetId: string, mime: string): string {
 	const ext = MIME_TO_EXT[mime];
 	if (!ext) throw new Error(`지원하지 않는 이미지 형식이에요: ${mime}`);
@@ -58,7 +46,6 @@ export function assetKeyFor(guildId: string, assetId: string, mime: string): str
 	return `${guildId}/${assetId}.${ext}`;
 }
 
-/** 에셋 이름(사용자 라벨) 검증 — 공백만으로 이루어진 이름 거부 */
 export const assetNameSchema = z
 	.string()
 	.trim()

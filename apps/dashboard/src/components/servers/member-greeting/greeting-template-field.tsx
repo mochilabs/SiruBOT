@@ -8,10 +8,8 @@ import { Field } from "@/components/primitives/field";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-
 const TEMPLATE_MAX = 500;
 
-/** 실제 전송 시 채워지는 값의 예시를 보여줘요 (jtc 템플릿 미리보기와 같은 방식) */
 function sampleTemplate(template: string): string {
   return template
     .replaceAll("{유저}", "@철수")
@@ -22,13 +20,11 @@ function sampleTemplate(template: string): string {
 
 interface GreetingTemplateFieldProps {
   kind: GreetingCardKind;
-  /** 편집 중인 템플릿 (저장 전) */
   value: string;
   disabled: boolean;
   onChange: (template: string) => void;
 }
 
-/** 메시지 템플릿 — 변수 삽입 버튼은 커서 위치에 끼워 넣고, 아래에 실제 값 예시를 보여줘요 */
 export function GreetingTemplateField({
   kind,
   value,

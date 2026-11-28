@@ -14,10 +14,6 @@ interface SwitchProps extends Omit<SwitchPrimitive.Root.Props, "onCheckedChange"
 	className?: string;
 }
 
-// Track internal geometry:
-//   md: track 44x24 px, thumb 20x20 px, 2px padding each side -> travel 20px (1.25rem)
-//   sm: track 36x20 px, thumb 16x16 px, 2px padding each side -> travel 16px (1rem)
-// Thumb is inset 2px from the top/bottom caps (4px smaller than track height) so it never clips the rounded caps.
 const trackSizes = {
 	sm: "h-5 w-9",
 	md: "h-6 w-11",
@@ -28,12 +24,6 @@ const thumbSizes = {
 	md: "h-5 w-5",
 };
 
-// Unchecked track: secondary fill is too subtle against cards, so it pairs with
-// an inset boundary. Checked track uses primary-control (= var(--brand) — light
-// #ee6f8b / dark #f98aa0) for a clear on-state fill.
-// Thumb is always solid white via --switch-thumb (iOS/Discord convention).
-// knob에 elevation shadow를 얹지 않는다 — 핑크 on-state 트랙 위에서 그림자가
-// 흰 dot 아래로 번져 knob이 몇 픽셀 낮게 보이는 착시를 만들어요.
 const trackBase =
 	"rounded-full border-0 bg-secondary shadow-control-boundary transition-colors duration-fast outline-none data-checked:bg-primary-control data-checked:shadow-none";
 
@@ -72,7 +62,6 @@ function Switch({
 				className={cn(
 					thumbBase,
 					thumbSizes[size],
-					// 2px inset from left cap.
 					"group-data-[size=sm]/switch:translate-x-0.5 group-data-[size=sm]/switch:data-checked:translate-x-[1rem]",
 					"group-data-[size=md]/switch:translate-x-0.5 group-data-[size=md]/switch:data-checked:translate-x-[1.25rem]",
 				)}

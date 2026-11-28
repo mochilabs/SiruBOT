@@ -15,13 +15,10 @@ export type BotInfoStats = {
 };
 
 export interface BotInfoLinks {
-	/** null이면 상태 페이지 버튼을 숨겨요 (D-4) */
 	dashboardUrl: string | null;
-	/** null이면 지원 서버 버튼을 숨겨요 */
 	supportServerUrl: string | null;
 }
 
-/** 링크 버튼 행 — 상태 페이지(`{dashboardUrl}/shards`)와 지원 서버. 둘 다 없으면 null이에요. */
 function linkRow(links: BotInfoLinks): ActionRowBuilder<ButtonBuilder> | null {
 	const row = new ActionRowBuilder<ButtonBuilder>();
 	if (links.dashboardUrl) {

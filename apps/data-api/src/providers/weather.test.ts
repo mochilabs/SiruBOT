@@ -2,11 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fetchWeather, weatherCacheKey } from './weather.ts';
 import { normalizeWeatherLocationQuery } from './weatherLocality.ts';
 
-/**
- * weather provider 스모크 — 유저 대상 실패 메시지와 캐시 키·지오코딩 후보 계약을 잠가요.
- * 지오코딩/예보/대기질 세 호출을 URL로 갈라 스텁해서 네트워크 없이 검증해요.
- */
-
 function weatherJson() {
 	return {
 		timezone: 'Asia/Seoul',
@@ -26,7 +21,6 @@ function weatherJson() {
 	};
 }
 
-/** geocoding 결과가 있을 때/없을 때를 갈라 쓰는 fetch 스텁 */
 function stubFetch(geocodeResults: unknown[] | null) {
 	const fetchMock = vi.fn(async (input: URL | string) => {
 		const url = String(input);

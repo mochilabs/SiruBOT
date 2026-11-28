@@ -229,7 +229,6 @@ export class ProfileCommand extends Command {
 			return;
 		}
 
-		// 본인 조회는 기본 비공개이고 생일은 비공개 응답에만 넣어요.
 		const target = interaction.options.getUser('user') ?? interaction.user;
 		const showPrivate = interaction.options.getBoolean('private') ?? target.id === interaction.user.id;
 		const preset = (interaction.options.getString('style') ?? 'dark') as 'dark' | 'ticket' | 'dashboard' | 'light' | 'aura';
@@ -237,7 +236,6 @@ export class ProfileCommand extends Command {
 
 		const data = await buildProfileCardData(target.id, interaction.user.id, interaction.guildId);
 
-		// 멤버 조회는 한 번만 — 이미지 카드(참가일/역할/상태)와 텍스트 카드가 공유해요.
 		const member = interaction.inCachedGuild()
 			? (interaction.guild.members.cache.get(target.id) ?? (await interaction.guild.members.fetch(target.id).catch(() => null)))
 			: null;
@@ -249,17 +247,13 @@ export class ProfileCommand extends Command {
 		try {
 			const fetchedUser = await target.fetch();
 			bannerUrl = fetchedUser.bannerURL({ size: 1024, extension: 'png' }) ?? null;
-			// 서버 태그 (디스코드 길드 아이덴티티) — identityEnabled + 태그 있을 때만
 			const pg = fetchedUser.primaryGuild;
 			if (pg?.identityEnabled && pg.tag) {
 				guildTag = pg.tag;
 				guildTagBadgeUrl = fetchedUser.guildTagBadgeURL({ size: 64, extension: 'png' }) ?? null;
 			}
-		} catch {
-			// 배너 없음/조회 실패 → 별자리 배경으로 그려요
-		}
+		} catch {}
 
-		// 역할 캡슐 — 캐시 역할 순 상위 4개 (@everyone 제외)
 		const roleChips =
 			member && interaction.inCachedGuild()
 				? member.roles.cache
@@ -269,7 +263,6 @@ export class ProfileCommand extends Command {
 						.slice(0, 4)
 				: [];
 
-		// 지금 재생 중 — 대상 유저가 요청자인 현재 트랙 (플레이어가 있을 때만)
 		let nowPlaying: { title: string; artist: string; thumbnailUrl: string | null } | null = null;
 		const player = interaction.guildId ? this.container.audio?.getPlayer(interaction.guildId) : undefined;
 		const current = player?.queue.current;
@@ -296,7 +289,7 @@ export class ProfileCommand extends Command {
 			}
 		}
 
-		// presence를 관측하지 못한 멤버는 상태를 단정하지 않아요. offline은 카드가 그리는 'invisible'(오프라인)으로 매핑해요.
+		// presence를 관측하지 못한 멤버는 상태를 단정하지 않아요
 		const observedStatus = member?.presence?.status;
 		const derivedStatus =
 			observedStatus === 'online' || observedStatus === 'idle' || observedStatus === 'dnd'
@@ -308,7 +301,6 @@ export class ProfileCommand extends Command {
 		const cardPng = await this.container.dataApi
 			.renderProfileCard({
 				preset,
-				// 상호작용 맥락의 서버 테마 — 추가 DB 조회 없이 메모리 값을 읽어요.
 				themePreset: currentThemePreset(),
 				userId: target.id,
 				displayName: target.displayName ?? target.username,
@@ -353,15 +345,12 @@ export class ProfileCommand extends Command {
 			return;
 		}
 
-		// 텍스트 카드 (폴백)
 		const lines = [`### ${emoji('user')} ${target.displayName ?? target.username} 님의 프로필`, ''];
 
-		// 소개 — 유저가 등록한 문구가 있을 때만
 		if (data.intro) {
 			lines.push(`> ${data.intro}`, '');
 		}
 
-		// 생일·별자리 — 생일은 본인에게만
 		if (data.isSelf && showPrivate) {
 			if (data.birthMonth != null && data.birthDay != null) {
 				lines.push(`${emoji('cake')} **생일**: ${data.birthMonth}월 ${data.birthDay}일`);
@@ -374,12 +363,10 @@ export class ProfileCommand extends Command {
 			lines.push(`${emoji('crystal_ball')} **별자리**: ${zodiacLabel(data.zodiacCode)}`);
 		}
 
-		// 출석 스트릭 뱃지
 		if (data.checkinStreak > 0) {
 			lines.push(`${streakBadge(data.checkinStreak)} **출석**: ${data.checkinStreak}일 연속`);
 		}
 
-		// 서버 정보 (길드 안에서만, 멤버를 찾을 수 있을 때)
 		if (interaction.inCachedGuild()) {
 			const createdAt = Math.floor(target.createdTimestamp / 1000);
 			lines.push(`${emoji('calendar')} **계정 생성일**: <t:${createdAt}:R>`);
@@ -392,7 +379,7 @@ export class ProfileCommand extends Command {
 					.map((role) => `<@&${role.id}>`)
 					.slice(0, 10);
 				if (roles.length > 0) {
-					const totalRoles = member.roles.cache.size - 1; // @everyone 제외
+					const totalRoles = member.roles.cache.size - 1;
 					lines.push(
 						`${emoji('mask')} **역할** (${totalRoles}개): ${roles.join(', ')}${totalRoles > 10 ? ` 외 ${totalRoles - 10}개` : ''}`
 					);
@@ -403,7 +390,6 @@ export class ProfileCommand extends Command {
 			}
 		}
 
-		// 음악 기록
 		lines.push('');
 		if (data.requestedCount > 0) {
 			const listen = formatTimeToKorean(Math.floor(data.listenMs / 1000));

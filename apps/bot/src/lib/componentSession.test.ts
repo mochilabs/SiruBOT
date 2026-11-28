@@ -2,7 +2,6 @@ import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi } from 'vitest';
 import { createComponentSession } from './componentSession.ts';
 
-/** InteractionCollector 흉내 — filter를 지키고 stop하면 end를 내보내요. */
 class FakeCollector extends EventEmitter {
 	ended = false;
 	stop = vi.fn((reason?: string) => {

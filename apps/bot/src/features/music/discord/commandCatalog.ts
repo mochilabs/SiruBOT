@@ -1,9 +1,3 @@
-/**
- * `/음악` 서브커맨드 요약 카탈로그 — Sapphire나 서브커맨드 모듈을 가져오지 않는 순수 데이터예요.
- * `/도움말`(discord)이 이 값을 읽으니 피스 클래스(commands/music.ts)를 불러오지 않아도 돼요.
- * 항목은 각 서브커맨드 모듈의 name·ko·description·descriptionEn과 같아야 해요 (commandCatalog.test.ts가 확인해요).
- */
-
 export interface MusicSubcommandSummary {
 	name: string;
 	ko: string;
@@ -11,7 +5,6 @@ export interface MusicSubcommandSummary {
 	descriptionEn: string;
 }
 
-/** `/음악` 서브커맨드 전체 (SUBCOMMANDS 순서 그대로) */
 const MUSIC_SUBCOMMAND_SUMMARIES: readonly MusicSubcommandSummary[] = [
 	{ name: 'play', ko: '재생', description: '음성 채널에서 노래를 재생해요.', descriptionEn: 'Play a track in your voice channel.' },
 	{
@@ -70,16 +63,12 @@ const MUSIC_SUBCOMMAND_SUMMARIES: readonly MusicSubcommandSummary[] = [
 	}
 ];
 
-/** 승격해서 top-level로 빼는 서브커맨드 — `/재생`·`/건너뛰기`·`/정지`가 같은 동작을 해요 */
 export const PROMOTED_SUBCOMMAND_NAMES: ReadonlySet<string> = new Set(['play', 'skip', 'stop']);
 
-/** /도움말에서 서브커맨드 멘션을 그릴 때 써요 (승격된 항목 제외) */
 export const MUSIC_SUBCOMMANDS: MusicSubcommandSummary[] = MUSIC_SUBCOMMAND_SUMMARIES.filter((sub) => !PROMOTED_SUBCOMMAND_NAMES.has(sub.name));
 
-/** `/도움말`이 승격된 `/재생`·`/건너뛰기`를 별도 줄로 그릴 때 쓰는 문구 */
 export const MUSIC_PROMOTED_COMMANDS: { name: string; ko: string; description: string }[] = MUSIC_SUBCOMMAND_SUMMARIES.filter((sub) =>
 	PROMOTED_SUBCOMMAND_NAMES.has(sub.name)
 ).map((sub) => ({ name: sub.name, ko: sub.ko, description: sub.description }));
 
-/** 카탈로그 원본 (테스트·검증용) */
 export const MUSIC_SUBCOMMAND_CATALOG: readonly MusicSubcommandSummary[] = MUSIC_SUBCOMMAND_SUMMARIES;

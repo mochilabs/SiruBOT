@@ -25,7 +25,6 @@ import { ApiError, toApiError } from "@/lib/api-error";
 import { notifyApiError } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
-/** 에셋 용량 표기 — assets-settings의 표기와 동일한 규칙이에요 */
 function formatAssetSize(sizeBytes: number): string {
 	if (sizeBytes >= 1024 * 1024) return `${(sizeBytes / (1024 * 1024)).toFixed(1)}MB`;
 	return `${Math.max(1, Math.round(sizeBytes / 1024))}KB`;
@@ -33,17 +32,12 @@ function formatAssetSize(sizeBytes: number): string {
 
 interface AssetPickerProps {
 	guildId: string;
-	/** true면 여러 장을 골라 한 번에 넘겨요. false면 썸네일을 누르는 즉시 선택돼요 */
 	multiple?: boolean;
 	open: boolean;
 	onClose: () => void;
 	onSelect: (urls: string[]) => void;
 }
 
-/**
- * 에셋 업로드: 8MiB·mime 화이트리스트를 먼저 검사한 뒤 multipart로 올리고
- * 등록된 에셋(주소 포함)을 돌려줘요. 검증 실패는 ApiError(재시도 불가)로 거부해요.
- */
 export async function uploadAssetFile(guildId: string, file: File): Promise<GuildAsset> {
 	if (file.size > ASSET_MAX_BYTES) {
 		throw new ApiError("이미지가 너무 커요. 최대 8MB까지 올릴 수 있어요.", false);
@@ -60,10 +54,6 @@ export async function uploadAssetFile(guildId: string, file: File): Promise<Guil
 	return body.asset;
 }
 
-/**
- * 에셋 선택 다이얼로그: 길드에 올려둔 이미지를 골라 주소를 넘겨요.
- * 안에서도 바로 업로드할 수 있고, 올린 이미지는 목록에 반영돼 바로 선택돼요.
- */
 export function AssetPicker({ guildId, multiple = false, open, onClose, onSelect }: AssetPickerProps) {
 	const toast = useToast();
 	const { assets, error, loading, refresh } = useGuildAssets(guildId);
@@ -71,7 +61,6 @@ export function AssetPicker({ guildId, multiple = false, open, onClose, onSelect
 	const [selectedUrls, setSelectedUrls] = useState<string[]>([]);
 	const [uploading, setUploading] = useState(false);
 
-	// 다이얼로그를 열 때마다 이전 선택을 비우고 목록을 다시 받아요
 	useEffect(() => {
 		if (!open) return;
 		setSelectedUrls([]);
@@ -209,7 +198,6 @@ export function AssetPicker({ guildId, multiple = false, open, onClose, onSelect
 									)}
 								>
 									<span className="relative block">
-										{/* 등록된 에셋 주소는 임의 도메인이라 next/image remotePatterns로 등록할 수 없어요 */}
 										{/* eslint-disable-next-line @next/next/no-img-element */}
 										<img
 											src={asset.url}

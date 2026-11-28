@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { detectContentBounds, dominantColor, hexToRgba, imageSizeOf, mixHex, normalizeAccent } from './artwork.js';
 import { createAsyncLru } from './kit.js';
 
-/** w×h RGBA 버퍼 — fill(x, y)가 [r,g,b,a]를 돌려줘요. */
 function pixels(w: number, h: number, fill: (x: number, y: number) => [number, number, number, number]): Uint8Array {
 	const out = new Uint8Array(w * h * 4);
 	for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) out.set(fill(x, y), (y * w + x) * 4);
@@ -33,7 +32,7 @@ describe('colors', () => {
 		const px = pixels(20, 20, (x) => (x < 14 ? [128, 128, 128, 255] : [230, 40, 60, 255]));
 		const hex = dominantColor(px)!;
 		const n = parseInt(hex.slice(1), 16);
-		expect((n >> 16) & 255).toBeGreaterThan(180); // 빨강 쪽
+		expect((n >> 16) & 255).toBeGreaterThan(180);
 		expect(n & 255).toBeLessThan(120);
 	});
 	it('dominantColor falls back to the average for gray images and null for transparent ones', () => {
@@ -66,8 +65,8 @@ describe('createAsyncLru', () => {
 		expect(await Promise.all([get('a'), get('a')])).toEqual(['A', 'A']);
 		expect(calls).toBe(1);
 		await get('b');
-		await get('a'); // a를 최근으로
-		await get('c'); // b가 밀려나요
+		await get('a');
+		await get('c');
 		expect(calls).toBe(3);
 		await get('a');
 		expect(calls).toBe(3);
@@ -91,14 +90,11 @@ describe('createAsyncLru', () => {
 
 describe('imageSizeOf', () => {
 	it('reads PNG, GIF and JPEG sizes from the header without decoding', () => {
-		// PNG 시그니처 + IHDR(너비 480 = 0x01e0, 높이 360 = 0x0168)
 		const png = Uint8Array.from([
 			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d, 0x49, 0x48, 0x44, 0x52, 0, 0, 0x01, 0xe0, 0, 0, 0x01, 0x68, 8, 6, 0, 0, 0
 		]);
 		expect(imageSizeOf(png)).toEqual({ width: 480, height: 360 });
-		// GIF89a, 가로 320(0x0140) 세로 200(0x00c8)
 		expect(imageSizeOf(Uint8Array.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x40, 0x01, 0xc8, 0x00, 0, 0]))).toEqual({ width: 320, height: 200 });
-		// JPEG: SOI + APP0(길이 4) + SOF0(높이 360=0x0168, 너비 480=0x01e0)
 		const jpeg = Uint8Array.from([
 			0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x01, 0x68, 0x01, 0xe0, 0x03, 0, 0, 0, 0, 0
 		]);
@@ -126,14 +122,11 @@ describe('imageSizeOf', () => {
 				0,
 				...body
 			]);
-		// VP8X: 플래그 4바이트 뒤 캔버스 너비-1·높이-1(각 24비트 LE) — 너비 1200, 높이 675
 		const vp8x = riff('VP8X', [0, 0, 0, 0, 0xaf, 0x04, 0, 0xa2, 0x02, 0, 0, 0, 0]);
 		expect(imageSizeOf(vp8x)).toEqual({ width: 1200, height: 675 });
-		// VP8L: 시그니처 0x2f 뒤 14비트 너비-1, 14비트 높이-1 — 너비 480, 높이 360
 		const bits = (479 | (359 << 14)) >>> 0;
 		const vp8l = riff('VP8L', [0x2f, bits & 0xff, (bits >> 8) & 0xff, (bits >> 16) & 0xff, (bits >>> 24) & 0xff, 0, 0, 0, 0, 0, 0, 0, 0]);
 		expect(imageSizeOf(vp8l)).toEqual({ width: 480, height: 360 });
-		// VP8: 프레임 태그 3바이트 + 시작 코드 9d 01 2a + 너비·높이(각 16비트 LE)
 		const vp8 = riff('VP8 ', [0, 0, 0, 0x9d, 0x01, 0x2a, 0xe0, 0x01, 0x68, 0x01, 0, 0, 0, 0]);
 		expect(imageSizeOf(vp8)).toEqual({ width: 480, height: 360 });
 	});

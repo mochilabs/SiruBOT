@@ -6,18 +6,6 @@ import { emoji } from '@sirubot/utils';
 import { purgeUserData, summarizeUserData } from '../../application/userDataService.ts';
 import { confirmAction } from '../../../../lib/confirmation.ts';
 
-/**
- * `/개인정보` — 내 데이터 열람·삭제 (PIPA/GDPR 삭제권 경로).
- *
- * 지금까지 프로필(생일·소개)을 빼면 사용자가 자기 데이터를 지울 방법이 없었어요.
- * 여기서 지우는 범위는 **사용자 단위** 저장소예요:
- * - AI 장기·단기 기억(`UserMemory`)
- * - 프로필(생일·소개)
- * - 채팅 TTS 사용자 설정(`TtsUserSetting`)
- * - 게임 전적(`GameRecord`)
- * 채널 대화 기록(`ChannelChatHistory`)은 여러 사용자가 섞여 있어 서버 관리자만 지울 수 있어요
- * (대시보드 서버 설정의 기록 삭제 / `/개인정보 보기` 안내로 연결).
- */
 @ApplyOptions<Subcommand.Options>({
 	enabled: true,
 	name: 'privacy',

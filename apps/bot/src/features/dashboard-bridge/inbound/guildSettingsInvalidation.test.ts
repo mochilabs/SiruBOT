@@ -30,7 +30,6 @@ const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
 
 const runtime: RedisRuntime = { logger, signingKey: 'ignored-for-unsigned', publisher: { publish: vi.fn() }, resolveGuild: () => undefined };
 const listener = createGuildSettingsInvalidationListener();
-/** 수신 메시지를 흘려 넣고 핸들러가 끝날 때까지 기다려요 */
 const receive = (payload: unknown) => listener.handle(typeof payload === 'string' ? payload : JSON.stringify(payload), runtime);
 
 beforeEach(() => {
