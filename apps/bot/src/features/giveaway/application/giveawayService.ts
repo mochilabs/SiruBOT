@@ -403,7 +403,8 @@ export class GiveawayService implements Stoppable {
 		if (!winners.success)
 			throw new AppError('invalid_input', winners.error.issues[0]?.message ?? '당첨자 수가 올바르지 않아요.', { ephemeral: true });
 		// 두 번 겹쳐 뽑으면 둘 다 같은 winnerIds를 읽고, 나중 저장이 먼저 발표된 당첨자를 지워요. 행을 읽기 전에 잠가요.
-		if (this.finalizing.has(giveawayId)) throw new AppError('conflict', '다른 추첨이 진행 중이에요. 잠시 뒤 다시 시도해 주세요.', { ephemeral: true });
+		if (this.finalizing.has(giveawayId))
+			throw new AppError('conflict', '다른 추첨이 진행 중이에요. 잠시 뒤 다시 시도해 주세요.', { ephemeral: true });
 		this.finalizing.add(giveawayId);
 		try {
 			return await this.rerollLocked(guildId, giveawayId, winners.data);
