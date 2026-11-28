@@ -11,6 +11,10 @@ import {
 } from 'discord.js';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { Stoppable } from '../../../lib/lifecycle.ts';
+import { thrownCode } from '../../../lib/thrownError.ts';
+
+const UNKNOWN_CHANNEL = 10003;
+const MISSING_ACCESS = 50001;
 
 interface RoomInfo {
 	guildId: string;
@@ -114,12 +118,17 @@ export class TempVoiceService implements Stoppable {
 			if (records === null) return false;
 
 			for (const [channelId, ownerId] of Object.entries(records)) {
-				const channel = await this.deps.discord.fetchChannel(channelId).catch(() => null);
+				if (this.rooms.has(channelId)) continue;
+				const channel = await this.fetchRoom(channelId);
+				if (channel === 'retry') {
+					this.rooms.set(channelId, { guildId, ownerId });
+					this.scheduleEmptyCheck(channelId);
+					continue;
+				}
 				if (!channel || !channel.isVoiceBased()) {
 					await this.deps.roomStore.deleteField(roomsKey(guildId), channelId);
 					continue;
 				}
-				if (this.rooms.has(channelId)) continue;
 				this.rooms.set(channelId, { guildId, ownerId });
 				await this.checkEmpty(channelId, channel);
 			}
@@ -218,12 +227,31 @@ export class TempVoiceService implements Stoppable {
 		this.emptyTimers.set(channelId, timer);
 	}
 
+	/**
+	 * null only when Discord says the room is gone or no longer visible. Any other failure (network, rate limit) is
+	 * 'retry': treating it as gone would drop the record and leave the room uncleaned forever.
+	 */
+	private async fetchRoom(channelId: string): Promise<Channel | null | 'retry'> {
+		try {
+			return await this.deps.discord.fetchChannel(channelId);
+		} catch (error) {
+			const code = thrownCode(error);
+			if (code === UNKNOWN_CHANNEL || code === MISSING_ACCESS) return null;
+			this.deps.logger.warn(`[tempVoice] room fetch failed, retrying later (channel ${channelId}): ${error}`);
+			return 'retry';
+		}
+	}
+
 	private async deleteIfEmpty(channelId: string): Promise<void> {
 		this.emptyTimers.delete(channelId);
 		if (!this.rooms.has(channelId)) return;
 
 		// 사람이 돌아온 뒤 untrack하면 영구 고아 방이 되므로, 채널이 없거나 실제로 비어서 삭제된 경우에만 추적을 끝낸다
-		const channel = await this.deps.discord.fetchChannel(channelId).catch(() => null);
+		const channel = await this.fetchRoom(channelId);
+		if (channel === 'retry') {
+			this.scheduleEmptyCheck(channelId);
+			return;
+		}
 		if (!channel || !channel.isVoiceBased()) {
 			this.untrack(channelId);
 			return;
