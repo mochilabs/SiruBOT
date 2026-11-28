@@ -306,6 +306,9 @@ export async function fetchLyricsForTrack(query: LyricsTrackQuery): Promise<Lyri
 	return { ...fallback, captionStatus: captions.status };
 }
 
+/** 2: 번역 자막을 원문으로 쓰던 결과와 같은 줄을 다 합치던 결과를 버려요 */
+const CAPTION_RULES_VERSION = 2;
+
 export function lyricsCacheKey(query: string): string {
 	return `dataapi:v1:lyrics:${normalizeQuery(query)}`;
 }
@@ -315,6 +318,7 @@ export function lyricsTrackCacheKey(query: LyricsTrackQuery): string {
 	// 길이는 5초 단위로 묶어 같은 곡의 사소한 길이 차이가 캐시를 쪼개지 않게 해요
 	const bucket = Math.round(query.durationMs / 5000);
 	const base = `dataapi:v2:lyrics-track:${normalizeQuery(cleaned.artist)}|${normalizeQuery(cleaned.track)}|${bucket}`;
-	// 자막 폴백은 영상마다 달라서 videoId가 있으면 키에 넣어요(없으면 기존 키 그대로예요)
-	return query.videoId ? `${base}|${query.videoId}` : base;
+	// 자막 폴백은 영상마다 달라서 videoId가 있으면 키에 넣어요(없으면 기존 키 그대로예요).
+	// 자막을 고르는 규칙이 바뀌면 CAPTION_RULES_VERSION을 올려 예전 규칙으로 고른 결과를 버려요
+	return query.videoId ? `${base}|${query.videoId}|c${CAPTION_RULES_VERSION}` : base;
 }

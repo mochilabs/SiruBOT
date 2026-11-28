@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sharedCache } from '../utils/cache.ts';
 import { outboundPool, ProxyUnavailableError } from '../utils/proxyPool.ts';
-import { captionFailKey, fetchCaptionLyrics, pairKoreanLines, parseJson3Captions, pickCaptionTracks } from './youtubeCaptions.ts';
+import {
+	captionFailKey,
+	fetchCaptionLyrics,
+	guessSpokenLanguage,
+	pairKoreanLines,
+	parseJson3Captions,
+	pickCaptionTracks
+} from './youtubeCaptions.ts';
 
 const track = (language_code: string, kind?: string) => ({ base_url: `https://x/${language_code}`, language_code, kind });
 
@@ -43,7 +50,7 @@ describe('parseJson3Captions', () => {
 		expect(lines.map((l) => l.text)).toEqual(['I love you I love you', 'Real line']);
 	});
 
-	it('collapses the same line repeated back to back into one that lasts until the last repeat ends', () => {
+	it('collapses a line split into quick back-to-back pieces into one that lasts until the last piece ends', () => {
 		const raw = JSON.stringify({
 			events: [
 				{ tStartMs: 0, dDurationMs: 1000, segs: [{ utf8: 'Hold on' }] },
@@ -58,6 +65,39 @@ describe('parseJson3Captions', () => {
 			{ startMs: 1000, text: 'one by one', endMs: 4500 },
 			{ startMs: 5000, text: 'Hold on', endMs: 6000 }
 		]);
+	});
+
+	it('keeps a line sung again later as its own line instead of stretching the first one', () => {
+		const raw = JSON.stringify({
+			events: [
+				{ tStartMs: 0, dDurationMs: 2500, segs: [{ utf8: 'one by one' }] },
+				{ tStartMs: 2500, dDurationMs: 2500, segs: [{ utf8: 'one by one' }] },
+				{ tStartMs: 5000, dDurationMs: 1000, segs: [{ utf8: '[Music]' }] },
+				{ tStartMs: 30000, dDurationMs: 1000, segs: [{ utf8: 'one by one' }] }
+			]
+		});
+		expect(parseJson3Captions(raw)).toEqual([
+			{ startMs: 0, text: 'one by one', endMs: 2500 },
+			{ startMs: 2500, text: 'one by one', endMs: 5000 },
+			{ startMs: 30000, text: 'one by one', endMs: 31000 }
+		]);
+	});
+
+	it('splits quick repeats when there is a gap between them', () => {
+		const raw = JSON.stringify({
+			events: [
+				{ tStartMs: 0, dDurationMs: 500, segs: [{ utf8: 'Hey' }] },
+				{ tStartMs: 1000, dDurationMs: 500, segs: [{ utf8: 'Hey' }] }
+			]
+		});
+		expect(parseJson3Captions(raw).map((l) => l.startMs)).toEqual([0, 1000]);
+	});
+
+	it('only merges repeats without durations when they start close together', () => {
+		const lines = parseJson3Captions(captions(['Go', 'Go', 'Stop']).replace(/"tStartMs":2000/, '"tStartMs":4000'));
+		expect(lines.map((l) => l.startMs)).toEqual([0, 4000]);
+		const spread = parseJson3Captions(JSON.stringify({ events: [0, 3000].map((tStartMs) => ({ tStartMs, segs: [{ utf8: 'Go' }] })) }));
+		expect(spread.map((l) => l.startMs)).toEqual([0, 3000]);
 	});
 
 	it('returns an empty list for broken input', () => {
@@ -81,6 +121,38 @@ describe('pickCaptionTracks', () => {
 		const picked = pickCaptionTracks([track('ko'), track('ko', 'asr')]);
 		expect(picked?.original.language_code).toBe('ko');
 		expect(picked?.korean).toBeNull();
+	});
+
+	it('falls back to Korean, then English, when the spoken language track is missing', () => {
+		const zutomayo = 'ずっと真夜中でいいのに。『袖のキルト』MV (ZUTOMAYO - QUILT)';
+		const quilt = [track('zh-Hans'), track('zh-Hant'), track('en'), track('id'), track('ko')];
+		expect(pickCaptionTracks(quilt, zutomayo)).toMatchObject({ original: { language_code: 'ko' }, korean: null });
+		const noKorean = pickCaptionTracks([track('ar'), track('en'), track('ja', 'asr')]);
+		expect(noKorean).toMatchObject({ original: { language_code: 'en' }, korean: null });
+	});
+
+	it('prefers the spoken language track over the fallbacks', () => {
+		const picked = pickCaptionTracks([track('ar'), track('ko'), track('ja')], 'ずっと真夜中でいいのに。『残機』MV');
+		expect(picked).toMatchObject({ original: { language_code: 'ja' }, korean: { language_code: 'ko' } });
+	});
+
+	it('uses the fallbacks when neither an auto-generated track nor the title tells the spoken language', () => {
+		expect(pickCaptionTracks([track('zh-Hans'), track('en')], '残響散歌')?.original.language_code).toBe('en');
+	});
+
+	it('never uses other translations as the original', () => {
+		expect(pickCaptionTracks([track('zh-Hans'), track('ar'), track('id')], 'ずっと真夜中でいいのに。『残機』MV')).toBeNull();
+	});
+});
+
+describe('guessSpokenLanguage', () => {
+	it('reads kana, hangul and Latin-only titles', () => {
+		expect(guessSpokenLanguage('ZUTOMAYO『袖のキルト』')).toBe('ja');
+		expect(guessSpokenLanguage('아이유 - 밤편지')).toBe('ko');
+		expect(guessSpokenLanguage('Rick Astley - Never Gonna Give You Up (Official Video) 4K')).toBe('en');
+		expect(guessSpokenLanguage('残響散歌')).toBeNull();
+		expect(guessSpokenLanguage('عمرو دياب')).toBeNull();
+		expect(guessSpokenLanguage(undefined)).toBeNull();
 	});
 });
 
